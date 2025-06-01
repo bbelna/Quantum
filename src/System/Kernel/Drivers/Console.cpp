@@ -6,9 +6,14 @@
 // Brandon Belna - MIT License
 //------------------------------------------------------------------------------
 
-#include <Console.hpp>
+#include <Drivers/Console.hpp>
 
 using namespace Quantum::Kernel::Drivers;
+
+volatile uint16* const Console::buffer = reinterpret_cast<volatile uint16*>(0xB8000);
+
+uint8 Console::row = 0;
+uint8 Console::col = 0;
 
 extern "C" inline void outb(uint16  port, uint8  value) {
   asm volatile ("outb %0, %1" :: "a"(value), "Nd"(port));

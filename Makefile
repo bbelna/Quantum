@@ -40,10 +40,10 @@ ASFLAGS   := -f bin -I$(BL_COMMON_DIR)
 
 # x86 (32-bit) compiler/linker settings
 CC32      := x86_64-linux-gnu-gcc
-CFLAGS32 := -m32 -ffreestanding -O2 -Wall -fno-exceptions -fno-rtti \
-            -nostdinc -nostdinc++
+CFLAGS32 := -fno-pic -fno-pie -m32 -ffreestanding -O2 -Wall -fno-exceptions \
+            -fno-rtti -nostdinc -nostdinc++
 LD32      := x86_64-linux-gnu-ld
-LDFLAGS32 := -m elf_i386
+LDFLAGS32 := --no-pie -m elf_i386
 
 OBJCOPY32 := x86_64-linux-gnu-objcopy
 
@@ -88,8 +88,11 @@ KER_COMMON_SRCS := \
 	$(KERNEL_COMMON)/Drivers/Console.cpp
 
 KER32_OBJ_DIR := $(BUILD_DIR)/Kernel/X86
+GDT_SRC := $(KERNEL_ARCH32)/GDT.asm
+GDT_OBJ := $(KER32_OBJ_DIR)/GDT.o
 KER32_OBJS    := \
 	$(patsubst $(KERNEL_COMMON)/%.cpp,$(KER32_OBJ_DIR)/%.o,$(KER_COMMON_SRCS)) \
+	$(GDT_OBJ) \
 	$(KER32_OBJ_DIR)/KernelEntry.o
 
 KER32_ELF     := $(KER32_OBJ_DIR)/qkrnl.elf
@@ -98,22 +101,28 @@ KER32_BIN     := $(KER32_OBJ_DIR)/qkrnl.qx
 # Compile each .cpp → 32-bit .o. 
 # We keep the corresponding .hpp as a dependency so that changing it rebuilds the .o,
 # but we do not compile the .hpp on its own.
-$(KER32_OBJ_DIR)/%.o: $(KERNEL_COMMON)/%.cpp $(KERNEL_COMMON)/%.hpp
+$(KER32_OBJ_DIR)/%.o: $(KERNEL_COMMON)/%.cpp $(KERNEL_INCLUDE)/%.hpp
 	@mkdir -p $(dir $@)
 	$(CC32) $(CFLAGS32) -I$(KERNEL_INCLUDE) -c $< -o $@
 
 # Compile KernelEntry.cpp → object; depend on its header so that edits trigger rebuild
-$(KER32_OBJ_DIR)/KernelEntry.o: $(KERNEL_ARCH32)/KernelEntry.cpp \
-																 $(KERNEL_COMMON)/Kernel.hpp
+$(KER32_OBJ_DIR)/KernelEntry.o: $(KERNEL_ARCH32)/KernelEntry.cpp
 	@mkdir -p $(dir $@)
 	$(CC32) $(CFLAGS32) -I$(KERNEL_INCLUDE) -c $< -o $@
 
-# Link x86_32 objects → ELF
+# Assemble GDT.asm into GDT.o
+$(GDT_OBJ): $(GDT_SRC)
+	@mkdir -p $(dir $@)
+	$(ASM) -f elf32 $< -o $@
+
+# Link x86_32 objects → ELF (use gcc driver instead of ld)
 $(KER32_ELF): $(KER32_OBJS) $(KERNEL_ARCH32)/Link.ld
 	@mkdir -p $(dir $@)
-	$(LD32) $(LDFLAGS32) -T $(KERNEL_ARCH32)/Link.ld \
-			$(KER32_OBJS) -o $@
+	$(CC32) $(CFLAGS32) -m32 -nostdlib -static -Wl,--no-pie \
+	        -T $(KERNEL_ARCH32)/Link.ld \
+	        $(KER32_OBJS) -o $@
 	@echo "[OK] Linked qkrnl.elf → $@"
+
 
 # Objcopy ELF → flat binary qkrnl.qx
 $(KER32_BIN): $(KER32_ELF)

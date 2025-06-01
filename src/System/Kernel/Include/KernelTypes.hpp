@@ -17,3 +17,6 @@ typedef   signed char      int8;
 typedef   signed short     int16;
 typedef   signed int       int32;
 typedef   signed long long int64;
+
+typedef uint32 uintptr;
+typedef int32  intptr;

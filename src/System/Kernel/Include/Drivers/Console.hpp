@@ -33,17 +33,17 @@ namespace Quantum::Kernel::Drivers {
        * VGA text‐mode buffer lives at 0xB8000
        * (each entry = 2 bytes: [char][color]).
        */
-      static volatile uint16* const buffer = (uint16*) 0xB8000;
+      static volatile uint16* const buffer;
 
       /**
        * Current cursor row in the text buffer.
        */
-      static uint8 row = 0;
+      static uint8 row;
 
       /**
        * Current cursor column in the text buffer.
        */
-      static uint8 col = 0;
+      static uint8 col;
 
       /**
        * Foreground/background color byte

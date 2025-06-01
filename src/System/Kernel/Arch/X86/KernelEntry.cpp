@@ -7,9 +7,14 @@
 //------------------------------------------------------------------------------
 
 #include <Kernel.hpp>
-#include <KernelEntry.hpp>
+#include <KernelTypes.hpp>
+#include <Arch/X86/KernelEntry.hpp>
 
 using namespace Quantum::Kernel;
+
+extern "C" void Kernel_Start() {
+    Kernel::Start();  // jump into your C++ code
+}
 
 __attribute__((naked, section(".text")))
 void EnterProtectedMode() {
@@ -37,14 +42,14 @@ void StartKernel() {
     "mov %ax, %ss\n\t"
     "mov $0x9000, %esp\n\t"
     "sti\n\t"
-    "call Kernel::Start\n\t"
+    "call Kernel_Start\n\t"
     "hlt\n\t"
     "jmp  .\n\t"
   );
 }
 
 __attribute__((aligned(16), section(".rodata")))
-const uint64_t GDTTable32[] = {
+const uint64 GDTTable32[] = {
   0x0000000000000000ULL,    // null
   0x00AF9A000000FFFFULL,    // code segment
   0x00AF92000000FFFFULL,    // data segment
@@ -52,9 +57,11 @@ const uint64_t GDTTable32[] = {
 
 __attribute__((aligned(1), section(".rodata")))
 struct {
-  uint16_t limit;
-  uint32_t base;
+  uint16 limit;
+  uint32 base;
 } GDTDescriptor32 = {
   sizeof(GDTTable32) - 1,
-  uint32_t(uintptr_t(&GDTTable32))
+  static_cast<uint32>(
+    reinterpret_cast<uintptr>(&GDTTable32)
+  )
 };

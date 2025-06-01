@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 
 #include <Kernel.hpp>
+#include <Drivers/Console.hpp>
 
 using namespace Quantum::Kernel;
 using namespace Quantum::Kernel::Drivers;

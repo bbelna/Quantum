@@ -1,18 +1,47 @@
-/* OUTPUT_FORMAT("binary") ensures ld emits a raw flat binary */
-OUTPUT_FORMAT("binary")
+/*-------------------------------------------------------------------------------
+  Quantum
+ -------------------------------------------------------------------------------
+  src/System/Kernel/Arch/X86/Link.ld
 
-/* The kernel’s true entry point is EnterProtectedMode (from KernelEntry.cpp) */
+  A minimal 32-bit GDT-aware linker script. It:
+   • Forces ELF32-i386 output
+   • Specifies the entry point (EnterProtectedMode)
+   • Places .text, .rodata, .data, and .bss at 0x8000 (where the bootloader expects
+     the kernel to live).
+ -------------------------------------------------------------------------------*/
+
+OUTPUT_FORMAT("elf32-i386")
+OUTPUT_ARCH(i386)
 ENTRY(EnterProtectedMode)
 
-SECTIONS {
-  /* 
-   * Place all .text, .rodata, .data, .bss at virtual address 0x8000 (i.e. physical 0x0000:0x8000).
-   * That means when the bootloader does `jmp 0x0000:0x8000`, it will land on EnterProtectedMode.
-   */
-  . = 0x8000;
+SECTIONS
+{
+    /* Start placing all loadable sections at 0x8000 (the address the bootloader jumps to) */
+    . = 0x00008000;
 
-  .text   : { *(.text)   }
-  .rodata : { *(.rodata) }
-  .data   : { *(.data)   }
-  .bss    : { *(COMMON) *(.bss) }
+    .text :
+    {
+        *(.text)           /* all .text from your .o files */
+        *(.text*)          /* any other text-subsections (constructors, etc.) */
+    }
+
+    .rodata :            /* read-only data (string literals, etc.) */
+    {
+        *(.rodata)
+        *(.rodata*)
+    }
+
+    .data :              /* initialized data */
+    {
+        *(.data)
+        *(.data*)
+    }
+
+    .bss :               /* uninitialized data (zeroed at startup) */
+    {
+        __bss_start = .; /* (optional) allow kernel code to know where .bss begins */
+        *(.bss)
+        *(.bss*)
+        __bss_end = .;   /* (optional) and where .bss ends */
+    }
 }

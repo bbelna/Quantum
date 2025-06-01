@@ -79,12 +79,12 @@ ScanDirEntries:
   pop cx
 
   ; BX still holds the entry’s base (0x0200 + n*32)
-  ; read starting cluster (word at offset BX+26)
-  mov dx, [0x0000:bx + 26]
+  ; read starting cluster (word) at offset (BX + 26)
+  mov dx, [bx + 26]
   mov [FoundCluster], dx
 
-  ; read file size (dword at offset BX+28)
-  mov eax, [0x0000:bx + 28]
+  ; read file size (dword) at offset (BX + 28)
+  mov eax, [bx + 28]
   mov [FoundFileSize], eax
 
   mov bx, 1          ; mark “found”
@@ -185,7 +185,8 @@ ReadSector:
   mov ah, 0x02
   mov al, 1
   mov bx, 0x0200        ; buffer offset
-  mov es, 0x0000
+  xor ax, ax
+  mov es, ax
 
   mov byte [RetryCount], 3
 
@@ -236,7 +237,9 @@ ReadSectorTo8000:
   mov ah, 0x02
   mov al, 1
   mov bx, di          ; ES:BX → destination offset
-  mov es, 0x0000
+  xor ax, ax
+  mov es, ax
+
 
   mov byte [RetryCount], 3
 

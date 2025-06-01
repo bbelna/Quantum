@@ -50,7 +50,15 @@ Unknown:
   call Print
   hlt
 
-UnknownMsg db "Unknown boot medium!$", 0
+DiskError:
+  mov si, ReadErrorMsg
+  call Print
+.Hang:
+  hlt
+  jmp .Hang
+
+UnknownMsg    db "Unknown boot medium!$", 0
+ReadErrorMsg  db "Disk read failed!$", 0
 
 times 510-($-$$) db 0
 dw 0xAA55
