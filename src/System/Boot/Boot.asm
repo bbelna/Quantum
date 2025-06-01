@@ -7,14 +7,12 @@
 ; Brandon Belna - MIT License
 ;------------------------------------------------------------------------------
 
-ORG 0x0600
+ORG 0x7C00
 BITS 16
 
 %include "Constants.inc"
-%include "Print.inc"
 
 Boot:
-  ; Basic segment setup & stack
   cli
   xor ax, ax
   mov ds, ax
@@ -32,18 +30,20 @@ Boot:
   jb Unknown
 
 FloppyBoot:
-  mov ah, 0x02          ; INT 13h - Read Sectors
-  mov al, 1             ; read 1 sector
-  mov ch, 0             ; cylinder 0
-  mov dh, 0             ; head 0
-  mov cl, 2             ; sector 2  (LBA 1 on a 1.44 MB floppy)
-  xor bx, bx
-  mov bx, 0x0600        ; offset 0x0600 into segment ES
+  ; Zero out AX to set DS=0 first
   xor ax, ax
-  mov es, ax            ; ES = 0x0000
-  int 0x13              ; DL already contains the boot-drive number
+  mov ds, ax
+
+  mov ah, 0x02
+  mov al, 2           ; read 2 consecutive sectors
+  mov ch, 0           ; cylinder 0
+  mov dh, 0           ; head 0
+  mov cl, 2           ; starting at sector 2
+  mov bx, 0x0600
+  int 0x13
   jc DiskError
-  jmp 0x0000:0x0600     ; Jump to stage 2
+
+  jmp 0x0000:0x0600
 
 Unknown:
   mov si, UnknownMsg
@@ -57,8 +57,10 @@ DiskError:
   hlt
   jmp .Hang
 
-UnknownMsg    db "Unknown boot medium!$", 0
-ReadErrorMsg  db "Disk read failed!$", 0
+UnknownMsg    db "Unknown boot medium!", 0
+ReadErrorMsg  db "Disk read failed!", 0
+
+%include "Print.inc"
 
 times 510-($-$$) db 0
 dw 0xAA55

@@ -1,334 +1,336 @@
-;-------------------------------------------------------------------------------
+;------------------------------------------------------------------------------
 ; Quantum
-;-------------------------------------------------------------------------------
+;------------------------------------------------------------------------------
 ; Boot/Floppy/Floppy.asm
-; Stage 2 FAT12 parser & QKRNL.QX loader. Assumes Stage 1 has loaded this sector
-; at 0x0000:0x0600 (so ORG=0x0600). After finding QKRNL.QX, reads it into
-; 0x0000:0x8000 and jumps there.
-; Brandon Belna - MIT License
-;-------------------------------------------------------------------------------
+; Stage-2 loader: locate QKRNL.QX on a FAT12 floppy, load it to 0x0000:0x8000,
+; then jump.  Assumes Stage-1 placed this file at 0x0000:0x0600.
+; Brandon Belna – MIT License
+;------------------------------------------------------------------------------
 
 ORG 0x0600
 BITS 16
 
-%include "Constants.inc"   ; defines STACK_OFFSET, etc.
-%include "Print.inc"     ; provides `Print` for DS:SI→string
+%include "Constants.inc"         ; STACK_OFFSET, etc.
 
+; ─────────────────────────────────────────────────────────────────────────────
+; Banner -- proves we executed Stage-2
+; ─────────────────────────────────────────────────────────────────────────────
 Floppy:
-  mov [BootDrive], dl     ; save BIOS‐drive (DL) so ReadSector can use it
+    mov si, Stage2Msg
+    call Print
 
-  ; Read BIOS‐Parameter Block (BPB) bytes from Boot sector at 0x0000:0x7C00
-  mov ax, [0x7C00 + 11]   ; BytesPerSector
-  mov [BPB_BytesPerSector], ax
+    mov [BootDrive], dl          ; remember BIOS drive #
 
-  mov al, [0x7C00 + 13]   ; SectorsPerCluster
-  mov [BPB_SectorsPerCluster], al
+; ─────────────────────────────────────────────────────────────────────────────
+; 1.  Read BPB from boot sector (0x7C00) into variables
+; ─────────────────────────────────────────────────────────────────────────────
+    mov ax, [0x7C00+11]          ; BytesPerSector
+    mov [BPB_BytesPerSector], ax
 
-  mov ax, [0x7C00 + 14]   ; ReservedSectors
-  mov [BPB_ReservedSectors], ax
+    mov al, [0x7C00+13]          ; SectorsPerCluster
+    mov [BPB_SectorsPerCluster], al
 
-  mov al, [0x7C00 + 16]   ; NumFATs
-  mov [BPB_NumFATs], al
+    mov ax, [0x7C00+14]          ; ReservedSectors
+    mov [BPB_ReservedSectors], ax
 
-  mov ax, [0x7C00 + 17]   ; MaxRootEntries
-  mov [BPB_MaxRootEntries], ax
+    mov al, [0x7C00+16]          ; NumFATs
+    mov [BPB_NumFATs], al
 
-  mov ax, [0x7C00 + 22]   ; SectorsPerFAT
-  mov [BPB_SectorsPerFAT], ax
+    mov ax, [0x7C00+17]          ; MaxRootEntries
+    mov [BPB_MaxRootEntries], ax
 
-  ; Scan the root directory (LBA 19..32) for “QKRNL.QX”
-  xor bx, bx         ; BX = found‐flag (0=not found, 1=found)
-  xor cx, cx         ; CX = sector‐index within root (0..13)
+    mov ax, [0x7C00+22]          ; SectorsPerFAT
+    mov [BPB_SectorsPerFAT], ax
 
-ScanRootDirSectors:
-  mov ax, 19
-  add ax, cx         ; AX = LBA to read this time
-  call ReadSector      ; → 0x0000:0x0200
+; ─────────────────────────────────────────────────────────────────────────────
+; 2.  Derived layout values
+; ─────────────────────────────────────────────────────────────────────────────
+    ; FirstRootLBA = ReservedSectors + NumFATs * SectorsPerFAT
+    mov al, [BPB_NumFATs]        ; AL = NumFATs (<=2)
+    mov ah, 0
+    mul word [BPB_SectorsPerFAT] ; AX = NumFATs * SectorsPerFAT
+    add ax, [BPB_ReservedSectors]
+    mov [FirstRootLBA], ax
 
-  mov si, 0x0200       ; point SI at first dir‐entry in buffer
-  mov dx, 16         ; 16 entries per sector
+    ; RootDirSectors = (MaxRootEntries * 32) / BytesPerSector
+    mov ax, [BPB_MaxRootEntries] ; 224
+    shl ax, 5                    ; ×32  -> 7168
+    xor dx, dx
+    mov bx, [BPB_BytesPerSector] ; 512
+    div bx                       ; AX = 14
+    mov [RootDirSectors], ax
 
-ScanDirEntries:
-  push cx
-  push dx
-  push si
+    ; FirstDataSector = FirstRootLBA + RootDirSectors
+    mov ax, [FirstRootLBA]
+    add ax, [RootDirSectors]
+    mov [FirstDataSector], ax
 
-  ; set BX to the base of this directory entry (buffer at 0x0200 + entryIndex*32)
-  mov bx, si       ; BX = offset of entry within memory (e.g. 0x0200 + n*32)
+; ─────────────────────────────────────────────────────────────────────────────
+; 3.  Load FAT-1 (SectorsPerFAT sectors) to 0x0000:0x0400
+; ─────────────────────────────────────────────────────────────────────────────
+    mov si, [BPB_ReservedSectors]   ; LBA of FAT-1
+    mov cx, [BPB_SectorsPerFAT]
+    mov di, 0x0400                  ; buffer
+LoadFAT:
+    mov ax, si                      ; AX = current LBA
+    xor dx, dx
+    mov es, dx                      ; ES = 0
+    mov bx, di                      ; ES:BX dest
+    call ReadSectorBuf
+    add di, 512
+    inc si
+    loop LoadFAT
 
-  ; compare 8-byte name at [0x0000:BX] vs. KernelName
-  mov di, bx       ; DI → first of 8 filename bytes
-  mov si, KernelName
-  call Compare8
-  cmp al, 0
-  jne NotThisEntry
+; ─────────────────────────────────────────────────────────────────────────────
+; 4.  Scan root directory for  "QKRNL   QX "
+; ─────────────────────────────────────────────────────────────────────────────
+    mov ax, [FirstRootLBA]
+    mov [CurrRootLBA], ax
+    mov cx, [RootDirSectors]
 
-  ; compare 3-byte extension at [0x0000:BX+8] vs. KernelExt
-  mov di, bx
-  add di, 8        ; DI → offset where extension begins
-  mov si, KernelExt
-  call Compare3
-  cmp al, 0
-  jne NotThisEntry
+NextRootSector:
+    mov ax, [CurrRootLBA]
+    xor dx, dx
+    mov es, dx
+    mov bx, 0x0200
+    call ReadSectorBuf
 
-  ; at this point, we know “QKRNL” + “QX” matched
+    mov di, 0x0200
+    mov dx, 16                      ; 16 entries in this sector
 
-  ; restore registers
-  pop si
-  pop dx
-  pop cx
+NextEntry:
+    push dx
+    push di
 
-  ; BX still holds the entry’s base (0x0200 + n*32)
-  ; read starting cluster (word) at offset (BX + 26)
-  mov dx, [bx + 26]
-  mov [FoundCluster], dx
+    ; compare 8-byte name
+    mov si, KernelName
+    mov cx, 8
+    call Compare8
+    or  al, al
+    jnz NotMatch
 
-  ; read file size (dword) at offset (BX + 28)
-  mov eax, [bx + 28]
-  mov [FoundFileSize], eax
+    ; compare 3-byte extension
+    add di, 8
+    mov si, KernelExt
+    mov cx, 3
+    call Compare3
+    or  al, al
+    jnz NotMatch
 
-  mov bx, 1          ; mark “found”
-  jmp DoneRootSearch
+    ; ---- MATCH! ----
+    pop di
+    pop dx
 
-NotThisEntry:
-  ; restore registers and move to the next entry
-  pop si
-  pop dx
-  pop cx
+    mov ax, [di+26]                 ; first cluster
+    mov [FoundCluster], ax
+    mov ax, [di+28]                 ; size low
+    mov dx, [di+30]                 ; size high
+    mov [FoundFileSize], ax
+    mov [FoundFileSize+2], dx
+    jmp LoadKernel
 
-  add si, 32         ; SI = next entry within this sector
-  dec dx
-  jnz ScanDirEntries
+NotMatch:
+    pop di
+    pop dx
+    add di, 32
+    dec dx
+    jnz NextEntry
 
-  ; end of this sector → move to the next root sector
-  pop si
-  pop dx
-  pop cx
-  inc cx
-  cmp cx, 14
-  jl ScanRootDirSectors
+    ; next root sector
+    inc word [CurrRootLBA]
+    dec cx
+    jnz NextRootSector
 
-DoneRootSearch:
-  cmp bx, 1
-  je LoadKernel        ; if found, go load it
+    ; not found
+    mov si, NotFoundMsg
+    call Print
+    jmp $
 
-  ; If we scanned all 14 root sectors and didn’t find it:
-  mov si, NotFoundMsg
-  call Print
-  jmp $            ; hang
-
-;───────────────────────────────────────────────────────────────────────────
-; LoadKernel
-; Compute how many sectors to read and where, then read them.
-;───────────────────────────────────────────────────────────────────────────
+; ─────────────────────────────────────────────────────────────────────────────
+; 5.  Follow FAT chain, load clusters into 0x0000:0x8000
+; ─────────────────────────────────────────────────────────────────────────────
 LoadKernel:
-  mov eax, [FoundFileSize]
-  mov [TempFileSize], eax
+    ; sectorsRemaining = ceil(filesize/512)
+    mov ax, [FoundFileSize]
+    add ax, 511
+    shr ax, 9
+    mov [SectorsRemain], ax
 
-  ; ClustersNeeded = (FileSize + 511) / 512
-  mov eax, [TempFileSize]
-  add eax, 511
-  mov ebx, 512
-  cdq
-  div ebx
-  mov [ClustersNeeded], ax
+    mov ax, [FoundCluster]
+    mov [CurrCluster], ax
+    mov di, 0x8000                  ; destination pointer
 
-  ; FirstDataSector = 33 + (FoundCluster - 2)
-  mov ax, [FoundCluster]
-  sub ax, 2
-  add ax, 33
-  mov [FirstDataSector], ax
+LoadCluster:
+    ; sectorLBA = FirstDataSector + (cluster-2)*SPC
+    mov ax, [CurrCluster]
+    sub ax, 2
+    xor dx, dx
+    mov bx, [BPB_SectorsPerCluster]
+    mul bx
+    add ax, [FirstDataSector]
+    mov [CurrClusterLBA], ax
 
-  mov ax, [ClustersNeeded]
-  mov [SectorsToRead], ax
+    ; read SPC sectors (usually 1)
+    mov cx, [BPB_SectorsPerCluster]
+    mov dx, ax                      ; DX = first LBA of cluster
 
-  mov cx, [SectorsToRead]     ; CX = # of sectors to read
-  mov si, [FirstDataSector]   ; SI = LBA of first data sector
-  mov di, 0x8000        ; DI = destination offset (SEG=0000 → phys 0x8000)
+ReadSecInClus:
+    mov ax, dx
+    xor dx, dx
+    mov es, dx
+    mov bx, di
+    call ReadSectorBuf
+    add di, 512
+    inc ax
+    mov dx, ax
+    dec cx
+    jnz ReadSecInClus
 
-ReadKernelLoop:
-  mov ax, si          ; AX = LBA of current data sector
-  call ReadSectorTo8000     ; read into 0000:DI
-  add di, 512           ; advance destination by 512 bytes
-  inc si            ; next LBA
-  dec cx
-  jnz ReadKernelLoop
+    dec word [SectorsRemain]
+    jz KernelLoaded
 
-  ; All sectors loaded! Jump into kernel at 0x0000:0x8000
-  jmp 0x0000:0x8000
+    ; ---- next cluster via FAT12 ----
+    mov ax, [CurrCluster]
+    call GetNextCluster
+    mov [CurrCluster], ax
+    cmp ax, 0xFF8
+    jb LoadCluster
 
-;───────────────────────────────────────────────────────────────────────────────
-; ReadSector
-; Read one 512-byte sector (LBA=AX) → 0x0000:0x0200, retry on error.
-;───────────────────────────────────────────────────────────────────────────────
-ReadSector:
-  push ax
-  push bx
-  push cx
-  push dx
+DiskFail:
+    mov si, ReadErrMsg
+    call Print
+    jmp $
 
-  ; Convert LBA (in AX) → CHS
-  mov bx, ax
-  xor dx, dx
-  mov ax, bx
-  mov cx, 36          ; 18 sectors/track × 2 heads = 36
-  div cx            ; AX=track, DX=remainder
-  mov ch, al
-  mov bx, dx
-  mov al, 18
-  div al            ; AH=head, AL=sector-1
-  mov dh, ah
-  mov cl, al
-  inc cl
+KernelLoaded:
+    jmp 0x0000:0x8000
 
-  mov dl, [BootDrive]
-  mov ah, 0x02
-  mov al, 1
-  mov bx, 0x0200        ; buffer offset
-  xor ax, ax
-  mov es, ax
+; ─────────────────────────────────────────────────────────────────────────────
+; ReadSectorBuf  (LBA in AX, ES:BX dest)  – retry 3×
+; ─────────────────────────────────────────────────────────────────────────────
+ReadSectorBuf:
+    push ax
+    push bx
+    push cx
+    push dx
 
-  mov byte [RetryCount], 3
+    xor  dx, dx            ; DX:AX = LBA   (high word = 0)
+    mov  cx, 36            ; sectors per cylinder (18 × 2)
+    div  cx                ; AX = cylinder, DX = temp (head*18 + sector-1)
 
-.RetryRead1:
-  int 0x13
-  jc  .RetryFail1
-  jmp .ReadDone1
+    mov  ch, al            ; CH = cylinder (low 8 bits)
+    xor  ax, ax
+    mov  ax, dx            ; AX = temp
+    mov  cl, 18
+    div  cl                ; AL = head, AH = sector-1
+    mov  dh, al            ; DH = head (0 or 1)
+    mov  cl, ah
+    inc  cl                ; CL = sector (1-18)
 
-.RetryFail1:
-  dec byte [RetryCount]
-  jnz  .RetryRead1
-  mov si, ReadErrorMsg
-  call Print
-  jmp $
+    mov  dl, [BootDrive]
+    mov  ah, 02h           ; INT 13h - read
+    mov  al, 1             ; 1 sector
 
-.ReadDone1:
-  pop dx
-  pop cx
-  pop bx
-  pop ax
-  ret
+.retry:
+    int  13h
+    jnc  .done
+    dec  byte [Retry]
+    jnz  .retry
+    jmp  DiskFail
 
-;───────────────────────────────────────────────────────────────────────────────
-; ReadSectorTo8000
-; Read one sector (LBA=AX) → 0x0000:DI, retry on error.
-;───────────────────────────────────────────────────────────────────────────────
-ReadSectorTo8000:
-  push ax
-  push bx
-  push cx
-  push dx
+.done:
+    pop  dx
+    pop  cx
+    pop  bx
+    pop  ax
+    ret
 
-  ; Convert LBA (in AX) → CHS
-  mov bx, ax
-  xor dx, dx
-  mov ax, bx
-  mov cx, 36
-  div cx
-  mov ch, al
-  mov bx, dx
-  mov al, 18
-  div al
-  mov dh, ah
-  mov cl, al
-  inc cl
+; ─────────────────────────────────────────────────────────────────────────────
+; GetNextCluster (FAT12) – uses FAT copy at 0x0400
+;  IN:  AX = current cluster (N)   OUT: AX = next cluster
+; ─────────────────────────────────────────────────────────────────────────────
+GetNextCluster:
+    push bx
+    push cx
+    push dx
+    push si
 
-  mov dl, [BootDrive]
-  mov ah, 0x02
-  mov al, 1
-  mov bx, di          ; ES:BX → destination offset
-  xor ax, ax
-  mov es, ax
+    mov bx, ax
+    shl bx, 1
+    add bx, ax              ; BX = 3*N
+    shr bx, 1               ; BX = floor((3*N)/2)
 
+    mov si, 0x0400
+    add si, bx
+    mov cx, [ds:si]         ; two bytes
 
-  mov byte [RetryCount], 3
+    test ax, 1              ; even or odd cluster?
+    jz  .even
+    shr cx, 4               ; odd: high 12 bits
+    jmp .done
+.even:
+    and cx, 0x0FFF          ; even: low 12 bits
+.done:
+    mov ax, cx
+    pop si
+    pop dx
+    pop cx
+    pop bx
+    ret
 
-.RetryRead2:
-  int 0x13
-  jc  .RetryFail2
-  jmp .ReadDone2
+; ─────────────────────────────────────────────────────────────────────────────
+; Compare helpers (DS:DI vs DS:SI – AL=0 if equal)
+; ─────────────────────────────────────────────────────────────────────────────
+Compare8:  mov cx,8
+.c8:       lodsb
+           scasb
+           jne .neq
+           loop .c8
+           xor al,al
+           ret
+.neq:      mov al,1
+           ret
 
-.RetryFail2:
-  dec byte [RetryCount]
-  jnz  .RetryRead2
-  mov si, ReadErrorMsg
-  call Print
-  jmp $
+Compare3:  mov cx,3
+.c3:       lodsb
+           scasb
+           jne .neq3
+           loop .c3
+           xor al,al
+           ret
+.neq3:     mov al,1
+           ret
 
-.ReadDone2:
-  pop dx
-  pop cx
-  pop bx
-  pop ax
-  ret
+; ─────────────────────────────────────────────────────────────────────────────
+; Data
+; ─────────────────────────────────────────────────────────────────────────────
+BootDrive           db 0
 
-;───────────────────────────────────────────────────────────────────────────────
-; Compare8
-; Compare 8 bytes at [DS:DI] vs. [DS:SI]. AL=0 if equal, ≠0 otherwise.
-;───────────────────────────────────────────────────────────────────────────────
-Compare8:
-  mov cx, 8
-.C8_Loop:
-  mov al, [ds:di]
-  mov ah, [ds:si]
-  cmp al, ah
-  jne .C8_NotEq
-  inc di
-  inc si
-  loop .C8_Loop
-  xor al, al
-  ret
-.C8_NotEq:
-  mov al, 1
-  ret
+BPB_BytesPerSector      dw 0
+BPB_SectorsPerCluster   db 0
+BPB_ReservedSectors     dw 0
+BPB_NumFATs             db 0
+BPB_MaxRootEntries      dw 0
+BPB_SectorsPerFAT       dw 0
 
-;───────────────────────────────────────────────────────────────────────────────
-; Compare3
-; Compare 3 bytes at [DS:DI] vs. [DS:SI]. AL=0 if equal, !=0 otherwise.
-;───────────────────────────────────────────────────────────────────────────────
-Compare3:
-  mov cx, 3
-.C3_Loop:
-  mov al, [ds:di]
-  mov ah, [ds:si]
-  cmp al, ah
-  jne .C3_NotEq
-  inc di
-  inc si
-  loop .C3_Loop
-  xor al, al
-  ret
-.C3_NotEq:
-  mov al, 1
-  ret
-
-;───────────────────────────────────────────────────────────────────────────────
-; Data & constants
-;───────────────────────────────────────────────────────────────────────────────
-BootDrive       db 0
-
-BPB_BytesPerSector  dw 0
-BPB_SectorsPerCluster db 0
-BPB_ReservedSectors   dw 0
-BPB_NumFATs       db 0
-BPB_MaxRootEntries  dw 0
-BPB_SectorsPerFAT   dw 0
-
-NameBuffer      db 8 dup(0)
-ExtBuffer       db 3 dup(0)
-EntryOffset       dw 0
-
-FoundCluster      dw 0
-FoundFileSize     dd 0
-ClustersNeeded    dw 0
+FirstRootLBA        dw 0
+RootDirSectors      dw 0
 FirstDataSector     dw 0
-SectorsToRead     dw 0
-TempFileSize      dd 0
-RetryCount      db 0
+CurrRootLBA         dw 0
 
-KernelName  db "QKRNL   "  ; 8 bytes
-KernelExt   db "QX "       ; 3 bytes
+FoundCluster        dw 0
+FoundFileSize       dd 0
+CurrCluster         dw 0
+CurrClusterLBA      dw 0
+SectorsRemain       dw 0
+Retry               db 0
 
-RootFoundMsg      db "Root search failed!$", 0
-NotFoundMsg       db "QKRNL.QX not found.$", 0
-ReadErrorMsg      db "Disk read failed!$", 0
+KernelName  db "QKRNL   "
+KernelExt   db "QX "
+
+Stage2Msg   db "Stage 2",0
+NotFoundMsg db "QKRNL.QX not found.",0
+ReadErrMsg  db "Disk read failed!",0
+
+%include "Print.inc"             ; keeps Print after loader code
+
+times 1024-($-$$) db 0

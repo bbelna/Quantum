@@ -138,23 +138,23 @@ IMG_SECTORS    := 2880       # 1.44 MB / 512 B
 IMG_BS         := 512
 FAT12_LABEL    := QUANTUM
 
-$(IMG): $(BOOT_STAGE1_BIN) $(BOOT_STAGE2_BIN) $(KER32_BIN)
+$(IMG): $(KER32_BIN) $(BOOT_STAGE1_BIN) $(BOOT_STAGE2_BIN)
 	@mkdir -p $(dir $@)
 
 	@echo "→ Creating blank 1.44 MB image: $@"
-	dd if=/dev/zero of=$@ bs=$(IMG_BS) count=$(IMG_SECTORS) conv=notrunc 2> /dev/null
+	dd if=/dev/zero of=$@ bs=$(IMG_BS) count=$(IMG_SECTORS) conv=notrunc status=none
 
 	@echo "→ Formatting as FAT12 (volume label: $(FAT12_LABEL))"
-	$(MKFS) -F12 -n $(FAT12_LABEL) $@
+	$(MKFS) -F 12 -n $(FAT12_LABEL) $@
 
 	@echo "→ Copying kernel (qkrnl.qx) into FAT12 root directory"
 	$(MCOPY) -i $@ $(KER32_BIN) ::/QKRNL.QX
 
 	@echo "→ Installing Stage 1 bootloader (sector 0)"
-	dd if=$(BOOT_STAGE1_BIN) of=$@ bs=$(IMG_BS) count=1 conv=notrunc 2> /dev/null
+	dd if=$(BOOT_STAGE1_BIN) of=$@ bs=$(IMG_BS) seek=0 count=1 conv=notrunc status=none
 
-	@echo "→ Installing Stage 2 bootloader (sector 1)"
-	dd if=$(BOOT_STAGE2_BIN) of=$@ bs=$(IMG_BS) seek=1 count=1 conv=notrunc 2> /dev/null
+	@echo "→ Installing Stage 2 bootloader (sectors 1-2)"
+	dd if=$(BOOT_STAGE2_BIN) of=$@ bs=$(IMG_BS) seek=1 count=2 conv=notrunc,sync status=none
 
 	@echo "[OK] Built FAT12 floppy image → $@"
 
