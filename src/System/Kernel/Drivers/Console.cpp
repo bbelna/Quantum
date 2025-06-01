@@ -8,7 +8,7 @@
 
 #include <Console.hpp>
 
-using namespace Kernel::Drivers;
+using namespace Quantum::Kernel::Drivers;
 
 extern "C" inline void outb(uint16  port, uint8  value) {
   asm volatile ("outb %0, %1" :: "a"(value), "Nd"(port));

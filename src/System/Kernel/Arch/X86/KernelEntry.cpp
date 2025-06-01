@@ -6,10 +6,10 @@
 // Brandon Belna - MIT License
 //------------------------------------------------------------------------------
 
-#include "KernelEntry.hpp"
-#include "../Kernel.hpp"
+#include <Kernel.hpp>
+#include <KernelEntry.hpp>
 
-using namespace Quantum;
+using namespace Quantum::Kernel;
 
 __attribute__((naked, section(".text")))
 void EnterProtectedMode() {

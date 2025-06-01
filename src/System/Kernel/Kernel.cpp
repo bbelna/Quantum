@@ -8,9 +8,12 @@
 
 #include <Kernel.hpp>
 
-using namespace Quantum;
+using namespace Quantum::Kernel;
+using namespace Quantum::Kernel::Drivers;
 
 void Kernel::Start() {
+	Console::Initialize();
+	Console::WriteString("Quantum\n");
   while (true) {
     asm volatile("hlt");
   }

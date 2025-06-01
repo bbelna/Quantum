@@ -48,9 +48,6 @@ ScanRootDirSectors:
   mov si, 0x0200       ; point SI at first dir‐entry in buffer
   mov dx, 16         ; 16 entries per sector
 
-  ;───────────────────────────────────────────────────────────────────────────
-  ; ScanDirEntries (fixing Compare logic and padded constants)
-  ;───────────────────────────────────────────────────────────────────────────
 ScanDirEntries:
   push cx
   push dx

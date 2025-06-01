@@ -8,7 +8,7 @@
 
 #pragma once
 
-namespace Quantum {
+namespace Quantum::Kernel {
   class Kernel {
     public:
       /**
