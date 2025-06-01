@@ -58,12 +58,12 @@ MCOPY     := mcopy
 BOOT_STAGE1_BIN := $(BUILD_DIR)/Boot/Boot.bin
 
 $(BOOT_STAGE1_BIN): \
-    $(BL_BOOT_SRC) \
-    $(BL_COMMON_DIR)/Constants.inc \
-    $(BL_COMMON_DIR)/Print.inc
-  @mkdir -p $(dir $@)
-  $(ASM) $(ASFLAGS) $(BL_BOOT_SRC) -o $(BOOT_STAGE1_BIN)
-  @echo "[OK] Assembled Stage 1 (Boot.bin) → $@"
+		$(BL_BOOT_SRC) \
+		$(BL_COMMON_DIR)/Constants.inc \
+		$(BL_COMMON_DIR)/Print.inc
+	@mkdir -p $(dir $@)
+	$(ASM) $(ASFLAGS) $(BL_BOOT_SRC) -o $(BOOT_STAGE1_BIN)
+	@echo "[OK] Assembled Stage 1 (Boot.bin) → $@"
 
 #───────────────────────────────────────────────────────────────────────────────
 # Stage 2: Assemble Floppy.asm → build/Boot/Floppy.bin (512 bytes)
@@ -72,12 +72,12 @@ $(BOOT_STAGE1_BIN): \
 BOOT_STAGE2_BIN := $(BUILD_DIR)/Boot/Floppy.bin
 
 $(BOOT_STAGE2_BIN): \
-    $(BL_FLOPPY_SRC) \
-    $(BL_COMMON_DIR)/Constants.inc \
-    $(BL_COMMON_DIR)/Print.inc
-  @mkdir -p $(dir $@)
-  $(ASM) $(ASFLAGS) $(BL_FLOPPY_SRC) -o $(BOOT_STAGE2_BIN)
-  @echo "[OK] Assembled Stage 2 (Floppy.bin) → $@"
+		$(BL_FLOPPY_SRC) \
+		$(BL_COMMON_DIR)/Constants.inc \
+		$(BL_COMMON_DIR)/Print.inc
+	@mkdir -p $(dir $@)
+	$(ASM) $(ASFLAGS) $(BL_FLOPPY_SRC) -o $(BOOT_STAGE2_BIN)
+	@echo "[OK] Assembled Stage 2 (Floppy.bin) → $@"
 
 #───────────────────────────────────────────────────────────────────────────────
 # Kernel (x86_32) Build
@@ -99,26 +99,26 @@ KER32_BIN     := $(KER32_OBJ_DIR)/qkrnl.qx
 # We keep the corresponding .hpp as a dependency so that changing it rebuilds the .o,
 # but we do not compile the .hpp on its own.
 $(KER32_OBJ_DIR)/%.o: $(KERNEL_COMMON)/%.cpp $(KERNEL_COMMON)/%.hpp
-  @mkdir -p $(dir $@)
-  $(CC32) $(CFLAGS32) -I$(KERNEL_INCLUDE) -c $< -o $@
+	@mkdir -p $(dir $@)
+	$(CC32) $(CFLAGS32) -I$(KERNEL_INCLUDE) -c $< -o $@
 
 # Compile KernelEntry.cpp → object; depend on its header so that edits trigger rebuild
 $(KER32_OBJ_DIR)/KernelEntry.o: $(KERNEL_ARCH32)/KernelEntry.cpp \
-                                 $(KERNEL_COMMON)/Kernel.hpp
-  @mkdir -p $(dir $@)
-  $(CC32) $(CFLAGS32) -I$(KERNEL_INCLUDE) -c $< -o $@
+																 $(KERNEL_COMMON)/Kernel.hpp
+	@mkdir -p $(dir $@)
+	$(CC32) $(CFLAGS32) -I$(KERNEL_INCLUDE) -c $< -o $@
 
 # Link x86_32 objects → ELF
 $(KER32_ELF): $(KER32_OBJS) $(KERNEL_ARCH32)/Link.ld
-  @mkdir -p $(dir $@)
-  $(LD32) $(LDFLAGS32) -T $(KERNEL_ARCH32)/Link.ld \
-      $(KER32_OBJS) -o $@
-  @echo "[OK] Linked qkrnl.elf → $@"
+	@mkdir -p $(dir $@)
+	$(LD32) $(LDFLAGS32) -T $(KERNEL_ARCH32)/Link.ld \
+			$(KER32_OBJS) -o $@
+	@echo "[OK] Linked qkrnl.elf → $@"
 
 # Objcopy ELF → flat binary qkrnl.qx
 $(KER32_BIN): $(KER32_ELF)
-  $(OBJCOPY32) -O binary $< $@
-  @echo "[OK] Created qkrnl.qx → $@"
+	$(OBJCOPY32) -O binary $< $@
+	@echo "[OK] Created qkrnl.qx → $@"
 
 #───────────────────────────────────────────────────────────────────────────────
 # Final FAT12 Floppy Image (1.44 MB)
@@ -130,24 +130,24 @@ IMG_BS         := 512
 FAT12_LABEL    := QUANTUM
 
 $(IMG): $(BOOT_STAGE1_BIN) $(BOOT_STAGE2_BIN) $(KER32_BIN)
-  @mkdir -p $(dir $@)
+	@mkdir -p $(dir $@)
 
-  @echo "→ Creating blank 1.44 MB image: $@"
-  dd if=/dev/zero of=$@ bs=$(IMG_BS) count=$(IMG_SECTORS) conv=notrunc 2> /dev/null
+	@echo "→ Creating blank 1.44 MB image: $@"
+	dd if=/dev/zero of=$@ bs=$(IMG_BS) count=$(IMG_SECTORS) conv=notrunc 2> /dev/null
 
-  @echo "→ Formatting as FAT12 (volume label: $(FAT12_LABEL))"
-  $(MKFS) -F12 -n $(FAT12_LABEL) $@
+	@echo "→ Formatting as FAT12 (volume label: $(FAT12_LABEL))"
+	$(MKFS) -F12 -n $(FAT12_LABEL) $@
 
-  @echo "→ Copying kernel (qkrnl.qx) into FAT12 root directory"
-  $(MCOPY) -i $@ $(KER32_BIN) ::/QKRNL.QX
+	@echo "→ Copying kernel (qkrnl.qx) into FAT12 root directory"
+	$(MCOPY) -i $@ $(KER32_BIN) ::/QKRNL.QX
 
-  @echo "→ Installing Stage 1 bootloader (sector 0)"
-  dd if=$(BOOT_STAGE1_BIN) of=$@ bs=$(IMG_BS) count=1 conv=notrunc 2> /dev/null
+	@echo "→ Installing Stage 1 bootloader (sector 0)"
+	dd if=$(BOOT_STAGE1_BIN) of=$@ bs=$(IMG_BS) count=1 conv=notrunc 2> /dev/null
 
-  @echo "→ Installing Stage 2 bootloader (sector 1)"
-  dd if=$(BOOT_STAGE2_BIN) of=$@ bs=$(IMG_BS) seek=1 count=1 conv=notrunc 2> /dev/null
+	@echo "→ Installing Stage 2 bootloader (sector 1)"
+	dd if=$(BOOT_STAGE2_BIN) of=$@ bs=$(IMG_BS) seek=1 count=1 conv=notrunc 2> /dev/null
 
-  @echo "[OK] Built FAT12 floppy image → $@"
+	@echo "[OK] Built FAT12 floppy image → $@"
 
 #───────────────────────────────────────────────────────────────────────────────
 # Meta‐targets
@@ -157,6 +157,6 @@ $(IMG): $(BOOT_STAGE1_BIN) $(BOOT_STAGE2_BIN) $(KER32_BIN)
 all: $(IMG)
 
 clean:
-  @echo "Cleaning $(BUILD_DIR)/ …"
-  @rm -rf $(BUILD_DIR)
-  @echo "[OK] Removed build/ directory."
+	@echo "Cleaning $(BUILD_DIR)/ …"
+	@rm -rf $(BUILD_DIR)
+	@echo "[OK] Removed build/ directory."
