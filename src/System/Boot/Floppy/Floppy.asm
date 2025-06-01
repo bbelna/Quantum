@@ -11,8 +11,8 @@
 ORG 0x0600
 BITS 16
 
-%include "../Common/Constants.inc"   ; defines STACK_OFFSET, etc.
-%include "../Common/Print.inc"     ; provides `Print` for DS:SI→string
+%include "Constants.inc"   ; defines STACK_OFFSET, etc.
+%include "Print.inc"     ; provides `Print` for DS:SI→string
 
 Floppy:
   mov [BootDrive], dl     ; save BIOS‐drive (DL) so ReadSector can use it

@@ -10,8 +10,8 @@
 ORG 0x0600
 BITS 16
 
-%include "Common/Constants.inc"
-%include "Common/Print.inc"
+%include "Constants.inc"
+%include "Print.inc"
 
 Boot:
   ; Basic segment setup & stack

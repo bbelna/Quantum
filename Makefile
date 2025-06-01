@@ -36,7 +36,7 @@ KERNEL_INCLUDE := $(KERNEL_SRC_DIR)/Include
 #───────────────────────────────────────────────────────────────────────────────
 
 ASM       := nasm
-ASFLAGS   := -f bin
+ASFLAGS   := -f bin -I$(BL_COMMON_DIR)
 
 # x86 (32-bit) compiler/linker settings
 CC32      := x86_64-linux-gnu-gcc
