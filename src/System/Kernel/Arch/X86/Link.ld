@@ -1,13 +1,8 @@
 /*-------------------------------------------------------------------------------
   Quantum
  -------------------------------------------------------------------------------
-  src/System/Kernel/Arch/X86/Link.ld
-
-  A minimal 32-bit GDT-aware linker script. It:
-   • Forces ELF32-i386 output
-   • Specifies the entry point (EnterProtectedMode)
-   • Places .text, .rodata, .data, and .bss at 0x8000 (where the bootloader expects
-     the kernel to live).
+  System/Kernel/Arch/X86/Link.ld
+  A minimal 32-bit GDT-aware linker script.
  -------------------------------------------------------------------------------*/
 
 OUTPUT_FORMAT("elf32-i386")

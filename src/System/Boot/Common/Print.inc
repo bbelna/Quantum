@@ -1,30 +1,30 @@
-;------------------------------------------------------------------------------
+; ------------------------------------------------------------------------------
 ; Quantum
-;------------------------------------------------------------------------------
-; File: Boot/Common/Print.inc
-; Description: Simple BIOS TTY print routine (AH=0x0E) for error messages.
-; Author: Brandon Belna
-; License: MIT
-;------------------------------------------------------------------------------
+; ------------------------------------------------------------------------------
+; System/Boot/Common/Print.inc
+; Simple BIOS TTY print routine (AH=0x0E) for error messages.
+; Brandon Belna - MIT License
+; ------------------------------------------------------------------------------
 
 Print:
-  mov ah, 0x0E
-.NextChar:
   lodsb
-  cmp al, 0
-  je .Done
+  or al, al
+  jz .done
+  mov ah, 0x0E
+  mov bh, 0
   int 0x10
-  jmp .NextChar
-.Done:
+  jmp Print
+.done:
   ret
 
-;-----------------------------
+; ------------------------------------------------------------------------------
 ; PrintHex8
-;   Input: AH=0 (ignored), AL = byte (0x00-0xFF)
-;   Prints exactly two ASCII hex digits (no CR/LF).
-;   Uses BIOS TTY (INT 10h/AH=0Eh) for output.
-;   On exit, AX is undefined; does not change any other registers.
-;-----------------------------
+; ------------------------------------------------------------------------------
+; Input: AH=0 (ignored), AL = byte (0x00-0xFF)
+; Prints exactly two ASCII hex digits (no CR/LF).
+; Uses BIOS TTY (INT 10h/AH=0Eh) for output.
+; On exit, AX is undefined; does not change any other registers.
+; ------------------------------------------------------------------------------
 PrintHex8:
   push ax
   push bx
@@ -44,11 +44,12 @@ PrintHex8:
   pop ax
   ret
 
-;-----------------------------
+; ------------------------------------------------------------------------------
 ; HexDigitPrint
-;   Input: BL = value 0..15
-;   Prints a single ASCII hex digit (0-9, A-F) via BIOS TTY.
-;-----------------------------
+; ------------------------------------------------------------------------------
+; Input: BL = value 0..15
+; Prints a single ASCII hex digit (0-9, A-F) via BIOS TTY.
+; ------------------------------------------------------------------------------
 HexDigitPrint:
   cmp bl, 10
   jl  .Print0to9

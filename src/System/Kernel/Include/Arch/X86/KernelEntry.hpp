@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // Quantum
 //------------------------------------------------------------------------------
-// Kernel/Include/Arch/X86/KernelEntry.hpp
+// System/Kernel/Include/Arch/X86/KernelEntry.hpp
 // Declarations for the 32-bit entry routines.
 // Brandon Belna - MIT License
 //------------------------------------------------------------------------------

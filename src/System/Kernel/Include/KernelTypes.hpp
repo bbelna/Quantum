@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // Quantum
 //------------------------------------------------------------------------------
-// Kernel/Include/KernelTypes.hpp
+// System/Kernel/Include/KernelTypes.hpp
 // Declaration of types used throughout the kernel.
 // Brandon Belna - MIT License
 //------------------------------------------------------------------------------

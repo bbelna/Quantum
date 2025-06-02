@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // Quantum
 //------------------------------------------------------------------------------
-// Kernel/Arch/x86/KernelEntry.cpp
+// System/Kernel/Arch/x86/KernelEntry.cpp
 // 32-bit entry point that calls starts the kernel.
 // Brandon Belna - MIT License
 //------------------------------------------------------------------------------
@@ -13,7 +13,7 @@
 using namespace Quantum::Kernel;
 
 extern "C" void Kernel_Start() {
-    Kernel::Start();  // jump into your C++ code
+  Kernel::Start();
 }
 
 __attribute__((naked, section(".text")))

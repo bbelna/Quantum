@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // Quantum
 //------------------------------------------------------------------------------
-// Kernel/Include/Drivers/Console.hpp
+// System/Kernel/Include/Drivers/Console.hpp
 // Declaration of the kernel's Console class.
 // Brandon Belna - MIT License
 //------------------------------------------------------------------------------
