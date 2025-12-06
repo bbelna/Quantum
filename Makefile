@@ -27,7 +27,7 @@ BL_COMMON_DIR  := $(BL_DIR)/Common
 
 # Kernel sources
 KERNEL_SRC_DIR := $(ROOT_DIR)/System/Kernel
-KERNEL_ARCH32  := $(KERNEL_SRC_DIR)/Arch/X86
+KERNEL_ARCH32  := $(KERNEL_SRC_DIR)/Arch/x86
 KERNEL_COMMON  := $(KERNEL_SRC_DIR)
 KERNEL_INCLUDE := $(KERNEL_SRC_DIR)/Include
 
@@ -41,7 +41,8 @@ ASFLAGS   := -f bin -I$(BL_COMMON_DIR)
 # x86 (32-bit) compiler/linker settings
 CC32      := x86_64-linux-gnu-gcc
 CFLAGS32 := -fno-pic -fno-pie -m32 -ffreestanding -O2 -Wall -fno-exceptions \
-            -fno-rtti -nostdinc -nostdinc++
+            -fno-rtti -nostdinc -nostdinc++ -fno-stack-protector -fno-builtin \
+            -mno-sse -mno-sse2 -mno-mmx
 LD32      := x86_64-linux-gnu-ld
 LDFLAGS32 := --no-pie -m elf_i386
 
@@ -87,7 +88,7 @@ KER_COMMON_SRCS := \
 	$(KERNEL_COMMON)/Kernel.cpp \
 	$(KERNEL_COMMON)/Drivers/Console.cpp
 
-KER32_OBJ_DIR := $(BUILD_DIR)/Kernel/X86
+KER32_OBJ_DIR := $(BUILD_DIR)/Kernel/x86
 GDT_SRC := $(KERNEL_ARCH32)/GDT.asm
 GDT_OBJ := $(KER32_OBJ_DIR)/GDT.o
 KER32_OBJS    := \
@@ -145,7 +146,7 @@ $(IMG): $(KER32_BIN) $(BOOT_STAGE1_BIN) $(BOOT_STAGE2_BIN)
 	dd if=/dev/zero of=$@ bs=$(IMG_BS) count=$(IMG_SECTORS) conv=notrunc status=none
 
 	@echo "→ Formatting as FAT12 (volume label: $(FAT12_LABEL))"
-	$(MKFS) -F 12 -n $(FAT12_LABEL) $@
+	$(MKFS) -F 12 -R 5 -n $(FAT12_LABEL) $@
 
 	@echo "→ Copying kernel (qkrnl.qx) into FAT12 root directory"
 	$(MCOPY) -i $@ $(KER32_BIN) ::/QKRNL.QX
@@ -154,7 +155,7 @@ $(IMG): $(KER32_BIN) $(BOOT_STAGE1_BIN) $(BOOT_STAGE2_BIN)
 	dd if=$(BOOT_STAGE1_BIN) of=$@ bs=$(IMG_BS) seek=0 count=1 conv=notrunc status=none
 
 	@echo "→ Installing Stage 2 bootloader (sectors 1-2)"
-	dd if=$(BOOT_STAGE2_BIN) of=$@ bs=$(IMG_BS) seek=1 count=2 conv=notrunc,sync status=none
+	dd if=$(BOOT_STAGE2_BIN) of=$@ bs=$(IMG_BS) seek=1 count=4 conv=notrunc,sync status=none
 
 	@echo "[OK] Built FAT12 floppy image → $@"
 

@@ -1,7 +1,7 @@
 ;-------------------------------------------------------------------------------
 ; Quantum
 ;-------------------------------------------------------------------------------
-; System/Kernel/Arch/X86/GDT.asm
+; System/Kernel/Arch/x86/GDT.asm
 ; Defines a minimal GDT (null, code, data) and its descriptor for 32-bit mode.
 ; GDTDescriptor32 is the 6-byte [limit(2), base(4)] that `lgdt` expects.
 ;-------------------------------------------------------------------------------

@@ -1,42 +1,46 @@
-/*-------------------------------------------------------------------------------
-  Quantum
- -------------------------------------------------------------------------------
-  System/Kernel/Arch/X86/Link.ld
-  A minimal 32-bit GDT-aware linker script.
- -------------------------------------------------------------------------------*/
-
 OUTPUT_FORMAT("elf32-i386")
 OUTPUT_ARCH(i386)
-ENTRY(EnterProtectedMode)
+ENTRY(StartKernel)
 
 SECTIONS
 {
-    /* Start placing all loadable sections at 0x8000 (the address the bootloader jumps to) */
-    . = 0x00008000;
+    /* Physical load address for the kernel */
+    . = 0x00010000;
 
+    /* All executable code, in one contiguous region */
     .text :
     {
-        *(.text)           /* all .text from your .o files */
-        *(.text*)          /* any other text-subsections (constructors, etc.) */
+        KEEP(*(.text.start))    /* StartKernel first */
+        *(.text)                /* other code */
+        *(.text.*)
     }
 
-    .rodata :            /* read-only data (string literals, etc.) */
+    .rodata :
     {
         *(.rodata)
-        *(.rodata*)
+        *(.rodata.*)
     }
 
-    .data :              /* initialized data */
+    .data :
     {
         *(.data)
-        *(.data*)
+        *(.data.*)
     }
 
-    .bss :               /* uninitialized data (zeroed at startup) */
+    .bss :
     {
-        __bss_start = .; /* (optional) allow kernel code to know where .bss begins */
+        __bss_start = .;
+        *(COMMON)
         *(.bss)
-        *(.bss*)
-        __bss_end = .;   /* (optional) and where .bss ends */
+        *(.bss.*)
+        __bss_end = .;
+    }
+
+    /DISCARD/ :
+    {
+        *(.comment)
+        *(.note*)
+        *(.eh_frame*)
+        *(.gnu*)
     }
 }

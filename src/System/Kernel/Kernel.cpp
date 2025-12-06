@@ -15,6 +15,7 @@ using namespace Quantum::Kernel::Drivers;
 void Kernel::Start() {
 	Console::Initialize();
 	Console::WriteString("Quantum\n");
+
   while (true) {
     asm volatile("hlt");
   }

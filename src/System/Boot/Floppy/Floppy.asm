@@ -2,344 +2,430 @@
 ; Quantum
 ;-------------------------------------------------------------------------------
 ; System/Boot/Floppy/Floppy.asm
-; Stage-2 FAT-12 loader. Finds QKRNL.QX in the root directory, follows the
-; cluster chain, copies it to 0000:8000, then jumps there.
+; Stage 2 bootloader for 1.44MB floppy.
 ; Brandon Belna - MIT License
 ;-------------------------------------------------------------------------------
 
 [BITS 16]
 [ORG 0x0600]
 
-; ------------------------------------------------------------------------------
-;  Constants
-; ------------------------------------------------------------------------------
-%define KERNEL_NAME   "QKRNL   "
-%define KERNEL_EXT    "QX"
-%define LOAD_SEG      0x0000
-%define LOAD_OFF      0x8000
-%define SCRATCH       0x0500        ; 512-byte temp buffer
+jmp Start
 
-; ------------------------------------------------------------------------------
-;  Entry
-; ------------------------------------------------------------------------------
+; --------------------------------------------------------------------------
+; Constants / Addresses
+; --------------------------------------------------------------------------
+
+BS_BASE             equ 0x7C00        ; boot sector still in memory
+
+; BPB offsets
+BS_BytesPerSector   equ BS_BASE + 11
+BS_SectorsPerCluster equ BS_BASE + 13
+BS_ReservedSectors  equ BS_BASE + 14
+BS_NumFATs          equ BS_BASE + 16
+BS_RootEntries      equ BS_BASE + 17
+BS_SectorsPerFAT    equ BS_BASE + 22
+BS_SectorsPerTrack  equ BS_BASE + 24
+BS_NumHeads         equ BS_BASE + 26
+
+; Memory layout (segment:offset with DS = ES = 0 initially)
+KERNEL_LOAD_SEG     equ 0x1000        ; kernel at 0x1000:0000 = 0x00010000
+KERNEL_PM_ENTRY     equ 0x00010000    ; 32-bit kernel entry linear addr
+
+ROOTDIR_BUF         equ 0x2000        ; buffer for root dir
+FAT_BUF             equ 0x3000        ; buffer for FAT
+
+STACK_TOP           equ 0x9C00        ; simple real-mode stack
+
+; GDT selectors
+CODE_SEL            equ 0x08
+DATA_SEL            equ 0x10
+
+STAGE2_SECTORS      equ 4             ; must match stage1 AL
+
+; --------------------------------------------------------------------------
+; Data / Variables
+; --------------------------------------------------------------------------
+
+BootDrive           db 0
+
+BytesPerSector      dw 0
+SectorsPerCluster   db 0
+ReservedSectors     dw 0
+NumFATs             db 0
+RootDirEntries      dw 0
+SectorsPerFAT       dw 0
+SectorsPerTrack     dw 0
+NumHeads            dw 0
+ClusterGuard        dw 0
+
+RootDirSectors      dw 0
+FirstRootSector     dw 0
+FirstDataSector     dw 0
+
+CurrentCluster      dw 0
+TempLBA             dw 0
+
+KernelSizeLow       dw 0
+KernelSizeHigh      dw 0
+
+KERNEL_NAME         db 'Q','K','R','N','L',' ',' ',' ','Q','X',' '
+
+Msg_NoKernel        db "Kernel QKRNL.QX not found!", 0
+Msg_DiskError       db "Disk read error!", 0
+Msg_FATError        db "FAT error!", 0
+
 Start:
   cli
   xor ax, ax
   mov ds, ax
   mov es, ax
   mov ss, ax
-  mov sp, 0x7C00
+  mov sp, STACK_TOP
   sti
-
-  mov [BootDrive], dl
 
   mov si, Stage2Msg
   call Print
 
-  ; Re-read LBA 0 so the BPB at 0000:7C00 is valid
-  xor ax, ax            ; LBA 0
-  mov bx, 0x7C00
-  call ReadSectorBuf
-  jc  DiskFail
+  mov [BootDrive], dl          ; preserve BIOS drive
 
-  ; Cache BPB fields we need
-  mov al, [0x7C0D]      ; sectors/cluster
-  mov [SectorsPerCluster], al
-  mov ax, [0x7C0E]      ; reserved sectors
-  mov [ReservedSectors], ax
-  mov al, [0x7C10]      ; number of FATs
-  mov [NumFATs], al
-  mov ax, [0x7C11]      ; root-entry count
-  mov [MaxRootEntries], ax
-  mov ax, [0x7C16]      ; sectors/FAT
-  mov [SectorsPerFAT], ax
+  call SetupFromBPB
+  mov si, MsgAfterSetup
+  call Print
 
-  call CalcRootDirInfo   ; fills RootDirLBA, FirstDataSector, RootDirSectors
+  call LoadFAT
+  mov si, MsgAfterFAT
+  call Print
 
-  ; Scan root directory for QKRNL.QX
-  mov ax, [RootDirLBA]       ; first root-dir sector
-  mov cx, [RootDirSectors]   ; sectors to scan
-  mov di, SCRATCH
+  call FindKernel
+  mov si, MsgAfterFind
+  call Print
 
-RootSectorLoop:
-  push ax
-  push cx
+  call LoadKernel              ; loads to 0x00010000
+  mov si, MsgAfterLoad
+  call Print
 
-  mov bx, di
-  call ReadSectorBuf
-  jc  DiskFail
+  ; Everything loaded, now go to protected mode
+  call EnterProtectedMode
 
-  mov si, di
-  mov cx, 16                ; 16 entries / sector
-DirEntryLoop:
-  cmp byte [es:si], 0x00
-  je   FileNotFound
-  cmp byte [es:si], 0xE5
-  je   NextEntry
-  test byte [es:si+11], 0x08
-  jnz  NextEntry
+.Hang:
+  hlt
+  jmp .Hang
 
-  push cx
-  push si
-  mov di, si
-  mov cx, 11
-  mov si, FileId
-  repe cmpsb                ; compare 11 chars
-  pop si
-  pop cx
-  jcxz FoundEntry
+Stage2Msg      db "Stage 2...", 0
+MsgAfterSetup  db "Setup OK", 0
+MsgAfterFAT    db "FAT OK", 0
+MsgAfterFind   db "Kernel found", 0
+MsgAfterLoad   db "Kernel loaded", 0
 
-NextEntry:
-  add si, 32
-  loop DirEntryLoop
+SetupFromBPB:
+  ; mov ax, [BS_BytesPerSector]
+  ; mov [BytesPerSector], ax
+  ; mov al, [BS_SectorsPerCluster]
+  ; mov [SectorsPerCluster], al
+  ; mov ax, [BS_ReservedSectors]
+  ; mov [ReservedSectors], ax
+  ; mov al, [BS_NumFATs]
+  ; mov [NumFATs], al
+  ; mov ax, [BS_RootEntries]
+  ; mov [RootDirEntries], ax
+  ; mov ax, [BS_SectorsPerFAT]
+  ; mov [SectorsPerFAT], ax
 
-  pop cx
-  pop ax
-  inc ax
-  loop RootSectorLoop
-  jmp FileNotFound
+  ; --- Hard-coded floppy geometry and FAT12 layout ---
+  mov word [BytesPerSector],    512
+  mov byte [SectorsPerCluster], 1
+  mov word [ReservedSectors],   5
+  mov byte [NumFATs],           2
+  mov word [RootDirEntries],    224
+  mov word [SectorsPerFAT],     9
 
-FoundEntry:
-  mov ax, [es:si+26]        ; first-cluster
-  mov [NextCluster], ax
-  pop cx
-  pop ax                    ; clear saved regs
+  ; Geometry for CHS↔LBA:
+  mov word [SectorsPerTrack],   18
+  mov word [NumHeads],          2
 
-  ; Load the kernel cluster-by-cluster
-  mov ax, LOAD_SEG
-  mov es, ax
-  mov di, LOAD_OFF
+  ; root_dir_sectors = ceil(RootDirEntries * 32 / BytesPerSector)
+  mov ax, [RootDirEntries]
+  mov cx, 32
+  mul cx                     ; DX:AX = entries * 32
 
-LoadClusterLoop:
-  mov ax, [NextCluster]
-  cmp ax, 0x0FF8
-  jae  KernelDone
+  mov bx, [BytesPerSector]
+  dec bx
+  add ax, bx
+  adc dx, 0
 
-  ; first sector of this cluster
-  mov bx, ax                ; BX = cluster
-  sub bx, 2                 ; index within data area
-  mov ax, bx
-  xor cx, cx
-  mov cl, [SectorsPerCluster]
-  mul cx                    ; DX:AX = index * spc
-  add ax, [FirstDataSector] ; AX = LBA of first sector
+  inc bx
+  mov bx, [BytesPerSector]
+  div bx                     ; AX = RootDirSectors
+  mov [RootDirSectors], ax
 
-  ; load every sector in the cluster
-  mov al, [SectorsPerCluster]
-  cbw
-  mov si, ax                ; SI = sectors left
-ClusterSectorLoop:
-  push ax
-  push si
-
-  mov bx, di
-  call ReadSectorBuf
-  jc  DiskFail
-
-  ; advance ES:DI by 512 bytes
-  add di, 512
-  jnc PtrOK
-  push ax
-  mov ax, es
-  add ax, 0x20              ; +32 paragraphs = 512 bytes
-  mov es, ax
-  pop ax
-PtrOK:
-  pop si
-  pop ax
-  inc ax
-  dec si
-  jnz ClusterSectorLoop
-
-  ; next cluster from FAT
-  mov ax, [NextCluster]
-  call GetNextCluster
-  mov [NextCluster], ax
-  jmp LoadClusterLoop
-
-; ------------------------------------------------------------------------------
-; KernelDone
-; ------------------------------------------------------------------------------
-; Jumps to the loaded kernel at 0000:8000.
-; ------------------------------------------------------------------------------
-KernelDone:
-  cli
-  xor ax, ax
-  mov ds, ax
-  mov es, ax
-  push word LOAD_SEG
-  push word LOAD_OFF        ; stack = SEG,OFF
-  retf                      ; far return → kernel
-
-; ------------------------------------------------------------------------------
-; ReadSectorBuf
-; ------------------------------------------------------------------------------
-; Input: AX=LBA, ES:BX=dest, DL=[BootDrive]
-; Reads one 512-byte sector.
-; ------------------------------------------------------------------------------
-ReadSectorBuf:
-  push ax
-  push bx
-  push cx
-  push dx
-  push si
-
-  ; LBA → CHS (18 spt, 2 heads)
-  xor dx, dx
-  mov cx, 36
-  div cx                    ; AX=cyl, DX=rem (0-35)
-  mov ch, al                ; cyl low
-  mov ax, dx
-  xor dx, dx
-  mov bl, 18
-  div bl                    ; AL=head, AH=sec-1
-  mov dh, al
-  mov cl, ah
-  inc cl
-
-  mov dl, [BootDrive]
-  mov ah, 0x02
-  mov al, 1
-  int 0x13
-  jc  .fail
-
-  pop si
-  pop dx
-  pop cx
-  pop bx
-  pop ax
-  clc
-  ret
-.fail:
-  pop si
-  pop dx
-  pop cx
-  pop bx
-  pop ax
-  stc
-  ret
-
-; ------------------------------------------------------------------------------
-; CalcRootDirInfo
-; ------------------------------------------------------------------------------
-; Fills RootDirLBA, FirstDataSector, RootDirSectors
-; ------------------------------------------------------------------------------
-CalcRootDirInfo:
-  mov ax, [MaxRootEntries]
-  shl ax, 5                 ; *32 bytes/entry
-  add ax, 511
-  shr ax, 9                 ; /512
-  mov [RootDirSectors], ax  ; (=14 on 1.44 MB floppy)
-
+  ; FirstRootSector = ReservedSectors + NumFATs * SectorsPerFAT
+  mov dl, [NumFATs]
+  xor dh, dh                 ; DX = NumFATs
   mov ax, [SectorsPerFAT]
-  mov bl, [NumFATs]
-  xor bh, bh
-  mul bx                    ; DX:AX = nFATs*spf
+  mul dx                     ; AX = SectorsPerFAT * NumFATs
   add ax, [ReservedSectors]
-  mov [RootDirLBA], ax
+  mov [FirstRootSector], ax
 
-  add ax, [RootDirSectors]
+  ; FirstDataSector = FirstRootSector + RootDirSectors
+  mov ax, [RootDirSectors]
+  add ax, [FirstRootSector]
   mov [FirstDataSector], ax
   ret
 
-; ------------------------------------------------------------------------------
-; GetNextCluster
-; ------------------------------------------------------------------------------
-; Input: AX = current cluster
-; Output: AX = next cluster (0xFF8..=EOC)
-; ------------------------------------------------------------------------------
+LoadFAT:
+  mov ax, [ReservedSectors]   ; first FAT sector
+  mov [TempLBA], ax
+
+  mov cx, [SectorsPerFAT]
+  mov si, FAT_BUF
+
+.LoadFAT_Loop:
+  mov bx, si
+  mov ax, [TempLBA]
+  call ReadSectorLBA
+
+  add si, 512
+  inc word [TempLBA]
+  loop .LoadFAT_Loop
+  ret
+
+FindKernel:
+  mov ax, [FirstRootSector]
+  mov [TempLBA], ax
+
+  mov cx, [RootDirSectors]      ; number of root dir sectors
+
+.NextRootSector:
+  mov bx, ROOTDIR_BUF
+  mov ax, [TempLBA]
+  call ReadSectorLBA
+
+  mov si, ROOTDIR_BUF
+  mov bx, 16                    ; 512 / 32 = 16 entries per sector
+
+.ScanEntry:
+  mov al, [si]                  ; first byte
+  cmp al, 0x00
+  je .NoMoreEntries             ; end of directory
+
+  cmp al, 0xE5
+  je .NextEntry                 ; deleted
+
+  mov al, [si + 11]             ; attribute
+  test al, 0x08
+  jnz .NextEntry                ; volume label
+  test al, 0x10
+  jnz .NextEntry                ; directory
+
+  ; compare 11-byte name
+  push si
+  mov di, KERNEL_NAME
+  mov cx, 11
+  repe cmpsb                    ; compare DS:SI with ES:DI (DS=ES=0)
+  pop si
+  je .FoundKernel
+
+.NextEntry:
+  add si, 32                    ; next directory entry
+  dec bx                        ; decrement entry counter
+  jnz .ScanEntry
+
+  inc word [TempLBA]            ; next root dir sector
+  loop .NextRootSector
+  jmp .NoMoreEntries
+
+.NoMoreEntries:
+  mov si, Msg_NoKernel
+  call Print
+  jmp Start.Hang
+
+.FoundKernel:
+  mov ax, [si + 26]           ; first cluster (WORD)
+
+  cmp ax, 2                   ; 0,1 are reserved
+  jb .BadCluster
+
+  cmp ax, 0x0FF0              ; absurd for a small floppy
+  ja .BadCluster
+
+  mov [CurrentCluster], ax
+
+  mov ax, [si + 28]           ; file size low word
+  mov [KernelSizeLow], ax
+  mov ax, [si + 30]           ; file size high word
+  mov [KernelSizeHigh], ax
+  ret
+
+.BadCluster:
+  mov si, Msg_NoKernel
+  call Print
+  jmp Start.Hang
+
+LoadKernel:
+  mov ax, KERNEL_LOAD_SEG
+  mov es, ax
+  xor bx, bx
+
+  ; Assume kernel starts at cluster 2, contiguous
+  mov ax, [FirstDataSector]   ; LBA of cluster 2
+  mov [TempLBA], ax
+
+  ; We know the file is 790 bytes → 2 sectors
+  mov cx, 2
+
+.ClusterSectorLoop:
+  mov ax, [TempLBA]
+  call ReadSectorLBA          ; read into ES:BX
+
+  mov ax, [BytesPerSector]
+  add bx, ax
+  inc word [TempLBA]
+  loop .ClusterSectorLoop
+
+  ret
+
 GetNextCluster:
   push bx
-  push cx
   push dx
   push si
-  push di
-  push es
 
-  mov di, ax                ; keep cluster for parity
-  mov cx, ax
-  shr cx, 1
-  add cx, ax                ; offset = c + c/2
+  mov dx, ax                 ; DX = N
+  mov bx, ax
+  shr bx, 1
+  add bx, dx                 ; BX = N + N/2 = 3N/2
 
-  mov ax, cx
-  mov cl, 9
-  shr ax, cl                ; sector index
-  mov dx, cx
-  and dx, 511               ; byte offset within sector
+  mov si, FAT_BUF
+  add si, bx                 ; SI = &FAT[N*1.5]
 
-  add ax, [ReservedSectors] ; LBA of FAT sector
+  mov ax, [si]
 
-  ; read FAT sector into 0000:SCRATCH
-  mov si, ax                ; save LBA
-  xor ax, ax
-  mov es, ax
-  mov ax, si
-  mov bx, SCRATCH
-  call ReadSectorBuf
-  jc  DiskFail
+  test dl, 1
+  jz .even
 
-  mov si, SCRATCH
-  add si, dx
-  mov ax, [es:si]
-
-  test di, 1
-  jz  .even
+  ; odd cluster
   shr ax, 4
   jmp .done
+
 .even:
   and ax, 0x0FFF
+
 .done:
-  pop es
-  pop di
   pop si
   pop dx
-  pop cx
   pop bx
   ret
 
-; ------------------------------------------------------------------------------
-;  Error handlers
-; ------------------------------------------------------------------------------
-DiskFail:
-  mov si, DiskErrMsg
-  call Print
-  jmp $
+ReadSectorLBA:
+  ; IN:  AX = LBA, ES:BX = dest
+  push ax
+  push bx
+  push cx
+  push dx
 
-FileNotFound:
-  mov si, NotFoundMsg
-  call Print
-  jmp $
+  ; Convert LBA to CHS
 
-BadDisk:
-  mov si, BadDiskMsg
+  ; track = LBA / SectorsPerTrack
+  mov dx, 0
+  div word [SectorsPerTrack]   ; AX = track, DX = sector-1
+  inc dx                       ; sector (1-based)
+  mov cx, dx                   ; CL = sector
+
+  ; cylinder/head
+  mov dx, 0
+  div word [NumHeads]          ; AX = cylinder, DX = head
+
+  mov dh, dl                   ; DH = head
+  mov ch, al                   ; CH = cylinder low
+  shl ah, 6
+  or  cl, ah                   ; sector | (cyl_high << 6)
+
+  ; reset disk
+  mov dl, [BootDrive]
+  mov ah, 0x00
+  int 0x13
+
+  ; read
+  mov dl, [BootDrive]
+  mov ah, 0x02
+  mov al, 1
+  ; ES:BX from caller
+  int 0x13
+  jc .disk_error
+
+  pop dx
+  pop cx
+  pop bx
+  pop ax
+  ret
+
+.disk_error:
+  pop dx
+  pop cx
+  pop bx
+  pop ax
+
+  mov si, Msg_DiskError
   call Print
-  jmp $
+  jmp Start.Hang
+
+EnableA20:
+  ; Fast A20 (port 0x92)
+  in   al, 0x92
+  test al, 00000010b
+  jnz  .done
+  or   al, 00000010b
+  out  0x92, al
+
+.done:
+  ret
+
+EnterProtectedMode:
+  cli
+  call EnableA20
+
+  lgdt [gdt_descriptor]
+
+  mov eax, cr0
+  or  eax, 1
+  mov cr0, eax
+
+  ; far jump to flush prefetch, into 32-bit code
+  jmp CODE_SEL:ProtectedEntry
+
+[BITS 32]
+
+ProtectedEntry:
+  mov ax, DATA_SEL
+  mov ds, ax
+  mov es, ax
+  mov ss, ax
+  mov fs, ax
+  mov gs, ax
+
+  mov esp, 0x90000        ; 32-bit stack (under 1MB for now)
+
+  ; Optionally pass boot drive in a register (e.g., BL)
+  movzx ebx, byte [BootDrive]
+
+  ; Jump to 32-bit kernel entry
+  jmp KERNEL_PM_ENTRY
+
+; --------------------------------------------------------------------------
+; GDT
+; --------------------------------------------------------------------------
+
+[BITS 16]
+
+gdt_start:
+  dq 0x0000000000000000       ; null
+  dq 0x00CF9A000000FFFF       ; code: base=0, limit=4GB, RX
+  dq 0x00CF92000000FFFF       ; data: base=0, limit=4GB, RW
+gdt_end:
+
+gdt_descriptor:
+  dw gdt_end - gdt_start - 1
+  dd gdt_start
 
 %include "Print.inc"
 
-; ------------------------------------------------------------------------------
-;  Data
-; ------------------------------------------------------------------------------
-Stage2Msg           db "Stage 2",13,10,0
-FileId              db KERNEL_NAME, KERNEL_EXT,0
-
-DiskErrMsg          db 13,10,"Disk read failed!",13,10,0
-NotFoundMsg         db 13,10,"QKRNL.QX not found!",13,10,0
-BadDiskMsg          db 13,10,"Invalid BPB!",13,10,0
-
-; BPB cache & derived values
-SectorsPerCluster   db 0
-ReservedSectors     dw 0
-NumFATs             db 0
-MaxRootEntries      dw 0
-SectorsPerFAT       dw 0
-RootDirSectors      dw 0
-RootDirLBA          dw 0
-FirstDataSector     dw 0
-
-; State
-BootDrive           db 0
-NextCluster         dw 0
-KernelSize          dw 0        ; (not yet used)
-
-times 1024-($-$$) db 0
+times STAGE2_SECTORS*512 - ($-$$) db 0

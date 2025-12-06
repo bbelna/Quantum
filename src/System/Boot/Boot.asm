@@ -1,17 +1,46 @@
-; ------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
 ; Quantum
-; ------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
 ; System/Boot/Boot.asm
-; Stage 1 bootloader. Load Stage 2 from sector 1 into 0x0000:0x0600, then jumps
-; there.
+; Stage 1 bootloader for 1.44MB floppy and HDD.
 ; Brandon Belna - MIT License
-; ------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
 
 [BITS 16]
 [ORG 0x7C00]
 
-%include "Constants.inc"
+%include "Constants.inc"   ; STACK_OFFSET, etc.
 
+; --------------------------------------------------------------------------
+; FAT12 BPB (1.44MB floppy)
+; --------------------------------------------------------------------------
+
+    jmp short BootEntry
+    nop
+
+OEMLabel:           db 'QUANTUM '     ; 8 bytes
+
+BytesPerSector:     dw 512
+SectorsPerCluster:  db 1
+ReservedSectors:    dw 5
+NumFATs:            db 2
+RootEntries:        dw 224
+TotalSectors16:     dw 2880           ; 1.44MB
+MediaDescriptor:    db 0xF0
+SectorsPerFAT:      dw 9
+SectorsPerTrack:    dw 18
+NumHeads:           dw 2
+HiddenSectors:      dd 0
+TotalSectors32:     dd 0              ; 0 for floppy
+
+; You can put the DOS 4.0+ extended BPB here if you want, but
+; stage2 doesn’t care about it.
+
+; --------------------------------------------------------------------------
+; Actual boot code starts here (BootEntry is what JMP above targets)
+; --------------------------------------------------------------------------
+
+BootEntry:
 Boot:
   cli
   xor ax, ax
@@ -29,22 +58,18 @@ Boot:
   cmp dl, 0x80          ; DL>=0x80 → HDD
   jb Unknown
 
-; ------------------------------------------------------------------------------
+; --------------------------------------------------------------------------
 ; FloppyBoot
-; ------------------------------------------------------------------------------
-; Bootloader for floppy disks. Reads 2 sectors starting at sector 2
-; into memory at 0x0600, then jumps to that address.
-; ------------------------------------------------------------------------------
+; --------------------------------------------------------------------------
+; Reads 4 sectors starting at sector 2 into 0x0000:0x0600 and jumps there.
+; --------------------------------------------------------------------------
 FloppyBoot:
-  ; Zero out AX to set DS=0 first
-  xor ax, ax
-  mov ds, ax
-
+  ; (DS is already 0 from above)
   mov ah, 0x02
-  mov al, 2           ; read 2 consecutive sectors
+  mov al, 4           ; read 4 consecutive sectors (stage2 size)
   mov ch, 0           ; cylinder 0
   mov dh, 0           ; head 0
-  mov cl, 2           ; starting at sector 2
+  mov cl, 2           ; starting at sector 2 (LBA 1)
   mov bx, 0x0600
   int 0x13
   jc DiskError

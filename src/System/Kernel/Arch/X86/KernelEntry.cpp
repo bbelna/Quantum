@@ -8,45 +8,44 @@
 
 #include <Kernel.hpp>
 #include <KernelTypes.hpp>
-#include <Arch/X86/KernelEntry.hpp>
+#include <Arch/x86/KernelEntry.hpp>
 
 using namespace Quantum::Kernel;
 
-extern "C" void Kernel_Start() {
+extern "C"
+__attribute__((naked))
+void KernelStart() {
   Kernel::Start();
 }
 
-__attribute__((naked, section(".text")))
-void EnterProtectedMode() {
+extern "C"
+__attribute__((naked, section(".text.start")))
+void StartKernel() {
   asm volatile(
     "cli\n\t"
-    "xor %ax, %ax\n\t"
-    "mov %ax, %ds\n\t"
-    "mov %ax, %es\n\t"
-    "mov %ax, %ss\n\t"
-    "mov $0x7C00, %sp\n\t"
-    "lgdtl GDTDescriptor32\n\t"
-    "mov %cr0, %eax\n\t"
-    "or $1, %eax\n\t"
-    "mov %eax, %cr0\n\t"
-    "jmp $0x08, $StartKernel\n\t"
+    "mov $0x10, %%ax\n\t"
+    "mov %%ax, %%ds\n\t"
+    "mov %%ax, %%es\n\t"
+    "mov %%ax, %%ss\n\t"
+    "mov %%ax, %%fs\n\t"
+    "mov %%ax, %%gs\n\t"
+
+    "mov $0x90000, %%esp\n\t"
+
+    // for now, no C++ call – just a visible marker
+    "mov $0xB8000, %%edi\n\t"
+    "mov $0x074B004F, %%eax\n\t"   // "O","K" (OK), little endian
+    "mov %%eax, (%%edi)\n\t"
+
+    "call KernelStart\n\t"
+    "hlt\n\t"
+    "jmp .-2\n\t"
+    :
+    :
+    : "ax", "edi", "eax", "memory"
   );
 }
 
-__attribute__((naked, section(".text")))
-void StartKernel() {
-  asm volatile(
-    "mov $0x10, %ax\n\t"
-    "mov %ax, %ds\n\t"
-    "mov %ax, %es\n\t"
-    "mov %ax, %ss\n\t"
-    "mov $0x9000, %esp\n\t"
-    "sti\n\t"
-    "call Kernel_Start\n\t"
-    "hlt\n\t"
-    "jmp  .\n\t"
-  );
-}
 
 __attribute__((aligned(16), section(".rodata")))
 const uint64 GDTTable32[] = {
