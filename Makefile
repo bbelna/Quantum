@@ -27,7 +27,7 @@ BL_COMMON_DIR  := $(BL_DIR)/Common
 
 # Kernel sources
 KERNEL_SRC_DIR := $(ROOT_DIR)/System/Kernel
-KERNEL_ARCH32  := $(KERNEL_SRC_DIR)/Arch/x86
+KERNEL_ARCH32  := $(KERNEL_SRC_DIR)/Arch/IA32
 KERNEL_COMMON  := $(KERNEL_SRC_DIR)
 KERNEL_INCLUDE := $(KERNEL_SRC_DIR)/Include
 
@@ -88,13 +88,14 @@ KER_COMMON_SRCS := \
 	$(KERNEL_COMMON)/Kernel.cpp \
 	$(KERNEL_COMMON)/Drivers/Console.cpp
 
-KER32_OBJ_DIR := $(BUILD_DIR)/Kernel/x86
+KER32_OBJ_DIR := $(BUILD_DIR)/Kernel/IA32
 GDT_SRC := $(KERNEL_ARCH32)/GDT.asm
 GDT_OBJ := $(KER32_OBJ_DIR)/GDT.o
 KER32_OBJS    := \
 	$(patsubst $(KERNEL_COMMON)/%.cpp,$(KER32_OBJ_DIR)/%.o,$(KER_COMMON_SRCS)) \
 	$(GDT_OBJ) \
-	$(KER32_OBJ_DIR)/KernelEntry.o
+	$(KER32_OBJ_DIR)/KernelEntry.o \
+	$(KER32_OBJ_DIR)/Drivers/VgaConsole.o
 
 KER32_ELF     := $(KER32_OBJ_DIR)/qkrnl.elf
 KER32_BIN     := $(KER32_OBJ_DIR)/qkrnl.qx
@@ -108,6 +109,10 @@ $(KER32_OBJ_DIR)/%.o: $(KERNEL_COMMON)/%.cpp $(KERNEL_INCLUDE)/%.hpp
 
 # Compile KernelEntry.cpp → object; depend on its header so that edits trigger rebuild
 $(KER32_OBJ_DIR)/KernelEntry.o: $(KERNEL_ARCH32)/KernelEntry.cpp
+	@mkdir -p $(dir $@)
+	$(CC32) $(CFLAGS32) -I$(KERNEL_INCLUDE) -c $< -o $@
+
+$(KER32_OBJ_DIR)/Drivers/VgaConsole.o: $(KERNEL_ARCH32)/Drivers/VgaConsole.cpp
 	@mkdir -p $(dir $@)
 	$(CC32) $(CFLAGS32) -I$(KERNEL_INCLUDE) -c $< -o $@
 
