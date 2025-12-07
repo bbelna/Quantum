@@ -7,7 +7,7 @@
 # All intermediates and outputs go under build/. Source remains untouched.
 #
 # Usage:
-#   make        # → build/Quantum.img (FAT12 floppy)
+#   make all    # → build/Quantum.img (FAT12 floppy)
 #   make clean  # → remove build/
 
 #───────────────────────────────────────────────────────────────────────────────
@@ -81,43 +81,49 @@ $(BOOT_STAGE2_BIN): \
 	@echo "[OK] Assembled Stage 2 (Floppy.bin) → $@"
 
 #───────────────────────────────────────────────────────────────────────────────
-# Kernel (x86_32) Build
+# Kernel Common Source Files
 #───────────────────────────────────────────────────────────────────────────────
 
 KER_COMMON_SRCS := \
 	$(KERNEL_COMMON)/Kernel.cpp \
 	$(KERNEL_COMMON)/Drivers/Console.cpp
 
+#───────────────────────────────────────────────────────────────────────────────
+# Kernel (IA32) Build
+#───────────────────────────────────────────────────────────────────────────────
+
 KER32_OBJ_DIR := $(BUILD_DIR)/Kernel/IA32
+
 GDT_SRC := $(KERNEL_ARCH32)/GDT.asm
 GDT_OBJ := $(KER32_OBJ_DIR)/GDT.o
-KER32_OBJS    := \
+
+KERNEL_ARCH32_CPP := \
+	$(wildcard $(KERNEL_ARCH32)/**/*.cpp) \
+	$(wildcard $(KERNEL_ARCH32)/*.cpp)
+KERNEL_ARCH32_OBJS := \
+	$(patsubst $(KERNEL_SRC_DIR)/%.cpp,$(KER32_OBJ_DIR)/%.o,$(KERNEL_ARCH32_CPP))
+
+KERNEL_ARCH32_ASM := \
+	$(wildcard $(KERNEL_ARCH32)/**/*.asm) \
+	$(wildcard $(KERNEL_ARCH32)/*.asm)
+KERNEL_ARCH32_ASM_OBJS := \
+	$(patsubst $(KERNEL_SRC_DIR)/%.asm,$(KER32_OBJ_DIR)/%.o,$(KERNEL_ARCH32_ASM))
+
+KER32_OBJS := \
 	$(patsubst $(KERNEL_COMMON)/%.cpp,$(KER32_OBJ_DIR)/%.o,$(KER_COMMON_SRCS)) \
-	$(GDT_OBJ) \
-	$(KER32_OBJ_DIR)/KernelEntry.o \
-	$(KER32_OBJ_DIR)/Drivers/VgaConsole.o
+	$(KERNEL_ARCH32_OBJS) \
+	$(KERNEL_ARCH32_ASM_OBJS)
 
 KER32_ELF     := $(KER32_OBJ_DIR)/qkrnl.elf
 KER32_BIN     := $(KER32_OBJ_DIR)/qkrnl.qx
 
-# Compile each .cpp → 32-bit .o. 
-# We keep the corresponding .hpp as a dependency so that changing it rebuilds the .o,
-# but we do not compile the .hpp on its own.
-$(KER32_OBJ_DIR)/%.o: $(KERNEL_COMMON)/%.cpp $(KERNEL_INCLUDE)/%.hpp
+# compile ANY .cpp under src/System/Kernel into build/Kernel/IA32
+$(KER32_OBJ_DIR)/%.o: $(KERNEL_SRC_DIR)/%.cpp
 	@mkdir -p $(dir $@)
 	$(CC32) $(CFLAGS32) -I$(KERNEL_INCLUDE) -c $< -o $@
 
-# Compile KernelEntry.cpp → object; depend on its header so that edits trigger rebuild
-$(KER32_OBJ_DIR)/KernelEntry.o: $(KERNEL_ARCH32)/KernelEntry.cpp
-	@mkdir -p $(dir $@)
-	$(CC32) $(CFLAGS32) -I$(KERNEL_INCLUDE) -c $< -o $@
-
-$(KER32_OBJ_DIR)/Drivers/VgaConsole.o: $(KERNEL_ARCH32)/Drivers/VgaConsole.cpp
-	@mkdir -p $(dir $@)
-	$(CC32) $(CFLAGS32) -I$(KERNEL_INCLUDE) -c $< -o $@
-
-# Assemble GDT.asm into GDT.o
-$(GDT_OBJ): $(GDT_SRC)
+# assemble ANY .asm under src/System/Kernel into build/Kernel/IA32
+$(KER32_OBJ_DIR)/%.o: $(KERNEL_SRC_DIR)/%.asm
 	@mkdir -p $(dir $@)
 	$(ASM) -f elf32 $< -o $@
 
@@ -128,7 +134,6 @@ $(KER32_ELF): $(KER32_OBJS) $(KERNEL_ARCH32)/Link.ld
 	        -T $(KERNEL_ARCH32)/Link.ld \
 	        $(KER32_OBJS) -o $@
 	@echo "[OK] Linked qkrnl.elf → $@"
-
 
 # Objcopy ELF → flat binary qkrnl.qx
 $(KER32_BIN): $(KER32_ELF)
