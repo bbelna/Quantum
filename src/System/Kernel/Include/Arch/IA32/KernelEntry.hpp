@@ -10,7 +10,7 @@
 
 extern "C" {
   /*
-   * Sets up segment registers, stack, and calls into Kernel::Initialize().
+   * Sets up segment registers, stack, and calls into `Kernel::Initialize()`.
    */
   void StartKernel();
 }
