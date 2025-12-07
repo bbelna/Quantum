@@ -36,16 +36,6 @@ namespace Quantum::Kernel::Drivers {
       static volatile uint16* const buffer;
 
       /**
-       * Current cursor row in the text buffer.
-       */
-      static uint8 row;
-
-      /**
-       * Current cursor column in the text buffer.
-       */
-      static uint8 col;
-
-      /**
        * Foreground/background color byte
        * (high‐4 bits = background, low‐4 bits = FG).
        */
