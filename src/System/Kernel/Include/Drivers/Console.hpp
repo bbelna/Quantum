@@ -49,12 +49,15 @@ namespace Quantum::Kernel::Drivers {
        * Foreground/background color byte
        * (high‐4 bits = background, low‐4 bits = FG).
        */
-      static const uint8 defaultColor = 0x07;
+      static constexpr uint8 defaultColor = 0x0F;
 
-      /**
-       * Updates the VGA text cursor position and scrolls if necessary.
-       */
-      static void UpdateCursor();
+      static uint8 cursorRow;
+      static uint8 cursorColumn;
+      static uint16 cursorSavedCell;
+      static bool cursorDrawn;
+
+      static void HideCursor();
+      static void DrawCursor();
 
       /**
        * Converts a row and column into a buffer index.
@@ -64,6 +67,10 @@ namespace Quantum::Kernel::Drivers {
        */
       static inline uint16 Index(uint8 r, uint8 c) {
           return (uint16 )(r * 80 + c);
+      }
+
+      static inline uint16 MakeEntry(char ch, uint8 color) {
+        return (uint16)ch | ((uint16)color << 8);
       }
   };
 }

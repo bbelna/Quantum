@@ -9,36 +9,29 @@
 [BITS 16]
 [ORG 0x7C00]
 
-%include "Constants.inc"   ; STACK_OFFSET, etc.
+%include "Constants.inc"
 
-; --------------------------------------------------------------------------
+jmp short BootEntry
+nop
+
+;-------------------------------------------------------------------------------
 ; FAT12 BPB (1.44MB floppy)
-; --------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
 
-    jmp short BootEntry
-    nop
+OEMLabel            db 'QUANTUM '     ; 8 bytes
 
-OEMLabel:           db 'QUANTUM '     ; 8 bytes
-
-BytesPerSector:     dw 512
-SectorsPerCluster:  db 1
-ReservedSectors:    dw 5
-NumFATs:            db 2
-RootEntries:        dw 224
-TotalSectors16:     dw 2880           ; 1.44MB
-MediaDescriptor:    db 0xF0
-SectorsPerFAT:      dw 9
-SectorsPerTrack:    dw 18
-NumHeads:           dw 2
-HiddenSectors:      dd 0
-TotalSectors32:     dd 0              ; 0 for floppy
-
-; You can put the DOS 4.0+ extended BPB here if you want, but
-; stage2 doesn’t care about it.
-
-; --------------------------------------------------------------------------
-; Actual boot code starts here (BootEntry is what JMP above targets)
-; --------------------------------------------------------------------------
+BytesPerSector      dw 512
+SectorsPerCluster   db 1
+ReservedSectors     dw 5
+NumFATs             db 2
+RootEntries         dw 224
+TotalSectors16      dw 2880           ; 1.44MB
+MediaDescriptor     db 0xF0
+SectorsPerFAT       dw 9
+SectorsPerTrack     dw 18
+NumHeads            dw 2
+HiddenSectors       dd 0
+TotalSectors32      dd 0              ; 0 for floppy
 
 BootEntry:
 Boot:
@@ -58,13 +51,12 @@ Boot:
   cmp dl, 0x80          ; DL>=0x80 → HDD
   jb Unknown
 
-; --------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
 ; FloppyBoot
-; --------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
 ; Reads 4 sectors starting at sector 2 into 0x0000:0x0600 and jumps there.
-; --------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
 FloppyBoot:
-  ; (DS is already 0 from above)
   mov ah, 0x02
   mov al, 4           ; read 4 consecutive sectors (stage2 size)
   mov ch, 0           ; cylinder 0

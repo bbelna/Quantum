@@ -12,8 +12,8 @@ namespace Quantum::Kernel {
   class Kernel {
     public:
       /**
-       * Starts the kernel.
+       * Initializes the kernel.
        */
-      static void Start();
+      static void Initialize();
   };
 }

@@ -12,10 +12,22 @@
 
 using namespace Quantum::Kernel;
 
+extern "C" uint8 __bss_start;
+extern "C" uint8 __bss_end;
+
 extern "C"
-__attribute__((naked))
 void KernelStart() {
-  Kernel::Start();
+  uint8* bss = &__bss_start;
+  uint8* bss_end = &__bss_end;
+  while (bss < bss_end) {
+    *bss++ = 0;
+  }
+
+  Kernel::Initialize();
+
+  while (true) {
+    asm volatile("hlt");
+  }
 }
 
 extern "C"
@@ -29,20 +41,14 @@ void StartKernel() {
     "mov %%ax, %%ss\n\t"
     "mov %%ax, %%fs\n\t"
     "mov %%ax, %%gs\n\t"
-
-    "mov $0x90000, %%esp\n\t"
-
-    // for now, no C++ call – just a visible marker
-    "mov $0xB8000, %%edi\n\t"
-    "mov $0x074B004F, %%eax\n\t"   // "O","K" (OK), little endian
-    "mov %%eax, (%%edi)\n\t"
-
+    "mov $0x90000, %%esp\n\t"   // set stack BEFORE any C code runs
     "call KernelStart\n\t"
+    "1:\n\t"
     "hlt\n\t"
-    "jmp .-2\n\t"
+    "jmp 1b\n\t"
     :
     :
-    : "ax", "edi", "eax", "memory"
+    : "ax", "memory"
   );
 }
 

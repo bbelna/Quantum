@@ -12,10 +12,13 @@
 using namespace Quantum::Kernel;
 using namespace Quantum::Kernel::Drivers;
 
-void Kernel::Start() {
+void Kernel::Initialize() {
 	Console::Initialize();
 	Console::WriteString("Quantum\n");
 
+  // TODO: kernel stuff
+
+  Console::WriteString("System halted\n");
   while (true) {
     asm volatile("hlt");
   }
