@@ -9,10 +9,10 @@
 #pragma once
 
 #include <KernelTypes.hpp>
-#include <Arch/IA32/Drivers/VGAConsole.hpp>
+#include <Drivers/Console.hpp>
 
 namespace Quantum::Kernel::Arch::IA32 {
-  using Quantum::Kernel::Arch::IA32::Drivers::VGAConsole;
+  using Quantum::Kernel::Drivers::Console;
 
   class CPU {
     public:
@@ -27,7 +27,7 @@ namespace Quantum::Kernel::Arch::IA32 {
        * Halts the CPU forever.
        */
       [[noreturn]] static inline void HaltForever() {
-        VGAConsole::WriteLine("System halted");
+        Console::WriteLine("System halted");
 
         for (;;) {
           asm volatile("hlt");

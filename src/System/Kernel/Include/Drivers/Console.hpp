@@ -32,5 +32,10 @@ namespace Quantum::Kernel::Drivers {
        * Writes a line (string followed by newline) to the console.
        */
       static void WriteLine(const char* str);
+
+      /**
+       * Writes a 32-bit value in hexadecimal format to the console.
+       */
+      static void WriteHex32(uint32 value);
   };
 }

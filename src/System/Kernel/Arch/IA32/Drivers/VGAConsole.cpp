@@ -10,8 +10,6 @@
 #include <Arch/IA32/Drivers/VGAConsole.hpp>
 
 namespace Quantum::Kernel::Arch::IA32::Drivers {
-  namespace IO = Quantum::Kernel::Arch::IA32::Drivers::IO;
-
   volatile uint16* const VGAConsole::buffer
     = reinterpret_cast<volatile uint16*>(0xB8000);
 
@@ -43,18 +41,33 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
   void VGAConsole::WriteChar(char c) {
     HideCursor();
 
-    if (c == '\n') {
-      cursorColumn = 0;
-      cursorRow++;
-    } else if (c == '\r') {
-      cursorColumn = 0;
-    } else {
-      uint16 attr = (uint16)defaultColor << 8;
-      buffer[Index(cursorRow, cursorColumn)] = ((uint16)c) | attr;
-      cursorColumn++;
-      if (cursorColumn >= 80) {
+    switch (c) {
+      case '\n':
         cursorColumn = 0;
         cursorRow++;
+        break;
+      case '\r':
+        cursorColumn = 0;
+        break;
+      case '\b':
+        if (cursorColumn > 0) {
+          cursorColumn--;
+          buffer[Index(cursorRow, cursorColumn)] = MakeEntry(' ', defaultColor);
+        } else if (cursorRow > 0) {
+          cursorRow--;
+          cursorColumn = 79;
+          buffer[Index(cursorRow, cursorColumn)] = MakeEntry(' ', defaultColor);
+        }
+        break;
+      default: {
+        uint16 attr = (uint16)defaultColor << 8;
+        buffer[Index(cursorRow, cursorColumn)] = ((uint16)c) | attr;
+        cursorColumn++;
+        if (cursorColumn >= 80) {
+          cursorColumn = 0;
+          cursorRow++;
+        }
+        break;
       }
     }
 
@@ -86,6 +99,16 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
   void VGAConsole::WriteLine(const char* str) {
     Write(str);
     WriteChar('\n');
+  }
+
+  void VGAConsole::WriteHex32(uint32 value) {
+    const char* hex = "0123456789ABCDEF";
+    Write("0x");
+
+    for (int shift = 28; shift >= 0; shift -= 4) {
+      uint8 nibble = static_cast<uint8>((value >> shift) & 0xF);
+      WriteChar(hex[nibble]);
+    }
   }
 
   void VGAConsole::HideCursor() {

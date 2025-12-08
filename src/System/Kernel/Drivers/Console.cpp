@@ -33,4 +33,8 @@ namespace Quantum::Kernel::Drivers {
   void Console::WriteLine(const char* str) {
     ConsoleDriver::WriteLine(str);
   }
+
+  void Console::WriteHex32(uint32 value) {
+    ConsoleDriver::WriteHex32(value);
+  }
 }

@@ -20,3 +20,4 @@ typedef   signed long long int64;
 
 typedef uint32 uintptr;
 typedef int32  intptr;
+typedef uint32 size_t;

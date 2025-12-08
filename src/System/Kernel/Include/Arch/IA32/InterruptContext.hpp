@@ -12,8 +12,23 @@
 
 namespace Quantum::Kernel {
   struct InterruptContext {
-    uint8  vector;
+    // General-purpose registers (pusha order)
+    uint32 edi;
+    uint32 esi;
+    uint32 ebp;
+    uint32 esp;  // value before pusha
+    uint32 ebx;
+    uint32 edx;
+    uint32 ecx;
+    uint32 eax;
+
+    // Software-pushed vector and hardware/synthetic error code
+    uint32 vector;
     uint32 errorCode;
-    // Later: saved registers, maybe flags, etc.
+
+    // CPU-pushed state
+    uint32 eip;
+    uint32 cs;
+    uint32 eflags;
   };
 }

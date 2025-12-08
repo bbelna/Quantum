@@ -8,16 +8,16 @@
 
 #include <Arch/IA32/IDT.hpp>
 #include <Arch/IA32/InterruptContext.hpp>
-#include <Arch/IA32/Drivers/VGAConsole.hpp>
 #include <Arch/IA32/Drivers/PIC.hpp>
-
-using Quantum::Kernel::Arch::IA32::Drivers::VGAConsole;
-using Quantum::Kernel::Arch::IA32::Drivers::PIC;
+#include <Drivers/Console.hpp>
 
 namespace Quantum::Kernel::Arch::IA32 {
-  constexpr uint8 kExceptionCount = 32;
-  constexpr uint8 kIRQBase = 32;
-  constexpr uint8 kIRQCount = 16;
+  using Drivers::PIC;
+  using Quantum::Kernel::Drivers::Console;
+
+  constexpr uint8 exceptionCount = 32;
+  constexpr uint8 irqBase = 32;
+  constexpr uint8 irqCount = 16;
 
   static IDTEntry idtEntries[256];
   static IDTDescriptor idtDescriptor;
@@ -73,7 +73,7 @@ namespace Quantum::Kernel::Arch::IA32 {
   extern "C" void IRQ15();
   extern "C" void LoadIDT(IDTDescriptor*);
 
-  static void (*const exceptionStubs[kExceptionCount])() = {
+  static void (*const exceptionStubs[exceptionCount])() = {
     ISR0,  ISR1,  ISR2,  ISR3,
     ISR4,  ISR5,  ISR6,  ISR7,
     ISR8,  ISR9,  ISR10, ISR11,
@@ -84,7 +84,7 @@ namespace Quantum::Kernel::Arch::IA32 {
     ISR28, ISR29, ISR30, ISR31
   };
 
-  static void (*const irqStubs[kIRQCount])() = {
+  static void (*const irqStubs[irqCount])() = {
     IRQ0,  IRQ1,  IRQ2,  IRQ3,
     IRQ4,  IRQ5,  IRQ6,  IRQ7,
     IRQ8,  IRQ9,  IRQ10, IRQ11,
@@ -110,12 +110,12 @@ namespace Quantum::Kernel::Arch::IA32 {
       handlerTable[i] = nullptr;
     }
 
-    for (uint8 i = 0; i < kExceptionCount; ++i) {
+    for (uint8 i = 0; i < exceptionCount; ++i) {
       SetIDTGate(i, exceptionStubs[i]);
     }
 
-    for (uint8 i = 0; i < kIRQCount; ++i) {
-      SetIDTGate(kIRQBase + i, irqStubs[i]);
+    for (uint8 i = 0; i < irqCount; ++i) {
+      SetIDTGate(irqBase + i, irqStubs[i]);
     }
 
     idtDescriptor.limit = sizeof(idtEntries) - 1;
@@ -123,7 +123,7 @@ namespace Quantum::Kernel::Arch::IA32 {
 
     LoadIDT(&idtDescriptor);
 
-    PIC::Initialize(kIRQBase, kIRQBase + 8);
+    PIC::Initialize(irqBase, irqBase + 8);
     PIC::MaskAll();
   }
 
@@ -131,28 +131,27 @@ namespace Quantum::Kernel::Arch::IA32 {
     handlerTable[vector] = handler;
   }
 
-  extern "C" void IDTExceptionHandler(uint32 vector, uint32 errorCode) {
-    InterruptContext ctx{
-      .vector    = static_cast<uint8>(vector),
-      .errorCode = errorCode,
-    };
-
-    bool isIRQ = ctx.vector >= kIRQBase && ctx.vector < (kIRQBase + kIRQCount);
-    bool handled = handlerTable[ctx.vector] != nullptr;
+  extern "C" void IDTExceptionHandler(InterruptContext* ctx) {
+    uint8 vector = static_cast<uint8>(ctx->vector);
+    bool isIRQ = vector >= irqBase && vector < (irqBase + irqCount);
+    bool spurious = !handlerTable[vector] &&
+                    (vector == static_cast<uint8>(irqBase + 7) ||
+                     vector == static_cast<uint8>(irqBase + 15));
+    bool handled = handlerTable[vector] != nullptr;
 
     if (handled) {
-      handlerTable[ctx.vector](ctx);
-    } else if (isIRQ) {
-      VGAConsole::WriteLine("Unhandled IRQ");
+      handlerTable[vector](*ctx);
+    } else if (isIRQ && !spurious) {
+      Console::WriteLine("Unhandled IRQ");
     } else {
-      VGAConsole::WriteLine("Unhandled interrupt vector");
+      Console::WriteLine("Unhandled interrupt vector");
       for (;;) {
         asm volatile("hlt");
       }
     }
 
     if (isIRQ) {
-      PIC::SendEOI(ctx.vector - kIRQBase);
+      PIC::SendEOI(vector - irqBase);
     }
   }
 }

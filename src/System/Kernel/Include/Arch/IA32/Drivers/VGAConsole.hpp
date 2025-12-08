@@ -36,6 +36,11 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
        */
       static void WriteLine(const char* str);
 
+      /**
+       * Writes a 32-bit value in hexadecimal format to the console.
+       */
+      static void WriteHex32(uint32 value);
+
     private:
       /**
        * VGA text‐mode buffer lives at 0xB8000
