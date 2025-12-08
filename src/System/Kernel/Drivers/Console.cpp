@@ -8,12 +8,13 @@
 
 #include <Drivers/Console.hpp>
 
-// TODO: make this select backend based on architecture
-// #if defined(QUANTUM_ARCH_IA32)
-#include <Arch/IA32/Drivers/VGAConsole.hpp>
+#if defined(QUANTUM_ARCH_IA32)
+  #include <Arch/IA32/Drivers/VGAConsole.hpp>
 
-namespace ConsoleNs = Quantum::Kernel::Arch::IA32::Drivers;
-// #endif
+  namespace ConsoleNs = Quantum::Kernel::Arch::IA32::Drivers;
+#else
+  #error "No architecture selected for console driver"
+#endif
 
 namespace Quantum::Kernel::Drivers {
   using ConsoleDriver = ConsoleNs::VGAConsole;

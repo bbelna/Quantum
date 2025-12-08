@@ -42,7 +42,7 @@ ASFLAGS   := -f bin -I$(BL_COMMON_DIR)
 CC32      := x86_64-linux-gnu-gcc
 CFLAGS32 := -fno-pic -fno-pie -m32 -ffreestanding -O2 -Wall -fno-exceptions \
             -fno-rtti -nostdinc -nostdinc++ -fno-stack-protector -fno-builtin \
-            -mno-sse -mno-sse2 -mno-mmx
+            -mno-sse -mno-sse2 -mno-mmx -DQUANTUM_ARCH_IA32
 LD32      := x86_64-linux-gnu-ld
 LDFLAGS32 := --no-pie -m elf_i386
 
@@ -86,7 +86,8 @@ $(BOOT_STAGE2_BIN): \
 
 KER_COMMON_SRCS := \
 	$(KERNEL_COMMON)/Kernel.cpp \
-	$(KERNEL_COMMON)/Drivers/Console.cpp
+	$(KERNEL_COMMON)/Drivers/Console.cpp \
+	$(KERNEL_COMMON)/Memory.cpp
 
 #───────────────────────────────────────────────────────────────────────────────
 # Kernel (IA32) Build

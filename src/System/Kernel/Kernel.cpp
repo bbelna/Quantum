@@ -8,6 +8,7 @@
 
 #include <Kernel.hpp>
 #include <Interrupts.hpp>
+#include <Memory.hpp>
 #include <Drivers/Console.hpp>
 
 namespace Quantum::Kernel {
@@ -17,6 +18,7 @@ namespace Quantum::Kernel {
     Console::Initialize();
     Console::WriteLine("Quantum");
 
+    Memory::Initialize();
     Interrupts::Initialize();
   }
 }

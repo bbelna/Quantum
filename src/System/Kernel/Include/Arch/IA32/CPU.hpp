@@ -47,5 +47,29 @@ namespace Quantum::Kernel::Arch::IA32 {
       static inline void EnableInterrupts() {
         asm volatile("sti" ::: "memory");
       }
+
+      /**
+       * Loads the physical address of the page directory into CR3.
+       */
+      static inline void LoadPageDirectory(uint32 physAddr) {
+        asm volatile("mov %0, %%cr3" :: "r"(physAddr) : "memory");
+      }
+
+      /**
+       * Enables paging by setting the PG bit in CR0.
+       */
+      static inline void EnablePaging() {
+        uint32 cr0;
+        asm volatile("mov %%cr0, %0" : "=r"(cr0));
+        cr0 |= 0x80000000; // set PG bit
+        asm volatile("mov %0, %%cr0" :: "r"(cr0) : "memory");
+      }
+
+      /**
+       * Invalidates a single page from the TLB.
+       */
+      static inline void InvalidatePage(uint32 addr) {
+        asm volatile("invlpg (%0)" :: "r"(addr) : "memory");
+      }
   };
 }

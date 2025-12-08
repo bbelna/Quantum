@@ -41,7 +41,7 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
     constexpr uint8 capsMake  = 0x3A;
     constexpr uint8 capsBreak = 0xBA;
 
-    constexpr size_t bufferSize = 64;
+    constexpr usize bufferSize = 64;
     char keyBuffer[bufferSize] = {};
     volatile uint8 head = 0;
     volatile uint8 tail = 0;
