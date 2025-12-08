@@ -124,8 +124,7 @@ namespace Quantum::Kernel::Arch::IA32 {
     LoadIDT(&idtDescriptor);
 
     PIC::Initialize(kIRQBase, kIRQBase + 8);
-
-    VGAConsole::WriteLine("IDT initialized");
+    PIC::MaskAll();
   }
 
   void SetIDTHandler(uint8 vector, InterruptHandler handler) {

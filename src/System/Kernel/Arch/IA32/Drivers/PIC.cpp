@@ -79,4 +79,9 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
     mask &= static_cast<uint8>(~(1 << irq));
     IO::OutByte(port, mask);
   }
+
+  void PIC::MaskAll() {
+    IO::OutByte(PIC1_DATA, 0xFF);
+    IO::OutByte(PIC2_DATA, 0xFF);
+  }
 }

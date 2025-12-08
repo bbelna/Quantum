@@ -9,10 +9,12 @@
 #include <Interrupts.hpp>
 #include <Arch/IA32/IDT.hpp>
 #include <Arch/IA32/CPU.hpp>
+#include <Arch/IA32/Exceptions.hpp>
 
 namespace Quantum::Kernel {
   void Interrupts::Initialize() {
     Arch::IA32::InitializeIDT();
+    Arch::IA32::InstallDefaultExceptionHandlers();
     Arch::IA32::CPU::EnableInterrupts();
   }
 

@@ -37,5 +37,10 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
        * Unmasks (enables) a specific IRQ line.
        */
       static void Unmask(uint8 irq);
+
+      /**
+       * Masks all IRQ lines on both PICs.
+       */
+      static void MaskAll();
   };
 }

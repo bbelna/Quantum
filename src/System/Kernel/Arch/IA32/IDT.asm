@@ -91,6 +91,7 @@ LoadIDT:
   call IDTExceptionHandler
   add esp, 8            ; drop vector + copied error code
   popa
+  add esp, 4            ; discard hardware error code
   iretd
 %endmacro
 
