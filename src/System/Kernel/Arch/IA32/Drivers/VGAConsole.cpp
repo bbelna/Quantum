@@ -104,5 +104,5 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
 
     buffer[Index(cursorRow, cursorColumn)] = blockCell;
     cursorDrawn = true;
-}
+  }
 }
