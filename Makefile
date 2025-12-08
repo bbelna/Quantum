@@ -100,17 +100,19 @@ GDT_OBJ := $(KER32_OBJ_DIR)/GDT.o
 KERNEL_ARCH32_CPP := \
 	$(wildcard $(KERNEL_ARCH32)/**/*.cpp) \
 	$(wildcard $(KERNEL_ARCH32)/*.cpp)
+
 KERNEL_ARCH32_OBJS := \
-	$(patsubst $(KERNEL_SRC_DIR)/%.cpp,$(KER32_OBJ_DIR)/%.o,$(KERNEL_ARCH32_CPP))
+	$(patsubst $(KERNEL_SRC_DIR)/%.cpp,$(KER32_OBJ_DIR)/%.cpp.o,$(KERNEL_ARCH32_CPP))
+
 
 KERNEL_ARCH32_ASM := \
 	$(wildcard $(KERNEL_ARCH32)/**/*.asm) \
 	$(wildcard $(KERNEL_ARCH32)/*.asm)
 KERNEL_ARCH32_ASM_OBJS := \
-	$(patsubst $(KERNEL_SRC_DIR)/%.asm,$(KER32_OBJ_DIR)/%.o,$(KERNEL_ARCH32_ASM))
+	$(patsubst $(KERNEL_SRC_DIR)/%.asm,$(KER32_OBJ_DIR)/%.asm.o,$(KERNEL_ARCH32_ASM))
 
 KER32_OBJS := \
-	$(patsubst $(KERNEL_COMMON)/%.cpp,$(KER32_OBJ_DIR)/%.o,$(KER_COMMON_SRCS)) \
+	$(patsubst $(KERNEL_COMMON)/%.cpp,$(KER32_OBJ_DIR)/%.cpp.o,$(KER_COMMON_SRCS)) \
 	$(KERNEL_ARCH32_OBJS) \
 	$(KERNEL_ARCH32_ASM_OBJS)
 
@@ -118,12 +120,12 @@ KER32_ELF     := $(KER32_OBJ_DIR)/qkrnl.elf
 KER32_BIN     := $(KER32_OBJ_DIR)/qkrnl.qx
 
 # compile ANY .cpp under src/System/Kernel into build/Kernel/IA32
-$(KER32_OBJ_DIR)/%.o: $(KERNEL_SRC_DIR)/%.cpp
+$(KER32_OBJ_DIR)/%.cpp.o: $(KERNEL_SRC_DIR)/%.cpp
 	@mkdir -p $(dir $@)
 	$(CC32) $(CFLAGS32) -I$(KERNEL_INCLUDE) -c $< -o $@
 
 # assemble ANY .asm under src/System/Kernel into build/Kernel/IA32
-$(KER32_OBJ_DIR)/%.o: $(KERNEL_SRC_DIR)/%.asm
+$(KER32_OBJ_DIR)/%.asm.o: $(KERNEL_SRC_DIR)/%.asm
 	@mkdir -p $(dir $@)
 	$(ASM) -f elf32 $< -o $@
 

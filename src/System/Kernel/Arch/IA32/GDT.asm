@@ -1,7 +1,8 @@
 ;-------------------------------------------------------------------------------
 ; Quantum
-;-------------------------------------------------------------------------------
 ; System/Kernel/Arch/IA32/GDT.asm
+; Brandon Belna - MIT License
+;-------------------------------------------------------------------------------
 ; Defines a minimal GDT (null, code, data) and its descriptor for 32-bit mode.
 ; GDTDescriptor32 is the 6-byte [limit(2), base(4)] that `lgdt` expects.
 ;-------------------------------------------------------------------------------
@@ -10,8 +11,6 @@ BITS 32
 
 global GDT
 global GDTDescriptor32
-
-;── GDT itself: 3 entries × 8 bytes each = 24 bytes ─────────────────────────────
 
 SECTION .data
 GDT:
@@ -40,12 +39,10 @@ GDT:
   ;      • base_high = 0x00
   dq 0x00CF92000000FFFF
 
-GDT_end:
-
-;── GDT descriptor for LGDT: 6 bytes → [limit (2 bytes), base (4 bytes)] ────────
+GDTEnd:
 
 SECTION .data
 GDTDescriptor32:
-  dw GDT_end - GDT - 1         ; limit = size of GDT - 1 (i.e. 24-1 = 23)
+  dw GDTEnd - GDT - 1         ; limit = size of GDT - 1 (i.e. 24-1 = 23)
   dd GDT                       ; base = linear address of GDT
 

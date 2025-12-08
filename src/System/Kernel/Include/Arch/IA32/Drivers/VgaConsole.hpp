@@ -1,9 +1,9 @@
 //------------------------------------------------------------------------------
 // Quantum
-//------------------------------------------------------------------------------
-// System/Kernel/Include/Arch/IA32/Drivers/VgaConsole.hpp
-// Declaration for the kernel IA32 VGA console driver.
+// System/Kernel/Include/Arch/IA32/Drivers/VGAConsole.hpp
 // Brandon Belna - MIT License
+//------------------------------------------------------------------------------
+// Declaration for the kernel IA32 VGA console driver.
 //------------------------------------------------------------------------------
 
 #pragma once
@@ -14,7 +14,7 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
   /**
    * IA32 VGA text‐mode console driver.
    */
-  class VgaConsole {
+  class VGAConsole {
     public:
       /**
        * Initializes the console driver.
@@ -29,7 +29,12 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
       /**
        * Writes a null-terminated string to the console.
        */
-      static void WriteString(const char* str);
+      static void Write(const char* str);
+
+      /**
+       * Writes a line (string followed by newline) to the console.
+       */
+      static void WriteLine(const char* str);
 
     private:
       /**

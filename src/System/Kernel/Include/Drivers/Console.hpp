@@ -1,9 +1,9 @@
 //------------------------------------------------------------------------------
 // Quantum
-//------------------------------------------------------------------------------
 // System/Kernel/Include/Drivers/Console.hpp
-// Architecture-agnostic console interface for the kernel.
 // Brandon Belna - MIT License
+//------------------------------------------------------------------------------
+// Architecture-agnostic console interface for the kernel.
 //------------------------------------------------------------------------------
 
 #pragma once
@@ -26,6 +26,11 @@ namespace Quantum::Kernel::Drivers {
       /**
        * Writes a null-terminated string to the console.
        */
-      static void WriteString(const char* str);
+      static void Write(const char* str);
+
+      /**
+       * Writes a line (string followed by newline) to the console.
+       */
+      static void WriteLine(const char* str);
   };
 }

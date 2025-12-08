@@ -1,25 +1,22 @@
 //------------------------------------------------------------------------------
 // Quantum
-//------------------------------------------------------------------------------
 // System/Kernel/Kernel.cpp
-// The core kernel implementation for Quantum.
 // Brandon Belna - MIT License
+//------------------------------------------------------------------------------
+// The core kernel implementation for Quantum.
 //------------------------------------------------------------------------------
 
 #include <Kernel.hpp>
+#include <Interrupts.hpp>
 #include <Drivers/Console.hpp>
 
-using namespace Quantum::Kernel;
-using namespace Quantum::Kernel::Drivers;
+namespace Quantum::Kernel {
+  using namespace Drivers;
 
-void Kernel::Initialize() {
-	Console::Initialize();
-	Console::WriteString("Quantum\n");
+  void Kernel::Initialize() {
+    Console::Initialize();
+    Console::WriteLine("Quantum");
 
-  // TODO: kernel stuff
-
-  Console::WriteString("System halted\n");
-  while (true) {
-    asm volatile("hlt");
+    Interrupts::Initialize();
   }
 }

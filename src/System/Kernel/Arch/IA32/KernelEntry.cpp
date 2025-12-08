@@ -1,25 +1,26 @@
 //------------------------------------------------------------------------------
 // Quantum
-//------------------------------------------------------------------------------
 // System/Kernel/Arch/IA32/KernelEntry.cpp
-// 32-bit entry point that calls starts the kernel.
 // Brandon Belna - MIT License
+//------------------------------------------------------------------------------
+// IA32 entry point that calls starts the kernel.
 //------------------------------------------------------------------------------
 
 #include <Kernel.hpp>
 #include <KernelTypes.hpp>
+#include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/KernelEntry.hpp>
 
 using namespace Quantum::Kernel;
+
+using Quantum::Kernel::Arch::IA32::CPU;
 
 extern "C" uint8 __bss_start;
 extern "C" uint8 __bss_end;
 
 extern "C" void* GDTDescriptor32;
 
-extern "C"
-__attribute__((naked, section(".text.start")))
-void StartKernel() {
+extern "C" __attribute__((naked, section(".text.start"))) void KernelEntry() {
   asm volatile(
     "cli\n\t"
     "lgdt GDTDescriptor32\n\t"
@@ -30,7 +31,7 @@ void StartKernel() {
     "mov %%ax, %%fs\n\t"
     "mov %%ax, %%gs\n\t"
     "mov $0x90000, %%esp\n\t"
-    "call KernelStart\n\t"
+    "call StartKernel\n\t"
     "1:\n\t"
     "hlt\n\t"
     "jmp 1b\n\t"
@@ -40,18 +41,18 @@ void StartKernel() {
   );
 }
 
+extern "C" void StartKernel() {
+  ClearBSS();
 
-extern "C"
-void KernelStart() {
+  Kernel::Initialize();
+
+  CPU::HaltForever();
+}
+
+void ClearBSS() {
   uint8* bss = &__bss_start;
   uint8* bss_end = &__bss_end;
   while (bss < bss_end) {
     *bss++ = 0;
-  }
-
-  Kernel::Initialize();
-
-  while (true) {
-    asm volatile("hlt");
   }
 }
