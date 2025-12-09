@@ -9,6 +9,7 @@
 #include <Kernel.hpp>
 #include <KernelTypes.hpp>
 #include <Memory.hpp>
+#include <Drivers/Console.hpp>
 
 #if defined(QUANTUM_ARCH_IA32)
   #include <Arch/IA32/Memory.hpp>
@@ -206,7 +207,12 @@ namespace Quantum::Kernel {
         uint8* blockEnd = blockStart + sizeof(FreeBlock) + current->size;
 
         if (blockStart < heapBase || blockEnd > heapBase + heapMappedBytes) {
-          Kernel::Panic("heap corruption detected");
+          Kernel::Panic(
+            "Heap corruption detected",
+            __FILE__,
+            __LINE__ - 3,
+            __func__
+          );
         }
 
         uint32 total = current->size + sizeof(FreeBlock);
@@ -308,23 +314,24 @@ namespace Quantum::Kernel {
       EnsureHeapInitialized();
 
       while (true) {
-        void* pointer = AllocateFromFreeList(size + sizeof(FreeBlock));
+        void* pointer = AllocateFromFreeList(size);
 
         if (pointer) {
           Memory::Free(pointer); // availability confirmed
-        } else {
-          // map a new page: release previous guard (if any) into free list, set
-          // new guard
-          if (guardPage) {
-            FreeBlock* block = reinterpret_cast<FreeBlock*>(guardPage);
-            block->size = heapPageSize - sizeof(FreeBlock);
-            block->next = nullptr;
-
-            InsertFreeBlockSorted(block);
-          }
-
-          guardPage = MapNextHeapPage();
+          break;
         }
+
+        // map a new page: release previous guard (if any) into free list, set
+        // new guard
+        if (guardPage) {
+          FreeBlock* block = reinterpret_cast<FreeBlock*>(guardPage);
+          block->size = heapPageSize - sizeof(FreeBlock);
+          block->next = nullptr;
+
+          InsertFreeBlockSorted(block);
+        }
+
+        guardPage = MapNextHeapPage();
       }
     }
   }
@@ -353,7 +360,7 @@ namespace Quantum::Kernel {
       return pointer;
     }
 
-    Kernel::Panic("kernel heap exhausted");
+    Kernel::Panic("Kernel heap exhausted", __FILE__, __LINE__, __func__);
 
     return nullptr;
   }
@@ -371,7 +378,12 @@ namespace Quantum::Kernel {
       bytePointer < heapBase + sizeof(FreeBlock) ||
       bytePointer >= heapBase + heapMappedBytes
     ) {
-      Kernel::Panic("heap free: pointer out of range");
+      Kernel::Panic(
+        "Heap free: pointer out of range",
+        __FILE__,
+        __LINE__ - 3,
+        __func__
+      );
     } else {
       FreeBlock* block = reinterpret_cast<FreeBlock*>(
         bytePointer - sizeof(FreeBlock)
@@ -384,7 +396,12 @@ namespace Quantum::Kernel {
         + block->size;
 
       if (blockEnd > heapBase + heapMappedBytes) {
-        Kernel::Panic("heap free: block overruns mapped region");
+        Kernel::Panic(
+          "Heap free: block overruns mapped region",
+          __FILE__,
+          __LINE__ - 3,
+          __func__
+        );
       } else {
         InsertIntoBinOrFreeList(block);
       }
@@ -410,5 +427,69 @@ namespace Quantum::Kernel {
     state.freeBlocks = blocks;
 
     return state;
+  }
+
+  void Memory::SelfTest() {
+    using Drivers::Console;
+
+    Console::WriteLine("Performing memory self-test");
+
+    HeapState before = GetHeapState();
+
+    void* a = Allocate(32);
+    void* b = Allocate(64);
+
+    if (!a || !b) {
+      Kernel::Panic(
+        "Allocation returned null",
+        __FILE__,
+        __LINE__ - 3,
+        __func__
+      );
+    }
+
+    // Write/read patterns to ensure writable pages.
+    uint8* pa = reinterpret_cast<uint8*>(a);
+    uint8* pb = reinterpret_cast<uint8*>(b);
+
+    for (usize i = 0; i < 32; ++i) {
+      pa[i] = static_cast<uint8>(i);
+      if (pa[i] != static_cast<uint8>(i)) {
+        Kernel::Panic(
+          "Heap write/read mismatch",
+          __FILE__,
+          __LINE__ - 3,
+          __func__
+        );
+      }
+    }
+
+    for (usize i = 0; i < 64; ++i) {
+      pb[i] = static_cast<uint8>(0xA5);
+      if (pb[i] != static_cast<uint8>(0xA5)) {
+        Kernel::Panic(
+          "Heap write/read mismatch",
+          __FILE__,
+          __LINE__ - 3,
+          __func__
+        );
+      }
+    }
+
+    Free(b);
+    Free(a);
+
+    HeapState after = GetHeapState();
+
+    if (after.freeBytes < before.freeBytes) {
+      Kernel::Panic(
+        "Free bytes decreased unexpectedly",
+        __FILE__,
+        __LINE__ - 3,
+        __func__
+      );
+    }
+
+    Console::WriteLine("Memory self-test passed");
   }
 }

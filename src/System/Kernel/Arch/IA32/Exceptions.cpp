@@ -66,12 +66,12 @@ namespace Quantum::Kernel::Arch::IA32 {
 
     static void OnDivideByZero(InterruptContext& context) {
       DumpContext(context);
-      Kernel::Panic("Divide by zero fault");
+      Kernel::Panic("Divide by zero fault", __FILE__, __LINE__, __func__);
     }
 
     static void OnGeneralProtection(InterruptContext& context) {
       DumpContext(context);
-      Kernel::Panic("General protection fault");
+      Kernel::Panic("General protection fault", __FILE__, __LINE__, __func__);
     }
 
     static void OnPageFault(InterruptContext& context) {
@@ -80,7 +80,7 @@ namespace Quantum::Kernel::Arch::IA32 {
       asm volatile("mov %%cr2, %0" : "=r"(faultAddress));
 
       DumpContext(context, faultAddress);
-      Kernel::Panic("Page fault");
+      Kernel::Panic("Page fault", __FILE__, __LINE__, __func__);
     }
   }
 

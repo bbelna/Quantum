@@ -20,6 +20,8 @@
   #error "No architecture selected for kernel"
 #endif
 
+#define KERNEL_SELF_TEST
+
 namespace Quantum::Kernel {
   using Helpers::String;
 
@@ -28,7 +30,7 @@ namespace Quantum::Kernel {
   void Kernel::Initialize(uint32 bootInfoPhysicalAddress) {
     Console::Initialize();
 
-    DumpVersionAndCopyright();
+    TraceVersionAndCopyright();
 
     Console::Write("bootInfoPhysicalAddress=");
     Console::WriteHex32(bootInfoPhysicalAddress);
@@ -40,15 +42,14 @@ namespace Quantum::Kernel {
     Interrupts::Initialize();
     Console::WriteLine("Initialized interrupt subsystem");
 
-    Panic(
-      "End of Kernel::Initialize reached",
-      __FILE__,
-      __LINE__,
-      __FUNCTION__
-    );
+    #ifdef KERNEL_SELF_TEST
+      Memory::SelfTest();
+    #endif
+
+    Panic("End of kernel initialization", __FILE__, __LINE__, __func__);
   }
 
-  void Kernel::DumpVersionAndCopyright() {
+  void Kernel::TraceVersionAndCopyright() {
     // TODO: versioning, architecture info, build date, etc.
     Console::WriteLine("Quantum Kernel");
     Console::WriteLine("Copyright (c) 2025 Brandon Belna");

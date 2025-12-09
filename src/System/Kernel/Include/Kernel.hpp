@@ -19,9 +19,9 @@ namespace Quantum::Kernel {
       static void Initialize(uint32 bootInfoPhys);
 
       /**
-       * Dumps the kernel version and copyright information to the console.
+       * Traces the kernel version and copyright information to the console.
        */
-      static void DumpVersionAndCopyright(); 
+      static void TraceVersionAndCopyright(); 
 
       /**
        * Panic the kernel with a message.

@@ -297,7 +297,7 @@ namespace Quantum::Kernel::Arch::IA32 {
         }
       }
 
-      Kernel::Panic("out of physical memory");
+      Kernel::Panic("Out of physical memory", __FILE__, __LINE__, __func__);
       return 0;
     }
   }

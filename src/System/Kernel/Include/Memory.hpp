@@ -70,5 +70,11 @@ namespace Quantum::Kernel {
        * @return Snapshot of current heap state.
        */
       static HeapState GetHeapState();
+
+      /**
+       * Runs a simple self-test of page and heap allocation/free paths.
+       * Only invoked when enabled by build flag.
+       */
+      static void SelfTest();
   };
 }
