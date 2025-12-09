@@ -6,16 +6,13 @@
 // IA32 paging setup and simple physical page allocator.
 //------------------------------------------------------------------------------
 
+#include <Arch/IA32/LinkerSymbols.hpp>
+#include <Arch/IA32/CPU.hpp>
+#include <Arch/IA32/Memory.hpp>
+#include <BootInfo.hpp>
+#include <Drivers/Console.hpp>
 #include <Kernel.hpp>
 #include <KernelTypes.hpp>
-#include <BootInfo.hpp>
-#include <Arch/IA32/Memory.hpp>
-#include <Arch/IA32/CPU.hpp>
-#include <Drivers/Console.hpp>
-
-extern "C" uint8 __bss_end;
-extern "C" uint8 __phys_start;
-extern "C" uint8 __phys_end;
 
 namespace Quantum::Kernel::Arch::IA32 {
   namespace {

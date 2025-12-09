@@ -10,12 +10,10 @@
 #include <KernelTypes.hpp>
 #include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/KernelEntry.hpp>
+#include <Arch/IA32/LinkerSymbols.hpp>
 
 using namespace Quantum::Kernel;
 using Quantum::Kernel::Arch::IA32::CPU;
-
-extern "C" uint8 __bss_start;
-extern "C" uint8 __bss_end;
 
 extern "C" void* GDTDescriptor32;
 

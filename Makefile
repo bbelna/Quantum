@@ -87,7 +87,8 @@ $(BOOT_STAGE2_BIN): \
 KER_COMMON_SRCS := \
 	$(KERNEL_COMMON)/Kernel.cpp \
 	$(KERNEL_COMMON)/Drivers/Console.cpp \
-	$(KERNEL_COMMON)/Memory.cpp
+	$(KERNEL_COMMON)/Memory.cpp \
+	$(KERNEL_COMMON)/Helpers/String.cpp
 
 #───────────────────────────────────────────────────────────────────────────────
 # Kernel (IA32) Build
