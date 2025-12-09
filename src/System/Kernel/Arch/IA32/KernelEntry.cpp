@@ -12,7 +12,6 @@
 #include <Arch/IA32/KernelEntry.hpp>
 
 using namespace Quantum::Kernel;
-
 using Quantum::Kernel::Arch::IA32::CPU;
 
 extern "C" uint8 __bss_start;
@@ -31,7 +30,9 @@ extern "C" __attribute__((naked, section(".text.start"))) void KernelEntry() {
     "mov %%ax, %%fs\n\t"
     "mov %%ax, %%gs\n\t"
     "mov $0x90000, %%esp\n\t"
+    "push %%esi\n\t"
     "call StartKernel\n\t"
+    "add $4, %%esp\n\t"
     "1:\n\t"
     "hlt\n\t"
     "jmp 1b\n\t"
@@ -41,10 +42,10 @@ extern "C" __attribute__((naked, section(".text.start"))) void KernelEntry() {
   );
 }
 
-extern "C" void StartKernel() {
+extern "C" void StartKernel(uint32 bootInfoPhys) {
   ClearBSS();
 
-  Kernel::Initialize();
+  Kernel::Initialize(bootInfoPhys);
 
   CPU::HaltForever();
 }

@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include <KernelTypes.hpp>
+
 extern "C" {
   /*
    * Sets up segment registers, stack, and calls into `StartKernel()`.
@@ -17,7 +19,7 @@ extern "C" {
   /**
    * The main kernel start routine called from `KernelEntry()`.
    */
-  void StartKernel();
+  void StartKernel(uint32 bootInfoPhys);
 }
 
 /**

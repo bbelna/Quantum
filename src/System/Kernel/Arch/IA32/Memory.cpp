@@ -6,66 +6,292 @@
 // IA32 paging setup and simple physical page allocator.
 //------------------------------------------------------------------------------
 
+#include <Kernel.hpp>
+#include <KernelTypes.hpp>
+#include <BootInfo.hpp>
 #include <Arch/IA32/Memory.hpp>
 #include <Arch/IA32/CPU.hpp>
-#include <KernelTypes.hpp>
 #include <Drivers/Console.hpp>
 
 extern "C" uint8 __bss_end;
+extern "C" uint8 __phys_start;
+extern "C" uint8 __phys_end;
 
 namespace Quantum::Kernel::Arch::IA32 {
   namespace {
-    constexpr uint32 pageSize    = 4096;
+    constexpr uint32 pageSize = 4096;
     constexpr uint32 pagePresent = 0x1;
-    constexpr uint32 pageWrite   = 0x2;
+    constexpr uint32 pageWrite = 0x2;
+    constexpr uint32 maxBootEntries = 32;
+    constexpr uint32 defaultManagedBytes = 64 * 1024 * 1024;
 
-    // For now, manage only the first 4 MB (1024 pages) to keep identity-mapped.
-    constexpr uint32 managedBytes = 4 * 1024 * 1024;
-    constexpr uint32 pageCount    = managedBytes / pageSize; // 1024 pages
+    uint32 managedBytes = defaultManagedBytes;
+    uint32 pageCount = defaultManagedBytes / pageSize;
 
-    // 4 KB aligned page directory and first page table.
     static uint32 pageDirectory[1024] __attribute__((aligned(pageSize)));
     static uint32 firstPageTable[1024] __attribute__((aligned(pageSize)));
-
-    // Physical page bitmap (1 bit per page), placed after BSS.
     static uint32* pageBitmap = nullptr;
-    static uint32  bitmapLengthWords = 0;
+    static uint32 bitmapLengthWords = 0;
 
-    inline uint32 AlignUp(uint32 value, uint32 align) {
-      return (value + align - 1) & ~(align - 1);
+    /**
+     * Aligns a value up to the specified alignment boundary.
+     * @param value Value to align.
+     * @param alignment Alignment to apply (must be power of two).
+     * @return Aligned value.
+     */
+    inline uint32 AlignUp(uint32 value, uint32 alignment) {
+      return (value + alignment - 1) & ~(alignment - 1);
     }
 
+    /**
+     * Marks a page as used in the bitmap.
+     * @param pageIndex Index of the page to mark.
+     */
     inline void SetPageUsed(uint32 pageIndex) {
       pageBitmap[pageIndex / 32] |= (1u << (pageIndex % 32));
     }
 
+    /**
+     * Clears the used bit for a page in the bitmap.
+     * @param pageIndex Index of the page to clear.
+     */
+    inline void ClearPageUsed(uint32 pageIndex) {
+      pageBitmap[pageIndex / 32] &= ~(1u << (pageIndex % 32));
+    }
+
+    /**
+     * Tests whether a page is free in the bitmap.
+     * @param pageIndex Index of the page to test.
+     * @return true if the page is free; false otherwise.
+     */
     inline bool PageFree(uint32 pageIndex) {
       return (pageBitmap[pageIndex / 32] & (1u << (pageIndex % 32))) == 0;
     }
 
-    void InitPhysicalAllocator() {
-      uint32 bitmapBytes = AlignUp((pageCount + 7) / 8, 4);
-      uint32 bitmapPhys  = AlignUp(reinterpret_cast<uint32>(&__bss_end), 4);
-      pageBitmap         = reinterpret_cast<uint32*>(bitmapPhys);
-      bitmapLengthWords  = bitmapBytes / 4;
+    /**
+     * Initializes the physical page allocator using the provided boot info map.
+     * @param bootInfoPhysicalAddress Physical address of the boot info block.
+     */
+    void InitializePhysicalAllocator(uint32 bootInfoPhysicalAddress) {
+      BootInfo* bootInfo = nullptr;
 
-      // Clear bitmap
-      for (uint32 i = 0; i < bitmapLengthWords; ++i) {
-        pageBitmap[i] = 0;
+      if (
+        bootInfoPhysicalAddress >= pageSize &&
+        bootInfoPhysicalAddress < managedBytes
+      ) {
+        bootInfo = reinterpret_cast<BootInfo*>(bootInfoPhysicalAddress);
       }
 
-      // Mark pages occupied by the bitmap and anything below it (kernel, bss, etc.)
-      uint32 usedUntil = AlignUp(bitmapPhys + bitmapBytes, pageSize);
+      // Track the highest usable address from type-1 regions.
+      uint64 maximumUsableAddress = defaultManagedBytes;
+      uint32 entryCount = 0;
+
+      if (bootInfo) {
+        entryCount = bootInfo->entryCount;
+
+        if (entryCount > maxBootEntries) {
+          entryCount = maxBootEntries;
+        }
+      }
+
+      // determine highest usable address to manage (clip to 4 GB)
+      if (bootInfo && entryCount > 0) {
+        for (uint32 i = 0; i < entryCount; ++i) {
+          const MemoryRegion& region = bootInfo->entries[i];
+
+          if (region.type != 1) {
+            continue;
+          }
+
+          uint64 baseAddress
+            = (static_cast<uint64>(region.baseHigh) << 32) | region.baseLow;
+          uint64 lengthBytes
+            = (static_cast<uint64>(region.lengthHigh) << 32) | region.lengthLow;
+
+          if (lengthBytes == 0) continue;
+
+          uint64 endAddress  = baseAddress + lengthBytes;
+
+          if (endAddress < baseAddress) continue; // overflow guard
+          if (endAddress > maximumUsableAddress) {
+            maximumUsableAddress = endAddress;
+          }
+        }
+      }
+
+      if (maximumUsableAddress == 0) {
+        maximumUsableAddress = defaultManagedBytes;
+      }
+
+      if (maximumUsableAddress > 0xFFFFFFFFULL) {
+        maximumUsableAddress = 0xFFFFFFFFULL;
+      }
+
+      managedBytes = static_cast<uint32>(maximumUsableAddress & 0xFFFFFFFF);
+
+      if (managedBytes < defaultManagedBytes) {
+        managedBytes = defaultManagedBytes;
+      }
+
+      managedBytes = AlignUp(managedBytes, pageSize);
+      pageCount = managedBytes / pageSize;
+
+      uint32 bitmapBytes = AlignUp((pageCount + 7) / 8, 4);
+      uint32 bitmapPhysical  = AlignUp(reinterpret_cast<uint32>(&__bss_end), 4);
+
+      pageBitmap = reinterpret_cast<uint32*>(bitmapPhysical);
+      bitmapLengthWords = bitmapBytes / 4;
+
+      // default all pages to used
+      for (uint32 i = 0; i < bitmapLengthWords; ++i) {
+        pageBitmap[i] = 0xFFFFFFFF;
+      }
+
+      uint32 freePages = 0;
+
+      // free usable pages from the map
+      if (bootInfo && entryCount > 0) {
+        for (uint32 i = 0; i < entryCount; ++i) {
+          const MemoryRegion& region = bootInfo->entries[i];
+
+          if (region.type != 1) {
+            continue;
+          }
+
+          uint64 baseAddress
+            = (static_cast<uint64>(region.baseHigh) << 32) | region.baseLow;
+          uint64 lengthBytes
+            = (static_cast<uint64>(region.lengthHigh) << 32) | region.lengthLow;
+
+          if (lengthBytes == 0) continue;
+
+          uint64 endAddress  = baseAddress + lengthBytes;
+
+          if (endAddress < baseAddress) continue; // overflow
+
+          // clip to 32-bit physical range we manage
+          if (baseAddress >= 0x100000000ULL) continue;
+          if (endAddress > 0x100000000ULL) endAddress = 0x100000000ULL;
+
+          uint32 startPage = static_cast<uint32>(baseAddress / pageSize);
+          uint32 endPage
+            = static_cast<uint32>((endAddress + pageSize - 1) / pageSize);
+
+          if (startPage >= pageCount) continue;
+          if (endPage > pageCount) endPage = pageCount;
+
+          for (uint32 p = startPage; p < endPage; ++p) {
+            ClearPageUsed(p);
+            ++freePages;
+          }
+        }
+      } else {
+        // no map provided; treat all managed pages as free initially
+        for (uint32 i = 0; i < pageCount; ++i) {
+          ClearPageUsed(i);
+          ++freePages;
+        }
+      }
+
+      // mark bitmap, kernel, page tables, boot info as used
+      uint32 usedUntil = AlignUp(bitmapPhysical + bitmapBytes, pageSize);
       uint32 usedPages = usedUntil / pageSize;
+
       for (uint32 i = 0; i < usedPages && i < pageCount; ++i) {
         SetPageUsed(i);
       }
 
-      // Mark the page directory and first table physical frames.
       SetPageUsed(reinterpret_cast<uint32>(pageDirectory) / pageSize);
       SetPageUsed(reinterpret_cast<uint32>(firstPageTable) / pageSize);
+
+      uint32 bootInfoPage = bootInfoPhysicalAddress / pageSize;
+      uint32 bootInfoEndPage
+        = (bootInfoPhysicalAddress + sizeof(BootInfo) + pageSize - 1)
+        / pageSize;
+
+      if (bootInfoPage < pageCount) {
+        for (
+          uint32 p = bootInfoPage;
+          p < bootInfoEndPage && p < pageCount;
+          ++p
+        ) {
+          SetPageUsed(p);
+        }
+      }
+
+      // never hand out the null page
+      SetPageUsed(0);
+
+      // reserve kernel image pages
+      uint32 kernelStart = reinterpret_cast<uint32>(&__phys_start);
+      uint32 kernelEnd = AlignUp(reinterpret_cast<uint32>(&__phys_end), pageSize);
+      uint32 kernelStartPage = kernelStart / pageSize;
+      uint32 kernelEndPage = kernelEnd / pageSize;
+
+      if (kernelStartPage < pageCount) {
+        if (kernelEndPage > pageCount) {
+          kernelEndPage = pageCount;
+        }
+
+        for (uint32 p = kernelStartPage; p < kernelEndPage; ++p) {
+          SetPageUsed(p);
+        }
+      }
+
+      // reserve early protected-mode stack pages (0x80000-0x90000)
+      uint32 stackBottom = 0x80000;
+      uint32 stackTop = 0x90000;
+      uint32 stackStartPage = stackBottom / pageSize;
+      uint32 stackEndPage = AlignUp(stackTop, pageSize) / pageSize;
+
+      if (stackStartPage < pageCount) {
+        if (stackEndPage > pageCount) {
+          stackEndPage = pageCount;
+        }
+
+        for (uint32 p = stackStartPage; p < stackEndPage; ++p) {
+          SetPageUsed(p);
+        }
+      }
+
+      // if nothing was free (bogus map), fall back to freeing everything except
+      // reserved
+      if (freePages == 0) {
+        Drivers::Console::WriteLine(
+          "BootInfo memory map unusable; falling back to default map"
+        );
+
+        for (uint32 i = 0; i < pageCount; ++i) {
+          ClearPageUsed(i);
+        }
+
+        for (uint32 i = 0; i < usedPages && i < pageCount; ++i) {
+          SetPageUsed(i);
+        }
+
+        SetPageUsed(reinterpret_cast<uint32>(pageDirectory) / pageSize);
+        SetPageUsed(reinterpret_cast<uint32>(firstPageTable) / pageSize);
+
+        if (bootInfoPage < pageCount) {
+          for (
+            uint32 p = bootInfoPage;
+            p < bootInfoEndPage && p < pageCount;
+            ++p
+          ) {
+            SetPageUsed(p);
+          }
+        }
+
+        SetPageUsed(0);
+      }
+
+      // retain BootInfo for potential future diagnostics (not logged here)
     }
 
+    /**
+     * Allocates a single physical 4 KB page.
+     * @return Physical address of the allocated page.
+     */
     uint32 AllocatePhysicalPage() {
       for (uint32 i = 0; i < pageCount; ++i) {
         if (PageFree(i)) {
@@ -74,55 +300,129 @@ namespace Quantum::Kernel::Arch::IA32 {
         }
       }
 
-      Quantum::Kernel::Drivers::Console::WriteLine("Out of physical memory");
-      for (;;) { asm volatile("hlt"); }
+      Kernel::Panic("out of physical memory");
+      return 0;
     }
   }
 
-  void InitializePaging() {
-    InitPhysicalAllocator();
+  /**
+   * Sets up identity paging for the managed physical range.
+   * @param bootInfoPhysicalAddress Physical address of the boot info block.
+   */
+  void InitializePaging(uint32 bootInfoPhysicalAddress) {
+    InitializePhysicalAllocator(bootInfoPhysicalAddress);
 
-    // Clear directory and table.
+    // clear directory and first table
     for (int i = 0; i < 1024; ++i) {
       pageDirectory[i] = 0;
       firstPageTable[i] = 0;
     }
 
-    // Identity map the first 4 MB.
-    for (uint32 i = 0; i < 1024; ++i) {
-      firstPageTable[i] = (i * pageSize) | pagePresent | pageWrite;
-    }
-    pageDirectory[0] = reinterpret_cast<uint32>(firstPageTable) | pagePresent | pageWrite;
+    // identity map managedBytes and map kernel higher-half
+    uint32 tablesNeeded
+      = (managedBytes + (4 * 1024 * 1024 - 1)) / (4 * 1024 * 1024);
 
-    // Load directory and enable paging.
+    if (tablesNeeded > 1024) {
+      tablesNeeded = 1024;
+    }
+
+    for (uint32 tableIndex = 0; tableIndex < tablesNeeded; ++tableIndex) {
+      uint32* table;
+
+      if (tableIndex == 0) {
+        table = firstPageTable;
+      } else {
+        table = reinterpret_cast<uint32*>(AllocatePhysicalPage());
+
+        for (int i = 0; i < 1024; ++i) {
+          table[i] = 0;
+        }
+      }
+
+      uint32 base = tableIndex * 1024 * pageSize;
+
+      for (uint32 i = 0; i < 1024; ++i) {
+        table[i] = (base + i * pageSize) | pagePresent | pageWrite;
+      }
+
+      if (tableIndex == 0) {
+        table[0] = 0; // guard null page
+      }
+
+      pageDirectory[tableIndex]
+        = reinterpret_cast<uint32>(table) | pagePresent | pageWrite;
+    }
+
+    // load directory and enable paging
     CPU::LoadPageDirectory(reinterpret_cast<uint32>(pageDirectory));
     CPU::EnablePaging();
+
+    // invalidate the null page TLB entry after enabling
+    CPU::InvalidatePage(0);
+
   }
 
   void* AllocatePage() {
-    uint32 phys = AllocatePhysicalPage();
-    // Identity mapped region for now.
-    return reinterpret_cast<void*>(phys);
+    uint32 physicalPageAddress = AllocatePhysicalPage();
+
+    return reinterpret_cast<void*>(physicalPageAddress);
   }
 
-  void MapPage(uint32 virtualAddr, uint32 physicalAddr, bool writable) {
-    uint32 pdIndex = (virtualAddr >> 22) & 0x3FF;
-    uint32 ptIndex = (virtualAddr >> 12) & 0x3FF;
+  void FreePage(void* physicalAddress) {
+    uint32 address = reinterpret_cast<uint32>(physicalAddress);
 
+    if (address % pageSize != 0) {
+      Drivers::Console::WriteLine("FreePage: non-aligned address");
+      return;
+    }
+
+    uint32 index = address / pageSize;
+
+    if (index >= pageCount) {
+      Drivers::Console::WriteLine("FreePage: out-of-range page");
+      return;
+    }
+
+    ClearPageUsed(index);
+  }
+
+  void MapPage(uint32 virtualAddress, uint32 physicalAddress, bool writable) {
+    uint32 pageDirectoryIndex = (virtualAddress >> 22) & 0x3FF;
+    uint32 pageTableIndex = (virtualAddress >> 12) & 0x3FF;
     uint32* table;
-    if (pageDirectory[pdIndex] & pagePresent) {
-      table = reinterpret_cast<uint32*>(pageDirectory[pdIndex] & ~0xFFF);
+
+    if (pageDirectory[pageDirectoryIndex] & pagePresent) {
+      table = reinterpret_cast<uint32*>(pageDirectory[pageDirectoryIndex] & ~0xFFF);
     } else {
-      // Allocate a new page table in low memory (identity mapped).
+      // allocate a new page table in low memory (identity mapped)
       table = reinterpret_cast<uint32*>(AllocatePhysicalPage());
+
       for (int i = 0; i < 1024; ++i) {
         table[i] = 0;
       }
-      pageDirectory[pdIndex] = reinterpret_cast<uint32>(table) | pagePresent | pageWrite;
+
+      pageDirectory[pageDirectoryIndex]
+        = reinterpret_cast<uint32>(table) | pagePresent | pageWrite;
     }
 
     uint32 flags = pagePresent | (writable ? pageWrite : 0);
-    table[ptIndex] = (physicalAddr & ~0xFFF) | flags;
-    CPU::InvalidatePage(virtualAddr);
+    table[pageTableIndex] = (physicalAddress & ~0xFFF) | flags;
+
+    CPU::InvalidatePage(virtualAddress);
+  }
+
+  void UnmapPage(uint32 virtualAddress) {
+    uint32 pageDirectoryIndex = (virtualAddress >> 22) & 0x3FF;
+    uint32 pageTableIndex = (virtualAddress >> 12) & 0x3FF;
+
+    if (!(pageDirectory[pageDirectoryIndex] & pagePresent)) {
+      return;
+    }
+
+    uint32* table
+      = reinterpret_cast<uint32*>(pageDirectory[pageDirectoryIndex] & ~0xFFF);
+    table[pageTableIndex] = 0;
+
+    CPU::InvalidatePage(virtualAddress);
   }
 }

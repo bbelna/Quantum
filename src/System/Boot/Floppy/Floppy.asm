@@ -75,6 +75,14 @@ KernelSectorsRemaining    dw 0
 
 KernelName        db 'Q','K','R','N','L',' ',' ',' ','Q','X',' '
 
+; E820 memory map buffer (BootInfo layout)
+BootInfoPhysical        equ 0x8000
+BootInfoTotalBytes      equ 8 + (32 * 20)           ; entryCount/res + 32 entries
+MemMapEntriesOffset     equ BootInfoPhysical + 8    ; after entryCount/reserved
+MemMapEntrySize         equ 20
+MemMapMaxEntries        equ 32
+MemMapEntryCount        equ BootInfoPhysical        ; dword
+
 NoKernelMsg        db "Kernel QKRNL.QX not found!", 0
 DiskErrorMsg       db "Disk read error!", 0
 FATErrorMsg        db "FAT error!", 0
@@ -94,6 +102,7 @@ Start:
   call LoadFAT
   call FindKernel
   call LoadKernel              ; loads to 0x00010000
+  call CollectE820
   call EnterProtectedMode
 
 .Hang:
@@ -432,6 +441,53 @@ ReadSectorLBA:
   call Print
   jmp Start.Hang
 
+;---------------------------------------------------------------------------
+; Collect E820 memory map into BootInfoPhysical.
+;---------------------------------------------------------------------------
+CollectE820:
+  ; Ensure DS/ES point to BootInfo buffer
+  xor ax, ax
+  mov ds, ax
+  mov ax, BootInfoPhysical >> 4
+  mov es, ax
+
+  ; Zero BootInfo buffer
+  mov di, BootInfoPhysical & 0xF
+  mov cx, BootInfoTotalBytes / 2
+  xor ax, ax
+  rep stosw
+
+  mov dword [MemMapEntryCount], 0
+  xor ebx, ebx                  ; continuation value
+  mov di, (BootInfoPhysical & 0xF) + (MemMapEntriesOffset - BootInfoPhysical)
+
+.E820Loop:
+  ; Reset ES for safety (some BIOSes clobber it)
+  mov ax, BootInfoPhysical >> 4
+  mov es, ax
+
+  mov eax, 0xE820
+  mov edx, 0x534D4150           ; 'SMAP'
+  mov ecx, MemMapEntrySize
+  int 0x15
+  jc .Done
+
+  cmp eax, 0x534D4150
+  jne .Done
+
+  ; store entry already in ES:DI
+  add di, MemMapEntrySize
+  inc dword [MemMapEntryCount]
+
+  cmp dword [MemMapEntryCount], MemMapMaxEntries
+  jae .Done
+
+  cmp ebx, 0
+  jne .E820Loop
+
+.Done:
+  ret
+
 EnableA20:
   ; Fast A20 (port 0x92)
   in   al, 0x92
@@ -468,8 +524,8 @@ ProtectedEntry:
 
   mov esp, 0x90000        ; 32-bit stack (under 1MB for now)
 
-  ; Optionally pass boot drive in a register (e.g., BL)
-  movzx ebx, byte [BootDrive]
+  ; Pass BootInfo physical pointer in ESI
+  mov esi, BootInfoPhysical
 
   ; Jump to 32-bit kernel entry
   jmp KernelPMEntry

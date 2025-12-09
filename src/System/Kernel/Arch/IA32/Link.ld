@@ -6,6 +6,7 @@ SECTIONS
 {
     /* Physical load address for the kernel */
     . = 0x00010000;
+    __phys_start = .;
 
     /* All executable code, in one contiguous region */
     .text :
@@ -13,6 +14,7 @@ SECTIONS
         KEEP(*(.text.start))    /* KernelEntry first */
         *(.text)                /* other code */
         *(.text.*)
+        __text_end = .;
     }
 
     .rodata :
@@ -35,6 +37,8 @@ SECTIONS
         *(.bss.*)
         __bss_end = .;
     }
+
+    __phys_end = __bss_end;
 
     /DISCARD/ :
     {
