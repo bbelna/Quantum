@@ -1,8 +1,32 @@
 # Quantum
+(c) Brandon Belna 2025 - MIT License
 
-Quantum is just another hobbyist operating system.
+## Overview
+Just another hobbyist operating system.
+Clean, readable, and documented code is at the heart of its philosophy.
+It does not try to emulate any existing operating system architectures:
+it is built from the ground-up to be something new, sleek, efficient, and modern.
 
-## v0.01 TODO
+How far will it go? Until I'm bored I suppose. If this goes on a long time, my goals are outlined below.
+
+## Planned Hardware Support
+  * **Architectures**: IA32, AMD64.
+  * **Storage**: CD/DVD, HDD, USB.
+  * **Graphics**: As long as we have colored graphics support generally.
+  * **Networking**: At least some proof of concepts.
+    * Port of FreeBSD stack (a la Haiku) for fuller support?
+
+## Vision 
+* Efficient use of symmetric multiprocessing.
+* Native API that focus on clean, optimized, readable code.
+* Standard library support (e.g., libc) to faciliate porting
+  existing applications.
+* Cool, new, and fun GUI.
+  * We will have a text-mode shell along the way; eventually will be
+    supplanted by a GUI.
+
+## Roadmap
+### v0.01
 
 **Boot/runtime**
 - [ ] Enable higher-half kernel mapping; relocate sections and adjust paging/entry.
