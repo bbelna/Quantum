@@ -85,10 +85,9 @@ $(BOOT_STAGE2_BIN): \
 #───────────────────────────────────────────────────────────────────────────────
 
 KER_COMMON_SRCS := \
-	$(KERNEL_COMMON)/Kernel.cpp \
-	$(KERNEL_COMMON)/Drivers/Console.cpp \
-	$(KERNEL_COMMON)/Memory.cpp \
-	$(KERNEL_COMMON)/Helpers/String.cpp
+	$(wildcard $(KERNEL_COMMON)/*.cpp) \
+	$(wildcard $(KERNEL_COMMON)/Drivers/*.cpp) \
+	$(wildcard $(KERNEL_COMMON)/Helpers/*.cpp)
 
 #───────────────────────────────────────────────────────────────────────────────
 # Kernel (IA32) Build

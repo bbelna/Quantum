@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // Quantum
 // System/Kernel/Include/Memory.hpp
-// Brandon Belna - MIT License
+// (c) 2025 Brandon Belna - MIT LIcense
 //------------------------------------------------------------------------------
 // Architecture-agnostic memory manager interface.
 //------------------------------------------------------------------------------
@@ -18,7 +18,7 @@ namespace Quantum::Kernel {
        * @param bootInfoPhysicalAddress Physical address of the boot information
        * block.
        */
-      static void Initialize(uint32 bootInfoPhysicalAddress);
+      static void Initialize(UInt32 bootInfoPhysicalAddress);
 
       /**
        * Allocates one 4 KB page of physical memory.
@@ -31,7 +31,7 @@ namespace Quantum::Kernel {
        * @param size Number of bytes requested.
        * @return Pointer to writable memory (never null; may panic on OOM).
        */
-      static void* Allocate(usize size);
+      static void* Allocate(Size size);
 
       /**
        * Frees a single physical page (identity-mapped).
@@ -52,17 +52,17 @@ namespace Quantum::Kernel {
         /**
          * Total heap bytes currently mapped.
          */
-        uint32 mappedBytes;
+        UInt32 mappedBytes;
 
         /**
          * Total free bytes tracked by the heap.
          */
-        uint32 freeBytes;
+        UInt32 freeBytes;
 
         /**
          * Number of free blocks in the heap.
          */
-        uint32 freeBlocks;
+        UInt32 freeBlocks;
       };
 
       /**
@@ -72,9 +72,14 @@ namespace Quantum::Kernel {
       static HeapState GetHeapState();
 
       /**
-       * Runs a simple self-test of page and heap allocation/free paths.
+       * Runs a simple test of page and heap allocation/free paths.
        * Only invoked when enabled by build flag.
        */
-      static void SelfTest();
+      static void Test();
+
+      /**
+       * Prints the current heap state to the console.
+       */
+      static void DumpState();
   };
 }

@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // Quantum
 // System/Kernel/Arch/IA32/Drivers/Timer.cpp
-// Brandon Belna - MIT License
+// (c) 2025 Brandon Belna - MIT LIcense
 //------------------------------------------------------------------------------
 // PIT timer driver.
 //------------------------------------------------------------------------------
@@ -18,32 +18,32 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
     /**
      * PIT channel 0 data port.
      */
-    constexpr uint16 pitChannel0 = 0x40;
+    constexpr UInt16 pitChannel0 = 0x40;
 
     /**
      * PIT command port.
      */
-    constexpr uint16 pitCommand = 0x43;
+    constexpr UInt16 pitCommand = 0x43;
 
     /**
      * PIT input clock frequency in Hz.
      */
-    constexpr uint32 pitInputHz = 1193180;
+    constexpr UInt32 pitInputHz = 1193180;
 
     /**
      * PIT operating mode configuration.
      */
-    constexpr uint16 pitMode = 0x36;
+    constexpr UInt16 pitMode = 0x36;
 
     /**
      * Desired PIT frequency in Hz.
      */
-    constexpr uint32 pitFreqHz  = 100;
+    constexpr UInt32 pitFreqHz  = 100;
 
     /**
      * Tick count since timer initialization.
      */
-    volatile uint64 tickCount = 0;
+    volatile UInt64 tickCount = 0;
     volatile bool tickLoggingEnabled = false;
 
     /**
@@ -61,7 +61,7 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
 
   void Timer::Initialize() {
     // program PIT for desired frequency
-    uint16 divisor = static_cast<uint16>(pitInputHz / pitFreqHz);
+    UInt16 divisor = static_cast<UInt16>(pitInputHz / pitFreqHz);
     IO::OutByte(pitCommand, pitMode);
     IO::OutByte(pitChannel0, divisor & 0xFF);
     IO::OutByte(pitChannel0, (divisor >> 8) & 0xFF);
@@ -71,7 +71,7 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
     PIC::Unmask(0);
   }
 
-  uint64 Timer::Ticks() {
+  UInt64 Timer::Ticks() {
     return tickCount;
   }
 

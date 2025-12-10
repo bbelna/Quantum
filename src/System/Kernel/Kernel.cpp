@@ -1,13 +1,13 @@
 //------------------------------------------------------------------------------
 // Quantum
 // System/Kernel/Kernel.cpp
-// Brandon Belna - MIT License
+// (c) 2025 Brandon Belna - MIT LIcense
 //------------------------------------------------------------------------------
 // The core kernel implementation for Quantum.
 //------------------------------------------------------------------------------
 
 #include <Drivers/Console.hpp>
-#include <Helpers/String.hpp>
+#include <Helpers/CStringHelper.hpp>
 #include <Interrupts.hpp>
 #include <Kernel.hpp>
 #include <Memory.hpp>
@@ -20,14 +20,15 @@
   #error "No architecture selected for kernel"
 #endif
 
-#define KERNEL_SELF_TEST
+#define MEMORY_TEST
 
+// TODO: kernel logging/tracing shouldn't use Console directly; abstract it
 namespace Quantum::Kernel {
-  using Helpers::String;
+  using Helpers::CStringHelper;
 
   using namespace Drivers;
 
-  void Kernel::Initialize(uint32 bootInfoPhysicalAddress) {
+  void Kernel::Initialize(UInt32 bootInfoPhysicalAddress) {
     Console::Initialize();
 
     TraceVersionAndCopyright();
@@ -39,14 +40,16 @@ namespace Quantum::Kernel {
     Memory::Initialize(bootInfoPhysicalAddress);
     Console::WriteLine("Initialized memory subsystem");
 
+    Memory::DumpState();
+
     Interrupts::Initialize();
     Console::WriteLine("Initialized interrupt subsystem");
 
-    #ifdef KERNEL_SELF_TEST
-      Memory::SelfTest();
+    #ifdef MEMORY_TEST
+      Memory::Test();
     #endif
 
-    Panic("End of kernel initialization", __FILE__, __LINE__, __func__);
+    PANIC("End of kernel initialization");
   }
 
   void Kernel::TraceVersionAndCopyright() {
@@ -58,18 +61,17 @@ namespace Quantum::Kernel {
   }
 
   void Kernel::Panic(
-    const char* message,
-    const char* file,
-    int line,
-    const char* function
+    String message,
+    String file,
+    UInt32 line,
+    String function
   ) {
     const char* fileStr = file ? file : "unknown";
     const char* funcStr = function ? function : "unknown";
-
     char lineBuffer[16] = {};
     const char* lineStr = nullptr;
 
-    if (line > 0 && String::ToString(line, lineBuffer, sizeof(lineBuffer))) {
+    if (line > 0 && CStringHelper::ToCString(line, lineBuffer, sizeof(lineBuffer))) {
       lineStr = lineBuffer;
     } else {
       lineStr = "unknown";
@@ -79,20 +81,20 @@ namespace Quantum::Kernel {
     Console::WriteLine(message ? message : "unknown");
 
     char info[256] = {};
-    usize out = 0;
+    Size out = 0;
 
     auto append = [&](const char* src) -> bool {
       if (!src) {
         return true;
       }
 
-      usize len = String::Length(src);
+      Size len = CStringHelper::Length(src);
 
       if (out + len >= sizeof(info)) {
         return false;
       }
 
-      for (usize i = 0; i < len; ++i) {
+      for (Size i = 0; i < len; ++i) {
         info[out++] = src[i];
       }
 
@@ -102,14 +104,16 @@ namespace Quantum::Kernel {
     // strip any prefix up to and including "/src/" or "\\src\\"
     const char* trimmedFile = fileStr;
     const char* slashSrc = nullptr;
+
     for (const char* p = fileStr; *p != '\0'; ++p) {
       if (
         (p[0] == '/' && p[1] == 's' && p[2] == 'r' && p[3] == 'c' && p[4] == '/')
         || (p[0] == '\\' && p[1] == 's' && p[2] == 'r' && p[3] == 'c' && p[4] == '\\')
       ) {
-        slashSrc = p + 5; // skip past "/src/" or "\src\"
+        slashSrc = p + 5;
       }
     }
+
     if (slashSrc) {
       trimmedFile = slashSrc;
     }

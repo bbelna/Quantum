@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // Quantum
 // System/Kernel/Arch/IA32/KernelEntry.cpp
-// Brandon Belna - MIT License
+// (c) 2025 Brandon Belna - MIT LIcense
 //------------------------------------------------------------------------------
 // IA32 entry point that calls starts the kernel.
 //------------------------------------------------------------------------------
@@ -40,7 +40,7 @@ extern "C" __attribute__((naked, section(".text.start"))) void KernelEntry() {
   );
 }
 
-extern "C" void StartKernel(uint32 bootInfoPhys) {
+extern "C" void StartKernel(UInt32 bootInfoPhys) {
   ClearBSS();
 
   Kernel::Initialize(bootInfoPhys);
@@ -49,8 +49,8 @@ extern "C" void StartKernel(uint32 bootInfoPhys) {
 }
 
 void ClearBSS() {
-  uint8* bss = &__bss_start;
-  uint8* bss_end = &__bss_end;
+  UInt8* bss = &__bss_start;
+  UInt8* bss_end = &__bss_end;
   while (bss < bss_end) {
     *bss++ = 0;
   }

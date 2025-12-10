@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // Quantum
 // System/Kernel/Arch/IA32/IDT.cpp
-// Brandon Belna - MIT License
+// (c) 2025 Brandon Belna - MIT LIcense
 //------------------------------------------------------------------------------
 // IA32 kernel Interrupt Descriptor Table (IDT) setup.
 //------------------------------------------------------------------------------
@@ -15,9 +15,9 @@ namespace Quantum::Kernel::Arch::IA32 {
   using Drivers::PIC;
   using Quantum::Kernel::Drivers::Console;
 
-  constexpr uint8 exceptionCount = 32;
-  constexpr uint8 irqBase = 32;
-  constexpr uint8 irqCount = 16;
+  constexpr UInt8 exceptionCount = 32;
+  constexpr UInt8 irqBase = 32;
+  constexpr UInt8 irqCount = 16;
 
   static IDTEntry idtEntries[256];
   static IDTDescriptor idtDescriptor;
@@ -92,8 +92,8 @@ namespace Quantum::Kernel::Arch::IA32 {
   };
 
   // NOTE: this is *internal* helper; not declared in the header.
-  static void SetIDTGate(uint8 vector, void (*stub)()) {
-    uint32 addr = reinterpret_cast<uint32>(stub);
+  static void SetIDTGate(UInt8 vector, void (*stub)()) {
+    UInt32 addr = reinterpret_cast<UInt32>(stub);
     IDTEntry& e = idtEntries[vector];
 
     e.offsetLow = addr & 0xFFFF;
@@ -110,16 +110,16 @@ namespace Quantum::Kernel::Arch::IA32 {
       handlerTable[i] = nullptr;
     }
 
-    for (uint8 i = 0; i < exceptionCount; ++i) {
+    for (UInt8 i = 0; i < exceptionCount; ++i) {
       SetIDTGate(i, exceptionStubs[i]);
     }
 
-    for (uint8 i = 0; i < irqCount; ++i) {
+    for (UInt8 i = 0; i < irqCount; ++i) {
       SetIDTGate(irqBase + i, irqStubs[i]);
     }
 
     idtDescriptor.limit = sizeof(idtEntries) - 1;
-    idtDescriptor.base = reinterpret_cast<uint32>(&idtEntries[0]);
+    idtDescriptor.base = reinterpret_cast<UInt32>(&idtEntries[0]);
 
     LoadIDT(&idtDescriptor);
 
@@ -127,16 +127,16 @@ namespace Quantum::Kernel::Arch::IA32 {
     PIC::MaskAll();
   }
 
-  void SetIDTHandler(uint8 vector, InterruptHandler handler) {
+  void SetIDTHandler(UInt8 vector, InterruptHandler handler) {
     handlerTable[vector] = handler;
   }
 
   extern "C" void IDTExceptionHandler(InterruptContext* ctx) {
-    uint8 vector = static_cast<uint8>(ctx->vector);
+    UInt8 vector = static_cast<UInt8>(ctx->vector);
     bool isIRQ = vector >= irqBase && vector < (irqBase + irqCount);
     bool spurious = !handlerTable[vector] &&
-                    (vector == static_cast<uint8>(irqBase + 7) ||
-                     vector == static_cast<uint8>(irqBase + 15));
+                    (vector == static_cast<UInt8>(irqBase + 7) ||
+                     vector == static_cast<UInt8>(irqBase + 15));
     bool handled = handlerTable[vector] != nullptr;
 
     if (handled) {

@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // Quantum
 // System/Kernel/Include/Helpers/String.hpp
-// Brandon Belna - MIT License
+// (c) 2025 Brandon Belna - MIT LIcense
 //------------------------------------------------------------------------------
 // Simple string helper utilities.
 //------------------------------------------------------------------------------
@@ -11,7 +11,7 @@
 #include <KernelTypes.hpp>
 
 namespace Quantum::Kernel::Helpers {
-  class String {
+  class CStringHelper {
     public:
       /**
        * Converts a signed 32-bit integer to a decimal C-string into a caller
@@ -21,12 +21,20 @@ namespace Quantum::Kernel::Helpers {
        * @param length Size of the destination buffer.
        * @return True on success; false if the buffer is too small.
        */
-      static bool ToString(int32 value, char* buffer, usize length);
+      static bool ToCString(Int32 value, CStringMutable buffer, Size length);
+
+      /**
+       * Converts a signed 32-bit integer to a decimal C-string using an
+       * internal static buffer (overwritten on each call).
+       * @param value Integer to convert.
+       * @return Pointer to the static null-terminated string.
+       */
+      static char* ToCString(Int32 value);
 
       /**
        * Returns the length of a null-terminated string (excluding the null).
        */
-      static usize Length(const char* str);
+      static Size Length(CString str);
 
       /**
        * Concatenates two C-strings into a destination buffer.
@@ -37,10 +45,10 @@ namespace Quantum::Kernel::Helpers {
        * @return True on success; false if the buffer is too small.
        */
       static bool Concat(
-        const char* left,
-        const char* right,
-        char* buffer,
-        usize length
+        CString left,
+        CString right,
+        CStringMutable buffer,
+        Size length
       );
 
       /**
@@ -52,9 +60,9 @@ namespace Quantum::Kernel::Helpers {
        * @return true on success; false if the buffer is too small.
        */
       static bool Concat(
-        const char* left,
-        const char* right,
-        char* buffer
+        CString left,
+        CString right,
+        CStringMutable buffer
       );
   };
 }

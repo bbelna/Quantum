@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // Quantum
 // System/Kernel/Include/Arch/IA32/LinkerSymbols.hpp
-// Brandon Belna - MIT License
+// (c) 2025 Brandon Belna - MIT LIcense
 //------------------------------------------------------------------------------
 // Linker-provided symbols for the IA32 kernel image.
 //------------------------------------------------------------------------------
@@ -11,9 +11,9 @@
 #include <KernelTypes.hpp>
 
 extern "C" {
-  extern uint8 __phys_start;
-  extern uint8 __phys_end;
+  extern UInt8 __phys_start;
+  extern UInt8 __phys_end;
 
-  extern uint8 __bss_start;
-  extern uint8 __bss_end;
+  extern UInt8 __bss_start;
+  extern UInt8 __bss_end;
 }

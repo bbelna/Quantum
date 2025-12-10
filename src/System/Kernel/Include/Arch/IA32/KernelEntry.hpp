@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // Quantum
 // System/Kernel/Include/Arch/IA32/KernelEntry.hpp
-// Brandon Belna - MIT License
+// (c) 2025 Brandon Belna - MIT LIcense
 //------------------------------------------------------------------------------
 // Declarations for the IA32 entry routines.
 //------------------------------------------------------------------------------
@@ -19,7 +19,7 @@ extern "C" {
   /**
    * The main kernel start routine called from `KernelEntry()`.
    */
-  void StartKernel(uint32 bootInfoPhys);
+  void StartKernel(UInt32 bootInfoPhys);
 }
 
 /**

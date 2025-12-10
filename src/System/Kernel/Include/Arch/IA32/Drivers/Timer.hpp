@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // Quantum
 // System/Kernel/Include/Arch/IA32/Drivers/Timer.hpp
-// Brandon Belna - MIT License
+// (c) 2025 Brandon Belna - MIT LIcense
 //------------------------------------------------------------------------------
 // PIT timer driver for IA32.
 //------------------------------------------------------------------------------
@@ -24,7 +24,7 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
       /**
        * Returns the current tick count since timer init.
        */
-      static uint64 Ticks();
+      static UInt64 Ticks();
 
       /**
        * Enables or disables periodic tick logging to the console.

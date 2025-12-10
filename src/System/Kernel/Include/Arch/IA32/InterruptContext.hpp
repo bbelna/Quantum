@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // Quantum
 // System/Kernel/Include/Arch/IA32/InterruptContext.hpp
-// Brandon Belna - MIT License
+// (c) 2025 Brandon Belna - MIT LIcense
 //------------------------------------------------------------------------------
 // Interrupt context for IA32 architecture.
 //------------------------------------------------------------------------------
@@ -13,22 +13,22 @@
 namespace Quantum::Kernel {
   struct InterruptContext {
     // General-purpose registers (pusha order)
-    uint32 edi;
-    uint32 esi;
-    uint32 ebp;
-    uint32 esp;  // value before pusha
-    uint32 ebx;
-    uint32 edx;
-    uint32 ecx;
-    uint32 eax;
+    UInt32 edi;
+    UInt32 esi;
+    UInt32 ebp;
+    UInt32 esp;  // value before pusha
+    UInt32 ebx;
+    UInt32 edx;
+    UInt32 ecx;
+    UInt32 eax;
 
     // Software-pushed vector and hardware/synthetic error code
-    uint32 vector;
-    uint32 errorCode;
+    UInt32 vector;
+    UInt32 errorCode;
 
     // CPU-pushed state
-    uint32 eip;
-    uint32 cs;
-    uint32 eflags;
+    UInt32 eip;
+    UInt32 cs;
+    UInt32 eflags;
   };
 }

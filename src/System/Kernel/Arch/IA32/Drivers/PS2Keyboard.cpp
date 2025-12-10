@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // Quantum
 // System/Kernel/Arch/IA32/Drivers/PS2Keyboard.cpp
-// Brandon Belna - MIT License
+// (c) 2025 Brandon Belna - MIT LIcense
 //------------------------------------------------------------------------------
 // PS/2 keyboard driver (basic scancode-to-ASCII and IRQ handler).
 //------------------------------------------------------------------------------
@@ -29,22 +29,22 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
       '|','z','x','c','v','b','n','m','<','>','?', 0, '*', 0, ' ',
     };
 
-    constexpr uint8 shiftLeftMake   = 0x2A;
-    constexpr uint8 shiftRightMake  = 0x36;
-    constexpr uint8 shiftLeftBreak  = 0xAA;
-    constexpr uint8 shiftRightBreak = 0xB6;
+    constexpr UInt8 shiftLeftMake   = 0x2A;
+    constexpr UInt8 shiftRightMake  = 0x36;
+    constexpr UInt8 shiftLeftBreak  = 0xAA;
+    constexpr UInt8 shiftRightBreak = 0xB6;
 
-    constexpr uint8 ctrlMake  = 0x1D;
-    constexpr uint8 ctrlBreak = 0x9D;
-    constexpr uint8 altMake   = 0x38;
-    constexpr uint8 altBreak  = 0xB8;
-    constexpr uint8 capsMake  = 0x3A;
-    constexpr uint8 capsBreak = 0xBA;
+    constexpr UInt8 ctrlMake  = 0x1D;
+    constexpr UInt8 ctrlBreak = 0x9D;
+    constexpr UInt8 altMake   = 0x38;
+    constexpr UInt8 altBreak  = 0xB8;
+    constexpr UInt8 capsMake  = 0x3A;
+    constexpr UInt8 capsBreak = 0xBA;
 
-    constexpr usize bufferSize = 64;
+    constexpr Size bufferSize = 64;
     char keyBuffer[bufferSize] = {};
-    volatile uint8 head = 0;
-    volatile uint8 tail = 0;
+    volatile UInt8 head = 0;
+    volatile UInt8 tail = 0;
     volatile bool shiftActive = false;
     volatile bool capsLock = false;
     volatile bool ctrlActive = false;
@@ -53,7 +53,7 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
     volatile bool echoEnabled = false;
 
     inline void Enqueue(char ch) {
-      uint8 next = static_cast<uint8>((head + 1) % bufferSize);
+      UInt8 next = static_cast<UInt8>((head + 1) % bufferSize);
       if (next != tail) {
         keyBuffer[head] = ch;
         head = next;
@@ -64,7 +64,7 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
      * Keyboard interrupt handler (IRQ1).
      */
     void KeyboardHandler(InterruptContext&) {
-      uint8 scancode = IO::InByte(0x60);
+      UInt8 scancode = IO::InByte(0x60);
 
       // Handle E0 prefix (extended scancode); mark and skip this byte.
       if (scancode == 0xE0) {
@@ -154,7 +154,7 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
       return 0;
     }
     char ch = keyBuffer[tail];
-    tail = static_cast<uint8>((tail + 1) % bufferSize);
+    tail = static_cast<UInt8>((tail + 1) % bufferSize);
     return ch;
   }
 

@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // Quantum
 // System/Kernel/Include/Arch/IA32/IDT.hpp
-// Brandon Belna - MIT License
+// (c) 2025 Brandon Belna - MIT LIcense
 //------------------------------------------------------------------------------
 // IDT setup for IA32.
 //------------------------------------------------------------------------------
@@ -18,19 +18,19 @@ namespace Quantum::Kernel::Arch::IA32 {
    * An entry in the IA32 Interrupt Descriptor Table (IDT).
    */
   struct IDTEntry {
-    uint16 offsetLow;         // bits 0..15 of handler address
-    uint16 selector;          // code segment selector
-    uint8  zero;              // always 0
-    uint8  typeAttribute;     // type and attributes (present, DPL, gate type)
-    uint16 offsetHigh;        // bits 16..31 of handler address
+    UInt16 offsetLow;         // bits 0..15 of handler address
+    UInt16 selector;          // code segment selector
+    UInt8  zero;              // always 0
+    UInt8  typeAttribute;     // type and attributes (present, DPL, gate type)
+    UInt16 offsetHigh;        // bits 16..31 of handler address
   } __attribute__((packed));
 
   /**
    * The IDT descriptor structure for the `lidt` instruction.
    */
   struct IDTDescriptor {
-    uint16 limit;
-    uint32 base;
+    UInt16 limit;
+    UInt32 base;
   } __attribute__((packed));
 
   /**
@@ -43,5 +43,5 @@ namespace Quantum::Kernel::Arch::IA32 {
    * @param vector The interrupt vector number (0-255).
    * @param handler The interrupt handler function.
    */
-  void SetIDTHandler(uint8 vector, InterruptHandler handler);
+  void SetIDTHandler(UInt8 vector, InterruptHandler handler);
 }

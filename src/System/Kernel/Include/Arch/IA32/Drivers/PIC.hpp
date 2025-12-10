@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // Quantum
 // System/Kernel/Include/Arch/IA32/Drivers/PIC.hpp
-// Brandon Belna - MIT License
+// (c) 2025 Brandon Belna - MIT LIcense
 //------------------------------------------------------------------------------
 // Programmable Interrupt Controller (8259A) driver.
 //------------------------------------------------------------------------------
@@ -20,23 +20,23 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
        * Remaps the PIC to the given vector offsets and preserves masks.
        * Commonly offset1=0x20 (IRQ0) and offset2=0x28 (IRQ8).
        */
-      static void Initialize(uint8 offset1, uint8 offset2);
+      static void Initialize(UInt8 offset1, UInt8 offset2);
 
       /**
        * Sends an End Of Interrupt (EOI) to the PICs.
        * @param irq IRQ number (0-15) that just fired.
        */
-      static void SendEOI(uint8 irq);
+      static void SendEOI(UInt8 irq);
 
       /**
        * Masks (disables) a specific IRQ line.
        */
-      static void Mask(uint8 irq);
+      static void Mask(UInt8 irq);
 
       /**
        * Unmasks (enables) a specific IRQ line.
        */
-      static void Unmask(uint8 irq);
+      static void Unmask(UInt8 irq);
 
       /**
        * Masks all IRQ lines on both PICs.

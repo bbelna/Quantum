@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // Quantum
 // System/Kernel/Include/BootInfo.hpp
-// Brandon Belna - MIT License
+// (c) 2025 Brandon Belna - MIT LIcense
 //------------------------------------------------------------------------------
 // Boot-time information passed from the bootloader to the kernel.
 //------------------------------------------------------------------------------
@@ -16,21 +16,21 @@ namespace Quantum::Kernel {
    * type == 1 indicates usable RAM; other values are reserved or ACPI data.
    */
   struct MemoryRegion {
-    uint32 baseLow;     /**< Low 32 bits of the physical base address. */
-    uint32 baseHigh;    /**< High 32 bits of the physical base address. */
-    uint32 lengthLow;   /**< Low 32 bits of the segment length in bytes. */
-    uint32 lengthHigh;  /**< High 32 bits of the segment length in bytes. */
-    uint32 type;        /**< Region classification (1 = usable, otherwise reserved). */
+    UInt32 baseLow;     /**< Low 32 bits of the physical base address. */
+    UInt32 baseHigh;    /**< High 32 bits of the physical base address. */
+    UInt32 lengthLow;   /**< Low 32 bits of the segment length in bytes. */
+    UInt32 lengthHigh;  /**< High 32 bits of the segment length in bytes. */
+    UInt32 type;        /**< Region classification (1 = usable, otherwise reserved). */
   };
 
   /**
    * Bootloader-provided memory map and metadata passed into the kernel.
    */
   struct BootInfo {
-    uint32 entryCount;          /**< Number of valid entries in the table. */
-    uint32 reserved;            /**< Reserved for future use/alignment. */
+    UInt32 entryCount;          /**< Number of valid entries in the table. */
+    UInt32 reserved;            /**< Reserved for future use/alignment. */
     MemoryRegion entries[32];   /**< E820 entries captured during boot. */
   };
 
-  constexpr uint32 kBootInfoPhysical = 0x00008000;
+  constexpr UInt32 kBootInfoPhysical = 0x00008000;
 }

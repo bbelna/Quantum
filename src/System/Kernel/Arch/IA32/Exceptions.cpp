@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // Quantum
 // System/Kernel/Arch/IA32/Exceptions.cpp
-// Brandon Belna - MIT License
+// (c) 2025 Brandon Belna - MIT LIcense
 //------------------------------------------------------------------------------
 // Default IA32 exception handlers.
 //------------------------------------------------------------------------------
@@ -21,7 +21,7 @@ namespace Quantum::Kernel::Arch::IA32 {
   namespace {
     void DumpContext(
       const InterruptContext& context,
-      uint32 faultAddress = 0
+      UInt32 faultAddress = 0
     ) {
       Console::Write("EIP=");
       Console::WriteHex32(context.eip);
@@ -66,21 +66,21 @@ namespace Quantum::Kernel::Arch::IA32 {
 
     static void OnDivideByZero(InterruptContext& context) {
       DumpContext(context);
-      Kernel::Panic("Divide by zero fault", __FILE__, __LINE__, __func__);
+      PANIC("Divide by zero fault");
     }
 
     static void OnGeneralProtection(InterruptContext& context) {
       DumpContext(context);
-      Kernel::Panic("General protection fault", __FILE__, __LINE__, __func__);
+      PANIC("General protection fault");
     }
 
     static void OnPageFault(InterruptContext& context) {
-      uint32 faultAddress;
+      UInt32 faultAddress;
 
       asm volatile("mov %%cr2, %0" : "=r"(faultAddress));
 
       DumpContext(context, faultAddress);
-      Kernel::Panic("Page fault", __FILE__, __LINE__, __func__);
+      PANIC("Page fault");
     }
   }
 

@@ -1,15 +1,17 @@
 //------------------------------------------------------------------------------
 // Quantum
 // System/Kernel/Memory.cpp
-// Brandon Belna - MIT License
+// (c) 2025 Brandon Belna - MIT LIcense
 //------------------------------------------------------------------------------
 // Architecture-agnostic memory manager entry points.
 //------------------------------------------------------------------------------
 
+#include <Drivers/Console.hpp>
 #include <Kernel.hpp>
 #include <KernelTypes.hpp>
 #include <Memory.hpp>
-#include <Drivers/Console.hpp>
+
+#define MEMORY_TEST_VERBOSE
 
 #if defined(QUANTUM_ARCH_IA32)
   #include <Arch/IA32/Memory.hpp>
@@ -26,47 +28,47 @@ namespace Quantum::Kernel {
     /**
      * Heap page size.
      */
-    constexpr uint32 heapPageSize  = 4096;
+    constexpr UInt32 heapPageSize  = 4096;
 
     /**
      * Heap start virtual address.
      */
-    constexpr uint32 heapStartVirtualAddress = 0x00400000;
+    constexpr UInt32 heapStartVirtualAddress = 0x00400000;
 
     /**
      * Number of guard pages before the heap.
      */
-    constexpr uint32 heapGuardPagesBefore = 1;
+    constexpr UInt32 heapGuardPagesBefore = 1;
 
     /**
      * Number of guard pages after the heap.
      */
-    constexpr uint32 heapGuardPagesAfter  = 1;
+    constexpr UInt32 heapGuardPagesAfter  = 1;
 
     /**
      * Pointer to the start of the heap region.
      */
-    uint8* heapBase = nullptr;
+    UInt8* heapBase = nullptr;
 
     /**
      * Pointer to the end of the heap region (next unmapped byte).
      */
-    uint8* heapEnd = nullptr;
+    UInt8* heapEnd = nullptr;
 
     /**
      * Pointer to the current guard page (if any).
      */
-    uint8* guardPage = nullptr;
+    UInt8* guardPage = nullptr;
 
     /**
      * Number of bytes currently mapped in the heap.
      */
-    uint32 heapMappedBytes = 0;
+    UInt32 heapMappedBytes = 0;
 
     /**
      * Pointer to the current position in the heap for allocations.
      */
-    uint8* heapCurrent = nullptr;
+    UInt8* heapCurrent = nullptr;
 
     /**
      * Aligns a value to the next multiple of alignment.
@@ -74,7 +76,7 @@ namespace Quantum::Kernel {
      * @param alignment Alignment boundary (power of two).
      * @return Aligned value.
      */
-    inline uint32 AlignUp(uint32 value, uint32 alignment) {
+    inline UInt32 AlignUp(UInt32 value, UInt32 alignment) {
       return (value + alignment - 1) & ~(alignment - 1);
     }
 
@@ -85,7 +87,7 @@ namespace Quantum::Kernel {
       /**
        * Bytes in block payload.
        */
-      uint32 size;
+      UInt32 size;
 
       /**
        * Next free block in list.
@@ -101,12 +103,12 @@ namespace Quantum::Kernel {
     /**
      * Number of fixed-size bins.
      */
-    constexpr uint32 binCount = 4;
+    constexpr UInt32 binCount = 4;
 
     /**
      * Sizes of fixed-size bins.
      */
-    constexpr uint32 binSizes[binCount] = { 16, 32, 64, 128 };
+    constexpr UInt32 binSizes[binCount] = { 16, 32, 64, 128 };
 
     /**
      * Free lists for each fixed-size bin.
@@ -117,13 +119,13 @@ namespace Quantum::Kernel {
      * Maps the next page in the heap virtual range and advances heapEnd.
      * @return Pointer to the start of the mapped page.
      */
-    uint8* MapNextHeapPage() {
-      uint8* pageStart = heapEnd;
+    UInt8* MapNextHeapPage() {
+      UInt8* pageStart = heapEnd;
       void* physicalPageAddress = ArchMemory::AllocatePage();
 
       ArchMemory::MapPage(
-        reinterpret_cast<uint32>(heapEnd),
-        reinterpret_cast<uint32>(physicalPageAddress),
+        reinterpret_cast<UInt32>(heapEnd),
+        reinterpret_cast<UInt32>(physicalPageAddress),
         true
       );
 
@@ -138,7 +140,7 @@ namespace Quantum::Kernel {
      */
     void EnsureHeapInitialized() {
       if (!heapBase) {
-        heapBase = reinterpret_cast<uint8*>(
+        heapBase = reinterpret_cast<UInt8*>(
           heapStartVirtualAddress + heapGuardPagesBefore * heapPageSize
         );
         heapCurrent = heapBase;
@@ -156,12 +158,12 @@ namespace Quantum::Kernel {
       FreeBlock* current = freeList;
 
       while (current && current->next) {
-        uint8* currentEnd
-          = reinterpret_cast<uint8*>(current)
+        UInt8* currentEnd
+          = reinterpret_cast<UInt8*>(current)
           + sizeof(FreeBlock)
           + current->size;
 
-        if (currentEnd == reinterpret_cast<uint8*>(current->next)) {
+        if (currentEnd == reinterpret_cast<UInt8*>(current->next)) {
           current->size += sizeof(FreeBlock) + current->next->size;
           current->next = current->next->next;
         } else {
@@ -197,29 +199,24 @@ namespace Quantum::Kernel {
      * @param needed Total bytes requested including header.
      * @return Pointer to payload or `nullptr` if none fit.
      */
-    void* AllocateFromFreeList(uint32 needed) {
+    void* AllocateFromFreeList(UInt32 needed) {
       FreeBlock* previous = nullptr;
       FreeBlock* current = freeList;
 
       while (current) {
         // sanity: block must fit within mapped heap
-        uint8* blockStart = reinterpret_cast<uint8*>(current);
-        uint8* blockEnd = blockStart + sizeof(FreeBlock) + current->size;
+        UInt8* blockStart = reinterpret_cast<UInt8*>(current);
+        UInt8* blockEnd = blockStart + sizeof(FreeBlock) + current->size;
 
         if (blockStart < heapBase || blockEnd > heapBase + heapMappedBytes) {
-          Kernel::Panic(
-            "Heap corruption detected",
-            __FILE__,
-            __LINE__ - 3,
-            __func__
-          );
+          PANIC("Heap corruption detected");
         }
 
-        uint32 total = current->size + sizeof(FreeBlock);
+        UInt32 total = current->size + sizeof(FreeBlock);
         if (total >= needed) {
           // split if enough space remains for another block
           if (total >= needed + sizeof(FreeBlock) + 8) {
-            uint8* newBlockAddr = reinterpret_cast<uint8*>(current) + needed;
+            UInt8* newBlockAddr = reinterpret_cast<UInt8*>(current) + needed;
             FreeBlock* newBlock = reinterpret_cast<FreeBlock*>(newBlockAddr);
             newBlock->size = total - needed - sizeof(FreeBlock);
             newBlock->next = current->next;
@@ -240,7 +237,7 @@ namespace Quantum::Kernel {
             }
           }
 
-          return reinterpret_cast<uint8*>(current) + sizeof(FreeBlock);
+          return reinterpret_cast<UInt8*>(current) + sizeof(FreeBlock);
         }
 
         previous = current;
@@ -255,8 +252,8 @@ namespace Quantum::Kernel {
      * @param size Payload bytes requested.
      * @return Bin index or -1 if it does not fit in a fixed bin.
      */
-    int BinIndexForSize(uint32 size) {
-      for (uint32 i = 0; i < binCount; ++i) {
+    int BinIndexForSize(UInt32 size) {
+      for (UInt32 i = 0; i < binCount; ++i) {
         if (size <= binSizes[i]) {
           return static_cast<int>(i);
         }
@@ -271,7 +268,7 @@ namespace Quantum::Kernel {
      * @param neededWithHeader Total bytes including header.
      * @return Pointer to payload or nullptr.
      */
-    void* AllocateFromBin(uint32 binSize, uint32 neededWithHeader) {
+    void* AllocateFromBin(UInt32 binSize, UInt32 neededWithHeader) {
       int index = BinIndexForSize(binSize);
 
       if (index < 0) {
@@ -281,7 +278,7 @@ namespace Quantum::Kernel {
           FreeBlock* block = binFreeLists[index];
           binFreeLists[index] = block->next;
 
-          return reinterpret_cast<uint8*>(block) + sizeof(FreeBlock);
+          return reinterpret_cast<UInt8*>(block) + sizeof(FreeBlock);
         }
 
         // fallback to general free list
@@ -310,7 +307,7 @@ namespace Quantum::Kernel {
      * Ensures the heap has room for an allocation of the given size.
      * @param size Bytes required (including header).
      */
-    void EnsureHeapHasSpace(uint32 size) {
+    void EnsureHeapHasSpace(UInt32 size) {
       EnsureHeapInitialized();
 
       while (true) {
@@ -336,7 +333,7 @@ namespace Quantum::Kernel {
     }
   }
 
-  void Memory::Initialize(uint32 bootInfoPhysicalAddress) {
+  void Memory::Initialize(UInt32 bootInfoPhysicalAddress) {
     ArchMemory::InitializePaging(bootInfoPhysicalAddress);
   }
 
@@ -344,11 +341,11 @@ namespace Quantum::Kernel {
     return ArchMemory::AllocatePage();
   }
 
-  void* Memory::Allocate(usize size) {
-    uint32 requested = AlignUp(static_cast<uint32>(size), 8);
+  void* Memory::Allocate(Size size) {
+    UInt32 requested = AlignUp(static_cast<UInt32>(size), 8);
     int binIndex = BinIndexForSize(requested);
-    uint32 binSize = (binIndex >= 0) ? binSizes[binIndex] : requested;
-    uint32 needed = AlignUp(binSize, 8) + sizeof(FreeBlock);
+    UInt32 binSize = (binIndex >= 0) ? binSizes[binIndex] : requested;
+    UInt32 needed = AlignUp(binSize, 8) + sizeof(FreeBlock);
 
     EnsureHeapHasSpace(needed);
 
@@ -360,7 +357,7 @@ namespace Quantum::Kernel {
       return pointer;
     }
 
-    Kernel::Panic("Kernel heap exhausted", __FILE__, __LINE__, __func__);
+    PANIC("Kernel heap exhausted");
 
     return nullptr;
   }
@@ -372,36 +369,26 @@ namespace Quantum::Kernel {
   void Memory::Free(void* pointer) {
     if (!pointer) return;
 
-    uint8* bytePointer = reinterpret_cast<uint8*>(pointer);
+    UInt8* bytePointer = reinterpret_cast<UInt8*>(pointer);
 
     if (
       bytePointer < heapBase + sizeof(FreeBlock) ||
       bytePointer >= heapBase + heapMappedBytes
     ) {
-      Kernel::Panic(
-        "Heap free: pointer out of range",
-        __FILE__,
-        __LINE__ - 3,
-        __func__
-      );
+      PANIC("Heap free: pointer out of range");
     } else {
       FreeBlock* block = reinterpret_cast<FreeBlock*>(
         bytePointer - sizeof(FreeBlock)
       );
 
       // basic sanity: size should not run past mapped heap
-      uint8* blockEnd
-        = reinterpret_cast<uint8*>(block)
+      UInt8* blockEnd
+        = reinterpret_cast<UInt8*>(block)
         + sizeof(FreeBlock)
         + block->size;
 
       if (blockEnd > heapBase + heapMappedBytes) {
-        Kernel::Panic(
-          "Heap free: block overruns mapped region",
-          __FILE__,
-          __LINE__ - 3,
-          __func__
-        );
+        PANIC("Heap free: block overruns mapped region");
       } else {
         InsertIntoBinOrFreeList(block);
       }
@@ -413,8 +400,8 @@ namespace Quantum::Kernel {
 
     state.mappedBytes = heapMappedBytes;
 
-    uint32 freeBytes = 0;
-    uint32 blocks = 0;
+    UInt32 freeBytes = 0;
+    UInt32 blocks = 0;
     FreeBlock* current = freeList;
 
     while (current) {
@@ -429,10 +416,24 @@ namespace Quantum::Kernel {
     return state;
   }
 
-  void Memory::SelfTest() {
+  void Memory::DumpState() {
     using Drivers::Console;
 
-    Console::WriteLine("Performing memory self-test");
+    HeapState state = GetHeapState();
+
+    Console::Write("Heap mapped bytes: ");
+    Console::WriteHex32(state.mappedBytes);
+    Console::Write(", free bytes: ");
+    Console::WriteHex32(state.freeBytes);
+    Console::Write(", free blocks: ");
+    Console::WriteHex32(state.freeBlocks);
+    Console::WriteLine("");
+  }
+
+  void Memory::Test() {
+    using Drivers::Console;
+
+    Console::WriteLine("Performing memory subsystem test");
 
     HeapState before = GetHeapState();
 
@@ -440,39 +441,24 @@ namespace Quantum::Kernel {
     void* b = Allocate(64);
 
     if (!a || !b) {
-      Kernel::Panic(
-        "Allocation returned null",
-        __FILE__,
-        __LINE__ - 3,
-        __func__
-      );
+      PANIC("Allocation returned null");
     }
 
     // Write/read patterns to ensure writable pages.
-    uint8* pa = reinterpret_cast<uint8*>(a);
-    uint8* pb = reinterpret_cast<uint8*>(b);
+    UInt8* pa = reinterpret_cast<UInt8*>(a);
+    UInt8* pb = reinterpret_cast<UInt8*>(b);
 
-    for (usize i = 0; i < 32; ++i) {
-      pa[i] = static_cast<uint8>(i);
-      if (pa[i] != static_cast<uint8>(i)) {
-        Kernel::Panic(
-          "Heap write/read mismatch",
-          __FILE__,
-          __LINE__ - 3,
-          __func__
-        );
+    for (Size i = 0; i < 32; ++i) {
+      pa[i] = static_cast<UInt8>(i);
+      if (pa[i] != static_cast<UInt8>(i)) {
+        PANIC("Heap write/read mismatch");
       }
     }
 
-    for (usize i = 0; i < 64; ++i) {
-      pb[i] = static_cast<uint8>(0xA5);
-      if (pb[i] != static_cast<uint8>(0xA5)) {
-        Kernel::Panic(
-          "Heap write/read mismatch",
-          __FILE__,
-          __LINE__ - 3,
-          __func__
-        );
+    for (Size i = 0; i < 64; ++i) {
+      pb[i] = static_cast<UInt8>(0xA5);
+      if (pb[i] != static_cast<UInt8>(0xA5)) {
+        PANIC("Heap write/read mismatch");
       }
     }
 
@@ -482,13 +468,28 @@ namespace Quantum::Kernel {
     HeapState after = GetHeapState();
 
     if (after.freeBytes < before.freeBytes) {
-      Kernel::Panic(
-        "Free bytes decreased unexpectedly",
-        __FILE__,
-        __LINE__ - 3,
-        __func__
-      );
+      PANIC("Free bytes decreased unexpectedly");
     }
+
+    #ifdef MEMORY_TEST_VERBOSE
+      Console::WriteLine("Memory state before self-test:");
+      Console::Write("  ");
+      Console::WriteHex32(before.mappedBytes);
+      Console::Write(" mapped, ");
+      Console::WriteHex32(before.freeBytes);
+      Console::Write(" free, ");
+      Console::WriteHex32(before.freeBlocks);
+      Console::WriteLine(" blocks");
+
+      Console::WriteLine("Memory state after self-test:");
+      Console::Write("  ");
+      Console::WriteHex32(after.mappedBytes);
+      Console::Write(" mapped, ");
+      Console::WriteHex32(after.freeBytes);
+      Console::Write(" free, ");
+      Console::WriteHex32(after.freeBlocks);
+      Console::WriteLine(" blocks");
+    #endif
 
     Console::WriteLine("Memory self-test passed");
   }

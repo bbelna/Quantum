@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // Quantum
 // System/Kernel/Arch/IA32/Drivers/PIC.cpp
-// Brandon Belna - MIT License
+// (c) 2025 Brandon Belna - MIT LIcense
 //------------------------------------------------------------------------------
 // 8259A PIC implementation.
 //------------------------------------------------------------------------------
@@ -11,21 +11,21 @@
 
 namespace Quantum::Kernel::Arch::IA32::Drivers {
   namespace {
-    constexpr uint8 picEoi = 0x20;
-    constexpr uint16 pic1Command = 0x20;
-    constexpr uint16 pic1Data = 0x21;
-    constexpr uint16 pic2Command = 0xA0;
-    constexpr uint16 pic2Data = 0xA1;
+    constexpr UInt8 picEoi = 0x20;
+    constexpr UInt16 pic1Command = 0x20;
+    constexpr UInt16 pic1Data = 0x21;
+    constexpr UInt16 pic2Command = 0xA0;
+    constexpr UInt16 pic2Data = 0xA1;
 
-    constexpr uint8 icw1Init = 0x10;
-    constexpr uint8 icw1Icw4 = 0x01;
-    constexpr uint8 icw48086 = 0x01;
+    constexpr UInt8 icw1Init = 0x10;
+    constexpr UInt8 icw1Icw4 = 0x01;
+    constexpr UInt8 icw48086 = 0x01;
   }
 
-  void PIC::Initialize(uint8 offset1, uint8 offset2) {
+  void PIC::Initialize(UInt8 offset1, UInt8 offset2) {
     // preserve current masks so we restore them after the remap
-    uint8 masterMask = IO::InByte(pic1Data);
-    uint8 slaveMask = IO::InByte(pic2Data);
+    UInt8 masterMask = IO::InByte(pic1Data);
+    UInt8 slaveMask = IO::InByte(pic2Data);
 
     // start the initialization sequence (cascade mode, expect ICW4)
     IO::OutByte(pic1Command, icw1Init | icw1Icw4);
@@ -50,7 +50,7 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
     IO::OutByte(pic2Data, slaveMask);
   }
 
-  void PIC::SendEOI(uint8 irq) {
+  void PIC::SendEOI(UInt8 irq) {
     if (irq >= 8) {
       IO::OutByte(pic2Command, picEoi);
     }
@@ -58,25 +58,25 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
     IO::OutByte(pic1Command, picEoi);
   }
 
-  void PIC::Mask(uint8 irq) {
-    uint16 port = (irq < 8) ? pic1Data : pic2Data;
+  void PIC::Mask(UInt8 irq) {
+    UInt16 port = (irq < 8) ? pic1Data : pic2Data;
     if (irq >= 8) {
       irq -= 8;
     }
 
-    uint8 mask = IO::InByte(port);
-    mask |= static_cast<uint8>(1 << irq);
+    UInt8 mask = IO::InByte(port);
+    mask |= static_cast<UInt8>(1 << irq);
     IO::OutByte(port, mask);
   }
 
-  void PIC::Unmask(uint8 irq) {
-    uint16 port = (irq < 8) ? pic1Data : pic2Data;
+  void PIC::Unmask(UInt8 irq) {
+    UInt16 port = (irq < 8) ? pic1Data : pic2Data;
     if (irq >= 8) {
       irq -= 8;
     }
 
-    uint8 mask = IO::InByte(port);
-    mask &= static_cast<uint8>(~(1 << irq));
+    UInt8 mask = IO::InByte(port);
+    mask &= static_cast<UInt8>(~(1 << irq));
     IO::OutByte(port, mask);
   }
 

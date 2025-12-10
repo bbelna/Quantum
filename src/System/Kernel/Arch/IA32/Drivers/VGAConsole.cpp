@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // Quantum
 // System/Kernel/Arch/IA32/Drivers/VGAConsole.cpp
-// Brandon Belna - MIT License
+// (c) 2025 Brandon Belna - MIT LIcense
 //------------------------------------------------------------------------------
 // IA32 kernel VGA console driver.
 //------------------------------------------------------------------------------
@@ -14,38 +14,38 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
     /**
      * The number of text-mode columns.
      */
-    constexpr uint8 columns = 80;
+    constexpr UInt8 columns = 80;
 
     /**
      * The number of text-mode rows.
      */
-    constexpr uint8 rows = 25;
+    constexpr UInt8 rows = 25;
 
     /**
      * The default text color (light gray on black).
      */
-    constexpr uint8 defaultColor = 0x0F;
+    constexpr UInt8 defaultColor = 0x0F;
 
     /**
      * The VGA text-mode buffer.
      */
-    volatile uint16* const buffer
-      = reinterpret_cast<volatile uint16*>(0xB8000);
+    volatile UInt16* const buffer
+      = reinterpret_cast<volatile UInt16*>(0xB8000);
 
     /**
      * The current cursor row.
      */
-    uint8 cursorRow = 0;
+    UInt8 cursorRow = 0;
 
     /**
      * The current cursor column.
      */
-    uint8 cursorColumn = 0;
+    UInt8 cursorColumn = 0;
 
     /**
      * The saved cell value under the cursor.
      */
-    uint16 cursorSavedCell = 0;
+    UInt16 cursorSavedCell = 0;
 
     /**
      * Whether the cursor is currently drawn.
@@ -59,8 +59,8 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
      * @param column The column.
      * @return The linear index.
      */
-    inline uint16 Index(uint8 row, uint8 column) {
-      return static_cast<uint16>(row * columns + column);
+    inline UInt16 Index(UInt8 row, UInt8 column) {
+      return static_cast<UInt16>(row * columns + column);
     }
 
     /**
@@ -69,8 +69,8 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
      * @param color The color attribute.
      * @return The VGA text-mode entry.
      */
-    inline uint16 MakeEntry(char character, uint8 color) {
-      return static_cast<uint16>(character) | (static_cast<uint16>(color) << 8);
+    inline UInt16 MakeEntry(char character, UInt8 color) {
+      return static_cast<UInt16>(character) | (static_cast<UInt16>(color) << 8);
     }
 
     /**
@@ -90,8 +90,8 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
       cursorSavedCell = buffer[Index(cursorRow, cursorColumn)];
 
       // solid block: fg=white, bg=white (with blink bit set; fine for now)
-      uint8 blockAttr = 0xFF;
-      uint16 blockCell = MakeEntry(' ', blockAttr);
+      UInt8 blockAttr = 0xFF;
+      UInt16 blockCell = MakeEntry(' ', blockAttr);
 
       buffer[Index(cursorRow, cursorColumn)] = blockCell;
       cursorDrawn = true;
@@ -99,10 +99,10 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
   }
 
   void VGAConsole::Initialize() {
-    uint16 blank = MakeEntry(' ', defaultColor);
+    UInt16 blank = MakeEntry(' ', defaultColor);
 
-    for (uint16 r = 0; r < rows; ++r) {
-      for (uint16 c = 0; c < columns; ++c) {
+    for (UInt16 r = 0; r < rows; ++r) {
+      for (UInt16 c = 0; c < columns; ++c) {
         buffer[Index(r, c)] = blank;
       }
     }
@@ -139,7 +139,7 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
         }
         break;
       default: {
-        uint16 entry = MakeEntry(c, defaultColor);
+        UInt16 entry = MakeEntry(c, defaultColor);
         buffer[Index(cursorRow, cursorColumn)] = entry;
         cursorColumn++;
         if (cursorColumn >= columns) {
@@ -151,14 +151,14 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
     }
 
     if (cursorRow >= rows) {
-      for (uint16 r = 1; r < rows; ++r) {
-        for (uint16 c = 0; c < columns; ++c) {
+      for (UInt16 r = 1; r < rows; ++r) {
+        for (UInt16 c = 0; c < columns; ++c) {
           buffer[Index(r - 1, c)] = buffer[Index(r, c)];
         }
       }
 
-      uint16 blank = MakeEntry(' ', defaultColor);
-      for (uint16 c = 0; c < columns; ++c) {
+      UInt16 blank = MakeEntry(' ', defaultColor);
+      for (UInt16 c = 0; c < columns; ++c) {
         buffer[Index(rows - 1, c)] = blank;
       }
 
@@ -172,21 +172,6 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
   void VGAConsole::Write(const char* str) {
     for (const char* p = str; *p != '\0'; ++p) {
       WriteChar(*p);
-    }
-  }
-
-  void VGAConsole::WriteLine(const char* str) {
-    Write(str);
-    WriteChar('\n');
-  }
-
-  void VGAConsole::WriteHex32(uint32 value) {
-    const char* hex = "0123456789ABCDEF";
-    Write("0x");
-
-    for (int shift = 28; shift >= 0; shift -= 4) {
-      uint8 nibble = static_cast<uint8>((value >> shift) & 0xF);
-      WriteChar(hex[nibble]);
     }
   }
 }

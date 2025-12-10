@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // Quantum
 // System/Kernel/Arch/IA32/Interrupts.cpp
-// Brandon Belna - MIT License
+// (c) 2025 Brandon Belna - MIT LIcense
 //------------------------------------------------------------------------------
 // IA32 kernel interrupt subsystem implementation.
 //------------------------------------------------------------------------------
@@ -26,7 +26,7 @@ namespace Quantum::Kernel {
     IA32::CPU::EnableInterrupts();
   }
 
-  void Interrupts::RegisterHandler(uint8 vector, InterruptHandler handler) {
+  void Interrupts::RegisterHandler(UInt8 vector, InterruptHandler handler) {
     IA32::SetIDTHandler(vector, handler);
   }
 }

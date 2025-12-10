@@ -1,7 +1,7 @@
 ;-------------------------------------------------------------------------------
 ; Quantum
 ; System/Kernel/Arch/IA32/GDT.asm
-; Brandon Belna - MIT License
+; (c) 2025 Brandon Belna - MIT LIcense
 ;-------------------------------------------------------------------------------
 ; Defines a minimal GDT (null, code, data) and its descriptor for 32-bit mode.
 ; GDTDescriptor32 is the 6-byte [limit(2), base(4)] that `lgdt` expects.

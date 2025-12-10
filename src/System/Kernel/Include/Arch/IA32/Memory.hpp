@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // Quantum
 // System/Kernel/Include/Arch/IA32/Memory.hpp
-// Brandon Belna - MIT License
+// (c) 2025 Brandon Belna - MIT LIcense
 //------------------------------------------------------------------------------
 // IA32 paging and basic memory helpers.
 //------------------------------------------------------------------------------
@@ -16,7 +16,7 @@ namespace Quantum::Kernel::Arch::IA32 {
    * @param bootInfoPhysicalAddress Physical address of boot info provided by
    * bootloader.
    */
-  void InitializePaging(uint32 bootInfoPhysicalAddress);
+  void InitializePaging(UInt32 bootInfoPhysicalAddress);
 
   /**
    * Allocates a 4 KB physical page (identity mapped).
@@ -38,8 +38,8 @@ namespace Quantum::Kernel::Arch::IA32 {
    * @param writable Whether the page should be writable.
    */
   void MapPage(
-    uint32 virtualAddress,
-    uint32 physicalAddress,
+    UInt32 virtualAddress,
+    UInt32 physicalAddress,
     bool writable = true
   );
 
@@ -47,5 +47,5 @@ namespace Quantum::Kernel::Arch::IA32 {
    * Unmaps a virtual page (does not free the physical page).
    * @param virtualAddress Virtual address of the page to unmap.
    */
-  void UnmapPage(uint32 virtualAddress);
+  void UnmapPage(UInt32 virtualAddress);
 }

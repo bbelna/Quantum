@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // Quantum
 // System/Kernel/Include/Kernel.hpp
-// Brandon Belna - MIT License
+// (c) 2025 Brandon Belna - MIT LIcense
 //------------------------------------------------------------------------------
 // Declaration of the Kernel class.
 //------------------------------------------------------------------------------
@@ -10,13 +10,16 @@
 
 #include <KernelTypes.hpp>
 
+#define PANIC(msg) ::Quantum::Kernel::Kernel::Panic((msg), __FILE__, __LINE__, __FUNCTION__)
+
 namespace Quantum::Kernel {
   class Kernel {
     public:
       /**
        * Initializes the kernel.
+       * @param bootInfoPhysicalAddress Physical address of the boot info block.
        */
-      static void Initialize(uint32 bootInfoPhys);
+      static void Initialize(UInt32 bootInfoPhysicalAddress);
 
       /**
        * Traces the kernel version and copyright information to the console.
@@ -31,10 +34,10 @@ namespace Quantum::Kernel {
        * @param function The function name where the panic occurred (optional).
        */
       static void Panic(
-        const char* message,
-        const char* file = nullptr,
-        int line = -1,
-        const char* function = nullptr
+        String message,
+        String file = nullptr,
+        UInt32 line = -1,
+        String function = nullptr
       );
   };
 }

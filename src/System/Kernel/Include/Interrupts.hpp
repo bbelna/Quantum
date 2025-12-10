@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // Quantum
 // System/Kernel/Include/Interrupts.hpp
-// Brandon Belna - MIT License
+// (c) 2025 Brandon Belna - MIT LIcense
 //------------------------------------------------------------------------------
 // Declaration of the kernel Interrupts class.
 //------------------------------------------------------------------------------
@@ -25,6 +25,6 @@ namespace Quantum::Kernel {
       /**
        * Registers an interrupt handler for the given vector.
        */
-      static void RegisterHandler(uint8 vector, InterruptHandler handler);
+      static void RegisterHandler(UInt8 vector, InterruptHandler handler);
   };
 }
