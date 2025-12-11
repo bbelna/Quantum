@@ -14,6 +14,8 @@
 #include <Arch/IA32/Drivers/PIC.hpp>
 
 namespace Quantum::Kernel::Arch::IA32::Drivers {
+  using Console = Quantum::Kernel::Drivers::Console;
+
   namespace {
     constexpr char scancodeMap[128] = {
       0,  27, '1','2','3','4','5','6','7','8','9','0','-','=', '\b',
@@ -132,8 +134,10 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
 
         if (ch != 0) {
           Enqueue(ch);
+
+          // TODO: this is just for testing; remove later
           if (echoEnabled) {
-            Quantum::Kernel::Drivers::Console::WriteCharacter(ch);
+            Console::WriteCharacter(ch);
           }
         }
       }

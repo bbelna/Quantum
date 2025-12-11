@@ -46,7 +46,7 @@ namespace Quantum::Kernel {
   }
 
   void Logger::Write(Level level, String message) {
-    if (level <= _minimumLevel) {
+    if (level < _minimumLevel) {
       return;
     }
 
@@ -58,7 +58,7 @@ namespace Quantum::Kernel {
   void Logger::WriteFormatted(Level level, String formattedMessage, ...) {
     VariableArgumentsList args;
 
-    if (level <= _minimumLevel) {
+    if (level < _minimumLevel) {
       return;
     }
 

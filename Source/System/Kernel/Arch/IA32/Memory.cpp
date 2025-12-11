@@ -10,11 +10,13 @@
 #include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/Memory.hpp>
 #include <BootInfo.hpp>
-#include <Drivers/Console.hpp>
 #include <Kernel.hpp>
+#include <Logger.hpp>
 #include <Types.hpp>
 
 namespace Quantum::Kernel::Arch::IA32 {
+  using LogLevel = Logger::Level;
+
   namespace {
     constexpr UInt32 pageSize = 4096;
     constexpr UInt32 pagePresent = 0x1;
@@ -254,7 +256,8 @@ namespace Quantum::Kernel::Arch::IA32 {
       // if nothing was free (bogus map), fall back to freeing everything except
       // reserved
       if (freePages == 0) {
-        Drivers::Console::WriteLine(
+        Logger::Write(
+          LogLevel::Warning,
           "BootInfo memory map unusable; falling back to default map"
         );
 
@@ -369,14 +372,14 @@ namespace Quantum::Kernel::Arch::IA32 {
     UInt32 address = reinterpret_cast<UInt32>(physicalAddress);
 
     if (address % pageSize != 0) {
-      Drivers::Console::WriteLine("FreePage: non-aligned address");
+      Logger::Write(LogLevel::Warning, "FreePage: non-aligned address");
       return;
     }
 
     UInt32 index = address / pageSize;
 
     if (index >= pageCount) {
-      Drivers::Console::WriteLine("FreePage: out-of-range page");
+      Logger::Write(LogLevel::Warning, "FreePage: out-of-range page");
       return;
     }
 

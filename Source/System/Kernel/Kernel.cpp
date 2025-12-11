@@ -6,10 +6,10 @@
 // The core kernel implementation for Quantum.
 //------------------------------------------------------------------------------
 
-#include <Drivers/Console.hpp>
 #include <Helpers/CStringHelper.hpp>
 #include <Interrupts.hpp>
 #include <Kernel.hpp>
+#include <Logger.hpp>
 #include <Memory.hpp>
 
 #if defined(QUANTUM_ARCH_IA32)
@@ -22,42 +22,27 @@
 
 #define MEMORY_TEST
 
-// TODO: kernel logging/tracing shouldn't use Console directly; abstract it
 namespace Quantum::Kernel {
   using CStringHelper = Helpers::CStringHelper;
-
-  using namespace Drivers;
+  using LogLevel = Logger::Level;
 
   void Kernel::Initialize(UInt32 bootInfoPhysicalAddress) {
-    Console::Initialize();
-
-    TraceVersionAndCopyright();
-
-    Console::Write("bootInfoPhysicalAddress=");
-    Console::WriteHex32(bootInfoPhysicalAddress);
-    Console::WriteLine("");
+    Logger::WriteFormatted(
+      LogLevel::Trace,
+      "bootInfoPhysicalAddress=%p",
+      bootInfoPhysicalAddress
+    );
 
     Memory::Initialize(bootInfoPhysicalAddress);
-    Console::WriteLine("Initialized memory subsystem");
-
     Memory::DumpState();
+    Logger::Write(LogLevel::Info, "Initialized memory subsystem");
 
     Interrupts::Initialize();
-    Console::WriteLine("Initialized interrupt subsystem");
+    Logger::Write(LogLevel::Info, "Initialized interrupt subsystem");
 
     #ifdef MEMORY_TEST
       Memory::Test();
     #endif
-
-    PANIC("End of kernel initialization");
-  }
-
-  void Kernel::TraceVersionAndCopyright() {
-    // TODO: versioning, architecture info, build date, etc.
-    Console::WriteLine("Quantum Kernel");
-    Console::WriteLine("Copyright (c) 2025 Brandon Belna");
-    Console::WriteLine("Released under the MIT License");
-    Console::WriteLine("Provided \"AS IS\" without warranty\n");
   }
 
   void Kernel::Panic(
@@ -77,7 +62,7 @@ namespace Quantum::Kernel {
       lineStr = "unknown";
     }
 
-    Console::WriteLine(":( PANIC");
+    Logger::Write(LogLevel::Panic, ":( PANIC");
 
     char info[256] = {};
     Size out = 0;
@@ -132,8 +117,8 @@ namespace Quantum::Kernel {
 
     info[out] = '\0';
 
-    Console::WriteLine(info);
-    Console::WriteLine(message ? message : "unknown");
+    Logger::Write(LogLevel::Panic, info);
+    Logger::Write(LogLevel::Panic, message ? message : "unknown");
 
     ArchCPU::HaltForever();
   }

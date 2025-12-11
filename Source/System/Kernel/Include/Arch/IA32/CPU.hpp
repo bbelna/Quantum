@@ -8,11 +8,11 @@
 
 #pragma once
 
+#include <Logger.hpp>
 #include <Types.hpp>
-#include <Drivers/Console.hpp>
 
 namespace Quantum::Kernel::Arch::IA32 {
-  using Quantum::Kernel::Drivers::Console;
+  using LogLevel = Logger::Level;
 
   class CPU {
     public:
@@ -27,7 +27,7 @@ namespace Quantum::Kernel::Arch::IA32 {
        * Halts the CPU forever.
        */
       [[noreturn]] static inline void HaltForever() {
-        Console::WriteLine("System halted");
+        Logger::Write(LogLevel::Info, "System halted");
 
         for (;;) {
           asm volatile("hlt");

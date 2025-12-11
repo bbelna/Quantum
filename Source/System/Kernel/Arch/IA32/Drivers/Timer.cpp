@@ -6,14 +6,16 @@
 // PIT timer driver.
 //------------------------------------------------------------------------------
 
-#include <Interrupts.hpp>
-#include <Types.hpp>
-#include <Drivers/Console.hpp>
 #include <Arch/IA32/Drivers/IO.hpp>
 #include <Arch/IA32/Drivers/PIC.hpp>
 #include <Arch/IA32/Drivers/Timer.hpp>
+#include <Interrupts.hpp>
+#include <Logger.hpp>
+#include <Types.hpp>
 
 namespace Quantum::Kernel::Arch::IA32::Drivers {
+  using LogLevel = Logger::Level;
+
   namespace {
     /**
      * PIT channel 0 data port.
@@ -52,9 +54,9 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
     void TimerHandler(InterruptContext&) {
       ++tickCount;
 
-      // Heartbeat every second (at 100 Hz).
+      // heartbeat every second (at 100 Hz)
       if (tickLoggingEnabled && (tickCount % pitFreqHz) == 0) {
-        Quantum::Kernel::Drivers::Console::WriteLine("Tick");
+        Logger::Write(LogLevel::Trace, "Tick");
       }
     }
   }

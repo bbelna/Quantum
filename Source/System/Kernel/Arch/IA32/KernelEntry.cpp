@@ -6,14 +6,21 @@
 // IA32 entry point that calls starts the kernel.
 //------------------------------------------------------------------------------
 
-#include <Kernel.hpp>
-#include <Types.hpp>
 #include <Arch/IA32/CPU.hpp>
+#include <Arch/IA32/Drivers/VGAConsole.hpp>
 #include <Arch/IA32/KernelEntry.hpp>
 #include <Arch/IA32/LinkerSymbols.hpp>
+#include <Kernel.hpp>
+#include <Logger.hpp>
+#include <Types.hpp>
+#include <Types/Writer.hpp>
 
 using namespace Quantum::Kernel;
-using Quantum::Kernel::Arch::IA32::CPU;
+
+using CPU = Arch::IA32::CPU;
+using LogLevel = Logger::Level;
+using VGAConsole = Arch::IA32::Drivers::VGAConsole;
+using Writer = Types::Writer;
 
 extern "C" void* GDTDescriptor32;
 
@@ -40,12 +47,14 @@ extern "C" __attribute__((naked, section(".text.start"))) void KernelEntry() {
   );
 }
 
-extern "C" void StartKernel(UInt32 bootInfoPhys) {
+extern "C" void StartKernel(UInt32 bootInfoPhysicalAddress) {
   ClearBSS();
+  InitializeKernelLogging();
+  TraceVersionAndCopyright();
 
-  Kernel::Initialize(bootInfoPhys);
+  Kernel::Initialize(bootInfoPhysicalAddress);
 
-  CPU::HaltForever();
+  PANIC("Returned from Kernel::Initialize()");
 }
 
 void ClearBSS() {
@@ -54,4 +63,21 @@ void ClearBSS() {
   while (bss < bss_end) {
     *bss++ = 0;
   }
+}
+
+void InitializeKernelLogging() {
+  VGAConsole::Initialize();
+
+  Writer* vgaWriter = &VGAConsole::GetWriter();
+  Writer** writers = &vgaWriter;
+
+  Logger::Initialize(LogLevel::Trace, writers, 1);
+}
+
+void TraceVersionAndCopyright() {
+  // TODO: versioning, build date, etc.
+  Logger::Write(LogLevel::Info, "x86 Quantum Kernel");
+  Logger::Write(LogLevel::Info, "Copyright (c) 2025 Brandon Belna");
+  Logger::Write(LogLevel::Info, "Released under the MIT License");
+  Logger::Write(LogLevel::Info, "Provided \"AS IS\" without warranty");
 }

@@ -18,11 +18,22 @@ extern "C" {
 
   /**
    * The main kernel start routine called from `KernelEntry()`.
+   * @param bootInfoPhysicalAddress Physical address of the boot info block.
    */
-  void StartKernel(UInt32 bootInfoPhys);
+  void StartKernel(UInt32 bootInfoPhysicalAddress);
 }
 
 /**
  * Clears the BSS segment.
  */
 void ClearBSS();
+
+/**
+ * Initializes kernel logging.
+ */
+void InitializeKernelLogging();
+
+/**
+ * Traces version and copyright information to the console.
+ */
+void TraceVersionAndCopyright();

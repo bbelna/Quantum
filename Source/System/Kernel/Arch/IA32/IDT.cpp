@@ -6,14 +6,16 @@
 // IA32 kernel Interrupt Descriptor Table (IDT) setup.
 //------------------------------------------------------------------------------
 
+#include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/IDT.hpp>
 #include <Arch/IA32/InterruptContext.hpp>
 #include <Arch/IA32/Drivers/PIC.hpp>
 #include <Drivers/Console.hpp>
+#include <Logger.hpp>
 
 namespace Quantum::Kernel::Arch::IA32 {
-  using Drivers::PIC;
-  using Quantum::Kernel::Drivers::Console;
+  using LogLevel = Logger::Level;
+  using PIC = Drivers::PIC;
 
   constexpr UInt8 exceptionCount = 32;
   constexpr UInt8 irqBase = 32;
@@ -91,7 +93,6 @@ namespace Quantum::Kernel::Arch::IA32 {
     IRQ12, IRQ13, IRQ14, IRQ15
   };
 
-  // NOTE: this is *internal* helper; not declared in the header.
   static void SetIDTGate(UInt8 vector, void (*stub)()) {
     UInt32 addr = reinterpret_cast<UInt32>(stub);
     IDTEntry& e = idtEntries[vector];
@@ -134,20 +135,20 @@ namespace Quantum::Kernel::Arch::IA32 {
   extern "C" void IDTExceptionHandler(InterruptContext* ctx) {
     UInt8 vector = static_cast<UInt8>(ctx->vector);
     bool isIRQ = vector >= irqBase && vector < (irqBase + irqCount);
-    bool spurious = !handlerTable[vector] &&
-                    (vector == static_cast<UInt8>(irqBase + 7) ||
-                     vector == static_cast<UInt8>(irqBase + 15));
+    bool spurious
+      = !handlerTable[vector] && (
+        vector == static_cast<UInt8>(irqBase + 7) ||
+        vector == static_cast<UInt8>(irqBase + 15)
+      );
     bool handled = handlerTable[vector] != nullptr;
 
     if (handled) {
       handlerTable[vector](*ctx);
     } else if (isIRQ && !spurious) {
-      Console::WriteLine("Unhandled IRQ");
+      Logger::Write(LogLevel::Error, "Unhandled IRQ");
     } else {
-      Console::WriteLine("Unhandled interrupt vector");
-      for (;;) {
-        asm volatile("hlt");
-      }
+      Logger::Write(LogLevel::Error, "Unhandled interrupt vector");
+      CPU::HaltForever();
     }
 
     if (isIRQ) {

@@ -30,7 +30,8 @@ namespace Quantum::Kernel {
       static void TraceVersionAndCopyright(); 
 
       /**
-       * Panic the kernel with a message.
+       * Panic the kernel with a message. Use the macro `PANIC(msg)` to include
+       * file, line, and function information automatically.
        * @param message Panic message.
        * @param file The source file where the panic occurred (optional).
        * @param line The line number where the panic occurred (optional).

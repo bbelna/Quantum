@@ -26,6 +26,10 @@ namespace Quantum::Kernel {
        */
       enum class Level : UInt8 {
         Trace,
+        Info,
+        Warning,
+        Error,
+        Panic
       };
 
       /**

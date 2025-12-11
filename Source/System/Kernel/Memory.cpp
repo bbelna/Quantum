@@ -8,8 +8,9 @@
 
 #include <Drivers/Console.hpp>
 #include <Kernel.hpp>
-#include <Types.hpp>
+#include <Logger.hpp>
 #include <Memory.hpp>
+#include <Types.hpp>
 
 #define MEMORY_TEST_VERBOSE
 
@@ -24,6 +25,8 @@
 #endif
 
 namespace Quantum::Kernel {
+  using LogLevel = Logger::Level;
+
   namespace {
     /**
      * Heap page size.
@@ -417,23 +420,21 @@ namespace Quantum::Kernel {
   }
 
   void Memory::DumpState() {
-    using Drivers::Console;
-
     HeapState state = GetHeapState();
 
-    Console::Write("Heap mapped bytes: ");
-    Console::WriteHex32(state.mappedBytes);
-    Console::Write(", free bytes: ");
-    Console::WriteHex32(state.freeBytes);
-    Console::Write(", free blocks: ");
-    Console::WriteHex32(state.freeBlocks);
-    Console::WriteLine("");
+    Logger::WriteFormatted(
+      LogLevel::Trace,
+      "Heap mapped bytes: %p, free bytes: %p, free blocks: %p",
+      state.mappedBytes,
+      state.freeBytes,
+      state.freeBlocks
+    );
   }
 
   void Memory::Test() {
     using Drivers::Console;
 
-    Console::WriteLine("Performing memory subsystem test");
+    Logger::Write(LogLevel::Trace, "Performing memory subsystem test");
 
     HeapState before = GetHeapState();
 
@@ -472,25 +473,22 @@ namespace Quantum::Kernel {
     }
 
     #ifdef MEMORY_TEST_VERBOSE
-      Console::WriteLine("Memory state before self-test:");
-      Console::Write("  ");
-      Console::WriteHex32(before.mappedBytes);
-      Console::Write(" mapped, ");
-      Console::WriteHex32(before.freeBytes);
-      Console::Write(" free, ");
-      Console::WriteHex32(before.freeBlocks);
-      Console::WriteLine(" blocks");
-
-      Console::WriteLine("Memory state after self-test:");
-      Console::Write("  ");
-      Console::WriteHex32(after.mappedBytes);
-      Console::Write(" mapped, ");
-      Console::WriteHex32(after.freeBytes);
-      Console::Write(" free, ");
-      Console::WriteHex32(after.freeBlocks);
-      Console::WriteLine(" blocks");
+      Logger::WriteFormatted(
+        LogLevel::Trace,
+        "Memory state before self-test: %p mapped, %p free, %p blocks",
+        before.mappedBytes,
+        before.freeBytes,
+        before.freeBlocks
+      );
+      Logger::WriteFormatted(
+        LogLevel::Trace,
+        "Memory state after self-test: %p mapped, %p free, %p blocks",
+        after.mappedBytes,
+        after.freeBytes,
+        after.freeBlocks
+      );
     #endif
 
-    Console::WriteLine("Memory self-test passed");
+    Logger::Write(LogLevel::Trace, "Memory self-test passed");
   }
 }
