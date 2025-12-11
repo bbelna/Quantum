@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <KernelTypes.hpp>
+#include <Types.hpp>
 
 namespace Quantum::Kernel::Drivers {
   class Console {
@@ -22,7 +22,7 @@ namespace Quantum::Kernel::Drivers {
        * Writes a single character to the console.
        * @param c The character to write.
        */
-      static void WriteChar(char c);
+      static void WriteCharacter(char c);
 
       /**
        * Writes a null-terminated string to the console.

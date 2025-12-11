@@ -7,7 +7,7 @@
 //------------------------------------------------------------------------------
 
 #include <Kernel.hpp>
-#include <KernelTypes.hpp>
+#include <Types.hpp>
 #include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/KernelEntry.hpp>
 #include <Arch/IA32/LinkerSymbols.hpp>

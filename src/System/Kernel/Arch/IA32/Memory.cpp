@@ -12,7 +12,7 @@
 #include <BootInfo.hpp>
 #include <Drivers/Console.hpp>
 #include <Kernel.hpp>
-#include <KernelTypes.hpp>
+#include <Types.hpp>
 
 namespace Quantum::Kernel::Arch::IA32 {
   namespace {

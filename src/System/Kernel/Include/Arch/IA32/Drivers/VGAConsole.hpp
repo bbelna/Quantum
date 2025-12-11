@@ -8,9 +8,14 @@
 
 #pragma once
 
-#include <KernelTypes.hpp>
+#include <Types.hpp>
+#include <Types/Writer.hpp>
+#include <Types/String.hpp>
 
 namespace Quantum::Kernel::Arch::IA32::Drivers {
+  using Writer = Types::Writer;
+  using String = Types::String;
+
   /**
    * IA32 VGA text-mode console driver.
    */
@@ -22,13 +27,39 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
       static void Initialize();
 
       /**
-       * Writes a single character to the console.
+       * Writes a character to the console.
+       * @param character The character.
        */
-      static void WriteChar(char c);
+      static void WriteCharacter(char character);
 
       /**
-       * Writes a null-terminated string to the console.
+       * Writes a message to the console.
+       * @param message The message.
        */
-      static void Write(const char* str);
+      static void Write(CString message);
+
+      /**
+       * Writes a message followed by a newline to the console.
+       * @param message The message.
+       */
+      static void WriteLine(CString message = "");
+
+      /**
+       * Gets the `Writer` adapter for the `VGAConsole`.
+       * @return The `Writer` adapter.
+       */
+      static Writer& GetWriter();
+
+      /**
+       * `Writer` adapter for `VGAConsole`.
+       */
+      class WriterAdapter : public Writer {
+        public:
+          /**
+           * Writes a message.
+           * @param message The message.
+           */
+          void Write(String message) override;
+      };
   };
 }

@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <KernelTypes.hpp>
+#include <Types.hpp>
 
 namespace Quantum::Kernel::Helpers {
   class CStringHelper {
@@ -63,6 +63,22 @@ namespace Quantum::Kernel::Helpers {
         CString left,
         CString right,
         CStringMutable buffer
+      );
+
+      /**
+       * Formats a C-string into a destination buffer using a simple format
+       * string and a variable argument list.
+       * @param buffer Destination buffer.
+       * @param length Size of the destination buffer.
+       * @param format Format string.
+       * @param args Variable argument list.
+       * @return True on success; false if the buffer is too small.
+       */
+      static bool Format(
+        CStringMutable buffer,
+        Size length,
+        CString format,
+        VariableArgumentsList args
       );
   };
 }

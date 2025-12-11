@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <KernelTypes.hpp>
+#include <Types.hpp>
 #include <Interrupts.hpp>
 
 namespace Quantum::Kernel::Arch::IA32 {

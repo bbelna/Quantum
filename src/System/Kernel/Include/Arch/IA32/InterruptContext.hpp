@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <KernelTypes.hpp>
+#include <Types.hpp>
 
 namespace Quantum::Kernel {
   struct InterruptContext {

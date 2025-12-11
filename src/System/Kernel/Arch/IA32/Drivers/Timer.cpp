@@ -7,7 +7,7 @@
 //------------------------------------------------------------------------------
 
 #include <Interrupts.hpp>
-#include <KernelTypes.hpp>
+#include <Types.hpp>
 #include <Drivers/Console.hpp>
 #include <Arch/IA32/Drivers/IO.hpp>
 #include <Arch/IA32/Drivers/PIC.hpp>

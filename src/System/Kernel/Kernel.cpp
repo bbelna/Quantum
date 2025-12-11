@@ -24,7 +24,7 @@
 
 // TODO: kernel logging/tracing shouldn't use Console directly; abstract it
 namespace Quantum::Kernel {
-  using Helpers::CStringHelper;
+  using CStringHelper = Helpers::CStringHelper;
 
   using namespace Drivers;
 

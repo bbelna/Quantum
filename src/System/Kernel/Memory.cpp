@@ -8,7 +8,7 @@
 
 #include <Drivers/Console.hpp>
 #include <Kernel.hpp>
-#include <KernelTypes.hpp>
+#include <Types.hpp>
 #include <Memory.hpp>
 
 #define MEMORY_TEST_VERBOSE

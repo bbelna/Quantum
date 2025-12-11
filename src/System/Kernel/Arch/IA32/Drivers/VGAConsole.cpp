@@ -96,6 +96,7 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
       buffer[Index(cursorRow, cursorColumn)] = blockCell;
       cursorDrawn = true;
     }
+
   }
 
   void VGAConsole::Initialize() {
@@ -117,10 +118,10 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
     DrawCursor();
   }
 
-  void VGAConsole::WriteChar(char c) {
+  void VGAConsole::WriteCharacter(char character) {
     HideCursor();
 
-    switch (c) {
+    switch (character) {
       case '\n':
         cursorColumn = 0;
         cursorRow++;
@@ -139,7 +140,7 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
         }
         break;
       default: {
-        UInt16 entry = MakeEntry(c, defaultColor);
+        UInt16 entry = MakeEntry(character, defaultColor);
         buffer[Index(cursorRow, cursorColumn)] = entry;
         cursorColumn++;
         if (cursorColumn >= columns) {
@@ -169,9 +170,27 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
     DrawCursor();
   }
 
-  void VGAConsole::Write(const char* str) {
-    for (const char* p = str; *p != '\0'; ++p) {
-      WriteChar(*p);
+  void VGAConsole::Write(CString message) {
+    for (
+      CString messageIterator = message;
+      *messageIterator != '\0';
+      ++messageIterator
+    ) {
+      WriteCharacter(*messageIterator);
     }
+  }
+
+  void VGAConsole::WriteLine(CString message) {
+    Write(message);
+    WriteCharacter('\n');
+  }
+
+  Writer& VGAConsole::GetWriter() {
+    static WriterAdapter writerAdapter;
+    return writerAdapter;
+  }
+
+  void VGAConsole::WriterAdapter::Write(String message) {
+    VGAConsole::WriteLine(message);
   }
 }

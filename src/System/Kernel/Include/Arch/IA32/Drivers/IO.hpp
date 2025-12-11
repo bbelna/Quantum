@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <KernelTypes.hpp>
+#include <Types.hpp>
 
 namespace Quantum::Kernel::Arch::IA32::Drivers::IO {
   inline void OutByte(UInt16 port, UInt8 value) {

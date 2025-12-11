@@ -8,11 +8,14 @@
 
 #pragma once
 
-#include <KernelTypes.hpp>
+#include <Types.hpp>
+#include <Types/String.hpp>
 
 #define PANIC(msg) ::Quantum::Kernel::Kernel::Panic((msg), __FILE__, __LINE__, __FUNCTION__)
 
 namespace Quantum::Kernel {
+  using String = Types::String;
+
   class Kernel {
     public:
       /**

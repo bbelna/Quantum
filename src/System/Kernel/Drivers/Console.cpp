@@ -7,7 +7,7 @@
 //------------------------------------------------------------------------------
 
 #include <Drivers/Console.hpp>
-#include <KernelTypes.hpp>
+#include <Types.hpp>
 #include <Helpers/CStringHelper.hpp>
 
 #if defined(QUANTUM_ARCH_IA32)
@@ -49,7 +49,7 @@ namespace Quantum::Kernel::Drivers {
       }
 
       while (idx > 0) {
-        ConsoleDriver::WriteChar(buffer[--idx]);
+        ConsoleDriver::WriteCharacter(buffer[--idx]);
       }
     }
 
@@ -68,7 +68,7 @@ namespace Quantum::Kernel::Drivers {
 
       for (const char* p = format; *p != '\0'; ++p) {
         if (*p != '%') {
-          ConsoleDriver::WriteChar(*p);
+          ConsoleDriver::WriteCharacter(*p);
           continue;
         }
 
@@ -86,7 +86,7 @@ namespace Quantum::Kernel::Drivers {
           }
           case 'c': {
             char c = static_cast<char>(VARIABLE_ARGUMENTS(args, int));
-            ConsoleDriver::WriteChar(c);
+            ConsoleDriver::WriteCharacter(c);
             break;
           }
           case 'd': {
@@ -110,12 +110,12 @@ namespace Quantum::Kernel::Drivers {
             break;
           }
           case '%': {
-            ConsoleDriver::WriteChar('%');
+            ConsoleDriver::WriteCharacter('%');
             break;
           }
           default: {
-            ConsoleDriver::WriteChar('%');
-            ConsoleDriver::WriteChar(*p);
+            ConsoleDriver::WriteCharacter('%');
+            ConsoleDriver::WriteCharacter(*p);
             break;
           }
         }
@@ -127,8 +127,8 @@ namespace Quantum::Kernel::Drivers {
     ConsoleDriver::Initialize();
   }
 
-  void Console::WriteChar(char c) {
-    ConsoleDriver::WriteChar(c);
+  void Console::WriteCharacter(char c) {
+    ConsoleDriver::WriteCharacter(c);
   }
 
   void Console::Write(const char* str) {
@@ -137,7 +137,7 @@ namespace Quantum::Kernel::Drivers {
 
   void Console::WriteLine(const char* str) {
     Write(str);
-    WriteChar('\n');
+    WriteCharacter('\n');
   }
 
   void Console::WriteFormatted(const char* format, ...) {
