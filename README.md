@@ -12,12 +12,12 @@ How far will it go? Until I'm bored I suppose. Long-term ideas and the current r
 ## Building & Debugging
 
 ### Windows (Ubuntu WSL)
-Install the stuff you need:
+Install the stuff you need in WSL:
 ```bash
 sudo apt update
 sudo apt install -y build-essential nasm mtools dosfstools
 ```
-You can then run `.\Build` in PowerShell to build. If successful, a floppy disk image will be outputted to `Build\Quantum.img`.
+You can then, in a normal non-WSL PowerShell, run `.\Build` to build. If successful, a floppy disk image will be outputted to `Build\Quantum.img`.
 
 To build and debug, run `.\Build -r`. To just debug, run `.\Debug`.
 
