@@ -7,19 +7,19 @@
 //------------------------------------------------------------------------------
 
 #include <Drivers/Console.hpp>
-#include <Types.hpp>
 #include <Helpers/CStringHelper.hpp>
+#include <Types.hpp>
 
 #if defined(QUANTUM_ARCH_IA32)
   #include <Arch/IA32/Drivers/VGAConsole.hpp>
 
   namespace ConsoleNs = Quantum::Kernel::Arch::IA32::Drivers;
+  using ConsoleDriver = ConsoleNs::VGAConsole;
 #else
   #error "No architecture selected for console driver"
 #endif
 
 namespace Quantum::Kernel::Drivers {
-  using ConsoleDriver = ConsoleNs::VGAConsole;
   using Helpers::CStringHelper;
 
   namespace {

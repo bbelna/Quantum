@@ -11,6 +11,9 @@
 #include <Types.hpp>
 
 namespace Quantum::Kernel::Helpers {
+  /**
+   * C-string helper utilities.
+   */
   class CStringHelper {
     public:
       /**

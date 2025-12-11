@@ -60,6 +60,7 @@ extern "C" void StartKernel(UInt32 bootInfoPhysicalAddress) {
 void ClearBSS() {
   UInt8* bss = &__bss_start;
   UInt8* bss_end = &__bss_end;
+
   while (bss < bss_end) {
     *bss++ = 0;
   }

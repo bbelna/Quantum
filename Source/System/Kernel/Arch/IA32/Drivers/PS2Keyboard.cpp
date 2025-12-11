@@ -6,17 +6,17 @@
 // PS/2 keyboard driver (basic scancode-to-ASCII and IRQ handler).
 //------------------------------------------------------------------------------
 
+#include <Arch/IA32/Drivers/IO.hpp>
+#include <Arch/IA32/Drivers/PIC.hpp>
+#include <Arch/IA32/Drivers/PS2Keyboard.hpp>
 #include <Interrupts.hpp>
 #include <Types.hpp>
-#include <Drivers/Console.hpp>
-#include <Arch/IA32/Drivers/IO.hpp>
-#include <Arch/IA32/Drivers/PS2Keyboard.hpp>
-#include <Arch/IA32/Drivers/PIC.hpp>
 
 namespace Quantum::Kernel::Arch::IA32::Drivers {
-  using Console = Quantum::Kernel::Drivers::Console;
-
   namespace {
+    /**
+     * Scancode to ASCII mapping for standard keys.
+     */
     constexpr char scancodeMap[128] = {
       0,  27, '1','2','3','4','5','6','7','8','9','0','-','=', '\b',
       '\t','q','w','e','r','t','y','u','i','o','p','[',']','\n',
@@ -24,38 +24,118 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
       '\\','z','x','c','v','b','n','m',',','.','/', 0, '*', 0, ' ',
     };
 
+    /**
+     * Scancode to ASCII mapping when Shift is active.
+     */
     constexpr char scancodeMapShift[128] = {
       0,  27, '!','@','#','$','%','^','&','*','(',')','_','+', '\b',
-      '\t','q','w','e','r','t','y','u','i','o','p','[',']','\n', // letters handled separately
+      '\t','q','w','e','r','t','y','u','i','o','p','[',']','\n',
       0,  'a','s','d','f','g','h','j','k','l',':','\"','~', 0,
       '|','z','x','c','v','b','n','m','<','>','?', 0, '*', 0, ' ',
     };
 
-    constexpr UInt8 shiftLeftMake   = 0x2A;
-    constexpr UInt8 shiftRightMake  = 0x36;
-    constexpr UInt8 shiftLeftBreak  = 0xAA;
+    /**
+     * Left shfit make code.
+     */
+    constexpr UInt8 shiftLeftMake = 0x2A;
+
+    /**
+     * Right shift make code.
+     */
+    constexpr UInt8 shiftRightMake = 0x36;
+
+    /**
+     * Left shift break code.
+     */
+    constexpr UInt8 shiftLeftBreak = 0xAA;
+
+    /**
+     * Right shift break code.
+     */
     constexpr UInt8 shiftRightBreak = 0xB6;
 
-    constexpr UInt8 ctrlMake  = 0x1D;
+    /**
+     * Control make code.
+     */
+    constexpr UInt8 ctrlMake = 0x1D;
+
+    /**
+     * Control break code.
+     */
     constexpr UInt8 ctrlBreak = 0x9D;
-    constexpr UInt8 altMake   = 0x38;
-    constexpr UInt8 altBreak  = 0xB8;
-    constexpr UInt8 capsMake  = 0x3A;
+
+    /**
+     * Alt make code.
+     */
+    constexpr UInt8 altMake = 0x38;
+
+    /**
+     * Alt break code.
+     */
+    constexpr UInt8 altBreak = 0xB8;
+
+    /**
+     * Caps Lock make code.
+     */
+    constexpr UInt8 capsMake = 0x3A;
+
+    /**
+     * Caps Lock break code.
+     */
     constexpr UInt8 capsBreak = 0xBA;
 
+    /**
+     * Keyboard input buffer size.
+     */
     constexpr Size bufferSize = 64;
-    char keyBuffer[bufferSize] = {};
-    volatile UInt8 head = 0;
-    volatile UInt8 tail = 0;
-    volatile bool shiftActive = false;
-    volatile bool capsLock = false;
-    volatile bool ctrlActive = false;
-    volatile bool altActive = false;
-    volatile bool extendedPrefix = false;
-    volatile bool echoEnabled = false;
 
+    /**
+     * Keyboard input buffer.
+     */
+    char keyBuffer[bufferSize] = {};
+
+    /**
+     * Head index for the keyboard buffer.
+     */
+    volatile UInt8 head = 0;
+
+    /**
+     * Tail index for the keyboard buffer.
+     */
+    volatile UInt8 tail = 0;
+
+    /**
+     * Indicates if Shift key is active.
+     */
+    volatile bool shiftActive = false;
+
+    /**
+     * Indicates if Caps Lock is active.
+     */
+    volatile bool capsLock = false;
+
+    /**
+     * Indicates if Control key is active.
+     */
+    volatile bool ctrlActive = false;
+
+    /**
+     * Indicates if Alt key is active.
+     */
+    volatile bool altActive = false;
+
+    /**
+     * Indicates if the last scancode was an extended prefix (0xE0).
+     */
+    volatile bool extendedPrefix = false;
+
+    /**
+     * Enqueues a character into the keyboard buffer.
+     * @param ch Character to enqueue.
+     */
     inline void Enqueue(char ch) {
       UInt8 next = static_cast<UInt8>((head + 1) % bufferSize);
+
       if (next != tail) {
         keyBuffer[head] = ch;
         head = next;
@@ -64,67 +144,41 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
 
     /**
      * Keyboard interrupt handler (IRQ1).
+     * @param context The interrupt context.
      */
     void KeyboardHandler(InterruptContext&) {
       UInt8 scancode = IO::InByte(0x60);
 
-      // Handle E0 prefix (extended scancode); mark and skip this byte.
       if (scancode == 0xE0) {
+        // handle E0 prefix (extended scancode); mark and skip this byte
         extendedPrefix = true;
-        return;
-      }
-
-      // For now, ignore extended scancodes.
-      if (extendedPrefix) {
+      } else if (extendedPrefix) {
+        // for now, ignore extended scancodes
         extendedPrefix = false;
-        return;
-      }
-
-      // Release handling
-      if (scancode == shiftLeftBreak || scancode == shiftRightBreak) {
+      } else if (scancode == shiftLeftBreak || scancode == shiftRightBreak) {
+        // release handling
         shiftActive = false;
-        return;
-      }
-      if (scancode == ctrlBreak) {
+      } else if (scancode == ctrlBreak) {
         ctrlActive = false;
-        return;
-      }
-      if (scancode == altBreak) {
+      } else if (scancode == altBreak) {
         altActive = false;
-        return;
-      }
-      if (scancode == capsBreak) {
+      } else if (scancode == capsBreak) {
         // ignore caps break
-        return;
-      }
-
-      // Ignore other release events (bit 7 set).
-      if (scancode & 0x80) {
-        return;
-      }
-
-      if (scancode == shiftLeftMake || scancode == shiftRightMake) {
+      } else if (scancode & 0x80) {
+        // ignore other release events (bit 7 set)
+      } else if (scancode == shiftLeftMake || scancode == shiftRightMake) {
         shiftActive = true;
-        return;
-      }
-      if (scancode == ctrlMake) {
+      } else if (scancode == ctrlMake) {
         ctrlActive = true;
-        return;
-      }
-      if (scancode == altMake) {
+      } else if (scancode == altMake) {
         altActive = true;
-        return;
-      }
-      if (scancode == capsMake) {
+      } else if (scancode == capsMake) {
         capsLock = !capsLock;
-        return;
-      }
-
-      if (scancode < sizeof(scancodeMap)) {
+      } else if (scancode < sizeof(scancodeMap)) {
         char base = scancodeMap[scancode];
         char ch = base;
 
-        // Alphabetic keys: apply shift/caps toggling
+        // alphabetic keys: apply shift/caps toggling
         if (base >= 'a' && base <= 'z') {
           bool upper = (shiftActive ^ capsLock);
           ch = upper ? static_cast<char>(base - ('a' - 'A')) : base;
@@ -134,11 +188,6 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
 
         if (ch != 0) {
           Enqueue(ch);
-
-          // TODO: this is just for testing; remove later
-          if (echoEnabled) {
-            Console::WriteCharacter(ch);
-          }
         }
       }
     }
@@ -153,16 +202,12 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
     return head != tail;
   }
 
-  char PS2Keyboard::ReadChar() {
+  char PS2Keyboard::ReadCharacter() {
     if (head == tail) {
       return 0;
     }
     char ch = keyBuffer[tail];
     tail = static_cast<UInt8>((tail + 1) % bufferSize);
     return ch;
-  }
-
-  void PS2Keyboard::SetEchoEnabled(bool enabled) {
-    echoEnabled = enabled;
   }
 }

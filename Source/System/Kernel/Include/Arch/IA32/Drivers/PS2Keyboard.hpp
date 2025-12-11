@@ -10,28 +10,25 @@
 
 namespace Quantum::Kernel::Arch::IA32::Drivers {
   /**
-   * PS/2 keyboard driver class.
+   * IA32 PS/2 (IRQ1) keyboard driver.
    */
   class PS2Keyboard {
     public:
       /**
-       * Initializes the PS/2 keyboard IRQ handler (IRQ1).
+       * Initializes the PS/2 keyboard driver.
        */
       static void Initialize();
 
       /**
-       * Returns true if a character is available in the buffer.
+       * Checks if a character is available in the buffer.
+       * @return True if a character is available, false otherwise.
        */
       static bool KeyAvailable();
 
       /**
-       * Reads a character from the buffer. Returns 0 if none available.
+       * Reads a character from the buffer.
+       * @return The character read, or 0 if none available.
        */
-      static char ReadChar();
-
-      /**
-       * Enables or disables echoing of keystrokes to the console.
-       */
-      static void SetEchoEnabled(bool enabled);
+      static char ReadCharacter();
   };
 }
