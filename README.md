@@ -7,7 +7,20 @@ Clean, readable, and documented code is at the heart of its philosophy.
 It does not try to emulate any existing operating system architectures:
 it is built from the ground-up to be something new, sleek, efficient, and modern.
 
-How far will it go? Until I'm bored I suppose. If this goes on a long time, my goals are outlined below.
+How far will it go? Until I'm bored I suppose. Long-term ideas and the current roadmap are outlined below (after Building & Debugging).
+
+## Building & Debugging
+
+### Windows (Ubuntu WSL)
+Install the stuff you need:
+```bash
+sudo apt update
+sudo apt install -y build-essential nasm mtools dosfstools
+```
+You can then run `.\Build` in PowerShell to build. If successful, a floppy disk image will be outputted to `Build\Quantum.img`.
+
+To build and debug, run `.\Build -r`. To just debug, run `.\Debug`.
+
 
 ## Planned Hardware Support
   * **Architectures**: IA32, AMD64.

@@ -1,21 +1,18 @@
 # Makefile (top‐level) for Quantum
-# Builds a two‐stage FAT12 floppy image (1.44 MB) containing:
-#   • Sector 0: Boot.asm (Stage 1)
-#   • Sector 1: Floppy.asm (Stage 2 FAT12 loader)
-#   • Root directory file: QKRNL.QX (the kernel)
-#
-# All intermediates and outputs go under build/. Source remains untouched.
+# Currently builds a two‐stage FAT12 floppy image (1.44 MB).
 #
 # Usage:
-#   make all    # → build/Quantum.img (FAT12 floppy)
-#   make clean  # → remove build/
+#   make all    # → Build/Quantum.img (FAT12 floppy)
+#   make clean  # → remove Build/
+
+.DEFAULT_GOAL := default
 
 #───────────────────────────────────────────────────────────────────────────────
 # Directory Variables
 #───────────────────────────────────────────────────────────────────────────────
 
-ROOT_DIR       := $(CURDIR)/src
-BUILD_DIR      := $(CURDIR)/build
+ROOT_DIR       := $(CURDIR)/Source
+BUILD_DIR      := $(CURDIR)/Build
 
 # Bootloader sources
 BL_DIR         := $(ROOT_DIR)/System/Boot
@@ -120,12 +117,12 @@ KER32_OBJS := \
 KER32_ELF     := $(KER32_OBJ_DIR)/qkrnl.elf
 KER32_BIN     := $(KER32_OBJ_DIR)/qkrnl.qx
 
-# compile ANY .cpp under src/System/Kernel into build/Kernel/IA32
+# compile ANY .cpp under Source/System/Kernel into Build/Kernel/IA32
 $(KER32_OBJ_DIR)/%.cpp.o: $(KERNEL_SRC_DIR)/%.cpp
 	@mkdir -p $(dir $@)
 	$(CC32) $(CFLAGS32) -I$(KERNEL_INCLUDE) -c $< -o $@
 
-# assemble ANY .asm under src/System/Kernel into build/Kernel/IA32
+# assemble ANY .asm under Source/System/Kernel into Build/Kernel/IA32
 $(KER32_OBJ_DIR)/%.asm.o: $(KERNEL_SRC_DIR)/%.asm
 	@mkdir -p $(dir $@)
 	$(ASM) -f elf32 $< -o $@
@@ -176,7 +173,8 @@ $(IMG): $(KER32_BIN) $(BOOT_STAGE1_BIN) $(BOOT_STAGE2_BIN)
 # Meta‐targets
 #───────────────────────────────────────────────────────────────────────────────
 
-.PHONY: all clean
+.PHONY: default all clean
+default: clean all
 all: $(IMG)
 
 clean:
