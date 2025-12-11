@@ -63,7 +63,7 @@ To build and debug, run `.\Build -r`. To just debug, run `.\Debug`.
 - [ ] Serial output for debug (COM1).
 
 **Logging/Diagnostics**
-- [ ] Logger implementation with sinks (console, serial); log levels and prefixes.
+- [x] Logger implementation with sinks (console, serial); log levels and prefixes.
 - [x] Panic output includes file:line:function; memory state dump on request.
 - [x] Self-test hooks for memory (build-flag gated).
 
