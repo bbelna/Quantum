@@ -106,7 +106,6 @@ KERNEL_ARCH32_CPP := \
 KERNEL_ARCH32_OBJS := \
 	$(patsubst $(KERNEL_SRC_DIR)/%.cpp,$(KER32_OBJ_DIR)/%.cpp.o,$(KERNEL_ARCH32_CPP))
 
-
 KERNEL_ARCH32_ASM := \
 	$(wildcard $(KERNEL_ARCH32)/**/*.asm) \
 	$(wildcard $(KERNEL_ARCH32)/*.asm)
@@ -135,8 +134,8 @@ $(KER32_OBJ_DIR)/%.asm.o: $(KERNEL_SRC_DIR)/%.asm
 $(KER32_ELF): $(KER32_OBJS) $(KERNEL_ARCH32)/Link.ld
 	@mkdir -p $(dir $@)
 	$(CC32) $(CFLAGS32) -m32 -nostdlib -static -Wl,--no-pie \
-	        -T $(KERNEL_ARCH32)/Link.ld \
-	        $(KER32_OBJS) -o $@
+		-T $(KERNEL_ARCH32)/Link.ld \
+		$(KER32_OBJS) -o $@
 	@echo "[OK] Linked qkrnl.elf → $@"
 
 # Objcopy ELF → flat binary qkrnl.qx
