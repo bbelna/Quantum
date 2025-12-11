@@ -87,7 +87,8 @@ $(BOOT_STAGE2_BIN): \
 KER_COMMON_SRCS := \
 	$(wildcard $(KERNEL_COMMON)/*.cpp) \
 	$(wildcard $(KERNEL_COMMON)/Drivers/*.cpp) \
-	$(wildcard $(KERNEL_COMMON)/Helpers/*.cpp)
+	$(wildcard $(KERNEL_COMMON)/Helpers/*.cpp) \
+	$(wildcard $(KERNEL_COMMON)/Runtime/*.cpp) \
 
 #───────────────────────────────────────────────────────────────────────────────
 # Kernel (IA32) Build
