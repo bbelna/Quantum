@@ -1,9 +1,9 @@
 ; ------------------------------------------------------------------------------
 ; Quantum
-; System/Boot/Common/Constants.inc
+; System/Boot/IA32/Constants.inc
 ; (c) 2025 Brandon Belna - MIT LIcense
 ; ------------------------------------------------------------------------------
-; Common bootloader constants.
+; IA32 common bootloader constants.
 ; ------------------------------------------------------------------------------
 
 ; Stack setup (in real mode): place stack at 0x7C00 for Stage 1

@@ -1,6 +1,6 @@
 ;-------------------------------------------------------------------------------
 ; Quantum
-; System/Boot/Floppy/Floppy.asm
+; System/Boot/IA32/Floppy/Stage2.asm
 ; (c) 2025 Brandon Belna - MIT LIcense
 ;-------------------------------------------------------------------------------
 ; Stage 2 bootloader for 1.44MB floppy.

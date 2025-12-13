@@ -6,19 +6,12 @@
 // The core kernel implementation for Quantum.
 //------------------------------------------------------------------------------
 
+#include <CPU.hpp>
 #include <Helpers/CStringHelper.hpp>
 #include <Interrupts.hpp>
 #include <Kernel.hpp>
 #include <Logger.hpp>
 #include <Memory.hpp>
-
-#if defined(QUANTUM_ARCH_IA32)
-  #include <Arch/IA32/CPU.hpp>
-
-  using ArchCPU = Quantum::Kernel::Arch::IA32::CPU;
-#else
-  #error "No architecture selected for kernel"
-#endif
 
 #define MEMORY_TEST
 
@@ -120,6 +113,6 @@ namespace Quantum::Kernel {
     Logger::Write(LogLevel::Panic, info);
     Logger::Write(LogLevel::Panic, message ? message : "unknown");
 
-    ArchCPU::HaltForever();
+    CPU::HaltForever();
   }
 }

@@ -1,6 +1,6 @@
 ;-------------------------------------------------------------------------------
 ; Quantum
-; System/Boot/Boot.asm
+; System/Boot/IA32/Floppy/Stage1.asm
 ; (c) 2025 Brandon Belna - MIT LIcense
 ;-------------------------------------------------------------------------------
 ; Stage 1 bootloader for 1.44MB floppy and HDD.

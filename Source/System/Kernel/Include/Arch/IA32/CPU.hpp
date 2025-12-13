@@ -19,57 +19,35 @@ namespace Quantum::Kernel::Arch::IA32 {
       /**
        * Halts the CPU until the next interrupt.
        */
-      static inline void Halt() {
-        asm volatile("hlt");
-      }
+      static void Halt();
 
       /**
        * Halts the CPU forever.
        */
-      [[noreturn]] static inline void HaltForever() {
-        Logger::Write(LogLevel::Info, "System halted");
-
-        for (;;) {
-          asm volatile("hlt");
-        }
-      }
-
+      [[noreturn]] static void HaltForever();
       /**
        * Disable interrupts.
        */
-      static inline void DisableInterrupts() {
-        asm volatile("cli" ::: "memory");
-      }
+      static void DisableInterrupts();
 
       /**
        * Enable interrupts.
        */
-      static inline void EnableInterrupts() {
-        asm volatile("sti" ::: "memory");
-      }
+      static void EnableInterrupts();
 
       /**
        * Loads the physical address of the page directory into CR3.
        */
-      static inline void LoadPageDirectory(UInt32 physAddr) {
-        asm volatile("mov %0, %%cr3" :: "r"(physAddr) : "memory");
-      }
+      static void LoadPageDirectory(UInt32 physicalAddress);
 
       /**
        * Enables paging by setting the PG bit in CR0.
        */
-      static inline void EnablePaging() {
-        UInt32 cr0;
-        asm volatile("mov %%cr0, %0" : "=r"(cr0));
-        cr0 |= 0x80000000; // set PG bit
-        asm volatile("mov %0, %%cr0" :: "r"(cr0) : "memory");
-      }
+      static void EnablePaging();
 
       /**
        * Invalidates a single page from the TLB.
        */
-      static inline void InvalidatePage(UInt32 addr) {
-        asm volatile("invlpg (%0)" :: "r"(addr) : "memory");
-      }
+      static void InvalidatePage(UInt32 address);
   };
 }

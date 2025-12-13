@@ -6,7 +6,6 @@
 // Architecture-agnostic memory manager entry points.
 //------------------------------------------------------------------------------
 
-#include <Drivers/Console.hpp>
 #include <Kernel.hpp>
 #include <Logger.hpp>
 #include <Memory.hpp>
@@ -432,8 +431,6 @@ namespace Quantum::Kernel {
   }
 
   void Memory::Test() {
-    using Drivers::Console;
-
     Logger::Write(LogLevel::Trace, "Performing memory subsystem test");
 
     HeapState before = GetHeapState();

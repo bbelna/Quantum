@@ -9,7 +9,6 @@
 #include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/Exceptions.hpp>
 #include <Arch/IA32/InterruptContext.hpp>
-#include <Drivers/Console.hpp>
 #include <Interrupts.hpp>
 #include <Kernel.hpp>
 #include <Logger.hpp>

@@ -10,7 +10,6 @@
 #include <Arch/IA32/IDT.hpp>
 #include <Arch/IA32/InterruptContext.hpp>
 #include <Arch/IA32/Drivers/PIC.hpp>
-#include <Drivers/Console.hpp>
 #include <Logger.hpp>
 
 namespace Quantum::Kernel::Arch::IA32 {

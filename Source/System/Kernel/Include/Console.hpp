@@ -1,16 +1,16 @@
 //------------------------------------------------------------------------------
 // Quantum
-// System/Kernel/Include/Drivers/Console.hpp
+// System/Kernel/Include/Console.hpp
 // (c) 2025 Brandon Belna - MIT LIcense
 //------------------------------------------------------------------------------
-// Architecture-agnostic console interface for the kernel.
+// Console interface for the kernel.
 //------------------------------------------------------------------------------
 
 #pragma once
 
 #include <Types.hpp>
 
-namespace Quantum::Kernel::Drivers {
+namespace Quantum::Kernel {
   class Console {
     public:
       /**
@@ -38,7 +38,6 @@ namespace Quantum::Kernel::Drivers {
 
       /**
        * Writes a formatted string to the console.
-       * Supported specifiers: %s, %c, %d, %u, %x, %p, %%.
        * @param format Formatted string.
        * @param ... Format arguments.
        */

@@ -6,20 +6,20 @@
 // The kernel's console driver.
 //------------------------------------------------------------------------------
 
-#include <Drivers/Console.hpp>
+#include <Console.hpp>
 #include <Helpers/CStringHelper.hpp>
 #include <Types.hpp>
 
 #if defined(QUANTUM_ARCH_IA32)
   #include <Arch/IA32/Drivers/VGAConsole.hpp>
 
-  namespace ConsoleNs = Quantum::Kernel::Arch::IA32::Drivers;
-  using ConsoleDriver = ConsoleNs::VGAConsole;
+  namespace Arch = Quantum::Kernel::Arch::IA32;
+  using ConsoleDriver = Arch::Drivers::VGAConsole;
 #else
   #error "No architecture selected for console driver"
 #endif
 
-namespace Quantum::Kernel::Drivers {
+namespace Quantum::Kernel {
   using Helpers::CStringHelper;
 
   namespace {
