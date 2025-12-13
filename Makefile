@@ -8,7 +8,7 @@
 .DEFAULT_GOAL := default
 
 # Optional user overrides
--include Build.config
+-include Makefile.config.mk
 
 PROJECT_ROOT := $(CURDIR)
 SRC_ROOT     := $(PROJECT_ROOT)/Source
