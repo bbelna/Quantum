@@ -10,15 +10,24 @@
 
 #include <Types.hpp>
 
-/**
- * Simple string view class for kernel use.
- */
 namespace Quantum::Kernel::Types {
+  /**
+   * Simple immutable string view class for kernel use.
+   */
   class String {
     public:
+      /**
+       * Constructs a string view from a null-terminated C string.
+       * @param data Pointer to the C string (may be nullptr).
+       */
       constexpr String(CString data)
         : _data(data), _length(ComputeLength(data)) {}
 
+      /**
+       * Constructs a string view from a buffer with explicit length.
+       * @param data Pointer to the buffer (may be nullptr).
+       * @param length Length of the buffer in bytes.
+       */
       constexpr String(CString data, Size length)
         : _data(data), _length(length) {}
 
@@ -43,9 +52,21 @@ namespace Quantum::Kernel::Types {
       }
 
     private:
+      /**
+       * Pointer to the underlying character buffer.
+       */
       CString _data;
+
+      /**
+       * Length of the buffer in bytes.
+       */
       Size _length;
 
+      /**
+       * Computes the length of a null-terminated C string.
+       * @param s Pointer to the C string.
+       * @return Length in bytes excluding the terminator.
+       */
       static constexpr Size ComputeLength(CString s) {
         Size count = 0;
         while (s[count] != '\0') count++;

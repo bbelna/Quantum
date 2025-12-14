@@ -17,7 +17,7 @@
   #include <Arch/IA32/Memory.hpp>
   #include <Arch/IA32/CPU.hpp>
 
-  namespace ArchMemory = Quantum::Kernel::Arch::IA32;
+  using ArchMemory = Quantum::Kernel::Arch::IA32::Memory;
   using ArchCPU = Quantum::Kernel::Arch::IA32::CPU;
 #else
   #error "No architecture selected for memory manager"
@@ -53,14 +53,14 @@ namespace Quantum::Kernel {
     UInt8* heapBase = nullptr;
 
     /**
-     * Pointer to the end of the heap region (next unmapped byte).
+     * Pointer to the end of the mapped heap region (next unmapped byte).
      */
-    UInt8* heapEnd = nullptr;
+    UInt8* heapMappedEnd = nullptr;
 
     /**
-     * Pointer to the current guard page (if any).
+     * Address of the guard page immediately following the mapped heap.
      */
-    UInt8* guardPage = nullptr;
+    UInt8* guardAddress = nullptr;
 
     /**
      * Number of bytes currently mapped in the heap.
@@ -98,6 +98,26 @@ namespace Quantum::Kernel {
     };
 
     /**
+     * Metadata stored immediately before an aligned payload.
+     */
+    struct AlignedMetadata {
+      /**
+       * Alignment marker to detect metadata.
+       */
+      UInt32 magic;
+
+      /**
+       * Owning free-block header for the allocation.
+       */
+      FreeBlock* block;
+
+      /**
+       * Offset from the start of the block payload to the aligned address.
+       */
+      UInt32 payloadOffset;
+    };
+
+    /**
      * Head of the general free list.
      */
     FreeBlock* freeList = nullptr;
@@ -118,21 +138,53 @@ namespace Quantum::Kernel {
     FreeBlock* binFreeLists[binCount] = { nullptr, nullptr, nullptr, nullptr };
 
     /**
-     * Maps the next page in the heap virtual range and advances heapEnd.
+     * Poison pattern used to fill newly allocated payloads.
+     */
+    constexpr UInt8 poisonAllocated = 0xAA;
+
+    /**
+     * Poison pattern used to fill freed payloads.
+     */
+    constexpr UInt8 poisonFreed = 0x55;
+
+    /**
+     * Canary value stored at the end of each allocation.
+     */
+    constexpr UInt32 canaryValue = 0xDEADC0DE;
+
+    /**
+     * Magic tag placed before aligned allocations.
+     */
+    constexpr UInt32 alignedMagic = 0xA11A0CED;
+
+    /**
+     * Maps the next page in the heap virtual range, keeping a guard page
+     * unmapped immediately after the mapped region.
      * @return Pointer to the start of the mapped page.
      */
     UInt8* MapNextHeapPage() {
-      UInt8* pageStart = heapEnd;
-      void* physicalPageAddress = ArchMemory::AllocatePage();
+      UInt8* pageStart = heapMappedEnd;
+      void* physicalPageAddress = ArchMemory::AllocatePage(true);
 
       ArchMemory::MapPage(
-        reinterpret_cast<UInt32>(heapEnd),
+        reinterpret_cast<UInt32>(heapMappedEnd),
         reinterpret_cast<UInt32>(physicalPageAddress),
-        true
+        true,
+        false,
+        false
       );
 
-      heapEnd += heapPageSize;
+      heapMappedEnd += heapPageSize;
       heapMappedBytes += heapPageSize;
+      guardAddress = heapMappedEnd;
+
+      Logger::WriteFormatted(
+        LogLevel::Trace,
+        "Heap mapped page at %p (physical %p); mapped bytes now %p",
+        pageStart,
+        physicalPageAddress,
+        heapMappedBytes
+      );
 
       return pageStart;
     }
@@ -146,9 +198,9 @@ namespace Quantum::Kernel {
           heapStartVirtualAddress + heapGuardPagesBefore * heapPageSize
         );
         heapCurrent = heapBase;
-        heapEnd = heapBase;
+        heapMappedEnd = heapBase;
         heapMappedBytes = 0;
-        guardPage = MapNextHeapPage(); // reserve first mapped page as guard
+        guardAddress = heapBase;
         freeList = nullptr;
       }
     }
@@ -305,63 +357,128 @@ namespace Quantum::Kernel {
       }
     }
 
-    /**
-     * Ensures the heap has room for an allocation of the given size.
-     * @param size Bytes required (including header).
-     */
-    void EnsureHeapHasSpace(UInt32 size) {
-      EnsureHeapInitialized();
-
-      while (true) {
-        void* pointer = AllocateFromFreeList(size);
-
-        if (pointer) {
-          Memory::Free(pointer); // availability confirmed
-          break;
-        }
-
-        // map a new page: release previous guard (if any) into free list, set
-        // new guard
-        if (guardPage) {
-          FreeBlock* block = reinterpret_cast<FreeBlock*>(guardPage);
-          block->size = heapPageSize - sizeof(FreeBlock);
-          block->next = nullptr;
-
-          InsertFreeBlockSorted(block);
-        }
-
-        guardPage = MapNextHeapPage();
-      }
-    }
   }
 
   void Memory::Initialize(UInt32 bootInfoPhysicalAddress) {
     ArchMemory::InitializePaging(bootInfoPhysicalAddress);
   }
 
-  void* Memory::AllocatePage() {
-    return ArchMemory::AllocatePage();
+  void* Memory::AllocatePage(bool zero) {
+    return ArchMemory::AllocatePage(zero);
   }
 
   void* Memory::Allocate(Size size) {
     UInt32 requested = AlignUp(static_cast<UInt32>(size), 8);
     int binIndex = BinIndexForSize(requested);
     UInt32 binSize = (binIndex >= 0) ? binSizes[binIndex] : requested;
-    UInt32 needed = AlignUp(binSize, 8) + sizeof(FreeBlock);
+    UInt32 payloadSize = AlignUp(binSize + sizeof(UInt32), 8); // space for canary
+    UInt32 needed = payloadSize + sizeof(FreeBlock);
 
-    EnsureHeapHasSpace(needed);
+    EnsureHeapInitialized();
 
-    void* pointer = (binIndex >= 0)
-      ? AllocateFromBin(binSize, needed)
-      : AllocateFromFreeList(needed);
+    void* pointer = nullptr;
+
+    while (true) {
+      if (binIndex >= 0) {
+        pointer = AllocateFromBin(binSize, needed);
+      } else {
+        pointer = AllocateFromFreeList(needed);
+      }
+
+      if (pointer) {
+        break;
+      }
+
+      UInt8* newPage = MapNextHeapPage();
+      FreeBlock* block = reinterpret_cast<FreeBlock*>(newPage);
+      block->size = heapPageSize - sizeof(FreeBlock);
+      block->next = nullptr;
+      InsertFreeBlockSorted(block);
+    }
 
     if (pointer) {
+      UInt8* payload = reinterpret_cast<UInt8*>(pointer);
+      UInt32 usable = payloadSize - sizeof(UInt32);
+
+      for (UInt32 i = 0; i < usable; ++i) {
+        payload[i] = poisonAllocated;
+      }
+
+      UInt32* canary = reinterpret_cast<UInt32*>(payload + usable);
+      *canary = canaryValue;
+
+      Logger::WriteFormatted(
+        LogLevel::Trace,
+        "Heap alloc ptr=%p block=%p usable=%p size=%p canary=%p mapped=%p",
+        payload,
+        reinterpret_cast<UInt8*>(payload) - sizeof(FreeBlock),
+        usable,
+        payloadSize,
+        *canary,
+        heapMappedBytes
+      );
+
       return pointer;
     }
 
     PANIC("Kernel heap exhausted");
 
     return nullptr;
+  }
+
+  void* Memory::AllocateAligned(Size size, Size alignment) {
+    if (alignment <= 8) {
+      return Allocate(size);
+    }
+
+    if ((alignment & (alignment - 1)) != 0) {
+      PANIC("AllocateAligned: alignment must be power of two");
+    }
+
+    UInt32 padding = static_cast<UInt32>(alignment) + sizeof(AlignedMetadata);
+    void* raw = Allocate(size + padding);
+
+    UInt8* rawBytes = reinterpret_cast<UInt8*>(raw);
+    UIntPtr rawAddress = reinterpret_cast<UIntPtr>(rawBytes);
+    UIntPtr alignedAddress = (rawAddress + alignment - 1) & ~(alignment - 1);
+
+    AlignedMetadata* metadata
+      = reinterpret_cast<AlignedMetadata*>(alignedAddress) - 1;
+    metadata->magic = alignedMagic;
+    metadata->block = reinterpret_cast<FreeBlock*>(rawBytes - sizeof(FreeBlock));
+    metadata->payloadOffset
+      = static_cast<UInt32>(alignedAddress - (rawAddress));
+
+    UInt8* alignedPayload = reinterpret_cast<UInt8*>(alignedAddress);
+    FreeBlock* block = metadata->block;
+    UInt32 usable = block->size - metadata->payloadOffset;
+
+    if (usable < sizeof(UInt32)) {
+      PANIC("AllocateAligned: block too small for canary");
+    }
+
+    usable -= sizeof(UInt32);
+
+    for (UInt32 i = 0; i < usable; ++i) {
+      alignedPayload[i] = poisonAllocated;
+    }
+
+    UInt32* canary = reinterpret_cast<UInt32*>(alignedPayload + usable);
+    *canary = canaryValue;
+
+    Logger::WriteFormatted(
+      LogLevel::Trace,
+      "Heap alloc aligned ptr=%p block=%p payload=%p offset=%p usable=%p size=%p canary=%p",
+      alignedPayload,
+      block,
+      reinterpret_cast<UInt8*>(block) + sizeof(FreeBlock),
+      metadata->payloadOffset,
+      usable,
+      block->size,
+      *canary
+    );
+
+    return reinterpret_cast<void*>(alignedAddress);
   }
 
   void Memory::FreePage(void* page) {
@@ -374,27 +491,116 @@ namespace Quantum::Kernel {
     UInt8* bytePointer = reinterpret_cast<UInt8*>(pointer);
 
     if (
-      bytePointer < heapBase + sizeof(FreeBlock) ||
+      bytePointer < heapBase ||
       bytePointer >= heapBase + heapMappedBytes
     ) {
       PANIC("Heap free: pointer out of range");
-    } else {
-      FreeBlock* block = reinterpret_cast<FreeBlock*>(
-        bytePointer - sizeof(FreeBlock)
-      );
+    }
 
-      // basic sanity: size should not run past mapped heap
-      UInt8* blockEnd
-        = reinterpret_cast<UInt8*>(block)
-        + sizeof(FreeBlock)
-        + block->size;
+    FreeBlock* block = reinterpret_cast<FreeBlock*>(bytePointer - sizeof(FreeBlock));
+    UInt8* blockBytes = reinterpret_cast<UInt8*>(block);
+    UInt8* payload = reinterpret_cast<UInt8*>(block) + sizeof(FreeBlock);
 
-      if (blockEnd > heapBase + heapMappedBytes) {
-        PANIC("Heap free: block overruns mapped region");
-      } else {
-        InsertIntoBinOrFreeList(block);
+    // if the pointer is not at the block payload start, it may be an aligned
+    // allocation; verify metadata before using it
+    if (bytePointer != payload && bytePointer >= heapBase + sizeof(AlignedMetadata)) {
+      AlignedMetadata* metadata
+        = reinterpret_cast<AlignedMetadata*>(bytePointer) - 1;
+
+      if (metadata->magic == alignedMagic) {
+        UInt8* candidateBlockBytes
+          = reinterpret_cast<UInt8*>(metadata->block);
+
+        if (
+          candidateBlockBytes >= heapBase &&
+          candidateBlockBytes < heapBase + heapMappedBytes
+        ) {
+          FreeBlock* candidateBlock = metadata->block;
+          UInt8* candidatePayload
+            = candidateBlockBytes + sizeof(FreeBlock);
+          UInt8* candidateAligned
+            = candidatePayload + metadata->payloadOffset;
+          UInt8* candidateEnd
+            = candidatePayload + candidateBlock->size;
+          UInt8* metadataBytes = reinterpret_cast<UInt8*>(metadata);
+
+          bool metadataValid
+            = metadata->payloadOffset < candidateBlock->size
+            && candidateAligned < candidateEnd
+            && metadataBytes >= candidatePayload
+            && metadataBytes < candidateEnd
+            && bytePointer == candidateAligned;
+
+          if (metadataValid) {
+            block = candidateBlock;
+            blockBytes = candidateBlockBytes;
+            payload = candidatePayload;
+          }
+        }
       }
     }
+
+    if (blockBytes < heapBase || blockBytes >= heapBase + heapMappedBytes) {
+      PANIC("Heap free: block pointer invalid");
+    }
+
+    // basic sanity: size should not run past mapped heap
+    UInt8* blockEnd = payload + block->size;
+
+    if (blockEnd > heapBase + heapMappedBytes) {
+      PANIC("Heap free: block overruns mapped region");
+    }
+
+    if (block->size < sizeof(UInt32)) {
+      PANIC("Heap free: block too small for canary");
+    }
+
+    UInt32 offset = 0;
+
+    offset = (bytePointer > payload) ? static_cast<UInt32>(bytePointer - payload) : 0;
+
+    if (offset >= block->size) {
+      PANIC("Heap free: offset beyond block size");
+    }
+
+    UInt32 usable = block->size - offset;
+
+    if (usable < sizeof(UInt32)) {
+      PANIC("Heap free: block too small for canary");
+    }
+
+    usable -= sizeof(UInt32);
+    UInt8* alignedPayload = payload + offset;
+    UInt32* canary = reinterpret_cast<UInt32*>(alignedPayload + usable);
+
+    if (*canary != canaryValue) {
+      Logger::WriteFormatted(
+        LogLevel::Error,
+        "Heap free: canary mismatch ptr=%p block=%p payload=%p offset=%p usable=%p size=%p canary=%p expected=%p",
+        bytePointer,
+        block,
+        payload,
+        offset,
+        usable,
+        block->size,
+        *canary,
+        canaryValue
+      );
+      Logger::WriteFormatted(
+        LogLevel::Error,
+        "Heap state: mapped=%p freeBytes=%p freeBlocks=%p",
+        heapMappedBytes,
+        GetHeapState().freeBytes,
+        GetHeapState().freeBlocks
+      );
+      PANIC("Heap free: canary corrupted");
+    }
+
+    for (UInt32 i = 0; i < usable; ++i) {
+      alignedPayload[i] = poisonFreed;
+    }
+
+    InsertIntoBinOrFreeList(block);
   }
 
   Memory::HeapState Memory::GetHeapState() {

@@ -11,7 +11,7 @@
 #include <Types.hpp>
 
 extern "C" {
-  /*
+  /**
    * Sets up segment registers, stack, and calls into `StartKernel()`.
    */
   void KernelEntry();

@@ -18,53 +18,232 @@ namespace Quantum::Kernel::Arch::IA32 {
   using LogLevel = Logger::Level;
 
   namespace {
+    /**
+     * Size of a single page in bytes.
+     */
     constexpr UInt32 pageSize = 4096;
+
+    /**
+     * Number of entries per IA32 page directory.
+     */
+    constexpr UInt32 pageDirectoryEntries = 1024;
+
+    /**
+     * Number of entries per IA32 page table.
+     */
+    constexpr UInt32 pageTableEntries = 1024;
+
+    /**
+     * Page present bit.
+     */
     constexpr UInt32 pagePresent = 0x1;
+
+    /**
+     * Page writable bit.
+     */
     constexpr UInt32 pageWrite = 0x2;
+
+    /**
+     * Page user-accessible bit.
+     */
+    constexpr UInt32 pageUser = 0x4;
+
+    /**
+     * Page global bit.
+     */
+    constexpr UInt32 pageGlobal = 0x100;
+
+    /**
+     * Virtual address base exposing all PTEs via the recursive slot.
+     */
+    constexpr UInt32 recursivePageTablesBase = 0xFFC00000;
+
+    /**
+     * Virtual address exposing the PDE array via the recursive slot.
+     */
+    constexpr UInt32 recursivePageDirectory = 0xFFFFF000;
+
+    /**
+     * Maximum BootInfo entries to consume from firmware.
+     */
     constexpr UInt32 maxBootEntries = 32;
+
+    /**
+     * Default managed memory size when no BootInfo is present.
+     */
     constexpr UInt32 defaultManagedBytes = 64 * 1024 * 1024;
 
+    /**
+     * Total bytes under management by the physical allocator.
+     */
     UInt32 managedBytes = defaultManagedBytes;
+
+    /**
+     * Total number of 4 KB pages under management.
+     */
     UInt32 pageCount = defaultManagedBytes / pageSize;
 
+    /**
+     * Number of pages currently marked used.
+     */
+    UInt32 usedPages = 0;
+
+    /**
+     * Kernel page directory storage.
+     */
     static UInt32 pageDirectory[1024] __attribute__((aligned(pageSize)));
+
+    /**
+     * First page table used for initial identity mapping.
+     */
     static UInt32 firstPageTable[1024] __attribute__((aligned(pageSize)));
+
+    /**
+     * Bitmap tracking physical page usage.
+     */
     static UInt32* pageBitmap = nullptr;
+
+    /**
+     * Length of the page bitmap in 32-bit words.
+     */
     static UInt32 bitmapLengthWords = 0;
 
     /**
-     * Aligns a value up to the specified alignment boundary.
+     * Allocates a single physical 4 KB page.
+     * @param zero Whether to zero the page before returning it.
+     * @return Physical address of the allocated page.
+     */
+    UInt32 AllocatePhysicalPage(bool zero);
+
+    /**
+     * Aligns a value down to the nearest alignment boundary.
      * @param value Value to align.
-     * @param alignment Alignment to apply (must be power of two).
-     * @return Aligned value.
+     * @param alignment Alignment boundary (power of two).
+     * @return Aligned value at or below the input.
+     */
+    inline UInt32 AlignDown(UInt32 value, UInt32 alignment) {
+      return value & ~(alignment - 1);
+    }
+
+    /**
+     * Aligns a value up to the next alignment boundary.
+     * @param value Value to align.
+     * @param alignment Alignment boundary (power of two).
+     * @return Aligned value at or above the input.
      */
     inline UInt32 AlignUp(UInt32 value, UInt32 alignment) {
       return (value + alignment - 1) & ~(alignment - 1);
     }
 
     /**
-     * Marks a page as used in the bitmap.
-     * @param pageIndex Index of the page to mark.
+     * Computes a bit mask for a specific bit index.
+     * @param bit Bit index within the bitmap.
+     * @return Mask with the indexed bit set.
+     */
+    inline UInt32 BitMask(UInt32 bit) {
+      return (1u << (bit % 32));
+    }
+
+    /**
+     * Converts a bit index to a bitmap word index.
+     * @param bit Bit index within the bitmap.
+     * @return Zero-based index of the 32-bit word containing the bit.
+     */
+    inline UInt32 BitmapWordIndex(UInt32 bit) {
+      return bit / 32;
+    }
+
+    /**
+     * Marks a page as used in the allocation bitmap.
+     * @param pageIndex Page index to mark used.
      */
     inline void SetPageUsed(UInt32 pageIndex) {
-      pageBitmap[pageIndex / 32] |= (1u << (pageIndex % 32));
+      pageBitmap[BitmapWordIndex(pageIndex)] |= BitMask(pageIndex);
     }
 
     /**
-     * Clears the used bit for a page in the bitmap.
-     * @param pageIndex Index of the page to clear.
+     * Marks a page as free in the allocation bitmap.
+     * @param pageIndex Page index to mark free.
      */
     inline void ClearPageUsed(UInt32 pageIndex) {
-      pageBitmap[pageIndex / 32] &= ~(1u << (pageIndex % 32));
+      pageBitmap[BitmapWordIndex(pageIndex)] &= ~BitMask(pageIndex);
     }
 
     /**
-     * Tests whether a page is free in the bitmap.
-     * @param pageIndex Index of the page to test.
+     * Tests whether a page is free according to the bitmap.
+     * @param pageIndex Page index to query.
      * @return true if the page is free; false otherwise.
      */
     inline bool PageFree(UInt32 pageIndex) {
-      return (pageBitmap[pageIndex / 32] & (1u << (pageIndex % 32))) == 0;
+      return (pageBitmap[BitmapWordIndex(pageIndex)] & BitMask(pageIndex)) == 0;
+    }
+
+    /**
+     * Tests whether a page is marked used according to the bitmap.
+     * @param pageIndex Page index to query.
+     * @return true if the page is used; false otherwise.
+     */
+    inline bool PageUsed(UInt32 pageIndex) {
+      return !PageFree(pageIndex);
+    }
+
+    /**
+     * Finds the index of the first zero bit; returns -1 if none.
+     * @param value 32-bit word to scan.
+     * @return Bit index [0,31] or -1 if all bits are one.
+     */
+    inline int FindFirstZeroBit(UInt32 value) {
+      if (value == 0xFFFFFFFF) return -1;
+      #ifdef __GNUC__
+        return __builtin_ctz(~value);
+      #else
+        for (int i = 0; i < 32; ++i) {
+          if ((value & (1u << i)) == 0) return i;
+        }
+        return -1;
+      #endif
+    }
+
+    /**
+     * Returns a pointer to the PDE array via the recursive mapping.
+     * @return Pointer to the page-directory entries.
+     */
+    inline UInt32* GetPageDirectoryVirtual() {
+      return reinterpret_cast<UInt32*>(recursivePageDirectory);
+    }
+
+    /**
+     * Returns a pointer to a PTE array via the recursive mapping.
+     * @param pageDirectoryIndex Index of the PDE to project.
+     * @return Pointer to the page-table entries for that PDE.
+     */
+    inline UInt32* GetPageTableVirtual(UInt32 pageDirectoryIndex) {
+      return reinterpret_cast<UInt32*>(
+        recursivePageTablesBase + pageDirectoryIndex * pageSize
+      );
+    }
+
+    /**
+     * Ensures a page table exists for a PDE index, allocating if needed.
+     * @param pageDirectoryIndex Index of the PDE to populate.
+     * @return Pointer to the mapped page-table entries.
+     */
+    UInt32* EnsurePageTable(UInt32 pageDirectoryIndex) {
+      if (pageDirectory[pageDirectoryIndex] & pagePresent) {
+        // identity map keeps tables reachable even before higher-half switch
+        return reinterpret_cast<UInt32*>(pageDirectory[pageDirectoryIndex] & ~0xFFF);
+      }
+
+      UInt32* table = reinterpret_cast<UInt32*>(AllocatePhysicalPage(true));
+
+      for (UInt32 i = 0; i < pageTableEntries; ++i) {
+        table[i] = 0;
+      }
+
+      pageDirectory[pageDirectoryIndex]
+        = reinterpret_cast<UInt32>(table) | pagePresent | pageWrite;
+
+      return table;
     }
 
     /**
@@ -283,20 +462,55 @@ namespace Quantum::Kernel::Arch::IA32 {
         }
 
         SetPageUsed(0);
+
+        freePages = 0;
+        for (UInt32 i = 0; i < pageCount; ++i) {
+          if (PageFree(i)) {
+            ++freePages;
+          }
+        }
       }
+
+      freePages = 0;
+      for (UInt32 i = 0; i < pageCount; ++i) {
+        if (PageFree(i)) {
+          ++freePages;
+        }
+      }
+
+      usedPages = pageCount - freePages;
 
       // retain BootInfo for potential future diagnostics (not logged here)
     }
 
     /**
      * Allocates a single physical 4 KB page.
+     * @param zero Whether to zero the page before returning it.
      * @return Physical address of the allocated page.
      */
-    UInt32 AllocatePhysicalPage() {
-      for (UInt32 i = 0; i < pageCount; ++i) {
-        if (PageFree(i)) {
-          SetPageUsed(i);
-          return i * pageSize;
+    UInt32 AllocatePhysicalPage(bool zero) {
+      UInt32 words = bitmapLengthWords;
+
+      for (UInt32 wordIndex = 0; wordIndex < words; ++wordIndex) {
+        UInt32 word = pageBitmap[wordIndex];
+        int bit = FindFirstZeroBit(word);
+
+        if (bit >= 0) {
+          UInt32 pageIndex = wordIndex * 32u + static_cast<UInt32>(bit);
+
+          if (pageIndex >= pageCount) break;
+
+          SetPageUsed(pageIndex);
+          ++usedPages;
+
+          if (zero) {
+            UInt8* memory = reinterpret_cast<UInt8*>(pageIndex * pageSize);
+            for (UInt32 b = 0; b < pageSize; ++b) {
+              memory[b] = 0;
+            }
+          }
+
+          return pageIndex * pageSize;
         }
       }
 
@@ -305,20 +519,16 @@ namespace Quantum::Kernel::Arch::IA32 {
     }
   }
 
-  /**
-   * Sets up identity paging for the managed physical range.
-   * @param bootInfoPhysicalAddress Physical address of the boot info block.
-   */
-  void InitializePaging(UInt32 bootInfoPhysicalAddress) {
+  void Memory::InitializePaging(UInt32 bootInfoPhysicalAddress) {
     InitializePhysicalAllocator(bootInfoPhysicalAddress);
 
     // clear directory and first table
-    for (int i = 0; i < 1024; ++i) {
+    for (int i = 0; i < static_cast<int>(pageDirectoryEntries); ++i) {
       pageDirectory[i] = 0;
       firstPageTable[i] = 0;
     }
 
-    // identity map managedBytes and map kernel higher-half
+    // identity map managedBytes
     UInt32 tablesNeeded
       = (managedBytes + (4 * 1024 * 1024 - 1)) / (4 * 1024 * 1024);
 
@@ -332,17 +542,17 @@ namespace Quantum::Kernel::Arch::IA32 {
       if (tableIndex == 0) {
         table = firstPageTable;
       } else {
-        table = reinterpret_cast<UInt32*>(AllocatePhysicalPage());
+        table = reinterpret_cast<UInt32*>(AllocatePhysicalPage(true));
 
-        for (int i = 0; i < 1024; ++i) {
+        for (UInt32 i = 0; i < pageTableEntries; ++i) {
           table[i] = 0;
         }
       }
 
-      UInt32 base = tableIndex * 1024 * pageSize;
+      UInt32 base = tableIndex * pageTableEntries * pageSize;
 
-      for (UInt32 i = 0; i < 1024; ++i) {
-        table[i] = (base + i * pageSize) | pagePresent | pageWrite;
+      for (UInt32 i = 0; i < pageTableEntries; ++i) {
+        table[i] = (base + i * pageSize) | pagePresent | pageWrite | pageGlobal;
       }
 
       if (tableIndex == 0) {
@@ -353,6 +563,10 @@ namespace Quantum::Kernel::Arch::IA32 {
         = reinterpret_cast<UInt32>(table) | pagePresent | pageWrite;
     }
 
+    // install recursive mapping in the last PDE
+    pageDirectory[Memory::recursiveSlot]
+      = reinterpret_cast<UInt32>(pageDirectory) | pagePresent | pageWrite;
+
     // load directory and enable paging
     CPU::LoadPageDirectory(reinterpret_cast<UInt32>(pageDirectory));
     CPU::EnablePaging();
@@ -362,13 +576,13 @@ namespace Quantum::Kernel::Arch::IA32 {
 
   }
 
-  void* AllocatePage() {
-    UInt32 physicalPageAddress = AllocatePhysicalPage();
+  void* Memory::AllocatePage(bool zero) {
+    UInt32 physicalPageAddress = AllocatePhysicalPage(zero);
 
     return reinterpret_cast<void*>(physicalPageAddress);
   }
 
-  void FreePage(void* physicalAddress) {
+  void Memory::FreePage(void* physicalAddress) {
     UInt32 address = reinterpret_cast<UInt32>(physicalAddress);
 
     if (address % pageSize != 0) {
@@ -383,35 +597,38 @@ namespace Quantum::Kernel::Arch::IA32 {
       return;
     }
 
-    ClearPageUsed(index);
-  }
-
-  void MapPage(UInt32 virtualAddress, UInt32 physicalAddress, bool writable) {
-    UInt32 pageDirectoryIndex = (virtualAddress >> 22) & 0x3FF;
-    UInt32 pageTableIndex = (virtualAddress >> 12) & 0x3FF;
-    UInt32* table;
-
-    if (pageDirectory[pageDirectoryIndex] & pagePresent) {
-      table = reinterpret_cast<UInt32*>(pageDirectory[pageDirectoryIndex] & ~0xFFF);
-    } else {
-      // allocate a new page table in low memory (identity mapped)
-      table = reinterpret_cast<UInt32*>(AllocatePhysicalPage());
-
-      for (int i = 0; i < 1024; ++i) {
-        table[i] = 0;
-      }
-
-      pageDirectory[pageDirectoryIndex]
-        = reinterpret_cast<UInt32>(table) | pagePresent | pageWrite;
+    if (PageFree(index)) {
+      Logger::Write(LogLevel::Warning, "FreePage: double free detected");
+      return;
     }
 
-    UInt32 flags = pagePresent | (writable ? pageWrite : 0);
+    ClearPageUsed(index);
+    if (usedPages > 0) {
+      --usedPages;
+    }
+  }
+
+  void Memory::MapPage(
+    UInt32 virtualAddress,
+    UInt32 physicalAddress,
+    bool writable,
+    bool user,
+    bool global
+  ) {
+    UInt32 pageDirectoryIndex = (virtualAddress >> 22) & 0x3FF;
+    UInt32 pageTableIndex = (virtualAddress >> 12) & 0x3FF;
+    UInt32* table = EnsurePageTable(pageDirectoryIndex);
+
+    UInt32 flags = pagePresent
+      | (writable ? pageWrite : 0)
+      | (user ? pageUser : 0)
+      | (global ? pageGlobal : 0);
     table[pageTableIndex] = (physicalAddress & ~0xFFF) | flags;
 
     CPU::InvalidatePage(virtualAddress);
   }
 
-  void UnmapPage(UInt32 virtualAddress) {
+  void Memory::UnmapPage(UInt32 virtualAddress) {
     UInt32 pageDirectoryIndex = (virtualAddress >> 22) & 0x3FF;
     UInt32 pageTableIndex = (virtualAddress >> 12) & 0x3FF;
 
@@ -419,10 +636,108 @@ namespace Quantum::Kernel::Arch::IA32 {
       return;
     }
 
-    UInt32* table
-      = reinterpret_cast<UInt32*>(pageDirectory[pageDirectoryIndex] & ~0xFFF);
+    UInt32* table = reinterpret_cast<UInt32*>(
+      pageDirectory[pageDirectoryIndex] & ~0xFFF
+    );
     table[pageTableIndex] = 0;
 
     CPU::InvalidatePage(virtualAddress);
+  }
+
+  void Memory::MapRange(
+    UInt32 virtualAddress,
+    UInt32 physicalAddress,
+    UInt32 lengthBytes,
+    bool writable,
+    bool user,
+    bool global
+  ) {
+    UInt32 bytes = AlignUp(lengthBytes, pageSize);
+    UInt32 count = bytes / pageSize;
+
+    for (UInt32 i = 0; i < count; ++i) {
+      MapPage(
+        virtualAddress + i * pageSize,
+        physicalAddress + i * pageSize,
+        writable,
+        user,
+        global
+      );
+    }
+  }
+
+  void Memory::UnmapRange(UInt32 virtualAddress, UInt32 lengthBytes) {
+    UInt32 bytes = AlignUp(lengthBytes, pageSize);
+    UInt32 count = bytes / pageSize;
+
+    for (UInt32 i = 0; i < count; ++i) {
+      UnmapPage(virtualAddress + i * pageSize);
+    }
+  }
+
+  void Memory::ReservePhysicalRange(UInt32 physicalAddress, UInt32 lengthBytes) {
+    UInt32 start = AlignDown(physicalAddress, pageSize);
+    UInt32 end = AlignUp(physicalAddress + lengthBytes, pageSize);
+
+    UInt32 startPage = start / pageSize;
+    UInt32 endPage = end / pageSize;
+
+    if (endPage > pageCount) {
+      endPage = pageCount;
+    }
+
+    for (UInt32 p = startPage; p < endPage; ++p) {
+      if (PageFree(p)) {
+        SetPageUsed(p);
+        ++usedPages;
+      }
+    }
+  }
+
+  void Memory::ReleasePhysicalRange(UInt32 physicalAddress, UInt32 lengthBytes) {
+    UInt32 start = AlignDown(physicalAddress, pageSize);
+    UInt32 end = AlignUp(physicalAddress + lengthBytes, pageSize);
+
+    UInt32 startPage = start / pageSize;
+    UInt32 endPage = end / pageSize;
+
+    if (endPage > pageCount) {
+      endPage = pageCount;
+    }
+
+    for (UInt32 p = startPage; p < endPage; ++p) {
+      if (PageUsed(p)) {
+        ClearPageUsed(p);
+        if (usedPages > 0) {
+          --usedPages;
+        }
+      }
+    }
+  }
+
+  UInt32 Memory::GetPageDirectoryEntry(UInt32 virtualAddress) {
+    UInt32 index = (virtualAddress >> 22) & 0x3FF;
+    UInt32* directory = GetPageDirectoryVirtual();
+    return directory[index];
+  }
+
+  UInt32 Memory::GetPageTableEntry(UInt32 virtualAddress) {
+    UInt32 directoryEntry = GetPageDirectoryEntry(virtualAddress);
+
+    if ((directoryEntry & pagePresent) == 0) {
+      return 0;
+    }
+
+    UInt32 tableIndex = (virtualAddress >> 12) & 0x3FF;
+    UInt32* table = GetPageTableVirtual((virtualAddress >> 22) & 0x3FF);
+    return table[tableIndex];
+  }
+
+  Memory::PhysicalAllocatorState Memory::GetPhysicalAllocatorState() {
+    PhysicalAllocatorState stats{};
+    stats.totalPages = pageCount;
+    stats.usedPages = usedPages;
+    stats.freePages = pageCount - usedPages;
+    return stats;
   }
 }

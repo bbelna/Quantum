@@ -14,6 +14,9 @@
 namespace Quantum::Kernel::Arch::IA32 {
   using LogLevel = Logger::Level;
 
+  /**
+   * Low-level IA32 CPU control helpers.
+   */
   class CPU {
     public:
       /**
@@ -25,6 +28,7 @@ namespace Quantum::Kernel::Arch::IA32 {
        * Halts the CPU forever.
        */
       [[noreturn]] static void HaltForever();
+
       /**
        * Disable interrupts.
        */

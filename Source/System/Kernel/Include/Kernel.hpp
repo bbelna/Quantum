@@ -16,6 +16,9 @@
 namespace Quantum::Kernel {
   using String = Types::String;
 
+  /**
+   * Core kernel entry points and panic handling.
+   */
   class Kernel {
     public:
       /**

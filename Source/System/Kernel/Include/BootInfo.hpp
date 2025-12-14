@@ -16,20 +16,50 @@ namespace Quantum::Kernel {
    * type == 1 indicates usable RAM; other values are reserved or ACPI data.
    */
   struct MemoryRegion {
-    UInt32 baseLow;     /**< Low 32 bits of the physical base address. */
-    UInt32 baseHigh;    /**< High 32 bits of the physical base address. */
-    UInt32 lengthLow;   /**< Low 32 bits of the segment length in bytes. */
-    UInt32 lengthHigh;  /**< High 32 bits of the segment length in bytes. */
-    UInt32 type;        /**< Region classification (1 = usable, otherwise reserved). */
+    /**
+     * Low 32 bits of the physical base address.
+     */
+    UInt32 baseLow;
+
+    /**
+     * High 32 bits of the physical base address.
+     */
+    UInt32 baseHigh;
+
+    /**
+     * Low 32 bits of the segment length in bytes.
+     */
+    UInt32 lengthLow;
+
+    /**
+     * High 32 bits of the segment length in bytes.
+     */
+    UInt32 lengthHigh;
+
+    /**
+     * Region classification (1 = usable, otherwise reserved).
+     */
+    UInt32 type;
   };
 
   /**
    * Bootloader-provided memory map and metadata passed into the kernel.
    */
   struct BootInfo {
-    UInt32 entryCount;          /**< Number of valid entries in the table. */
-    UInt32 reserved;            /**< Reserved for future use/alignment. */
-    MemoryRegion entries[32];   /**< E820 entries captured during boot. */
+    /**
+     * Number of valid entries in the table.
+     */
+    UInt32 entryCount;
+
+    /**
+     * Reserved for future use/alignment.
+     */
+    UInt32 reserved;
+
+    /**
+     * E820 entries captured during boot.
+     */
+    MemoryRegion entries[32];
   };
 
   constexpr UInt32 kBootInfoPhysical = 0x00008000;

@@ -18,18 +18,44 @@ namespace Quantum::Kernel::Arch::IA32 {
    * An entry in the IA32 Interrupt Descriptor Table (IDT).
    */
   struct IDTEntry {
-    UInt16 offsetLow;         // bits 0..15 of handler address
-    UInt16 selector;          // code segment selector
-    UInt8  zero;              // always 0
-    UInt8  typeAttribute;     // type and attributes (present, DPL, gate type)
-    UInt16 offsetHigh;        // bits 16..31 of handler address
+    /**
+     * Bits 0..15 of handler address.
+     */
+    UInt16 offsetLow;
+
+    /**
+     * Code segment selector.
+     */
+    UInt16 selector;
+
+    /**
+     * Always zero.
+     */
+    UInt8 zero;
+
+    /**
+     * Type and attributes (present, DPL, gate type).
+     */
+    UInt8 typeAttribute;
+
+    /**
+     * Bits 16..31 of handler address.
+     */
+    UInt16 offsetHigh;
   } __attribute__((packed));
 
   /**
    * The IDT descriptor structure for the `lidt` instruction.
    */
   struct IDTDescriptor {
+    /**
+     * Size of the IDT in bytes minus one.
+     */
     UInt16 limit;
+
+    /**
+     * Linear base address of the IDT.
+     */
     UInt32 base;
   } __attribute__((packed));
 

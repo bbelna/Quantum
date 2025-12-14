@@ -15,6 +15,9 @@ namespace Quantum::Kernel {
 
   using InterruptHandler = void(*)(InterruptContext& ctx);
 
+  /**
+   * Kernel interrupt controller for registering handlers.
+   */
   class Interrupts {
     public:
       /**

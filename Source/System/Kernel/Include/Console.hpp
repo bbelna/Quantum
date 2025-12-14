@@ -11,6 +11,9 @@
 #include <Types.hpp>
 
 namespace Quantum::Kernel {
+  /**
+   * Console interface used by the kernel for text output.
+   */
   class Console {
     public:
       /**

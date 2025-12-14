@@ -9,6 +9,7 @@
 #include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/Exceptions.hpp>
 #include <Arch/IA32/InterruptContext.hpp>
+#include <Arch/IA32/Memory.hpp>
 #include <Interrupts.hpp>
 #include <Kernel.hpp>
 #include <Logger.hpp>
@@ -48,7 +49,7 @@ namespace Quantum::Kernel::Arch::IA32 {
       );
       Logger::WriteFormatted(
         LogLevel::Trace,
-        "Vector=%p Error=%p%s",
+        "Vector=%p Error=%p",
         context.vector,
         context.errorCode
       );
@@ -72,12 +73,43 @@ namespace Quantum::Kernel::Arch::IA32 {
       PANIC("General protection fault");
     }
 
+    void DumpPageFaultDetails(UInt32 faultAddress, UInt32 errorCode) {
+      const char* accessType = (errorCode & 0x2) ? "write" : "read";
+      const char* mode = (errorCode & 0x4) ? "user" : "kernel";
+      bool presentViolation = (errorCode & 0x1) != 0;
+      bool reservedBit = (errorCode & 0x8) != 0;
+      bool instructionFetch = (errorCode & 0x10) != 0;
+
+      UInt32 pde = Memory::GetPageDirectoryEntry(faultAddress);
+      UInt32 pte = Memory::GetPageTableEntry(faultAddress);
+
+      Logger::WriteFormatted(
+        LogLevel::Trace,
+        "Page fault at %p (%s %s) err=%p present=%s reserved=%s instr=%s",
+        faultAddress,
+        accessType,
+        mode,
+        errorCode,
+        presentViolation ? "yes" : "no",
+        reservedBit ? "yes" : "no",
+        instructionFetch ? "yes" : "no"
+      );
+
+      Logger::WriteFormatted(
+        LogLevel::Trace,
+        "PDE=%p PTE=%p",
+        pde,
+        pte
+      );
+    }
+
     static void OnPageFault(InterruptContext& context) {
       UInt32 faultAddress;
 
       asm volatile("mov %%cr2, %0" : "=r"(faultAddress));
 
       DumpContext(context, faultAddress);
+      DumpPageFaultDetails(faultAddress, context.errorCode);
       PANIC("Page fault");
     }
   }

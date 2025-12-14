@@ -24,14 +24,22 @@ namespace Quantum::Kernel {
        * Allocates one 4 KB page of physical memory.
        * @return Pointer to the allocated page (identity mapped).
        */
-      static void* AllocatePage();
+      static void* AllocatePage(bool zero = false);
 
       /**
-       * Allocates a block of kernel heap memory (bump allocator).
+       * Allocates a block of kernel heap memory.
        * @param size Number of bytes requested.
        * @return Pointer to writable memory (never null; may panic on OOM).
        */
       static void* Allocate(Size size);
+
+      /**
+       * Allocates a block of kernel heap memory with a specific alignment.
+       * @param size Number of bytes requested.
+       * @param alignment Power-of-two byte alignment.
+       * @return Pointer to aligned memory (never null; may panic on OOM).
+       */
+      static void* AllocateAligned(Size size, Size alignment);
 
       /**
        * Frees a single physical page (identity-mapped).
