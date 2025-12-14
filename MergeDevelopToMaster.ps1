@@ -29,7 +29,10 @@ $after = (git rev-parse HEAD).Trim()
 
 # only push if there were new commits merged
 if ($before -ne $after) {
+    Write-Host "`Pushing master..."
+
     git push origin master
+
     Write-Host "`Pushed master (new commits were merged)."
 } else {
     Write-Host "`No changes to merge; skipping push."
