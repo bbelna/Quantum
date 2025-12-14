@@ -36,7 +36,6 @@ namespace Quantum::Kernel {
 
       char buffer[16] = {};
       Size idx = 0;
-
       const char* digits = "0123456789ABCDEF";
 
       do {
@@ -69,6 +68,7 @@ namespace Quantum::Kernel {
       for (const char* p = format; *p != '\0'; ++p) {
         if (*p != '%') {
           ConsoleDriver::WriteCharacter(*p);
+
           continue;
         }
 
@@ -81,41 +81,55 @@ namespace Quantum::Kernel {
         switch (*p) {
           case 's': {
             const char* str = VARIABLE_ARGUMENTS(args, const char*);
+
             ConsoleDriver::Write(str ? str : "(null)");
+
             break;
           }
           case 'c': {
             char c = static_cast<char>(VARIABLE_ARGUMENTS(args, int));
+
             ConsoleDriver::WriteCharacter(c);
+
             break;
           }
           case 'd': {
             Int32 v = VARIABLE_ARGUMENTS(args, Int32);
+
             ConsoleDriver::Write(CStringHelper::ToCString(v));
+
             break;
           }
           case 'u': {
             UInt32 v = VARIABLE_ARGUMENTS(args, UInt32);
+
             WriteUnsigned(v, 10);
+
             break;
           }
           case 'x': {
             UInt32 v = VARIABLE_ARGUMENTS(args, UInt32);
+
             WriteUnsigned(v, 16, false);
+
             break;
           }
           case 'p': {
             UInt32 v = VARIABLE_ARGUMENTS(args, UInt32);
+
             WriteUnsigned(v, 16, true);
+
             break;
           }
           case '%': {
             ConsoleDriver::WriteCharacter('%');
+
             break;
           }
           default: {
             ConsoleDriver::WriteCharacter('%');
             ConsoleDriver::WriteCharacter(*p);
+
             break;
           }
         }

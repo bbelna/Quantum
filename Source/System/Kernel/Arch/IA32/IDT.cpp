@@ -7,17 +7,29 @@
 //------------------------------------------------------------------------------
 
 #include <Arch/IA32/CPU.hpp>
+#include <Arch/IA32/Drivers/PIC.hpp>
 #include <Arch/IA32/IDT.hpp>
 #include <Arch/IA32/InterruptContext.hpp>
-#include <Arch/IA32/Drivers/PIC.hpp>
 #include <Logger.hpp>
 
+// TODO: refactor into IDT class
 namespace Quantum::Kernel::Arch::IA32 {
   using LogLevel = Logger::Level;
   using PIC = Drivers::PIC;
 
+  /**
+   * Total number of ISR exceptions.
+   */
   constexpr UInt8 exceptionCount = 32;
+
+  /**
+   * IRQ base vector.
+   */
   constexpr UInt8 irqBase = 32;
+
+  /**
+   * Total number of IRQs.
+   */
   constexpr UInt8 irqCount = 16;
 
   static IDTEntry idtEntries[256];

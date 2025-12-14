@@ -66,9 +66,7 @@ namespace Quantum::Kernel {
     char buffer[bufferLength] = {};
 
     VARIABLE_ARGUMENTS_START(args, formattedMessage);
-
     CStringHelper::Format(buffer, bufferLength, formattedMessage.Data(), args);
-
     VARIABLE_ARGUMENTS_END(args);
 
     for (Size i = 0; i < _writerCount; ++i) {

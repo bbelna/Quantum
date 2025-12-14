@@ -27,16 +27,6 @@ using Writer = Types::Writer;
 extern "C" void* GDTDescriptor32;
 
 namespace {
-  inline void EarlyPutChar(UInt16 pos, char c, UInt8 attr = 0x0F) {
-    volatile UInt16* vga = reinterpret_cast<volatile UInt16*>(0xB8000);
-    vga[pos] = static_cast<UInt16>(c) | (static_cast<UInt16>(attr) << 8);
-  }
-
-  /**
-   * Simple page table entries built in low memory to cover a 16 MB identity
-   * window, the higher-half kernel image, and the recursive slot. Only used
-   * during bootstrap; the main memory manager replaces these later.
-   */
   /**
    * Bootstrap page directory used before the main memory manager takes over.
    */
@@ -71,10 +61,13 @@ namespace {
     // identity map first 16 mb (4 tables)
     for (UInt32 t = 0; t < 4; ++t) {
       UInt32* table = bootstrapPageTables[t];
+
       for (UInt32 entryIndex = 0; entryIndex < 1024; ++entryIndex) {
         UInt32 physicalAddress = (t * 1024 + entryIndex) * pageSize;
+
         table[entryIndex] = physicalAddress | pagePresent | pageWrite;
       }
+
       bootstrapPageDirectory[t] = reinterpret_cast<UInt32>(table) | pagePresent | pageWrite;
     }
 
@@ -84,7 +77,6 @@ namespace {
     UInt32 kernelPhysicalEnd   = reinterpret_cast<UInt32>(&__phys_end);
     UInt32 kernelImageBytes    = kernelPhysicalEnd - kernelPhysicalStart;
     UInt32 kernelVirtualBase   = reinterpret_cast<UInt32>(&__hh_virt_start);
-
     UInt32 nextKernelTable = 0;
 
     // map each page of the kernel image
@@ -93,20 +85,27 @@ namespace {
       UInt32 virtualAddress = kernelVirtualBase + offset;
       UInt32 pageDirectoryIndex = (virtualAddress >> 22) & 0x3FF;
       UInt32 pageTableIndex = (virtualAddress >> 12) & 0x3FF;
+
       if (bootstrapPageDirectory[pageDirectoryIndex] == 0) {
         UInt32 tablePhysical = 0;
+
         if (pageDirectoryIndex < 4) {
           tablePhysical = reinterpret_cast<UInt32>(bootstrapPageTables[pageDirectoryIndex]);
         } else if (nextKernelTable < 8) {
           UInt32* table = bootstrapKernelTables[nextKernelTable++];
+
           for (UInt32 i = 0; i < 1024; ++i) {
             table[i] = 0;
           }
+
           tablePhysical = reinterpret_cast<UInt32>(table);
         }
+
         bootstrapPageDirectory[pageDirectoryIndex] = tablePhysical | pagePresent | pageWrite;
       }
+
       UInt32* table = reinterpret_cast<UInt32*>(bootstrapPageDirectory[pageDirectoryIndex] & ~0xFFFu);
+
       table[pageTableIndex] = physicalAddress | pagePresent | pageWrite;
     }
 
@@ -125,21 +124,23 @@ extern "C" [[noreturn]] __attribute__((section(".text.start")))
 void EnablePagingAndJump(UInt32 bootInfoPhysicalAddress) {
   BuildBootstrapPaging();
 
-  // Debug: confirm the higher-half payload actually exists in low memory before paging.
-  // If the bootloader failed to copy the higher-half segment, this byte will be 0.
-  UInt8 hhFirstByte = *reinterpret_cast<UInt8*>(&__hh_phys_start);
-
   UInt32 pageDirectoryPhysical = reinterpret_cast<UInt32>(bootstrapPageDirectory);
+
   asm volatile("mov %0, %%cr3" : : "r"(pageDirectoryPhysical) : "memory");
 
   UInt32 cr0;
+
   asm volatile("mov %%cr0, %0" : "=r"(cr0));
+
   cr0 |= 0x80000000; // enable paging
+
   asm volatile("mov %0, %%cr0" : : "r"(cr0) : "memory");
 
   // keep using the low stack; it remains identity mapped
   UInt32 esp;
+
   asm volatile("mov %%esp, %0" : "=r"(esp));
+
   UInt32 higherEsp = esp;
 
   // higher-half entry address for StartKernel
@@ -184,11 +185,8 @@ extern "C" __attribute__((naked, section(".text.start.entry"))) void KernelEntry
 }
 
 extern "C" void StartKernel(UInt32 bootInfoPhysicalAddress) {
-  EarlyPutChar(1, 'X');
-
   ClearBSS();
   InitializeKernelLogging();
-  TraceVersionAndCopyright();
 
   Kernel::Initialize(bootInfoPhysicalAddress);
 
@@ -209,13 +207,6 @@ void InitializeKernelLogging() {
 
   static Writer* writerArray[1];
   writerArray[0] = &VGAConsole::GetWriter();
-  Logger::Initialize(LogLevel::Trace, writerArray, 1);
-}
 
-void TraceVersionAndCopyright() {
-  // TODO: versioning, build date, etc.
-  Logger::Write(LogLevel::Info, "x86 Quantum Kernel");
-  Logger::Write(LogLevel::Info, "Copyright (c) 2025 Brandon Belna");
-  Logger::Write(LogLevel::Info, "Released under the MIT License");
-  Logger::Write(LogLevel::Info, "Provided \"AS IS\" without warranty");
+  Logger::Initialize(LogLevel::Trace, writerArray, 1);
 }

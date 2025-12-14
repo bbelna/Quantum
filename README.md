@@ -41,15 +41,21 @@ To build and debug, run `.\Build -r`. To just debug, run `.\Debug`.
 ## Roadmap
 ### v0.01
 
+**Code cleanliness**
+- [ ] Ensure consistent use of kernel types (e.g., `const char*` should be `CString` or `String`).
+- [ ] Refactor all private namespace variables to use _ prefix.
+- [ ] Ensure all functions and properties are documented.
+- [ ] Wrap IDT.cpp in a class.
+
 **Boot/runtime**
-- [ ] Enable higher-half kernel mapping; relocate sections and adjust paging/entry.
+- [x] Enable higher-half kernel mapping; relocate sections and adjust paging/entry.
 - [ ] Clean handoff path: BSS clear, stack setup, boot info validation, sane panic path.
 - [ ] Robust memory map parsing with sanity checks; fallback defaults.
 
 **Memory management**
 - [x] Physical page allocator with tracking and guard pages.
 - [x] Kernel heap with sanity checks; self-test hooks.
-- [ ] Virtual memory abstraction: map/unmap helpers, page fault handler stubs/logging.
+- [x] Virtual memory abstraction: map/unmap helpers, page fault handler stubs/logging.
 - [ ] Heap validation improvements (double-free, bounds checks); optional debug fills.
 
 **Interrupts and CPU**

@@ -67,7 +67,12 @@ namespace Quantum::Kernel::Helpers {
     }
 
     // Append a C-string to buffer[out], respecting length.
-    bool AppendString(CStringMutable buffer, Size length, Size& out, CString str) {
+    bool AppendString(
+      CStringMutable buffer,
+      Size length,
+      Size& out,
+      CString str
+    ) {
       if (!buffer || length == 0) {
         return false;
       }
@@ -122,12 +127,17 @@ namespace Quantum::Kernel::Helpers {
     }
   }
 
-  bool CStringHelper::ToCString(Int32 value, CStringMutable buffer, Size length) {
+  bool CStringHelper::ToCString(
+    Int32 value,
+    CStringMutable buffer,
+    Size length
+  ) {
     return WriteIntToBuffer(value, buffer, length);
   }
 
   char* CStringHelper::ToCString(Int32 value) {
     WriteIntToBuffer(value, staticBuffer, bufferSize);
+
     return staticBuffer;
   }
 
@@ -183,7 +193,11 @@ namespace Quantum::Kernel::Helpers {
     return true;
   }
 
-  bool CStringHelper::Concat(CString left, CString right, CStringMutable buffer) {
+  bool CStringHelper::Concat(
+    CString left,
+    CString right,
+    CStringMutable buffer
+  ) {
     if (!buffer) {
       return false;
     }

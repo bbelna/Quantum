@@ -14,12 +14,19 @@
 #include <Kernel.hpp>
 #include <Logger.hpp>
 
+// TODO: refactor into Exceptions class
 namespace Quantum::Kernel::Arch::IA32 {
   using CPU = Quantum::Kernel::Arch::IA32::CPU;
   using Kernel = Quantum::Kernel::Kernel;
   using LogLevel = Logger::Level;
 
   namespace {
+    /**
+     * Dumps the interrupt context to the kernel log.
+     * @param context The interrupt context.
+     * @param faultAddress Optional, defaults to 0. The faulting address (for
+     * page faults).
+     */
     void DumpContext(
       const InterruptContext& context,
       UInt32 faultAddress = 0
@@ -94,7 +101,6 @@ namespace Quantum::Kernel::Arch::IA32 {
         reservedBit ? "yes" : "no",
         instructionFetch ? "yes" : "no"
       );
-
       Logger::WriteFormatted(
         LogLevel::Trace,
         "PDE=%p PTE=%p",

@@ -253,7 +253,6 @@ namespace Quantum::Kernel {
         UInt8* blockStart = reinterpret_cast<UInt8*>(current);
         UInt8* blockPayload = blockStart + sizeof(FreeBlock);
         UInt8* blockEnd = blockPayload + current->size;
-
         UInt8* reclaimStart = reinterpret_cast<UInt8*>(
           AlignUp(reinterpret_cast<UInt32>(blockPayload), heapPageSize)
         );
@@ -274,11 +273,14 @@ namespace Quantum::Kernel {
             UInt32 virtualPage
               = reinterpret_cast<UInt32>(reclaimStart) + i * heapPageSize;
             UInt32 pte = ArchMemory::GetPageTableEntry(virtualPage);
+
             if ((pte & 0x1) == 0) {
               continue;
             }
+
             UInt32 physical = pte & ~0xFFFu;
             ArchMemory::UnmapPage(virtualPage);
+
             if (physical) {
               ArchMemory::FreePage(reinterpret_cast<void*>(physical));
             }
@@ -292,7 +294,6 @@ namespace Quantum::Kernel {
             = static_cast<UInt32>(reclaimStart - blockStart);
           UInt32 suffixBytes
             = static_cast<UInt32>(blockEnd - reclaimEnd);
-
           FreeBlock* next = current->next;
           FreeBlock* fragmentHead = nullptr;
           FreeBlock* fragmentTail = nullptr;
@@ -301,9 +302,12 @@ namespace Quantum::Kernel {
             if (bytes < sizeof(FreeBlock) + 8) {
               return;
             }
+
             FreeBlock* frag = reinterpret_cast<FreeBlock*>(start);
+
             frag->size = bytes - sizeof(FreeBlock);
             frag->next = nullptr;
+
             if (!fragmentHead) {
               fragmentHead = frag;
               fragmentTail = frag;
@@ -322,12 +326,14 @@ namespace Quantum::Kernel {
           } else {
             freeList = fragmentHead ? fragmentHead : next;
           }
+
           if (fragmentTail) {
             fragmentTail->next = next;
             previous = fragmentTail;
           }
 
           current = next;
+
           continue;
         }
 

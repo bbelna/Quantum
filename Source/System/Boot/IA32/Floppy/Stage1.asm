@@ -83,7 +83,7 @@ DiskError:
 UnknownMsg    db "Unknown boot medium!", 0
 ReadErrorMsg  db "Disk read failed!", 0
 
-%include "Print.inc"
+%include "Console.inc"
 
 times 510-($-$$) db 0
 dw 0xAA55

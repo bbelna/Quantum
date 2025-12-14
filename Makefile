@@ -40,7 +40,7 @@ export ASM ASFLAGS CC32 CFLAGS32 LD32 LDFLAGS32 OBJCOPY32 MKFS MCOPY PROJECT_ROO
 # Artifacts
 BOOT_STAGE1_BIN := $(BUILD_DIR)/Boot/$(ARCH)/$(BOOT_MEDIUM)/Stage1.bin
 BOOT_STAGE2_BIN := $(BUILD_DIR)/Boot/$(ARCH)/$(BOOT_MEDIUM)/Stage2.bin
-KER_BIN         := $(BUILD_DIR)/Kernel/$(ARCH)/qkrnl.qx
+KER_BIN         := $(BUILD_DIR)/Kernel/$(ARCH)/Kernel.qx
 
 IMG         := $(BUILD_DIR)/Quantum.img
 IMG_SECTORS := 2880       # 1.44 MB / 512 B
@@ -72,8 +72,8 @@ $(IMG): $(KER_BIN) $(BOOT_STAGE1_BIN) $(BOOT_STAGE2_BIN)
 	dd if=/dev/zero of=$@ bs=$(IMG_BS) count=$(IMG_SECTORS) conv=notrunc status=none
 	@echo "Formatting as FAT12 (volume label: $(FAT12_LABEL))"
 	$(MKFS) -F 12 -R 5 -n $(FAT12_LABEL) $@
-	@echo "Copying kernel (qkrnl.qx) into FAT12 root directory"
-	$(MCOPY) -i $@ $(KER_BIN) ::/QKRNL.QX
+	@echo "Copying kernel (KERNEL.QX) into FAT12 root directory"
+	$(MCOPY) -i $@ $(KER_BIN) ::/KERNEL.QX
 	@echo "Installing Stage 1 bootloader (sector 0)"
 	dd if=$(BOOT_STAGE1_BIN) of=$@ bs=$(IMG_BS) seek=0 count=1 conv=notrunc status=none
 	@echo "Installing Stage 2 bootloader (sectors 1-4)"

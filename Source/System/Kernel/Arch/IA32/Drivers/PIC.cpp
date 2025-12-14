@@ -11,14 +11,44 @@
 
 namespace Quantum::Kernel::Arch::IA32::Drivers {
   namespace {
+    /**
+     * PIC EOI command value.
+     */
     constexpr UInt8 picEoi = 0x20;
+
+    /**
+     * PIC 1 command port.
+     */
     constexpr UInt16 pic1Command = 0x20;
+
+    /**
+     * PIC 1 data port.
+     */
     constexpr UInt16 pic1Data = 0x21;
+
+    /**
+     * PIC 2 command port.
+     */
     constexpr UInt16 pic2Command = 0xA0;
+
+    /**
+     * PIC 2 data port.
+     */
     constexpr UInt16 pic2Data = 0xA1;
 
+    /**
+     * ICW1 initialization command.
+     */
     constexpr UInt8 icw1Init = 0x10;
+
+    /**
+     * ICW1 expects ICW4.
+     */
     constexpr UInt8 icw1Icw4 = 0x01;
+
+    /**
+     * ICW4 mode 8086/88.
+     */
     constexpr UInt8 icw48086 = 0x01;
   }
 

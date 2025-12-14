@@ -29,12 +29,12 @@ stage1: $(STAGE1_BIN)
 
 stage2: $(STAGE2_BIN)
 
-$(STAGE1_BIN): $(STAGE1_SRC) $(SRC_ROOT)/System/Boot/IA32/Constants.inc $(SRC_ROOT)/System/Boot/IA32/Print.inc
+$(STAGE1_BIN): $(STAGE1_SRC) $(SRC_ROOT)/System/Boot/IA32/Constants.inc $(SRC_ROOT)/System/Boot/IA32/Console.inc
 	@mkdir -p $(dir $@)
 	$(ASM) $(ASFLAGS) $< -o $@
 	@echo "[OK] Assembled IA32 Stage1 -> $@"
 
-$(STAGE2_BIN): $(STAGE2_SRC) $(SRC_ROOT)/System/Boot/IA32/Constants.inc $(SRC_ROOT)/System/Boot/IA32/Print.inc
+$(STAGE2_BIN): $(STAGE2_SRC) $(SRC_ROOT)/System/Boot/IA32/Constants.inc $(SRC_ROOT)/System/Boot/IA32/Console.inc
 	@mkdir -p $(dir $@)
 	$(ASM) $(ASFLAGS) $< -o $@
 	@echo "[OK] Assembled IA32 Stage2 -> $@"

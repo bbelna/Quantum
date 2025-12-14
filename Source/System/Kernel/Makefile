@@ -46,8 +46,8 @@ KER_OBJS := \
 	$(KERNEL_ARCH_OBJS) \
 	$(KERNEL_ARCH_ASM_OBJS)
 
-KER_ELF := $(KER_OBJ_DIR)/qkrnl.elf
-KER_BIN := $(KER_OBJ_DIR)/qkrnl.qx
+KER_ELF := $(KER_OBJ_DIR)/Kernel.elf
+KER_BIN := $(KER_OBJ_DIR)/Kernel.qx
 
 .PHONY: all clean kernel
 
@@ -68,11 +68,10 @@ $(KER_ELF): $(KER_OBJS) $(KERNEL_ARCH)/Link.ld
 	$(CC32) $(CFLAGS32) -m32 -nostdlib -static -Wl,--no-pie \
 		-T $(KERNEL_ARCH)/Link.ld \
 		$(KER_OBJS) -o $@
-	@echo "[OK] Linked qkrnl.elf -> $@"
+	@echo "[OK] Linked Kernel.elf -> $@"
 
 $(KER_BIN): $(KER_ELF)
 	$(OBJCOPY32) -O binary $< $@
-	@echo "[OK] Created qkrnl.qx -> $@"
-
+	@echo "[OK] Created Kernel.qx -> $@"
 clean:
 	@rm -rf $(KER_OBJ_DIR)

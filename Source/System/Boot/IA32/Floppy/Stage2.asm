@@ -74,7 +74,7 @@ KernelSectors             dw 0
 KernelSectorsRemaining    dw 0
 KernelDestLinear          dd 0
 
-KernelName        db 'Q','K','R','N','L',' ',' ',' ','Q','X',' '
+KernelName        db 'K','E','R','N','E','L',' ',' ','Q','X',' '
 
 ; E820 memory map buffer (BootInfo layout)
 BootInfoPhysical        equ 0x8000
@@ -84,11 +84,14 @@ MemMapEntrySize         equ 20
 MemMapMaxEntries        equ 32
 MemMapEntryCount        equ BootInfoPhysical        ; dword
 
-NoKernelMsg        db "Kernel QKRNL.QX not found!", 0
+NoKernelMsg        db "KERNEL.QX not found!", 0
 DiskErrorMsg       db "Disk read error!", 0
 FATErrorMsg        db "FAT error!", 0
 
 Start:
+  ; start by clearing the console to indicate stage2 has started
+  call ClearConsole
+
   cli
   xor ax, ax
   mov ds, ax
@@ -280,7 +283,7 @@ ClusterToLBA:
 
 LoadKernel:
   ; Destination linear address (may exceed 64 KB, so track explicitly).
-  ; The flat kernel image (qkrnl.qx) is already laid out with holes so that
+  ; The flat kernel image (KERNEL.QX) is already laid out with holes so that
   ; file offset 0 maps directly to physical 0x00010000. Load it exactly at
   ; KernelPMEntry to preserve the segment offsets baked into the image.
   mov dword [KernelDestLinear], KernelPMEntry
@@ -564,6 +567,6 @@ GDTDescriptor:
   dw GDTEnd - GDTStart - 1
   dd GDTStart
 
-%include "Print.inc"
+%include "Console.inc"
 
 times Stage2Sectors*512 - ($-$$) db 0

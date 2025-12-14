@@ -49,7 +49,10 @@ namespace Quantum::Kernel {
     char lineBuffer[16] = {};
     const char* lineStr = nullptr;
 
-    if (line > 0 && CStringHelper::ToCString(line, lineBuffer, sizeof(lineBuffer))) {
+    if (
+      line > 0 &&
+      CStringHelper::ToCString(line, lineBuffer, sizeof(lineBuffer))
+    ) {
       lineStr = lineBuffer;
     } else {
       lineStr = "unknown";
