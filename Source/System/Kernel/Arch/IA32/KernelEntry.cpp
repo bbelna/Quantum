@@ -125,6 +125,10 @@ extern "C" [[noreturn]] __attribute__((section(".text.start")))
 void EnablePagingAndJump(UInt32 bootInfoPhysicalAddress) {
   BuildBootstrapPaging();
 
+  // Debug: confirm the higher-half payload actually exists in low memory before paging.
+  // If the bootloader failed to copy the higher-half segment, this byte will be 0.
+  UInt8 hhFirstByte = *reinterpret_cast<UInt8*>(&__hh_phys_start);
+
   UInt32 pageDirectoryPhysical = reinterpret_cast<UInt32>(bootstrapPageDirectory);
   asm volatile("mov %0, %%cr3" : : "r"(pageDirectoryPhysical) : "memory");
 

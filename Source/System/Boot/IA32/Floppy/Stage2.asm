@@ -279,7 +279,10 @@ ClusterToLBA:
   ret
 
 LoadKernel:
-  ; Destination linear address (may exceed 64 KB, so track explicitly)
+  ; Destination linear address (may exceed 64 KB, so track explicitly).
+  ; The flat kernel image (qkrnl.qx) is already laid out with holes so that
+  ; file offset 0 maps directly to physical 0x00010000. Load it exactly at
+  ; KernelPMEntry to preserve the segment offsets baked into the image.
   mov dword [KernelDestLinear], KernelPMEntry
 
   ; Total sectors to read (already computed in FindKernel)
@@ -324,6 +327,7 @@ LoadKernel:
   ; Set ES:BX for this sector from the running linear destination pointer.
   mov eax, [KernelDestLinear]    ; EAX = dest linear
   mov bx, ax                     ; offset = low 16 bits
+  and bx, 0x000F                 ; physical offset = linear & 0xF (prevent wrap)
   shr eax, 4
   mov es, ax                     ; segment = linear >> 4
 
@@ -400,6 +404,12 @@ ReadSectorLBA:
   push cx
   push dx
 
+  ; Reset disk controller before issuing the read. Do this *before* we derive
+  ; CHS, because many BIOSes clobber CH/CL/DH on reset.
+  mov dl, [BootDrive]
+  mov ah, 0x00
+  int 0x13
+
   ; Convert LBA to CHS
 
   ; track = LBA / SectorsPerTrack
@@ -416,11 +426,6 @@ ReadSectorLBA:
   mov ch, al                   ; CH = cylinder low
   shl ah, 6
   or  cl, ah                   ; sector | (cyl_high << 6)
-
-  ; reset disk
-  mov dl, [BootDrive]
-  mov ah, 0x00
-  int 0x13
 
   ; read
   mov dl, [BootDrive]
