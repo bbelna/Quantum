@@ -11,6 +11,8 @@
 #include <Memory.hpp>
 #include <Types.hpp>
 
+#define MEMORY_DEBUG 0
+
 #define MEMORY_TEST_VERBOSE
 
 #if defined(QUANTUM_ARCH_IA32)
@@ -80,6 +82,16 @@ namespace Quantum::Kernel {
      */
     inline UInt32 AlignUp(UInt32 value, UInt32 alignment) {
       return (value + alignment - 1) & ~(alignment - 1);
+    }
+
+    /**
+     * Aligns a value down to the nearest alignment boundary.
+     * @param value Value to align.
+     * @param alignment Alignment boundary (power of two).
+     * @return Aligned value at or below input.
+     */
+    inline UInt32 AlignDown(UInt32 value, UInt32 alignment) {
+      return value & ~(alignment - 1);
     }
 
     /**
@@ -178,13 +190,15 @@ namespace Quantum::Kernel {
       heapMappedBytes += heapPageSize;
       guardAddress = heapMappedEnd;
 
-      Logger::WriteFormatted(
-        LogLevel::Trace,
-        "Heap mapped page at %p (physical %p); mapped bytes now %p",
-        pageStart,
-        physicalPageAddress,
-        heapMappedBytes
-      );
+      #if MEMORY_DEBUG
+        Logger::WriteFormatted(
+          LogLevel::Trace,
+          "Heap mapped page at %p (physical %p); mapped bytes now %p",
+          pageStart,
+          physicalPageAddress,
+          heapMappedBytes
+        );
+      #endif
 
       return pageStart;
     }
@@ -227,6 +241,104 @@ namespace Quantum::Kernel {
     }
 
     /**
+     * Reclaims page-aligned spans inside free blocks back to the physical
+     * allocator. Splits blocks as needed and preserves non-page-aligned
+     * prefix/suffix fragments.
+     */
+    void ReclaimPageSpans() {
+      FreeBlock* previous = nullptr;
+      FreeBlock* current = freeList;
+
+      while (current) {
+        UInt8* blockStart = reinterpret_cast<UInt8*>(current);
+        UInt8* blockPayload = blockStart + sizeof(FreeBlock);
+        UInt8* blockEnd = blockPayload + current->size;
+
+        UInt8* reclaimStart = reinterpret_cast<UInt8*>(
+          AlignUp(reinterpret_cast<UInt32>(blockPayload), heapPageSize)
+        );
+        UInt8* reclaimEnd = reinterpret_cast<UInt8*>(
+          AlignDown(reinterpret_cast<UInt32>(blockEnd), heapPageSize)
+        );
+
+        if (
+          reclaimStart < reclaimEnd &&
+          heapMappedBytes > static_cast<UInt32>(reclaimEnd - reclaimStart)
+        ) {
+          UInt32 reclaimBytes
+            = static_cast<UInt32>(reclaimEnd - reclaimStart);
+          UInt32 pages = reclaimBytes / heapPageSize;
+
+          // Unmap and free each page in the reclaim span.
+          for (UInt32 i = 0; i < pages; ++i) {
+            UInt32 virtualPage
+              = reinterpret_cast<UInt32>(reclaimStart) + i * heapPageSize;
+            UInt32 pte = ArchMemory::GetPageTableEntry(virtualPage);
+            if ((pte & 0x1) == 0) {
+              continue;
+            }
+            UInt32 physical = pte & ~0xFFFu;
+            ArchMemory::UnmapPage(virtualPage);
+            if (physical) {
+              ArchMemory::FreePage(reinterpret_cast<void*>(physical));
+            }
+            if (heapMappedBytes >= heapPageSize) {
+              heapMappedBytes -= heapPageSize;
+            }
+          }
+
+          // Build prefix/suffix fragments if any.
+          UInt32 prefixBytes
+            = static_cast<UInt32>(reclaimStart - blockStart);
+          UInt32 suffixBytes
+            = static_cast<UInt32>(blockEnd - reclaimEnd);
+
+          FreeBlock* next = current->next;
+          FreeBlock* fragmentHead = nullptr;
+          FreeBlock* fragmentTail = nullptr;
+
+          auto pushFragment = [&](UInt8* start, UInt32 bytes) {
+            if (bytes < sizeof(FreeBlock) + 8) {
+              return;
+            }
+            FreeBlock* frag = reinterpret_cast<FreeBlock*>(start);
+            frag->size = bytes - sizeof(FreeBlock);
+            frag->next = nullptr;
+            if (!fragmentHead) {
+              fragmentHead = frag;
+              fragmentTail = frag;
+            } else {
+              fragmentTail->next = frag;
+              fragmentTail = frag;
+            }
+          };
+
+          pushFragment(blockStart, prefixBytes);
+          pushFragment(reclaimEnd, suffixBytes);
+
+          // Splice fragments into the list in place of the reclaimed block.
+          if (previous) {
+            previous->next = fragmentHead ? fragmentHead : next;
+          } else {
+            freeList = fragmentHead ? fragmentHead : next;
+          }
+          if (fragmentTail) {
+            fragmentTail->next = next;
+            previous = fragmentTail;
+          }
+
+          current = next;
+          continue;
+        }
+
+        previous = current;
+        current = current->next;
+      }
+
+      CoalesceAdjacentFreeBlocks();
+    }
+
+    /**
      * Inserts a free block into the sorted free list and coalesces neighbors.
      * @param block Block to insert.
      */
@@ -246,6 +358,7 @@ namespace Quantum::Kernel {
       }
 
       CoalesceAdjacentFreeBlocks();
+      ReclaimPageSpans();
     }
 
     /**
@@ -361,6 +474,22 @@ namespace Quantum::Kernel {
 
   void Memory::Initialize(UInt32 bootInfoPhysicalAddress) {
     ArchMemory::InitializePaging(bootInfoPhysicalAddress);
+
+    ArchMemory::PhysicalAllocatorState phys = ArchMemory::GetPhysicalAllocatorState();
+    UInt64 totalBytes = static_cast<UInt64>(phys.totalPages) * heapPageSize;
+    UInt64 usedBytes = static_cast<UInt64>(phys.usedPages) * heapPageSize;
+    UInt64 freeBytes = static_cast<UInt64>(phys.freePages) * heapPageSize;
+
+    Logger::WriteFormatted(
+      LogLevel::Info,
+      "Physical allocator: pages total=%p used=%p free=%p bytes total=%p used=%p free=%p",
+      phys.totalPages,
+      phys.usedPages,
+      phys.freePages,
+      totalBytes,
+      usedBytes,
+      freeBytes
+    );
   }
 
   void* Memory::AllocatePage(bool zero) {
@@ -407,16 +536,18 @@ namespace Quantum::Kernel {
       UInt32* canary = reinterpret_cast<UInt32*>(payload + usable);
       *canary = canaryValue;
 
-      Logger::WriteFormatted(
-        LogLevel::Trace,
-        "Heap alloc ptr=%p block=%p usable=%p size=%p canary=%p mapped=%p",
-        payload,
-        reinterpret_cast<UInt8*>(payload) - sizeof(FreeBlock),
-        usable,
-        payloadSize,
-        *canary,
-        heapMappedBytes
-      );
+      #if MEMORY_DEBUG
+        Logger::WriteFormatted(
+          LogLevel::Trace,
+          "Heap alloc ptr=%p block=%p usable=%p size=%p canary=%p mapped=%p",
+          payload,
+          reinterpret_cast<UInt8*>(payload) - sizeof(FreeBlock),
+          usable,
+          payloadSize,
+          *canary,
+          heapMappedBytes
+        );
+      #endif
 
       return pointer;
     }
@@ -466,17 +597,19 @@ namespace Quantum::Kernel {
     UInt32* canary = reinterpret_cast<UInt32*>(alignedPayload + usable);
     *canary = canaryValue;
 
-    Logger::WriteFormatted(
-      LogLevel::Trace,
-      "Heap alloc aligned ptr=%p block=%p payload=%p offset=%p usable=%p size=%p canary=%p",
-      alignedPayload,
-      block,
-      reinterpret_cast<UInt8*>(block) + sizeof(FreeBlock),
-      metadata->payloadOffset,
-      usable,
-      block->size,
-      *canary
-    );
+    #if MEMORY_DEBUG
+      Logger::WriteFormatted(
+        LogLevel::Trace,
+        "Heap alloc aligned ptr=%p block=%p payload=%p offset=%p usable=%p size=%p canary=%p",
+        alignedPayload,
+        block,
+        reinterpret_cast<UInt8*>(block) + sizeof(FreeBlock),
+        metadata->payloadOffset,
+        usable,
+        block->size,
+        *canary
+      );
+    #endif
 
     return reinterpret_cast<void*>(alignedAddress);
   }
@@ -693,5 +826,61 @@ namespace Quantum::Kernel {
     #endif
 
     Logger::Write(LogLevel::Trace, "Memory self-test passed");
+  }
+
+  bool Memory::VerifyHeap() {
+    EnsureHeapInitialized();
+
+    // Verify free list ordering and bounds.
+    FreeBlock* current = freeList;
+    FreeBlock* last = nullptr;
+
+    while (current) {
+      UInt8* blockBytes = reinterpret_cast<UInt8*>(current);
+      UInt8* payload = blockBytes + sizeof(FreeBlock);
+      UInt8* blockEnd = payload + current->size;
+
+      if (blockBytes < heapBase || blockEnd > heapBase + heapMappedBytes) {
+        PANIC("VerifyHeap: free block out of bounds");
+      }
+
+      if (last && current <= last) {
+        PANIC("VerifyHeap: free list not strictly increasing");
+      }
+
+      last = current;
+      current = current->next;
+    }
+
+    // Verify canaries of all free blocks (payload poisoned but canary intact).
+    current = freeList;
+
+    while (current) {
+      UInt8* payload = reinterpret_cast<UInt8*>(current) + sizeof(FreeBlock);
+
+      if (current->size < sizeof(UInt32)) {
+        PANIC("VerifyHeap: free block too small for canary");
+      }
+
+      UInt32 usable = current->size - sizeof(UInt32);
+      UInt32* canary = reinterpret_cast<UInt32*>(payload + usable);
+
+      if (*canary != canaryValue) {
+        PANIC("VerifyHeap: free block canary corrupted");
+      }
+
+      current = current->next;
+    }
+
+    return true;
+  }
+
+  void Memory::CheckHeap() {
+    bool ok = VerifyHeap();
+    Logger::WriteFormatted(
+      ok ? LogLevel::Info : LogLevel::Error,
+      "Heap verify %s",
+      ok ? "ok" : "failed"
+    );
   }
 }

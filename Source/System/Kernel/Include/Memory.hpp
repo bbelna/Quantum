@@ -89,5 +89,17 @@ namespace Quantum::Kernel {
        * Prints the current heap state to the console.
        */
       static void DumpState();
+
+      /**
+       * Verifies heap invariants (free list ordering, sizes, canaries).
+       * Intended for debug builds; may panic on corruption.
+       * @return true if no inconsistencies were detected; false otherwise.
+       */
+      static bool VerifyHeap();
+
+      /**
+       * Runs `VerifyHeap` and logs the result. Intended for debug use.
+       */
+      static void CheckHeap();
   };
 }
