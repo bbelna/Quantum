@@ -4,7 +4,7 @@ $ErrorActionPreference = "Stop"
 $currentBranch = (git rev-parse --abbrev-ref HEAD).Trim()
 
 Write-Host "`Current branch: $currentBranch"
-Write-Host "`nMerging develop to master branch..."
+Write-Host "`Merging develop to master branch..."
 
 git checkout master
 
@@ -14,7 +14,7 @@ $before = (git rev-parse HEAD).Trim()
 git merge develop
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "`nMerge failed (likely conflicts). Resolve conflicts and re-run. Skipping push."
+    Write-Host "`Merge failed (likely conflicts). Resolve conflicts and re-run. Skipping push."
 
     # stay on master so conflicts can be resolved here
     exit 1
@@ -26,9 +26,9 @@ $after = (git rev-parse HEAD).Trim()
 # only push if there were new commits merged
 if ($before -ne $after) {
     git push origin master
-    Write-Host "`nPushed master (new commits were merged)."
+    Write-Host "`Pushed master (new commits were merged)."
 } else {
-    Write-Host "`nNo changes to merge; skipping push."
+    Write-Host "`No changes to merge; skipping push."
 }
 
 # return to original branch
