@@ -3,13 +3,15 @@ $ErrorActionPreference = "Stop"
 # remember where we started
 $currentBranch = (git rev-parse --abbrev-ref HEAD).Trim()
 
-Write-Host "`Current branch: $currentBranch"
-Write-Host "`Merging develop to master branch..."
+Write-Host "`Current branch is $currentBranch"
+Write-Host "`Checking out master..."
 
 git checkout master
 
 # record commit before merge
 $before = (git rev-parse HEAD).Trim()
+
+Write-Host "`Merging develop..."
 
 git merge develop
 
@@ -18,6 +20,8 @@ if ($LASTEXITCODE -ne 0) {
 
     # stay on master so conflicts can be resolved here
     exit 1
+} else {
+    Write-Host "`Merge successful."
 }
 
 # record commit after merge
@@ -33,7 +37,7 @@ if ($before -ne $after) {
 
 # return to original branch
 if ($currentBranch -ne "master") {
+    Write-Host "`Returning to $currentBranch"
+
     git checkout $currentBranch
 }
-
-Write-Host "`Merge complete. Returned to: $currentBranch"
