@@ -16,4 +16,11 @@ extern "C" {
 
   extern UInt8 __bss_start;
   extern UInt8 __bss_end;
+  extern UInt8 __phys_bss_start;
+  extern UInt8 __phys_bss_end;
+  extern UInt8 __virt_start;
+  extern UInt8 __virt_end;
+
+  extern UInt8 __hh_virt_start;
+  extern UInt8 __hh_phys_start;
 }

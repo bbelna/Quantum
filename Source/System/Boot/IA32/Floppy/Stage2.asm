@@ -72,6 +72,7 @@ KernelBytesRemainingLow   dw 0
 KernelBytesRemainingHigh  dw 0
 KernelSectors             dw 0
 KernelSectorsRemaining    dw 0
+KernelDestLinear          dd 0
 
 KernelName        db 'Q','K','R','N','L',' ',' ',' ','Q','X',' '
 
@@ -244,22 +245,22 @@ FindKernel:
   mov [CurrentCluster], ax
   mov [SavedFirstCluster], ax
 
-  ; file size (low word is enough for now: 790 bytes)
+  ; file size (32-bit)
   mov ax, [si + 28]
   mov [KernelSizeLow], ax
   mov ax, [si + 30]
   mov [KernelSizeHigh], ax
 
   ; Compute number of sectors = ceil(size / BytesPerSector)
-
-  mov ax, [KernelSizeLow]       ; assume high=0 for now
+  ; Use DX:AX for the 32-bit size so kernels larger than 64 KB are handled.
+  mov ax, [KernelSizeLow]
+  mov dx, [KernelSizeHigh]
   mov bx, [BytesPerSector]      ; 512
   dec bx
   add ax, bx                    ; size + (BPS-1)
+  adc dx, 0
   inc bx                        ; restore BPS
-  xor dx, dx
-  div bx                        ; AX = (size + BPS-1) / BPS
-
+  div bx                        ; DX:AX / BX -> AX = sectors
   mov [KernelSectors], ax
 
   ret
@@ -278,10 +279,8 @@ ClusterToLBA:
   ret
 
 LoadKernel:
-  ; Destination segment = 0x1000
-  mov ax, KernelLoadSeg
-  mov es, ax
-  xor bx, bx                     ; ES:BX = 0x00010000
+  ; Destination linear address (may exceed 64 KB, so track explicitly)
+  mov dword [KernelDestLinear], KernelPMEntry
 
   ; Total sectors to read (already computed in FindKernel)
   mov cx, [KernelSectors]        ; CX = sectorsRemaining
@@ -322,12 +321,19 @@ LoadKernel:
   cmp di, 0
   je .NextCluster
 
+  ; Set ES:BX for this sector from the running linear destination pointer.
+  mov eax, [KernelDestLinear]    ; EAX = dest linear
+  mov bx, ax                     ; offset = low 16 bits
+  shr eax, 4
+  mov es, ax                     ; segment = linear >> 4
+
   mov ax, dx                     ; AX = current LBA
   call ReadSectorLBA             ; read 1 sector -> ES:BX
 
-  ; advance dest pointer by one sector
-  mov ax, [BytesPerSector]
-  add bx, ax
+  ; advance dest pointer by one sector (handle >64 KB)
+  mov bx, [BytesPerSector]
+  add word [KernelDestLinear], bx
+  adc word [KernelDestLinear + 2], 0
 
   ; next LBA
   inc dx
@@ -503,14 +509,21 @@ EnterProtectedMode:
   cli
   call EnableA20
 
+  ; reset real-mode stack to a known location before switching
+  xor ax, ax
+  mov ss, ax
+  mov sp, StackTop
+
   lgdt [GDTDescriptor]
 
   mov eax, cr0
   or  eax, 1
   mov cr0, eax
 
-  ; far jump to flush prefetch, into 32-bit code
-  jmp CodeSelector:ProtectedEntry
+  ; far jump to flush prefetch, into 32-bit code using stack + retf
+  push word 0x08
+  push word ProtectedEntry
+  retf
 
 [BITS 32]
 

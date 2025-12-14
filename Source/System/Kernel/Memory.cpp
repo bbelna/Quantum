@@ -269,7 +269,7 @@ namespace Quantum::Kernel {
             = static_cast<UInt32>(reclaimEnd - reclaimStart);
           UInt32 pages = reclaimBytes / heapPageSize;
 
-          // Unmap and free each page in the reclaim span.
+          // unmap and free each page in the reclaim span
           for (UInt32 i = 0; i < pages; ++i) {
             UInt32 virtualPage
               = reinterpret_cast<UInt32>(reclaimStart) + i * heapPageSize;
@@ -287,7 +287,7 @@ namespace Quantum::Kernel {
             }
           }
 
-          // Build prefix/suffix fragments if any.
+          // build prefix/suffix fragments if any
           UInt32 prefixBytes
             = static_cast<UInt32>(reclaimStart - blockStart);
           UInt32 suffixBytes
@@ -316,7 +316,7 @@ namespace Quantum::Kernel {
           pushFragment(blockStart, prefixBytes);
           pushFragment(reclaimEnd, suffixBytes);
 
-          // Splice fragments into the list in place of the reclaimed block.
+          // splice fragments into the list in place of the reclaimed block
           if (previous) {
             previous->next = fragmentHead ? fragmentHead : next;
           } else {
@@ -475,17 +475,17 @@ namespace Quantum::Kernel {
   void Memory::Initialize(UInt32 bootInfoPhysicalAddress) {
     ArchMemory::InitializePaging(bootInfoPhysicalAddress);
 
-    ArchMemory::PhysicalAllocatorState phys = ArchMemory::GetPhysicalAllocatorState();
-    UInt64 totalBytes = static_cast<UInt64>(phys.totalPages) * heapPageSize;
-    UInt64 usedBytes = static_cast<UInt64>(phys.usedPages) * heapPageSize;
-    UInt64 freeBytes = static_cast<UInt64>(phys.freePages) * heapPageSize;
+    ArchMemory::PhysicalAllocatorState physicalState = ArchMemory::GetPhysicalAllocatorState();
+    UInt64 totalBytes = static_cast<UInt64>(physicalState.totalPages) * heapPageSize;
+    UInt64 usedBytes = static_cast<UInt64>(physicalState.usedPages) * heapPageSize;
+    UInt64 freeBytes = static_cast<UInt64>(physicalState.freePages) * heapPageSize;
 
     Logger::WriteFormatted(
       LogLevel::Info,
       "Physical allocator: pages total=%p used=%p free=%p bytes total=%p used=%p free=%p",
-      phys.totalPages,
-      phys.usedPages,
-      phys.freePages,
+      physicalState.totalPages,
+      physicalState.usedPages,
+      physicalState.freePages,
       totalBytes,
       usedBytes,
       freeBytes
@@ -781,7 +781,7 @@ namespace Quantum::Kernel {
       PANIC("Allocation returned null");
     }
 
-    // Write/read patterns to ensure writable pages.
+    // write/read patterns to ensure writable pages
     UInt8* pa = reinterpret_cast<UInt8*>(a);
     UInt8* pb = reinterpret_cast<UInt8*>(b);
 
@@ -831,7 +831,7 @@ namespace Quantum::Kernel {
   bool Memory::VerifyHeap() {
     EnsureHeapInitialized();
 
-    // Verify free list ordering and bounds.
+    // verify free list ordering and bounds
     FreeBlock* current = freeList;
     FreeBlock* last = nullptr;
 
@@ -852,7 +852,7 @@ namespace Quantum::Kernel {
       current = current->next;
     }
 
-    // Verify canaries of all free blocks (payload poisoned but canary intact).
+    // verify canaries of all free blocks (payload poisoned but canary intact)
     current = freeList;
 
     while (current) {

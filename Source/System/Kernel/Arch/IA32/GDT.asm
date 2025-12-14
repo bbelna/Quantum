@@ -12,7 +12,7 @@ BITS 32
 global GDT
 global GDTDescriptor32
 
-SECTION .data
+SECTION .text.start
 GDT:
   ; 1) Null descriptor (all zeros)
   dq 0x0000000000000000
@@ -41,8 +41,7 @@ GDT:
 
 GDTEnd:
 
-SECTION .data
+SECTION .text.start
 GDTDescriptor32:
   dw GDTEnd - GDT - 1         ; limit = size of GDT - 1 (i.e. 24-1 = 23)
   dd GDT                       ; base = linear address of GDT
-
