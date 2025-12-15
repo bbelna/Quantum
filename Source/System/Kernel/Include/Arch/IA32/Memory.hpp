@@ -143,7 +143,10 @@ namespace Quantum::Kernel::Arch::IA32 {
        * @param lengthBytes
        *   Length of the range in bytes.
        */
-      static void ReservePhysicalRange(UInt32 physicalAddress, UInt32 lengthBytes);
+      static void ReservePhysicalRange(
+        UInt32 physicalAddress,
+        UInt32 lengthBytes
+      );
 
       /**
        * Releases a previously reserved physical range back to the allocator.
@@ -152,7 +155,10 @@ namespace Quantum::Kernel::Arch::IA32 {
        * @param lengthBytes
        *   Length of the range in bytes.
        */
-      static void ReleasePhysicalRange(UInt32 physicalAddress, UInt32 lengthBytes);
+      static void ReleasePhysicalRange(
+        UInt32 physicalAddress,
+        UInt32 lengthBytes
+      );
 
       /**
        * Returns the page directory entry value for a given virtual address.
