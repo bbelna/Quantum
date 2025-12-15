@@ -29,6 +29,11 @@ namespace Quantum::Kernel::Arch::IA32 {
     TaskControlBlock* _currentTask = nullptr;
 
     /**
+     * Pointer to the idle task (never exits).
+     */
+    TaskControlBlock* _idleTask = nullptr;
+
+    /**
      * Head of the ready queue (circular linked list).
      */
     TaskControlBlock* _readyQueueHead = nullptr;
@@ -95,11 +100,14 @@ namespace Quantum::Kernel::Arch::IA32 {
      * Task wrapper that calls the actual entry point and exits cleanly.
      */
     void TaskWrapper(void (*entryPoint)()) {
-      // Call the actual task function
+      // call the actual task function
       entryPoint();
 
-      // Task returned - terminate it
-      Logger::Write(LogLevel::Trace, "Task completed, exiting");
+      // task returned - terminate it
+      #ifdef TASK_DEBUG
+        Logger::Write(LogLevel::Trace, "Task completed, exiting");
+      #endif
+
       Task::Exit();
     }
 
@@ -107,22 +115,26 @@ namespace Quantum::Kernel::Arch::IA32 {
      * Performs the actual context switch logic and task scheduling.
      */
     void DoSchedule() {
-      // if current task is still running, move it back to ready queue
-      if (_currentTask != nullptr && _currentTask->State == TaskState::Running) {
+      // if current task is still running and not idle, move it back to ready queue
+      if (
+        _currentTask != nullptr &&
+        _currentTask->State == TaskState::Running &&
+        _currentTask != _idleTask
+      ) {
         AddToReadyQueue(_currentTask);
       }
 
       // get next task from ready queue
       TaskControlBlock* nextTask = PopFromReadyQueue();
-
       if (nextTask == nullptr) {
-        // no tasks available - should never happen if idle task exists
-        PANIC("No tasks in ready queue");
+        // nothing ready; fall back to idle task
+        nextTask = _idleTask;
       }
 
       // if switching to a different task, perform context switch
+      TaskControlBlock* previousTask = _currentTask;
+
       if (nextTask != _currentTask) {
-        TaskControlBlock* previousTask = _currentTask;
         _currentTask = nextTask;
         nextTask->State = TaskState::Running;
 
@@ -137,11 +149,23 @@ namespace Quantum::Kernel::Arch::IA32 {
         // same task - just update state
         _currentTask->State = TaskState::Running;
       }
+
+      // we are now running on the next task's stack; safe to free a terminated previous task
+      if (
+        previousTask &&
+        previousTask != _idleTask &&
+        previousTask->State == TaskState::Terminated
+      ) {
+        Memory::Free(previousTask->StackBase);
+        Memory::Free(previousTask);
+      }
     }
   }
 
   void Task::Initialize() {
-    Logger::Write(LogLevel::Info, "Creating idle task");
+    #ifdef TASK_DEBUG
+      Logger::Write(LogLevel::Info, "Creating idle task");
+    #endif
 
     // create the idle task (runs when nothing else is ready)
     TaskControlBlock* idleTask = Create(IdleTask, 4096);
@@ -150,11 +174,18 @@ namespace Quantum::Kernel::Arch::IA32 {
       PANIC("Failed to create idle task");
     }
 
-    // set it as the current task and start executing
-    _currentTask = idleTask;
-    idleTask->State = TaskState::Running;
+    // keep idle task out of the ready queue; it is used as a fallback when
+    // nothing else is runnable. We start with no current task so the first
+    // schedule doesn't try to save over the idle task's pristine stack.
+    _currentTask = nullptr;
+    idleTask->State = TaskState::Ready;
+    _idleTask = idleTask;
+    _readyQueueHead = nullptr;
+    _readyQueueTail = nullptr;
 
-    Logger::Write(LogLevel::Info, "Task subsystem initialized");
+    #ifdef TASK_DEBUG
+      Logger::Write(LogLevel::Info, "Idle task created successfully");
+    #endif
   }
 
   TaskControlBlock* Task::Create(void (*entryPoint)(), UInt32 stackSize) {
@@ -213,36 +244,34 @@ namespace Quantum::Kernel::Arch::IA32 {
     // add to ready queue
     AddToReadyQueue(tcb);
 
-    Logger::WriteFormatted(
-      LogLevel::Trace,
-      "Created task ID=%u, entry=%p, stack=%p-%p",
-      tcb->Id,
-      entryPoint,
-      stack,
-      reinterpret_cast<UInt8*>(stack) + stackSize
-    );
+    #ifdef TASK_DEBUG
+      Logger::WriteFormatted(
+        LogLevel::Info,
+        "Created task ID=%u, entry=%p, stack=%p-%p size=%p",
+        tcb->Id,
+        entryPoint,
+        stack,
+        reinterpret_cast<UInt8*>(stack) + stackSize,
+        stackSize
+      );
+    #endif
 
     return tcb;
   }
 
   void Task::Exit() {
-    Logger::WriteFormatted(
-      LogLevel::Trace,
-      "Task %u exiting",
-      _currentTask->Id
-    );
+    #ifdef TASK_DEBUG
+      Logger::WriteFormatted(
+        LogLevel::Trace,
+        "Task %u exiting",
+        _currentTask->Id
+      );
+    #endif
 
-    // mark task as terminated
+    // mark task as terminated; defer freeing stack/TCB until after next switch
     _currentTask->State = TaskState::Terminated;
 
-    // free the task's stack
-    Memory::Free(_currentTask->StackBase);
-
-    // free the TCB itself
-    Memory::Free(_currentTask);
-
     // schedule next task (never returns)
-    _currentTask = nullptr;
     DoSchedule();
 
     // should never reach here
@@ -280,32 +309,30 @@ namespace Quantum::Kernel::Arch::IA32 {
     TaskContext* nextStackPointer
   ) {
     asm volatile(
-      // save current context if currentStackPointer is not null
-      "mov 4(%%esp), %%eax\n"       // eax = currentStackPointer
-      "test %%eax, %%eax\n"          // check if null
-      "jz 1f\n"                      // skip save if null (first task)
-
-      // save current task's context
+      // Save caller-saved + base registers for current task
       "push %%ebp\n"
       "push %%ebx\n"
       "push %%esi\n"
       "push %%edi\n"
 
-      // store current ESP into *currentStackPointer
+      // Store ESP into *currentStackPointer if provided
+      "mov 20(%%esp), %%eax\n"   // currentStackPointer argument (after pushes)
+      "test %%eax, %%eax\n"
+      "jz 1f\n"
       "mov %%esp, (%%eax)\n"
 
       "1:\n"
-      // load next task's context
-      "mov 8(%%esp), %%eax\n"        // eax = nextStackPointer
-      "mov %%eax, %%esp\n"           // switch to next task's stack
+      // Load nextStackPointer argument (after pushes)
+      "mov 24(%%esp), %%eax\n"
+      "mov %%eax, %%esp\n"       // switch to next task's stack
 
-      // restore next task's context
+      // Restore next task context
       "pop %%edi\n"
       "pop %%esi\n"
       "pop %%ebx\n"
       "pop %%ebp\n"
 
-      "ret\n"                        // return to next task's EIP
+      "ret\n"                    // return to next task's EIP
       :::
     );
   }

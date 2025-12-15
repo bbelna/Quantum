@@ -61,31 +61,23 @@ namespace Quantum::Kernel {
 
   void Kernel::Initialize(UInt32 bootInfoPhysicalAddress) {
     Memory::Initialize(bootInfoPhysicalAddress);
-    Memory::DumpState();
-
     Interrupts::Initialize();
-
-    #ifdef MEMORY_TEST
-      Memory::Test();
-      Memory::ResetHeap();
-      Memory::CheckHeap();
-    #endif
-
     Task::Initialize();
+    Task::Yield();
 
-    #ifdef TASK_TEST
-      // create test tasks to verify multitasking works
-      Logger::Write(LogLevel::Info, "Creating test tasks...");
-      Task::Create(TestTask1, 4096);
-      Task::Create(TestTask2, 4096);
-      Task::Create(TestTask3, 4096);
+    // #ifdef TASK_TEST
+    //   // create test tasks to verify multitasking works
+    //   Logger::Write(LogLevel::Info, "Creating test tasks");
+    //   Task::Create(TestTask1, 4096);
+    //   Task::Create(TestTask2, 4096);
+    //   Task::Create(TestTask3, 4096);
 
-      // yield to start task switching
-      Logger::Write(LogLevel::Info, "Starting multitasking...");
-      Task::Yield();
+    //   // yield to start task switching
+    //   Logger::Write(LogLevel::Info, "Starting multitasking");
+      
 
-      Logger::Write(LogLevel::Info, "All test tasks completed");
-    #endif
+    //   Logger::Write(LogLevel::Info, "All test tasks completed");
+    // #endif
   }
 
   void Kernel::Panic(

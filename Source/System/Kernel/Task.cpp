@@ -23,7 +23,6 @@ namespace Quantum::Kernel {
   using LogLevel = Logger::Level;
 
   void Task::Initialize() {
-    Logger::Write(LogLevel::Info, "Initializing task subsystem...");
     ArchTask::Initialize();
   }
 
