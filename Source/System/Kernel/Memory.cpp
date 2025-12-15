@@ -206,15 +206,13 @@ namespace Quantum::Kernel {
       heapMappedBytes += heapPageSize;
       guardAddress = heapMappedEnd;
 
-      #ifdef MEMORY_DEBUG
-        Logger::WriteFormatted(
-          LogLevel::Trace,
-          "Heap mapped page at %p (physical %p); mapped bytes now %p",
-          pageStart,
-          physicalPageAddress,
-          heapMappedBytes
-        );
-      #endif
+      Logger::WriteFormatted(
+        LogLevel::Debug,
+        "Heap mapped page at %p (physical %p); mapped bytes now %p",
+        pageStart,
+        physicalPageAddress,
+        heapMappedBytes
+      );
 
       return pageStart;
     }
@@ -534,28 +532,26 @@ namespace Quantum::Kernel {
     ArchMemory::InitializePaging(bootInfoPhysicalAddress);
 
     ArchMemory::PhysicalAllocatorState physicalState = ArchMemory::GetPhysicalAllocatorState();
-    UInt64 totalBytes = static_cast<UInt64>(physicalState.totalPages) * heapPageSize;
-    UInt64 usedBytes = static_cast<UInt64>(physicalState.usedPages) * heapPageSize;
-    UInt64 freeBytes = static_cast<UInt64>(physicalState.freePages) * heapPageSize;
+    UInt64 totalBytes = static_cast<UInt64>(physicalState.TotalPages) * heapPageSize;
+    UInt64 usedBytes = static_cast<UInt64>(physicalState.UsedPages) * heapPageSize;
+    UInt64 freeBytes = static_cast<UInt64>(physicalState.FreePages) * heapPageSize;
 
-    #ifdef MEMORY_DEBUG
-      Logger::WriteFormatted(
-        LogLevel::Info,
-        "Physical allocator: pages total=%p used=%p free=%p bytes total=%p used=%p free=%p",
-        physicalState.totalPages,
-        physicalState.usedPages,
-        physicalState.freePages,
-        totalBytes,
-        usedBytes,
-        freeBytes
-      );
-      DumpState();
-    #endif
+    Logger::WriteFormatted(
+      LogLevel::Debug,
+      "Physical allocator: pages total=%p used=%p free=%p bytes total=%p used=%p free=%p",
+      physicalState.TotalPages,
+      physicalState.UsedPages,
+      physicalState.FreePages,
+      totalBytes,
+      usedBytes,
+      freeBytes
+    );
+    DumpState();
 
     #ifdef MEMORY_TEST
       Memory::Test();
       Memory::ResetHeap();
-      Memory::CheckHeap();
+      Memory::VerifyHeap();
     #endif
   }
 
@@ -574,17 +570,15 @@ namespace Quantum::Kernel {
       requiredTailPages = pagesNeeded;
     }
 
-    #ifdef MEMORY_DEBUG
-      Logger::WriteFormatted(
-        LogLevel::Trace,
-        "Allocate: requested=%p binIndex=%d binSize=%p payloadSize=%p needed=%p",
-        requested,
-        binIndex,
-        binSize,
-        payloadSize,
-        needed
-      );
-    #endif
+    Logger::WriteFormatted(
+      LogLevel::Debug,
+      "Allocate: requested=%p binIndex=%d binSize=%p payloadSize=%p needed=%p",
+      requested,
+      binIndex,
+      binSize,
+      payloadSize,
+      needed
+    );
 
     EnsureHeapInitialized();
 
@@ -638,18 +632,16 @@ namespace Quantum::Kernel {
       UInt32* canary = reinterpret_cast<UInt32*>(payload + usable);
       *canary = canaryValue;
 
-      #ifdef MEMORY_DEBUG
-        Logger::WriteFormatted(
-          LogLevel::Trace,
-          "Heap alloc ptr=%p block=%p usable=%p size=%p canary=%p mapped=%p",
-          payload,
-          reinterpret_cast<UInt8*>(payload) - sizeof(FreeBlock),
-          usable,
-          payloadSize,
-          *canary,
-          heapMappedBytes
-        );
-      #endif
+      Logger::WriteFormatted(
+        LogLevel::Debug,
+        "Heap alloc ptr=%p block=%p usable=%p size=%p canary=%p mapped=%p",
+        payload,
+        reinterpret_cast<UInt8*>(payload) - sizeof(FreeBlock),
+        usable,
+        payloadSize,
+        *canary,
+        heapMappedBytes
+      );
 
       return pointer;
     }
@@ -699,19 +691,17 @@ namespace Quantum::Kernel {
     UInt32* canary = reinterpret_cast<UInt32*>(alignedPayload + usable);
     *canary = canaryValue;
 
-    #ifdef MEMORY_DEBUG
-      Logger::WriteFormatted(
-        LogLevel::Trace,
-        "Heap alloc aligned ptr=%p block=%p payload=%p offset=%p usable=%p size=%p canary=%p",
-        alignedPayload,
-        block,
-        reinterpret_cast<UInt8*>(block) + sizeof(FreeBlock),
-        metadata->payloadOffset,
-        usable,
-        block->size,
-        *canary
-      );
-    #endif
+    Logger::WriteFormatted(
+      LogLevel::Debug,
+      "Heap alloc aligned ptr=%p block=%p payload=%p offset=%p usable=%p size=%p canary=%p",
+      alignedPayload,
+      block,
+      reinterpret_cast<UInt8*>(block) + sizeof(FreeBlock),
+      metadata->payloadOffset,
+      usable,
+      block->size,
+      *canary
+    );
 
     return reinterpret_cast<void*>(alignedAddress);
   }
@@ -863,7 +853,7 @@ namespace Quantum::Kernel {
     HeapState state = GetHeapState();
 
     Logger::WriteFormatted(
-      LogLevel::Trace,
+      LogLevel::Debug,
       "Heap mapped bytes: %p, free bytes: %p, free blocks: %p",
       state.mappedBytes,
       state.freeBytes,
@@ -910,28 +900,28 @@ namespace Quantum::Kernel {
       PANIC("Free bytes decreased unexpectedly");
     }
 
-    #ifdef MEMORY_TEST_VERBOSE
-      Logger::WriteFormatted(
-        LogLevel::Trace,
-        "Memory state before self-test: %p mapped, %p free, %p blocks",
-        before.mappedBytes,
-        before.freeBytes,
-        before.freeBlocks
-      );
-      Logger::WriteFormatted(
-        LogLevel::Trace,
-        "Memory state after self-test: %p mapped, %p free, %p blocks",
-        after.mappedBytes,
-        after.freeBytes,
-        after.freeBlocks
-      );
-    #endif
+    Logger::WriteFormatted(
+      LogLevel::Debug,
+      "Memory state before self-test: %p mapped, %p free, %p blocks",
+      before.mappedBytes,
+      before.freeBytes,
+      before.freeBlocks
+    );
+    Logger::WriteFormatted(
+      LogLevel::Debug,
+      "Memory state after self-test: %p mapped, %p free, %p blocks",
+      after.mappedBytes,
+      after.freeBytes,
+      after.freeBlocks
+    );
 
     Logger::Write(LogLevel::Trace, "Memory self-test passed");
   }
 
   bool Memory::VerifyHeap() {
     EnsureHeapInitialized();
+
+    bool ok = true;
 
     // verify free list ordering and bounds
     FreeBlock* current = freeList;
@@ -961,56 +951,54 @@ namespace Quantum::Kernel {
       UInt8* payload = reinterpret_cast<UInt8*>(current) + sizeof(FreeBlock);
 
       if (current->size < sizeof(UInt32)) {
-        PANIC("VerifyHeap: free block too small for canary");
+        Logger::Write(LogLevel::Error, "VerifyHeap: free block too small for canary");
+        ok = false;
+        break;
       }
 
       UInt32 usable = current->size - sizeof(UInt32);
       UInt32* canary = reinterpret_cast<UInt32*>(payload + usable);
 
       if (*canary != canaryValue) {
-        PANIC("VerifyHeap: free block canary corrupted");
+        Logger::Write(LogLevel::Error, "VerifyHeap: free block canary corrupted");
+        ok = false;
+        break;
       }
 
       current = current->next;
     }
 
-    return true;
-  }
+    // dump free list snapshot for debugging
+    Logger::Write(LogLevel::Debug, "Free list dump:");
+    current = freeList;
+    int count = 0;
 
-  void Memory::CheckHeap() {
-    bool ok = VerifyHeap();
-    
-    if (!ok) {
-      // dump free list for debugging
-      Logger::Write(LogLevel::Error, "Free list dump:");
-      FreeBlock* current = freeList;
-      int count = 0;
-      
-      while (current && count < 20) {
-        UInt8* blockStart = reinterpret_cast<UInt8*>(current);
-        UInt8* blockEnd = blockStart + sizeof(FreeBlock) + current->size;
-        
-        Logger::WriteFormatted(
-          LogLevel::Error,
-          "  Block %d: addr=%p size=%p end=%p (heap base=%p end=%p)",
-          count,
-          blockStart,
-          current->size,
-          blockEnd,
-          heapBase,
-          heapBase + heapMappedBytes
-        );
-        
-        count++;
-        current = current->next;
-      }
+    while (current && count < 20) {
+      UInt8* blockStart = reinterpret_cast<UInt8*>(current);
+      UInt8* blockEnd = blockStart + sizeof(FreeBlock) + current->size;
+
+      Logger::WriteFormatted(
+        LogLevel::Debug,
+        "  Block %d: addr=%p size=%p end=%p (heap base=%p end=%p)",
+        count,
+        blockStart,
+        current->size,
+        blockEnd,
+        heapBase,
+        heapBase + heapMappedBytes
+      );
+
+      count++;
+      current = current->next;
     }
-    
+
     Logger::WriteFormatted(
-      ok ? LogLevel::Info : LogLevel::Error,
+      ok ? LogLevel::Debug : LogLevel::Error,
       "Heap verify %s",
       ok ? "ok" : "failed"
     );
+
+    return ok;
   }
 
   void Memory::ResetHeap() {
@@ -1044,13 +1032,11 @@ namespace Quantum::Kernel {
     CoalesceAdjacentFreeBlocks();
     ReclaimPageSpans();
 
-    #ifdef MEMORY_DEBUG
-      Logger::WriteFormatted(
-        LogLevel::Trace,
-        "Heap reset: mapped=%p freeBytes=%p",
-        heapMappedBytes,
-        block->size
-      );
-    #endif
+    Logger::WriteFormatted(
+      LogLevel::Debug,
+      "Heap reset: mapped=%p freeBytes=%p",
+      heapMappedBytes,
+      block->size
+    );
   }
 }

@@ -9,13 +9,16 @@
 #include <Arch/IA32/LinkerSymbols.hpp>
 #include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/Memory.hpp>
-#include <BootInfo.hpp>
 #include <Kernel.hpp>
 #include <Logger.hpp>
 #include <Types.hpp>
+#include <Types/Boot/BootInfo.hpp>
+#include <Types/Memory/MemoryRegion.hpp>
 
 namespace Quantum::Kernel::Arch::IA32 {
+  using BootInfo = Types::Boot::BootInfo;
   using LogLevel = Logger::Level;
+  using MemoryRegion = Types::Memory::MemoryRegion;
 
   namespace {
     /**
@@ -291,7 +294,7 @@ namespace Quantum::Kernel::Arch::IA32 {
       UInt32 entryCount = 0;
 
       if (bootInfo) {
-        entryCount = bootInfo->entryCount;
+        entryCount = bootInfo->EntryCount;
 
         if (entryCount > maxBootEntries) {
           entryCount = maxBootEntries;
@@ -301,16 +304,16 @@ namespace Quantum::Kernel::Arch::IA32 {
       // determine highest usable address to manage (clip to 4 gb)
       if (bootInfo && entryCount > 0) {
         for (UInt32 i = 0; i < entryCount; ++i) {
-          const MemoryRegion& region = bootInfo->entries[i];
+          const MemoryRegion& region = bootInfo->Entries[i];
 
-          if (region.type != 1) {
+          if (region.Type != 1) {
             continue;
           }
 
           UInt64 baseAddress
-            = (static_cast<UInt64>(region.baseHigh) << 32) | region.baseLow;
+            = (static_cast<UInt64>(region.BaseHigh) << 32) | region.BaseLow;
           UInt64 lengthBytes
-            = (static_cast<UInt64>(region.lengthHigh) << 32) | region.lengthLow;
+            = (static_cast<UInt64>(region.LengthHigh) << 32) | region.LengthLow;
 
           if (lengthBytes == 0) continue;
 
@@ -356,16 +359,16 @@ namespace Quantum::Kernel::Arch::IA32 {
       // free usable pages from the map
       if (bootInfo && entryCount > 0) {
         for (UInt32 i = 0; i < entryCount; ++i) {
-          const MemoryRegion& region = bootInfo->entries[i];
+          const MemoryRegion& region = bootInfo->Entries[i];
 
-          if (region.type != 1) {
+          if (region.Type != 1) {
             continue;
           }
 
           UInt64 baseAddress
-            = (static_cast<UInt64>(region.baseHigh) << 32) | region.baseLow;
+            = (static_cast<UInt64>(region.BaseHigh) << 32) | region.BaseLow;
           UInt64 lengthBytes
-            = (static_cast<UInt64>(region.lengthHigh) << 32) | region.lengthLow;
+            = (static_cast<UInt64>(region.LengthHigh) << 32) | region.LengthLow;
 
           if (lengthBytes == 0) continue;
 
@@ -779,9 +782,9 @@ namespace Quantum::Kernel::Arch::IA32 {
   Memory::PhysicalAllocatorState Memory::GetPhysicalAllocatorState() {
     PhysicalAllocatorState state{};
 
-    state.totalPages = pageCount;
-    state.usedPages = usedPages;
-    state.freePages = pageCount - usedPages;
+    state.TotalPages = pageCount;
+    state.UsedPages = usedPages;
+    state.FreePages = pageCount - usedPages;
 
     return state;
   }

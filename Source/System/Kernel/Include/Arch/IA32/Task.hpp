@@ -17,12 +17,11 @@ namespace Quantum::Kernel::Arch::IA32 {
    * Matches the layout expected by the context switch assembly routine.
    */
   struct TaskContext {
-    // General purpose registers
     UInt32 Edi;
     UInt32 Esi;
     UInt32 Ebx;
     UInt32 Ebp;
-    UInt32 Eip;  // Return address (EIP) for ret instruction
+    UInt32 Eip;
   };
 
   /**
@@ -41,7 +40,7 @@ namespace Quantum::Kernel::Arch::IA32 {
 
     /**
      * Pointer to the saved stack pointer (ESP).
-     * Points to a TaskContext structure on the stack.
+     * Points to a `TaskContext` structure on the stack.
      */
     TaskContext* StackPointer;
 
@@ -73,9 +72,12 @@ namespace Quantum::Kernel::Arch::IA32 {
 
       /**
        * Creates a new task with the given entry point and stack size.
-       * @param entryPoint Function pointer to the task's entry point.
-       * @param stackSize Size of the task's kernel stack in bytes.
-       * @return Pointer to the task control block, or nullptr on failure.
+       * @param entryPoint
+       *   Function pointer to the task's entry point.
+       * @param stackSize
+       *   Size of the task's kernel stack in bytes.
+       * @return
+       *   Pointer to the task control block, or nullptr on failure.
        */
       static TaskControlBlock* Create(void (*entryPoint)(), UInt32 stackSize);
 
@@ -112,9 +114,14 @@ namespace Quantum::Kernel::Arch::IA32 {
 
       /**
        * Performs a context switch from the current task to the next task.
-       * @param currentStackPointer Pointer to store the current task's ESP.
-       * @param nextStackPointer The next task's ESP to restore.
+       * @param currentStackPointer
+       *   Pointer to store the current task's ESP.
+       * @param nextStackPointer
+       *   The next task's ESP to restore.
        */
-      static void SwitchContext(TaskContext** currentStackPointer, TaskContext* nextStackPointer);
+      static void SwitchContext(
+        TaskContext** currentStackPointer,
+        TaskContext* nextStackPointer
+      );
   };
 }

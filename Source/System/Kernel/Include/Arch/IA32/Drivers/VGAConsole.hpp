@@ -28,25 +28,29 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
 
       /**
        * Writes a character to the console.
-       * @param character The character.
+       * @param character
+       *   The character.
        */
       static void WriteCharacter(char character);
 
       /**
        * Writes a message to the console.
-       * @param message The message.
+       * @param message
+       *   The message.
        */
       static void Write(CString message);
 
       /**
        * Writes a message followed by a newline to the console.
-       * @param message The message.
+       * @param message
+       *   The message.
        */
       static void WriteLine(CString message = "");
 
       /**
        * Gets the `Writer` adapter for the `VGAConsole`.
-       * @return The `Writer` adapter.
+       * @return
+       *   The `Writer` adapter.
        */
       static Writer& GetWriter();
 

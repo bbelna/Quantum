@@ -17,7 +17,8 @@ namespace Quantum::Kernel::Arch::IA32 {
   namespace {
     /**
      * Checks if the CPUID instruction is supported.
-     * @return True if CPUID is supported, false otherwise.
+     * @return
+     *   True if CPUID is supported, false otherwise.
      */
     static bool IsCPUIDSupported() {
       UInt32 flags1, flags2;
@@ -39,17 +40,22 @@ namespace Quantum::Kernel::Arch::IA32 {
         :: "eax"
       );
       
-      // If ID bit changed, CPUID is supported
+      // if ID bit changed, CPUID is supported
       return (flags1 ^ flags2) & 0x200000;
     }
 
     /**
      * Executes the CPUID instruction with the given function ID.
-     * @param function The CPUID function ID.
-     * @param eax Reference to store EAX result.
-     * @param ebx Reference to store EBX result.
-     * @param ecx Reference to store ECX result.
-     * @param edx Reference to store EDX result.
+     * @param function
+     *   The CPUID function ID.
+     * @param eax
+     *   Reference to store EAX result.
+     * @param ebx
+     *   Reference to store EBX result.
+     * @param ecx
+     *   Reference to store ECX result.
+     * @param edx
+     *   Reference to store EDX result.
      */
     static void ExecuteCPUID(
       UInt32 function,
@@ -124,7 +130,7 @@ namespace Quantum::Kernel::Arch::IA32 {
     
     // function 0: get vendor string and max basic function
     ExecuteCPUID(0, eax, ebx, ecx, edx);
-    info.maxBasicFunction = eax;
+    info.MaxBasicFunction = eax;
     
     // Vendor string: EBX, EDX, ECX (in that order)
     *reinterpret_cast<UInt32*>(info.vendor + 0) = ebx;
@@ -136,115 +142,115 @@ namespace Quantum::Kernel::Arch::IA32 {
     Logger::WriteFormatted(LogLevel::Info, "CPU Vendor: %s", info.vendor);
     
     // function 1: get processor info and feature flags
-    if (info.maxBasicFunction >= 1) {
+    if (info.MaxBasicFunction >= 1) {
       ExecuteCPUID(1, eax, ebx, ecx, edx);
       
       // parse processor signature from EAX
-      info.stepping = eax & 0xF;
-      info.modelNumber = (eax >> 4) & 0xF;
-      info.family = (eax >> 8) & 0xF;
-      info.processorType = (eax >> 12) & 0x3;
+      info.Stepping = eax & 0xF;
+      info.ModelNumber = (eax >> 4) & 0xF;
+      info.Family = (eax >> 8) & 0xF;
+      info.ProcessorType = (eax >> 12) & 0x3;
       
       // extended model and family
       UInt32 extendedModel = (eax >> 16) & 0xF;
       UInt32 extendedFamily = (eax >> 20) & 0xFF;
       
       // adjust model and family if needed
-      if (info.family == 0xF) {
-        info.family += extendedFamily;
+      if (info.Family == 0xF) {
+        info.Family += extendedFamily;
       }
 
-      if (info.family == 0x6 || info.family == 0xF) {
-        info.modelNumber += (extendedModel << 4);
+      if (info.Family == 0x6 || info.Family == 0xF) {
+        info.ModelNumber += (extendedModel << 4);
       }
       
       // parse feature flags from EDX (function 1)
-      info.hasFPU    = (edx & (1 << 0)) != 0;
-      info.hasVME    = (edx & (1 << 1)) != 0;
-      info.hasDE     = (edx & (1 << 2)) != 0;
-      info.hasPSE    = (edx & (1 << 3)) != 0;
-      info.hasTSC    = (edx & (1 << 4)) != 0;
-      info.hasMSR    = (edx & (1 << 5)) != 0;
-      info.hasPAE    = (edx & (1 << 6)) != 0;
-      info.hasMCE    = (edx & (1 << 7)) != 0;
-      info.hasCX8    = (edx & (1 << 8)) != 0;
-      info.hasAPIC   = (edx & (1 << 9)) != 0;
-      info.hasSEP    = (edx & (1 << 11)) != 0;
-      info.hasMTRR   = (edx & (1 << 12)) != 0;
-      info.hasPGE    = (edx & (1 << 13)) != 0;
-      info.hasMCA    = (edx & (1 << 14)) != 0;
-      info.hasCMOV   = (edx & (1 << 15)) != 0;
-      info.hasPAT    = (edx & (1 << 16)) != 0;
-      info.hasPSE36  = (edx & (1 << 17)) != 0;
-      info.hasCLFSH  = (edx & (1 << 19)) != 0;
-      info.hasMMX    = (edx & (1 << 23)) != 0;
-      info.hasFXSR   = (edx & (1 << 24)) != 0;
-      info.hasSSE    = (edx & (1 << 25)) != 0;
-      info.hasSSE2   = (edx & (1 << 26)) != 0;
-      info.hasHTT    = (edx & (1 << 28)) != 0;
+      info.HasFPU    = (edx & (1 << 0)) != 0;
+      info.HasVME    = (edx & (1 << 1)) != 0;
+      info.HasDE     = (edx & (1 << 2)) != 0;
+      info.HasPSE    = (edx & (1 << 3)) != 0;
+      info.HasTSC    = (edx & (1 << 4)) != 0;
+      info.HasMSR    = (edx & (1 << 5)) != 0;
+      info.HasPAE    = (edx & (1 << 6)) != 0;
+      info.HasMCE    = (edx & (1 << 7)) != 0;
+      info.HasCX8    = (edx & (1 << 8)) != 0;
+      info.HasAPIC   = (edx & (1 << 9)) != 0;
+      info.HasSEP    = (edx & (1 << 11)) != 0;
+      info.HasMTRR   = (edx & (1 << 12)) != 0;
+      info.HasPGE    = (edx & (1 << 13)) != 0;
+      info.HasMCA    = (edx & (1 << 14)) != 0;
+      info.HasCMOV   = (edx & (1 << 15)) != 0;
+      info.HasPAT    = (edx & (1 << 16)) != 0;
+      info.HasPSE36  = (edx & (1 << 17)) != 0;
+      info.HasCLFSH  = (edx & (1 << 19)) != 0;
+      info.HasMMX    = (edx & (1 << 23)) != 0;
+      info.HasFXSR   = (edx & (1 << 24)) != 0;
+      info.HasSSE    = (edx & (1 << 25)) != 0;
+      info.HasSSE2   = (edx & (1 << 26)) != 0;
+      info.HasHTT    = (edx & (1 << 28)) != 0;
       
       // parse feature flags from ECX (function 1)
-      info.hasSSE3      = (ecx & (1 << 0)) != 0;
-      info.hasPCLMULQDQ = (ecx & (1 << 1)) != 0;
-      info.hasSSSE3     = (ecx & (1 << 9)) != 0;
-      info.hasFMA       = (ecx & (1 << 12)) != 0;
-      info.hasCX16      = (ecx & (1 << 13)) != 0;
-      info.hasSSE41     = (ecx & (1 << 19)) != 0;
-      info.hasSSE42     = (ecx & (1 << 20)) != 0;
-      info.hasPOPCNT    = (ecx & (1 << 23)) != 0;
-      info.hasAES       = (ecx & (1 << 25)) != 0;
-      info.hasXSAVE     = (ecx & (1 << 26)) != 0;
-      info.hasAVX       = (ecx & (1 << 28)) != 0;
-      info.hasRDRAND    = (ecx & (1 << 30)) != 0;
+      info.HasSSE3      = (ecx & (1 << 0)) != 0;
+      info.HasPCLMULQDQ = (ecx & (1 << 1)) != 0;
+      info.HasSSSE3     = (ecx & (1 << 9)) != 0;
+      info.HasFMA       = (ecx & (1 << 12)) != 0;
+      info.HasCX16      = (ecx & (1 << 13)) != 0;
+      info.HasSSE41     = (ecx & (1 << 19)) != 0;
+      info.HasSSE42     = (ecx & (1 << 20)) != 0;
+      info.HasPOPCNT    = (ecx & (1 << 23)) != 0;
+      info.HasAES       = (ecx & (1 << 25)) != 0;
+      info.HasXSAVE     = (ecx & (1 << 26)) != 0;
+      info.HasAVX       = (ecx & (1 << 28)) != 0;
+      info.HasRDRAND    = (ecx & (1 << 30)) != 0;
       
       // fill base CPUInfo fields
-      info.hasHardwareFPU = info.hasFPU;
-      info.hasSIMD = info.hasSSE || info.hasMMX;
+      info.hasHardwareFPU = info.HasFPU;
+      info.hasSIMD = info.HasSSE || info.HasMMX;
       info.coreCount = 1; // Will be updated if we parse topology
       
       Logger::WriteFormatted(
         LogLevel::Info, 
         "CPU: Family=%u Model=%u Stepping=%u",
-        info.family,
-        info.modelNumber,
-        info.stepping
+        info.Family,
+        info.ModelNumber,
+        info.Stepping
       );
     }
     
     // function 7: extended features
-    if (info.maxBasicFunction >= 7) {
+    if (info.MaxBasicFunction >= 7) {
       ExecuteCPUID(7, eax, ebx, ecx, edx);
       
       // parse extended feature flags from EBX
-      info.hasFSGSBASE   = (ebx & (1 << 0)) != 0;
-      info.hasBMI1       = (ebx & (1 << 3)) != 0;
-      info.hasAVX2       = (ebx & (1 << 5)) != 0;
-      info.hasBMI2       = (ebx & (1 << 8)) != 0;
-      info.hasRDSEED     = (ebx & (1 << 18)) != 0;
-      info.hasSMAP       = (ebx & (1 << 20)) != 0;
-      info.hasCLFLUSHOPT = (ebx & (1 << 23)) != 0;
+      info.HasFSGSBASE   = (ebx & (1 << 0)) != 0;
+      info.HasBMI1       = (ebx & (1 << 3)) != 0;
+      info.HasAVX2       = (ebx & (1 << 5)) != 0;
+      info.HasBMI2       = (ebx & (1 << 8)) != 0;
+      info.HasRDSEED     = (ebx & (1 << 18)) != 0;
+      info.HasSMAP       = (ebx & (1 << 20)) != 0;
+      info.HasCLFLUSHOPT = (ebx & (1 << 23)) != 0;
     }
     
     // function 0x80000000: get max extended function
     ExecuteCPUID(0x80000000, eax, ebx, ecx, edx);
 
-    info.maxExtendedFunction = eax;
+    info.MaxExtendedFunction = eax;
     
     // function 0x80000001: extended processor info and features
-    if (info.maxExtendedFunction >= 0x80000001) {
+    if (info.MaxExtendedFunction >= 0x80000001) {
       ExecuteCPUID(0x80000001, eax, ebx, ecx, edx);
       
       // parse extended feature flags from EDX
-      info.hasSYSCALL = (edx & (1 << 11)) != 0;
-      info.hasNX      = (edx & (1 << 20)) != 0;
-      info.hasPage1GB = (edx & (1 << 26)) != 0;
-      info.hasRDTSCP  = (edx & (1 << 27)) != 0;
-      info.hasLM      = (edx & (1 << 29)) != 0;
+      info.HasSYSCALL = (edx & (1 << 11)) != 0;
+      info.HasNX      = (edx & (1 << 20)) != 0;
+      info.HasPage1GB = (edx & (1 << 26)) != 0;
+      info.HasRDTSCP  = (edx & (1 << 27)) != 0;
+      info.HasLM      = (edx & (1 << 29)) != 0;
       info.hasVirtualization = (ecx & (1 << 2)) != 0; // AMD SVM
     }
     
     // function 0x80000002-0x80000004: processor brand string
-    if (info.maxExtendedFunction >= 0x80000004) {
+    if (info.MaxExtendedFunction >= 0x80000004) {
       char* modelPtr = info.model;
       
       for (UInt32 func = 0x80000002; func <= 0x80000004; func++) {
@@ -282,11 +288,11 @@ namespace Quantum::Kernel::Arch::IA32 {
     Logger::WriteFormatted(
       LogLevel::Info, 
       "Features: FPU=%d SSE=%d SSE2=%d AVX=%d PAE=%d",
-      info.hasFPU,
-      info.hasSSE,
-      info.hasSSE2,
-      info.hasAVX,
-      info.hasPAE
+      info.HasFPU,
+      info.HasSSE,
+      info.HasSSE2,
+      info.HasAVX,
+      info.HasPAE
     );
     
     return info;

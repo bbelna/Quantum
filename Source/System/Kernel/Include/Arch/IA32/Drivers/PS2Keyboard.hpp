@@ -21,13 +21,15 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
 
       /**
        * Checks if a character is available in the buffer.
-       * @return True if a character is available, false otherwise.
+       * @return
+       *   True if a character is available, false otherwise.
        */
       static bool KeyAvailable();
 
       /**
        * Reads a character from the buffer.
-       * @return The character read, or 0 if none available.
+       * @return
+       *   The character read, or 0 if none available.
        */
       static char ReadCharacter();
   };

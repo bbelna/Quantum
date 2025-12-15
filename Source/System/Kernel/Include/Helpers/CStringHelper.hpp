@@ -19,18 +19,24 @@ namespace Quantum::Kernel::Helpers {
       /**
        * Converts a signed 32-bit integer to a decimal C-string into a caller
        * buffer.
-       * @param value Integer to convert.
-       * @param buffer Destination buffer.
-       * @param length Size of the destination buffer.
-       * @return True on success; false if the buffer is too small.
+       * @param value
+       *   Integer to convert.
+       * @param buffer
+       *   Destination buffer.
+       * @param length
+       *   Size of the destination buffer.
+       * @return
+       *   True on success; false if the buffer is too small.
        */
       static bool ToCString(Int32 value, CStringMutable buffer, Size length);
 
       /**
        * Converts a signed 32-bit integer to a decimal C-string using an
        * internal static buffer (overwritten on each call).
-       * @param value Integer to convert.
-       * @return Pointer to the static null-terminated string.
+       * @param value
+       *   Integer to convert.
+       * @return
+       *   Pointer to the static null-terminated string.
        */
       static char* ToCString(Int32 value);
 
@@ -41,11 +47,16 @@ namespace Quantum::Kernel::Helpers {
 
       /**
        * Concatenates two C-strings into a destination buffer.
-       * @param left First string.
-       * @param right Second string.
-       * @param buffer Destination buffer.
-       * @param length Size of the destination buffer.
-       * @return True on success; false if the buffer is too small.
+       * @param left
+       *   First string.
+       * @param right
+       *   Second string.
+       * @param buffer
+       *   Destination buffer.
+       * @param length
+       *   Size of the destination buffer.
+       * @return
+       *   True on success; false if the buffer is too small.
        */
       static bool Concat(
         CString left,
@@ -57,10 +68,14 @@ namespace Quantum::Kernel::Helpers {
       /**
        * Concatenates two C-strings into a destination buffer, computing the
        * required length automatically.
-       * @param left First string.
-       * @param right Second string.
-       * @param buffer Destination buffer.
-       * @return true on success; false if the buffer is too small.
+       * @param left
+       *   First string.
+       * @param right
+       *   Second string.
+       * @param buffer
+       *   Destination buffer.
+       * @return
+       *   True on success; false if the buffer is too small.
        */
       static bool Concat(
         CString left,
@@ -71,11 +86,16 @@ namespace Quantum::Kernel::Helpers {
       /**
        * Formats a C-string into a destination buffer using a simple format
        * string and a variable argument list.
-       * @param buffer Destination buffer.
-       * @param length Size of the destination buffer.
-       * @param format Format string.
-       * @param args Variable argument list.
-       * @return True on success; false if the buffer is too small.
+       * @param buffer
+       *   Destination buffer.
+       * @param length
+       *   Size of the destination buffer.
+       * @param format
+       *   Format string.
+       * @param args
+       *   Variable argument list.
+       * @return
+       *   True on success; false if the buffer is too small.
        */
       static bool Format(
         CStringMutable buffer,

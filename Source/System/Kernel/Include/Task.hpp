@@ -53,11 +53,17 @@ namespace Quantum::Kernel {
 
       /**
        * Creates a new kernel task.
-       * @param entryPoint Function pointer to the task's entry point.
-       * @param stackSize Size of the task's kernel stack in bytes.
-       * @return Pointer to the task control block, or nullptr on failure.
+       * @param entryPoint
+       *   Function pointer to the task's entry point.
+       * @param stackSize
+       *   Size of the task's kernel stack in bytes.
+       * @return
+       *   Pointer to the task control block, or nullptr on failure.
        */
-      static TaskControlBlock* Create(void (*entryPoint)(), UInt32 stackSize = 4096);
+      static TaskControlBlock* Create(
+        void (*entryPoint)(),
+        UInt32 stackSize = 4096
+      );
 
       /**
        * Terminates the current task.
@@ -71,7 +77,8 @@ namespace Quantum::Kernel {
 
       /**
        * Gets the currently executing task.
-       * @return Pointer to the current task control block.
+       * @return
+       *   Pointer to the current task control block.
        */
       static TaskControlBlock* GetCurrent();
 

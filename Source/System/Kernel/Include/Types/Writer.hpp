@@ -20,7 +20,8 @@ namespace Quantum::Kernel::Types {
     public:
       /**
        * Writes a message.
-       * @param message The message.
+       * @param message
+       *   The message.
        */
       virtual void Write(String message);
 

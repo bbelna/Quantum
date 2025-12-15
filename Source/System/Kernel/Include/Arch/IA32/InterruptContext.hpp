@@ -18,66 +18,66 @@ namespace Quantum::Kernel {
     /**
      * General-purpose register EDI (pusha order).
      */
-    UInt32 edi;
+    UInt32 EDI;
 
     /**
      * General-purpose register ESI (pusha order).
      */
-    UInt32 esi;
+    UInt32 ESI;
 
     /**
      * Base pointer captured during pusha.
      */
-    UInt32 ebp;
+    UInt32 EBP;
 
     /**
      * Value before pusha for ESP.
      */
-    UInt32 esp;
+    UInt32 ESP;
 
     /**
      * General-purpose register EBX (pusha order).
      */
-    UInt32 ebx;
+    UInt32 EBX;
 
     /**
      * General-purpose register EDX (pusha order).
      */
-    UInt32 edx;
+    UInt32 EDX;
 
     /**
      * General-purpose register ECX (pusha order).
      */
-    UInt32 ecx;
+    UInt32 ECX;
 
     /**
      * General-purpose register EAX (pusha order).
      */
-    UInt32 eax;
+    UInt32 EAX;
 
     /**
      * Software-pushed vector.
      */
-    UInt32 vector;
+    UInt32 Vector;
 
     /**
      * Software-pushed hardware/synthetic error code.
      */
-    UInt32 errorCode;
+    UInt32 ErrorCode;
 
     /**
      * Instruction pointer at the time of the interrupt.
      */
-    UInt32 eip;
+    UInt32 EIP;
 
     /**
      * Code segment selector at the time of the interrupt.
      */
-    UInt32 cs;
+    UInt32 CS;
 
     /**
      * CPU flags at the time of the interrupt.
      */
-    UInt32 eflags;
+    UInt32 EFlags;
   };
 }

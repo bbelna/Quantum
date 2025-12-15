@@ -10,8 +10,14 @@
 
 namespace Quantum::Kernel::Arch::IA32 {
   /**
-   * Installs default exception handlers for critical CPU faults.
-   * Currently handles #DE (0), #GP (13), and #PF (14).
+   * IA32 exception handler registration.
    */
-  void InstallDefaultExceptionHandlers();
+  class Exceptions {
+    public:
+      /**
+       * Installs default exception handlers for critical CPU faults.
+       * Currently handles #DE (0), #GP (13), and #PF (14).
+       */
+      static void InstallDefaultHandlers();
+  };
 }

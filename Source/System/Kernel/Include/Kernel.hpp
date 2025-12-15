@@ -23,7 +23,8 @@ namespace Quantum::Kernel {
     public:
       /**
        * Initializes the kernel.
-       * @param bootInfoPhysicalAddress Physical address of the boot info block.
+       * @param bootInfoPhysicalAddress
+       *   Physical address of the boot info block.
        */
       static void Initialize(UInt32 bootInfoPhysicalAddress);
 
@@ -35,10 +36,14 @@ namespace Quantum::Kernel {
       /**
        * Panic the kernel with a message. Use the macro `PANIC(msg)` to include
        * file, line, and function information automatically.
-       * @param message Panic message.
-       * @param file The source file where the panic occurred (optional).
-       * @param line The line number where the panic occurred (optional).
-       * @param function The function name where the panic occurred (optional).
+       * @param message
+       *   Panic message.
+       * @param file
+       *   The source file where the panic occurred (optional).
+       * @param line
+       *   The line number where the panic occurred (optional).
+       * @param function
+       *   The function name where the panic occurred (optional).
        */
       static void Panic(
         String message,

@@ -27,6 +27,10 @@ namespace Quantum::Kernel {
 
       /**
        * Registers an interrupt handler for the given vector.
+       * @param vector
+       *  The interrupt vector number.
+       * @param handler
+       *   The interrupt handler function.
        */
       static void RegisterHandler(UInt8 vector, InterruptHandler handler);
   };

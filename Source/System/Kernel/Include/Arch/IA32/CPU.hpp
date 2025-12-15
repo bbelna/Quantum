@@ -28,267 +28,272 @@ namespace Quantum::Kernel::Arch::IA32 {
         /**
          * Highest basic CPUID function supported (range 0x0-0x7FFFFFFF).
          */
-        UInt32 maxBasicFunction;
+        UInt32 MaxBasicFunction;
         
         /**
          * Highest extended CPUID function supported (range 0x80000000+).
          */
-        UInt32 maxExtendedFunction;
+        UInt32 MaxExtendedFunction;
         
         /**
          * Processor stepping identifier within the model.
          */
-        UInt32 stepping;
+        UInt32 Stepping;
         
         /**
          * Processor model number.
          */
-        UInt32 modelNumber;
+        UInt32 ModelNumber;
         
         /**
          * Processor family number.
          */
-        UInt32 family;
+        UInt32 Family;
         
         /**
          * Processor type (0=OEM, 1=OverDrive, 2=Dual processor).
          */
-        UInt32 processorType;
+        UInt32 ProcessorType;
         
         /**
          * Indicates if the CPU has an x87 floating-point unit on chip.
          */
-        bool hasFPU;
+        bool HasFPU;
         
         /**
          * Indicates if the CPU supports virtual 8086 mode enhancements.
          */
-        bool hasVME;
+        bool HasVME;
         
         /**
          * Indicates if the CPU supports debugging extensions (I/O breakpoints).
          */
-        bool hasDE;
+        bool HasDE;
         
         /**
          * Indicates if the CPU supports page size extension (4MB pages).
          */
-        bool hasPSE;
+        bool HasPSE;
         
         /**
          * Indicates if the CPU has a time stamp counter (RDTSC instruction).
          */
-        bool hasTSC;
+        bool HasTSC;
         
         /**
-         * Indicates if the CPU supports model-specific registers (RDMSR/WRMSR instructions).
+         * Indicates if the CPU supports model-specific registers
+         * (RDMSR/WRMSR instructions).
          */
-        bool hasMSR;
+        bool HasMSR;
         
         /**
-         * Indicates if the CPU supports physical address extension (36-bit addressing).
+         * Indicates if the CPU supports physical address extension
+         * (36-bit addressing).
          */
-        bool hasPAE;
+        bool HasPAE;
         
         /**
          * Indicates if the CPU supports machine check exception (MCE).
          */
-        bool hasMCE;
+        bool HasMCE;
         
         /**
          * Indicates if the CPU supports the CMPXCHG8B instruction.
          */
-        bool hasCX8;
+        bool HasCX8;
         
         /**
-         * Indicates if the CPU has an on-chip Advanced Programmable Interrupt Controller.
+         * Indicates if the CPU has an on-chip Advanced Programmable Interrupt
+         * Controller.
          */
-        bool hasAPIC;
+        bool HasAPIC;
         
         /**
-         * Indicates if the CPU supports SYSENTER and SYSEXIT fast system call instructions.
+         * Indicates if the CPU supports SYSENTER and SYSEXIT fast system call
+         * instructions.
          */
-        bool hasSEP;
+        bool HasSEP;
         
         /**
-         * Indicates if the CPU supports memory type range registers for cache control.
+         * Indicates if the CPU supports memory type range registers for cache
+         * control.
          */
-        bool hasMTRR;
+        bool HasMTRR;
         
         /**
          * Indicates if the CPU supports page global enable bit in CR4.
          */
-        bool hasPGE;
+        bool HasPGE;
         
         /**
          * Indicates if the CPU supports machine check architecture.
          */
-        bool hasMCA;
+        bool HasMCA;
         
         /**
          * Indicates if the CPU supports conditional move instructions (CMOV).
          */
-        bool hasCMOV;
+        bool HasCMOV;
         
         /**
          * Indicates if the CPU supports page attribute table for memory types.
          */
-        bool hasPAT;
+        bool HasPAT;
         
         /**
          * Indicates if the CPU supports 36-bit page size extension.
          */
-        bool hasPSE36;
+        bool HasPSE36;
         
         /**
          * Indicates if the CPU supports the CLFLUSH cache line flush instruction.
          */
-        bool hasCLFSH;
+        bool HasCLFSH;
         
         /**
          * Indicates if the CPU supports MMX technology instructions.
          */
-        bool hasMMX;
+        bool HasMMX;
         
         /**
          * Indicates if the CPU supports FXSAVE and FXRSTOR instructions for FPU state.
          */
-        bool hasFXSR;
+        bool HasFXSR;
         
         /**
          * Indicates if the CPU supports Streaming SIMD Extensions (SSE).
          */
-        bool hasSSE;
+        bool HasSSE;
         
         /**
          * Indicates if the CPU supports Streaming SIMD Extensions 2 (SSE2).
          */
-        bool hasSSE2;
+        bool HasSSE2;
         
         /**
          * Indicates if the CPU supports hyper-threading technology.
          */
-        bool hasHTT;
+        bool HasHTT;
         
         /**
          * Indicates if the CPU supports Streaming SIMD Extensions 3 (SSE3).
          */
-        bool hasSSE3;
+        bool HasSSE3;
         
         /**
          * Indicates if the CPU supports the PCLMULQDQ carry-less multiplication instruction.
          */
-        bool hasPCLMULQDQ;
+        bool HasPCLMULQDQ;
         
         /**
          * Indicates if the CPU supports Supplemental Streaming SIMD Extensions 3 (SSSE3).
          */
-        bool hasSSSE3;
+        bool HasSSSE3;
         
         /**
          * Indicates if the CPU supports fused multiply-add instructions (FMA3).
          */
-        bool hasFMA;
+        bool HasFMA;
         
         /**
          * Indicates if the CPU supports the CMPXCHG16B instruction for 16-byte compare-and-swap.
          */
-        bool hasCX16;
+        bool HasCX16;
         
         /**
          * Indicates if the CPU supports Streaming SIMD Extensions 4.1 (SSE4.1).
          */
-        bool hasSSE41;
+        bool HasSSE41;
         
         /**
          * Indicates if the CPU supports Streaming SIMD Extensions 4.2 (SSE4.2).
          */
-        bool hasSSE42;
+        bool HasSSE42;
         
         /**
          * Indicates if the CPU supports the POPCNT population count instruction.
          */
-        bool hasPOPCNT;
+        bool HasPOPCNT;
         
         /**
          * Indicates if the CPU supports AES instruction set for encryption.
          */
-        bool hasAES;
+        bool HasAES;
         
         /**
          * Indicates if the CPU supports XSAVE and XRSTOR instructions for extended state management.
          */
-        bool hasXSAVE;
+        bool HasXSAVE;
         
         /**
          * Indicates if the CPU supports Advanced Vector Extensions (AVX).
          */
-        bool hasAVX;
+        bool HasAVX;
         
         /**
          * Indicates if the CPU supports the RDRAND hardware random number generator instruction.
          */
-        bool hasRDRAND;
+        bool HasRDRAND;
         
         /**
          * Indicates if the CPU supports RDFSBASE and WRFSBASE instructions for FS/GS base access.
          */
-        bool hasFSGSBASE;
+        bool HasFSGSBASE;
         
         /**
          * Indicates if the CPU supports Bit Manipulation Instruction Set 1 (BMI1).
          */
-        bool hasBMI1;
+        bool HasBMI1;
         
         /**
          * Indicates if the CPU supports Advanced Vector Extensions 2 (AVX2).
          */
-        bool hasAVX2;
+        bool HasAVX2;
         
         /**
          * Indicates if the CPU supports Bit Manipulation Instruction Set 2 (BMI2).
          */
-        bool hasBMI2;
+        bool HasBMI2;
         
         /**
          * Indicates if the CPU supports the RDSEED hardware random number seed instruction.
          */
-        bool hasRDSEED;
+        bool HasRDSEED;
         
         /**
          * Indicates if the CPU supports Supervisor Mode Access Prevention.
          */
-        bool hasSMAP;
+        bool HasSMAP;
         
         /**
          * Indicates if the CPU supports the optimized CLFLUSHOPT cache line flush instruction.
          */
-        bool hasCLFLUSHOPT;
+        bool HasCLFLUSHOPT;
         
         /**
          * Indicates if the CPU supports SYSCALL and SYSRET fast system call instructions.
          */
-        bool hasSYSCALL;
+        bool HasSYSCALL;
         
         /**
          * Indicates if the CPU supports the NX (No-Execute) bit for memory protection.
          */
-        bool hasNX;
+        bool HasNX;
         
         /**
          * Indicates if the CPU supports 1GB memory pages.
          */
-        bool hasPage1GB;
+        bool HasPage1GB;
         
         /**
          * Indicates if the CPU supports the RDTSCP instruction for reading time-stamp counter.
          */
-        bool hasRDTSCP;
+        bool HasRDTSCP;
         
         /**
          * Indicates if the CPU supports Long Mode (64-bit x86-64 architecture).
          */
-        bool hasLM;
+        bool HasLM;
       };
 
       /**
@@ -313,7 +318,8 @@ namespace Quantum::Kernel::Arch::IA32 {
 
       /**
        * Loads the physical address of the page directory into CR3.
-       * @param physicalAddress The physical address of the page directory.
+       * @param physicalAddress
+       *   The physical address of the page directory.
        */
       static void LoadPageDirectory(UInt32 physicalAddress);
 
@@ -324,7 +330,8 @@ namespace Quantum::Kernel::Arch::IA32 {
 
       /**
        * Invalidates a single page from the TLB.
-       * @param address The virtual address of the page to invalidate.
+       * @param address
+       *   The virtual address of the page to invalidate.
        */
       static void InvalidatePage(UInt32 address);
 

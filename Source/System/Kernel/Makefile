@@ -17,6 +17,9 @@ CC32    ?= x86_64-linux-gnu-gcc
 CFLAGS32 ?= -fno-pic -fno-pie -m32 -ffreestanding -O2 -Wall -fno-exceptions \
             -fno-rtti -nostdinc -nostdinc++ -fno-stack-protector -fno-builtin \
             -mno-sse -mno-sse2 -mno-mmx -DQUANTUM_ARCH_IA32
+
+# Allow callers to append extra flags (e.g., -DKERNEL_TESTS)
+CFLAGS32 += $(EXTRA_CFLAGS32)
 LD32      ?= x86_64-linux-gnu-ld
 LDFLAGS32 ?= --no-pie -m elf_i386
 OBJCOPY32 ?= x86_64-linux-gnu-objcopy
@@ -25,7 +28,8 @@ KER_COMMON_SRCS := \
 	$(wildcard $(KERNEL_SRC_DIR)/*.cpp) \
 	$(wildcard $(KERNEL_SRC_DIR)/Drivers/*.cpp) \
 	$(wildcard $(KERNEL_SRC_DIR)/Helpers/*.cpp) \
-	$(wildcard $(KERNEL_SRC_DIR)/Runtime/*.cpp)
+	$(wildcard $(KERNEL_SRC_DIR)/Runtime/*.cpp) \
+	$(wildcard $(KERNEL_SRC_DIR)/Tests/*.cpp)
 
 KERNEL_ARCH_CPP := \
 	$(wildcard $(KERNEL_ARCH)/**/*.cpp) \

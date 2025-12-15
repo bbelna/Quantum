@@ -18,28 +18,33 @@ namespace Quantum::Kernel::Types {
     public:
       /**
        * Constructs a string view from a null-terminated C string.
-       * @param data Pointer to the C string (may be nullptr).
+       * @param data
+       *   Pointer to the C string (may be `nullptr`).
        */
       constexpr String(CString data)
         : _data(data), _length(ComputeLength(data)) {}
 
       /**
        * Constructs a string view from a buffer with explicit length.
-       * @param data Pointer to the buffer (may be nullptr).
-       * @param length Length of the buffer in bytes.
+       * @param data
+       *   Pointer to the buffer (may be `nullptr`).
+       * @param length
+       *   Length of the buffer in bytes.
        */
       constexpr String(CString data, Size length)
         : _data(data), _length(length) {}
 
       /**
        * Gets the underlying C-style string data.
-       * @return The C-style string.
+       * @return
+       *   The C-style string.
        */
       constexpr const char* Data() const { return _data; }
 
       /**
        * Gets the length of the string.
-       * @return The string length.
+       * @return
+       *   The string length.
        */
       constexpr Size Length() const { return _length; }
 
@@ -64,8 +69,10 @@ namespace Quantum::Kernel::Types {
 
       /**
        * Computes the length of a null-terminated C string.
-       * @param s Pointer to the C string.
-       * @return Length in bytes excluding the terminator.
+       * @param s
+       *   Pointer to the C string.
+       * @return
+       *   Length in bytes excluding the terminator.
        */
       static constexpr Size ComputeLength(CString s) {
         Size count = 0;

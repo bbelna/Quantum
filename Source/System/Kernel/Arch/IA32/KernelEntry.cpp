@@ -30,45 +30,51 @@ namespace {
   /**
    * Bootstrap page directory used before the main memory manager takes over.
    */
-  alignas(4096) UInt32 bootstrapPageDirectory[1024] __attribute__((section(".text.start.data")));
+  [[gnu::section(".text.start.data")]]
+  alignas(4096) UInt32 _bootstrapPageDirectory[1024];
 
   /**
    * Page tables covering the 16 MB identity window.
    */
-  alignas(4096) UInt32 bootstrapPageTables[4][1024] __attribute__((section(".text.start.data")));
+  [[gnu::section(".text.start.data")]]
+  alignas(4096) UInt32 _bootstrapPageTables[4][1024];
 
   /**
    * Page tables for the higher-half kernel image during bootstrap.
    */
-  alignas(4096) UInt32 bootstrapKernelTables[8][1024] __attribute__((section(".text.start.data")));
+  [[gnu::section(".text.start.data")]]
+  alignas(4096) UInt32 _bootstrapKernelTables[8][1024];
 
-  constexpr UInt32 pagePresent = 0x1;
-  constexpr UInt32 pageWrite = 0x2;
-  constexpr UInt32 recursiveSlot = 1023;
-  constexpr UInt32 pageSize = 4096;
-  constexpr UInt32 identityWindowBytes = 16 * 1024 * 1024;
+  constexpr UInt32 _pagePresent = 0x1;
+  constexpr UInt32 _pageWrite = 0x2;
+  constexpr UInt32 _recursiveSlot = 1023;
+  constexpr UInt32 _pageSize = 4096;
+  constexpr UInt32 _identityWindowBytes = 16 * 1024 * 1024;
 
   /**
    * Builds identity and higher-half mappings needed to turn on paging.
    */
-  __attribute__((section(".text.start")))
+  [[gnu::section(".text.start")]]
   void BuildBootstrapPaging() {
     // clear directory
     for (UInt32 i = 0; i < 1024; ++i) {
-      bootstrapPageDirectory[i] = 0;
+      _bootstrapPageDirectory[i] = 0;
     }
 
     // identity map first 16 mb (4 tables)
     for (UInt32 t = 0; t < 4; ++t) {
-      UInt32* table = bootstrapPageTables[t];
+      UInt32* table = _bootstrapPageTables[t];
 
       for (UInt32 entryIndex = 0; entryIndex < 1024; ++entryIndex) {
-        UInt32 physicalAddress = (t * 1024 + entryIndex) * pageSize;
+        UInt32 physicalAddress = (t * 1024 + entryIndex) * _pageSize;
 
-        table[entryIndex] = physicalAddress | pagePresent | pageWrite;
+        table[entryIndex] = physicalAddress | _pagePresent | _pageWrite;
       }
 
-      bootstrapPageDirectory[t] = reinterpret_cast<UInt32>(table) | pagePresent | pageWrite;
+      _bootstrapPageDirectory[t]
+        = reinterpret_cast<UInt32>(table)
+        | _pagePresent
+        | _pageWrite;
     }
 
     // map kernel higher-half: map the loaded higher-half image
@@ -80,19 +86,19 @@ namespace {
     UInt32 nextKernelTable = 0;
 
     // map each page of the kernel image
-    for (UInt32 offset = 0; offset < kernelImageBytes; offset += pageSize) {
+    for (UInt32 offset = 0; offset < kernelImageBytes; offset += _pageSize) {
       UInt32 physicalAddress = kernelPhysicalStart + offset;
       UInt32 virtualAddress = kernelVirtualBase + offset;
       UInt32 pageDirectoryIndex = (virtualAddress >> 22) & 0x3FF;
       UInt32 pageTableIndex = (virtualAddress >> 12) & 0x3FF;
 
-      if (bootstrapPageDirectory[pageDirectoryIndex] == 0) {
+      if (_bootstrapPageDirectory[pageDirectoryIndex] == 0) {
         UInt32 tablePhysical = 0;
 
         if (pageDirectoryIndex < 4) {
-          tablePhysical = reinterpret_cast<UInt32>(bootstrapPageTables[pageDirectoryIndex]);
+          tablePhysical = reinterpret_cast<UInt32>(_bootstrapPageTables[pageDirectoryIndex]);
         } else if (nextKernelTable < 8) {
-          UInt32* table = bootstrapKernelTables[nextKernelTable++];
+          UInt32* table = _bootstrapKernelTables[nextKernelTable++];
 
           for (UInt32 i = 0; i < 1024; ++i) {
             table[i] = 0;
@@ -101,17 +107,17 @@ namespace {
           tablePhysical = reinterpret_cast<UInt32>(table);
         }
 
-        bootstrapPageDirectory[pageDirectoryIndex] = tablePhysical | pagePresent | pageWrite;
+        _bootstrapPageDirectory[pageDirectoryIndex] = tablePhysical | _pagePresent | _pageWrite;
       }
 
-      UInt32* table = reinterpret_cast<UInt32*>(bootstrapPageDirectory[pageDirectoryIndex] & ~0xFFFu);
+      UInt32* table = reinterpret_cast<UInt32*>(_bootstrapPageDirectory[pageDirectoryIndex] & ~0xFFFu);
 
-      table[pageTableIndex] = physicalAddress | pagePresent | pageWrite;
+      table[pageTableIndex] = physicalAddress | _pagePresent | _pageWrite;
     }
 
     // install recursive mapping
-    bootstrapPageDirectory[recursiveSlot]
-      = reinterpret_cast<UInt32>(bootstrapPageDirectory) | pagePresent | pageWrite;
+    _bootstrapPageDirectory[_recursiveSlot]
+      = reinterpret_cast<UInt32>(_bootstrapPageDirectory) | _pagePresent | _pageWrite;
   }
 
 }
@@ -120,11 +126,13 @@ namespace {
  * Enables paging using the bootstrap page tables, then jumps to the higher-half
  * entry point with a higher-half stack.
  */
-extern "C" [[noreturn]] __attribute__((section(".text.start")))
-void EnablePagingAndJump(UInt32 bootInfoPhysicalAddress) {
+extern "C" [[noreturn]] [[gnu::section(".text.start")]]
+void EnablePagingAndJump(
+  UInt32 bootInfoPhysicalAddress
+) {
   BuildBootstrapPaging();
 
-  UInt32 pageDirectoryPhysical = reinterpret_cast<UInt32>(bootstrapPageDirectory);
+  UInt32 pageDirectoryPhysical = reinterpret_cast<UInt32>(_bootstrapPageDirectory);
 
   asm volatile("mov %0, %%cr3" : : "r"(pageDirectoryPhysical) : "memory");
 
@@ -161,7 +169,7 @@ void EnablePagingAndJump(UInt32 bootInfoPhysicalAddress) {
   }
 }
 
-extern "C" __attribute__((naked, section(".text.start.entry"))) void KernelEntry() {
+extern "C" [[gnu::section(".text.start.entry")]] void KernelEntry() {
   asm volatile(
     "cli\n\t"
     "lgdt [GDTDescriptor32]\n\t"

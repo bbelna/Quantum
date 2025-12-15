@@ -17,8 +17,8 @@ namespace Quantum::Kernel {
   using namespace Quantum::Kernel::Arch;
 
   void Interrupts::Initialize() {
-    IA32::InitializeIDT();
-    IA32::InstallDefaultExceptionHandlers();
+    IA32::IDT::Initialize();
+    IA32::Exceptions::InstallDefaultHandlers();
 
     IA32::Drivers::Timer::Initialize();
     IA32::Drivers::PS2Keyboard::Initialize();
@@ -27,6 +27,6 @@ namespace Quantum::Kernel {
   }
 
   void Interrupts::RegisterHandler(UInt8 vector, InterruptHandler handler) {
-    IA32::SetIDTHandler(vector, handler);
+    IA32::IDT::SetHandler(vector, handler);
   }
 }

@@ -14,82 +14,82 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
     /**
      * PIC EOI command value.
      */
-    constexpr UInt8 picEoi = 0x20;
+    constexpr UInt8 _picEoi = 0x20;
 
     /**
      * PIC 1 command port.
      */
-    constexpr UInt16 pic1Command = 0x20;
+    constexpr UInt16 _pic1Command = 0x20;
 
     /**
      * PIC 1 data port.
      */
-    constexpr UInt16 pic1Data = 0x21;
+    constexpr UInt16 _pic1Data = 0x21;
 
     /**
      * PIC 2 command port.
      */
-    constexpr UInt16 pic2Command = 0xA0;
+    constexpr UInt16 _pic2Command = 0xA0;
 
     /**
      * PIC 2 data port.
      */
-    constexpr UInt16 pic2Data = 0xA1;
+    constexpr UInt16 _pic2Data = 0xA1;
 
     /**
      * ICW1 initialization command.
      */
-    constexpr UInt8 icw1Init = 0x10;
+    constexpr UInt8 _icw1Init = 0x10;
 
     /**
      * ICW1 expects ICW4.
      */
-    constexpr UInt8 icw1Icw4 = 0x01;
+    constexpr UInt8 _icw1Icw4 = 0x01;
 
     /**
      * ICW4 mode 8086/88.
      */
-    constexpr UInt8 icw48086 = 0x01;
+    constexpr UInt8 _icw48086 = 0x01;
   }
 
   void PIC::Initialize(UInt8 offset1, UInt8 offset2) {
     // preserve current masks so we restore them after the remap
-    UInt8 masterMask = IO::InByte(pic1Data);
-    UInt8 slaveMask = IO::InByte(pic2Data);
+    UInt8 masterMask = IO::InByte(_pic1Data);
+    UInt8 slaveMask = IO::InByte(_pic2Data);
 
     // start the initialization sequence (cascade mode, expect ICW4)
-    IO::OutByte(pic1Command, icw1Init | icw1Icw4);
-    IO::OutByte(pic2Command, icw1Init | icw1Icw4);
+    IO::OutByte(_pic1Command, _icw1Init | _icw1Icw4);
+    IO::OutByte(_pic2Command, _icw1Init | _icw1Icw4);
 
     // set interrupt vector offsets
-    IO::OutByte(pic1Data, offset1);
-    IO::OutByte(pic2Data, offset2);
+    IO::OutByte(_pic1Data, offset1);
+    IO::OutByte(_pic2Data, offset2);
 
     // tell Master PIC there is a slave PIC at IRQ2 (0000 0100)
-    IO::OutByte(pic1Data, 0x04);
+    IO::OutByte(_pic1Data, 0x04);
 
     // tell Slave PIC its cascade identity (0000 0010)
-    IO::OutByte(pic2Data, 0x02);
+    IO::OutByte(_pic2Data, 0x02);
 
     // set 8086/88 mode
-    IO::OutByte(pic1Data, icw48086);
-    IO::OutByte(pic2Data, icw48086);
+    IO::OutByte(_pic1Data, _icw48086);
+    IO::OutByte(_pic2Data, _icw48086);
 
     // restore saved masks
-    IO::OutByte(pic1Data, masterMask);
-    IO::OutByte(pic2Data, slaveMask);
+    IO::OutByte(_pic1Data, masterMask);
+    IO::OutByte(_pic2Data, slaveMask);
   }
 
   void PIC::SendEOI(UInt8 irq) {
     if (irq >= 8) {
-      IO::OutByte(pic2Command, picEoi);
+      IO::OutByte(_pic2Command, _picEoi);
     }
 
-    IO::OutByte(pic1Command, picEoi);
+    IO::OutByte(_pic1Command, _picEoi);
   }
 
   void PIC::Mask(UInt8 irq) {
-    UInt16 port = (irq < 8) ? pic1Data : pic2Data;
+    UInt16 port = (irq < 8) ? _pic1Data : _pic2Data;
     if (irq >= 8) {
       irq -= 8;
     }
@@ -100,7 +100,7 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
   }
 
   void PIC::Unmask(UInt8 irq) {
-    UInt16 port = (irq < 8) ? pic1Data : pic2Data;
+    UInt16 port = (irq < 8) ? _pic1Data : _pic2Data;
     if (irq >= 8) {
       irq -= 8;
     }
@@ -111,7 +111,7 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
   }
 
   void PIC::MaskAll() {
-    IO::OutByte(pic1Data, 0xFF);
-    IO::OutByte(pic2Data, 0xFF);
+    IO::OutByte(_pic1Data, 0xFF);
+    IO::OutByte(_pic2Data, 0xFF);
   }
 }

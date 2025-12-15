@@ -23,11 +23,15 @@ namespace Quantum::Kernel::Arch::IA32::Drivers {
 
       /**
        * Returns the current tick count since timer init.
+       * @return
+       *   The current tick count.
        */
       static UInt64 Ticks();
 
       /**
        * Enables or disables periodic tick logging to the console.
+       * @param enabled
+       *   True to enable tick logging, false to disable.
        */
       static void SetTickLoggingEnabled(bool enabled);
   };

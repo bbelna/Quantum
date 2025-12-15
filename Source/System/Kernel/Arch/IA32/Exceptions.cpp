@@ -14,7 +14,6 @@
 #include <Kernel.hpp>
 #include <Logger.hpp>
 
-// TODO: refactor into Exceptions class
 namespace Quantum::Kernel::Arch::IA32 {
   using CPU = Quantum::Kernel::Arch::IA32::CPU;
   using Kernel = Quantum::Kernel::Kernel;
@@ -23,9 +22,10 @@ namespace Quantum::Kernel::Arch::IA32 {
   namespace {
     /**
      * Dumps the interrupt context to the kernel log.
-     * @param context The interrupt context.
-     * @param faultAddress Optional, defaults to 0. The faulting address (for
-     * page faults).
+     * @param context
+     *   The interrupt context.
+     * @param faultAddress
+     *   Optional, defaults to 0. The faulting address (for page faults).
      */
     void DumpContext(
       const InterruptContext& context,
@@ -34,31 +34,31 @@ namespace Quantum::Kernel::Arch::IA32 {
       Logger::WriteFormatted(
         LogLevel::Trace,
         "EIP=%p CS=%p EFLAGS=%p",
-        context.eip,
-        context.cs,
-        context.eflags
+        context.EIP,
+        context.CS,
+        context.EFlags
       );
       Logger::WriteFormatted(
         LogLevel::Trace,
         "EAX=%p EBX=%p ECX=%p EDX=%p",
-        context.eax,
-        context.ebx,
-        context.ecx,
-        context.edx
+        context.EAX,
+        context.EBX,
+        context.ECX,
+        context.EDX
       );
       Logger::WriteFormatted(
         LogLevel::Trace,
         "ESI=%p EDI=%p EBP=%p ESP=%p",
-        context.esi,
-        context.edi,
-        context.ebp,
-        context.esp
+        context.ESI,
+        context.EDI,
+        context.EBP,
+        context.ESP
       );
       Logger::WriteFormatted(
         LogLevel::Trace,
         "Vector=%p Error=%p",
-        context.vector,
-        context.errorCode
+        context.Vector,
+        context.ErrorCode
       );
       
       if (faultAddress) {
@@ -115,12 +115,13 @@ namespace Quantum::Kernel::Arch::IA32 {
       asm volatile("mov %%cr2, %0" : "=r"(faultAddress));
 
       DumpContext(context, faultAddress);
-      DumpPageFaultDetails(faultAddress, context.errorCode);
+      DumpPageFaultDetails(faultAddress, context.ErrorCode);
+
       PANIC("Page fault");
     }
   }
 
-  void InstallDefaultExceptionHandlers() {
+  void Exceptions::InstallDefaultHandlers() {
     Interrupts::RegisterHandler(0, OnDivideByZero);
     Interrupts::RegisterHandler(13, OnGeneralProtection);
     Interrupts::RegisterHandler(14, OnPageFault);

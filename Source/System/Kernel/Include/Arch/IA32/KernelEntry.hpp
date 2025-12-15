@@ -18,7 +18,8 @@ extern "C" {
 
   /**
    * The main kernel start routine called from `KernelEntry()`.
-   * @param bootInfoPhysicalAddress Physical address of the boot info block.
+   * @param bootInfoPhysicalAddress
+   *   Physical address of the boot info block.
    */
   void StartKernel(UInt32 bootInfoPhysicalAddress);
 }

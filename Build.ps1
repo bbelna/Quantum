@@ -1,5 +1,6 @@
 param(
-    [switch]$Run  # enables --run or -Run or -r
+    [switch]$Run,   # enables --run or -Run or -r
+    [switch]$Tests  # enables kernel tests via KERNEL_TESTS
 )
 
 # Paths
@@ -9,7 +10,13 @@ $ImageWinPath   = "D:\Development\Git\Quantum\Build\Quantum.img"
 Write-Host "=== Building Quantum (WSL) ==="
 
 # Build inside WSL
-wsl -e bash -lc "cd $ProjectPathWSL && make clean && make all"
+$makeCmd = "cd $ProjectPathWSL && "
+if ($Tests) {
+    $makeCmd += "export EXTRA_CFLAGS32='-DKERNEL_TESTS' && "
+}
+$makeCmd += "make clean && make all"
+
+wsl -e bash -lc $makeCmd
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Build failed. Aborting."
     exit 1

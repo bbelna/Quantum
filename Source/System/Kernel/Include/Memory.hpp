@@ -15,8 +15,8 @@ namespace Quantum::Kernel {
     public:
       /**
        * Initializes the kernel memory subsystem (paging + allocators).
-       * @param bootInfoPhysicalAddress Physical address of the boot information
-       * block.
+       * @param bootInfoPhysicalAddress
+       *   Physical address of the boot information block.
        */
       static void Initialize(UInt32 bootInfoPhysicalAddress);
 
@@ -28,28 +28,35 @@ namespace Quantum::Kernel {
 
       /**
        * Allocates a block of kernel heap memory.
-       * @param size Number of bytes requested.
-       * @return Pointer to writable memory (never null; may panic on OOM).
+       * @param size
+       *   Number of bytes requested.
+       * @return
+       *   Pointer to writable memory (never null; may panic on OOM).
        */
       static void* Allocate(Size size);
 
       /**
        * Allocates a block of kernel heap memory with a specific alignment.
-       * @param size Number of bytes requested.
-       * @param alignment Power-of-two byte alignment.
-       * @return Pointer to aligned memory (never null; may panic on OOM).
+       * @param size
+       *   Number of bytes requested.
+       * @param alignment
+       *   Power-of-two byte alignment.
+       * @return
+       *   Pointer to aligned memory (never null; may panic on OOM).
        */
       static void* AllocateAligned(Size size, Size alignment);
 
       /**
        * Frees a single physical page (identity-mapped).
-       * @param page Pointer to the page to free.
+       * @param page
+       *   Pointer to the page to free.
        */
       static void FreePage(void* page);
 
       /**
        * Frees a heap allocation previously returned by Allocate.
-       * @param pointer Pointer to memory to free.
+       * @param pointer
+       *   Pointer to memory to free.
        */
       static void Free(void* pointer);
 
@@ -75,7 +82,8 @@ namespace Quantum::Kernel {
 
       /**
        * Retrieves the current heap state.
-       * @return Snapshot of current heap state.
+       * @return
+       *   Snapshot of current heap state.
        */
       static HeapState GetHeapState();
 
@@ -93,7 +101,8 @@ namespace Quantum::Kernel {
       /**
        * Verifies heap invariants (free list ordering, sizes, canaries).
        * Intended for debug builds; may panic on corruption.
-       * @return true if no inconsistencies were detected; false otherwise.
+       * @return
+       *   True if no inconsistencies were detected; false otherwise.
        */
       static bool VerifyHeap();
 
@@ -102,10 +111,5 @@ namespace Quantum::Kernel {
        * Rebuilds a fresh free list over the currently mapped heap pages.
        */
       static void ResetHeap();
-
-      /**
-       * Runs `VerifyHeap` and logs the result. Intended for debug use.
-       */
-      static void CheckHeap();
   };
 }

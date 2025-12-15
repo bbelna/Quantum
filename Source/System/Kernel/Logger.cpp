@@ -58,19 +58,22 @@ namespace Quantum::Kernel {
   void Logger::WriteFormatted(Level level, String formattedMessage, ...) {
     VariableArgumentsList args;
 
-    if (level < _minimumLevel) {
-      return;
-    }
+    if (level >= _minimumLevel) {
+      constexpr Size bufferLength = 256;
+      char buffer[bufferLength] = {};
 
-    constexpr Size bufferLength = 256;
-    char buffer[bufferLength] = {};
+      VARIABLE_ARGUMENTS_START(args, formattedMessage);
+      CStringHelper::Format(
+        buffer,
+        bufferLength,
+        formattedMessage.Data(),
+        args
+      );
+      VARIABLE_ARGUMENTS_END(args);
 
-    VARIABLE_ARGUMENTS_START(args, formattedMessage);
-    CStringHelper::Format(buffer, bufferLength, formattedMessage.Data(), args);
-    VARIABLE_ARGUMENTS_END(args);
-
-    for (Size i = 0; i < _writerCount; ++i) {
-      _writers[i]->Write(String(buffer));
+      for (Size i = 0; i < _writerCount; ++i) {
+        _writers[i]->Write(String(buffer));
+      }
     }
   }
 }
