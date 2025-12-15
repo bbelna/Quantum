@@ -19,7 +19,12 @@ sudo apt install -y build-essential nasm mtools dosfstools
 ```
 You can then, in a normal non-WSL PowerShell, run `.\Build` to build. If successful, a floppy disk image will be outputted to `Build\Quantum.img`.
 
+To build a version that performs kernel testing, run `.\Build -t`.
+
+Using the debugging script requires QEMU to be installed and your PATH set up
+to point to QEMU's directory. 
 To build and debug, run `.\Build -r`. To just debug, run `.\Debug`.
+You can do `.\Build -r -t` to build and debug a version that runs tests.
 
 
 ## Planned Hardware Support
