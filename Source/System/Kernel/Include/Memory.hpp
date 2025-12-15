@@ -98,6 +98,12 @@ namespace Quantum::Kernel {
       static bool VerifyHeap();
 
       /**
+       * Resets the heap allocator state (debug/boot use only).
+       * Rebuilds a fresh free list over the currently mapped heap pages.
+       */
+      static void ResetHeap();
+
+      /**
        * Runs `VerifyHeap` and logs the result. Intended for debug use.
        */
       static void CheckHeap();

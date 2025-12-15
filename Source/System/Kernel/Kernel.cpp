@@ -12,29 +12,79 @@
 #include <Kernel.hpp>
 #include <Logger.hpp>
 #include <Memory.hpp>
+#include <Task.hpp>
 
 #define MEMORY_TEST
+#define TASK_TEST
 
 namespace Quantum::Kernel {
   using CStringHelper = Helpers::CStringHelper;
   using LogLevel = Logger::Level;
 
-  void Kernel::Initialize(UInt32 bootInfoPhysicalAddress) {
-    Logger::WriteFormatted(
-      LogLevel::Trace,
-      "bootInfoPhysicalAddress=%p",
-      bootInfoPhysicalAddress
-    );
+  namespace {
+    /**
+     * Test task 1 - prints messages and yields.
+     */
+    void TestTask1() {
+      for (int i = 0; i < 5; i++) {
+        Logger::WriteFormatted(LogLevel::Info, "Task 1: iteration %d", i);
+        Task::Yield();
+      }
 
+      Logger::Write(LogLevel::Info, "Task 1: completed");
+    }
+
+    /**
+     * Test task 2 - prints messages and yields.
+     */
+    void TestTask2() {
+      for (int i = 0; i < 5; i++) {
+        Logger::WriteFormatted(LogLevel::Info, "Task 2: iteration %d", i);
+        Task::Yield();
+      }
+
+      Logger::Write(LogLevel::Info, "Task 2: completed");
+    }
+
+    /**
+     * Test task 3 - prints messages and yields.
+     */
+    void TestTask3() {
+      for (int i = 0; i < 3; i++) {
+        Logger::WriteFormatted(LogLevel::Info, "Task 3: iteration %d", i);
+        Task::Yield();
+      }
+
+      Logger::Write(LogLevel::Info, "Task 3: completed");
+    }
+  }
+
+  void Kernel::Initialize(UInt32 bootInfoPhysicalAddress) {
     Memory::Initialize(bootInfoPhysicalAddress);
     Memory::DumpState();
-    Logger::Write(LogLevel::Info, "Initialized memory subsystem");
 
     Interrupts::Initialize();
-    Logger::Write(LogLevel::Info, "Initialized interrupt subsystem");
 
     #ifdef MEMORY_TEST
       Memory::Test();
+      Memory::ResetHeap();
+      Memory::CheckHeap();
+    #endif
+
+    Task::Initialize();
+
+    #ifdef TASK_TEST
+      // create test tasks to verify multitasking works
+      Logger::Write(LogLevel::Info, "Creating test tasks...");
+      Task::Create(TestTask1, 4096);
+      Task::Create(TestTask2, 4096);
+      Task::Create(TestTask3, 4096);
+
+      // yield to start task switching
+      Logger::Write(LogLevel::Info, "Starting multitasking...");
+      Task::Yield();
+
+      Logger::Write(LogLevel::Info, "All test tasks completed");
     #endif
   }
 
