@@ -1,10 +1,10 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Include/Tests/TaskTests.hpp
-// (c) 2025 Brandon Belna - MIT License
-//------------------------------------------------------------------------------
-// Tasking test registrations.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Include/Tests/TaskTests.hpp
+ * Task subsystem tests.
+ */
 
 #pragma once
 

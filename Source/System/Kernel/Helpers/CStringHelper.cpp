@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // Quantum
 // System/Kernel/Helpers/String.cpp
-// (c) 2025 Brandon Belna - MIT LIcense
+// (c) 2025 Brandon Belna - MIT License
 //------------------------------------------------------------------------------
 // C-string helper utilities.
 //------------------------------------------------------------------------------
@@ -10,8 +10,8 @@
 
 namespace Quantum::Kernel::Helpers {
   namespace {
-    constexpr Size bufferSize = 12;
-    static char staticBuffer[bufferSize] = {};
+    constexpr Size _bufferSize = 12;
+    static char _staticBuffer[_bufferSize] = {};
 
     bool WriteIntToBuffer(Int32 value, CStringMutable buffer, Size length) {
       if (length == 0) {
@@ -23,14 +23,14 @@ namespace Quantum::Kernel::Helpers {
       UInt32 magnitude = negative
         ? static_cast<UInt32>(-static_cast<Int64>(value))
         : static_cast<UInt32>(value);
-      char temp[bufferSize] = {};
+      char temp[_bufferSize] = {};
       Size idx = 0;
       Size out = 0;
 
       do {
         temp[idx++] = static_cast<char>('0' + (magnitude % 10));
         magnitude /= 10;
-      } while (magnitude > 0 && idx < bufferSize - 1);
+      } while (magnitude > 0 && idx < _bufferSize - 1);
 
       // ensure buffer has space for sign + digits + null
       Size needed = idx + (negative ? 1 : 0) + 1;
@@ -136,9 +136,9 @@ namespace Quantum::Kernel::Helpers {
   }
 
   char* CStringHelper::ToCString(Int32 value) {
-    WriteIntToBuffer(value, staticBuffer, bufferSize);
+    WriteIntToBuffer(value, _staticBuffer, _bufferSize);
 
-    return staticBuffer;
+    return _staticBuffer;
   }
 
   Size CStringHelper::Length(CString str) {
@@ -273,7 +273,7 @@ namespace Quantum::Kernel::Helpers {
         }
         case 'd': {
           Int32 v = VARIABLE_ARGUMENTS(args, Int32);
-          char temp[bufferSize] = {};
+          char temp[_bufferSize] = {};
 
           if (!ToCString(v, temp, sizeof(temp))) {
             temp[0] = '\0';

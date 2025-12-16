@@ -1,14 +1,14 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Include/Arch/IA32/InterruptContext.hpp
-// (c) 2025 Brandon Belna - MIT LIcense
-//------------------------------------------------------------------------------
-// Interrupt context for IA32 architecture.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Include/Arch/IA32/InterruptContext.hpp
+ * IA32 interrupt context.
+ */
 
 #pragma once
 
-#include <Types.hpp>
+#include <Types/Primitives.hpp>
 
 namespace Quantum::Kernel {
   /**

@@ -1,16 +1,16 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Arch/IA32/Drivers/PS2Keyboard.cpp
-// (c) 2025 Brandon Belna - MIT LIcense
-//------------------------------------------------------------------------------
-// PS/2 keyboard driver (basic scancode-to-ASCII and IRQ handler).
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Arch/IA32/Drivers/PS2Keyboard.cpp
+ * IA32 PS/2 keyboard driver.
+ */
 
 #include <Arch/IA32/Drivers/IO.hpp>
 #include <Arch/IA32/Drivers/PIC.hpp>
 #include <Arch/IA32/Drivers/PS2Keyboard.hpp>
 #include <Interrupts.hpp>
-#include <Types.hpp>
+#include <Types/Primitives.hpp>
 
 namespace Quantum::Kernel::Arch::IA32::Drivers {
   namespace {

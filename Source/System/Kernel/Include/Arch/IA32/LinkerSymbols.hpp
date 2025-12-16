@@ -1,14 +1,14 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Include/Arch/IA32/LinkerSymbols.hpp
-// (c) 2025 Brandon Belna - MIT LIcense
-//------------------------------------------------------------------------------
-// Linker-provided symbols for the IA32 kernel image.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Include/Arch/IA32/LinkerSymbols.hpp
+ * IA32 linker symbols.
+ */
 
 #pragma once
 
-#include <Types.hpp>
+#include <Types/Primitives.hpp>
 
 extern "C" {
   /**

@@ -1,10 +1,10 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Arch/IA32/Interrupts.cpp
-// (c) 2025 Brandon Belna - MIT LIcense
-//------------------------------------------------------------------------------
-// IA32 kernel interrupt subsystem implementation.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Arch/IA32/Interrupts.cpp
+ * IA32 kernel interrupt subsystem implementation.
+ */
 
 #include <Interrupts.hpp>
 #include <Arch/IA32/IDT.hpp>

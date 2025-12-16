@@ -1,18 +1,18 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Include/Arch/IA32/Memory.hpp
-// (c) 2025 Brandon Belna - MIT LIcense
-//------------------------------------------------------------------------------
-// IA32 paging and basic memory helpers.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Include/Arch/IA32/Memory.hpp
+ * IA32 paging and memory functions.
+ */
 
 #pragma once
 
-#include <Types.hpp>
+#include <Types/Primitives.hpp>
 
 namespace Quantum::Kernel::Arch::IA32 {
   /**
-   * IA32 paging helpers and physical allocator.
+   * IA32 paging and memory functions.
    */
   class Memory {
     public:

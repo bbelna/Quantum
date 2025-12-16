@@ -1,18 +1,18 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Include/Console.hpp
-// (c) 2025 Brandon Belna - MIT LIcense
-//------------------------------------------------------------------------------
-// Console interface for the kernel.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Include/Console.hpp
+ * Architecture-agnostic console driver.
+ */
 
 #pragma once
 
-#include <Types.hpp>
+#include <Types/Primitives.hpp>
 
 namespace Quantum::Kernel {
   /**
-   * Console interface used by the kernel for text output.
+   * Architecture-agnostic console driver.
    */
   class Console {
     public:

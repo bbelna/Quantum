@@ -1,10 +1,10 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Tests/MemoryTests.cpp
-// (c) 2025 Brandon Belna - MIT License
-//------------------------------------------------------------------------------
-// Memory subsystem tests.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Tests/MemoryTests.cpp
+ * Memory subsystem tests.
+ */
 
 #include <Memory.hpp>
 #include <Tests.hpp>

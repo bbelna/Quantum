@@ -1,10 +1,10 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Arch/IA32/Task.cpp
-// (c) 2025 Brandon Belna - MIT LIcense
-//------------------------------------------------------------------------------
-// IA32 task management and context switching implementation.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Arch/IA32/Task.cpp
+ * IA32 task context and control structures.
+ */
 
 #include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/Task.hpp>
@@ -12,7 +12,7 @@
 #include <Kernel.hpp>
 #include <Logger.hpp>
 #include <Memory.hpp>
-#include <Types.hpp>
+#include <Types/Primitives.hpp>
 
 namespace Quantum::Kernel::Arch::IA32 {
   using LogLevel = Logger::Level;
@@ -75,6 +75,7 @@ namespace Quantum::Kernel::Arch::IA32 {
       }
 
       TaskControlBlock* task = _readyQueueHead;
+
       _readyQueueHead = task->Next;
 
       if (_readyQueueHead == nullptr) {
@@ -82,6 +83,7 @@ namespace Quantum::Kernel::Arch::IA32 {
       }
 
       task->Next = nullptr;
+
       return task;
     }
 
@@ -104,10 +106,7 @@ namespace Quantum::Kernel::Arch::IA32 {
       entryPoint();
 
       // task returned - terminate it
-      #ifdef TASK_DEBUG
-        Logger::Write(LogLevel::Trace, "Task completed, exiting");
-      #endif
-
+      Logger::Write(LogLevel::Debug, "Task completed, exiting");
       Task::Exit();
     }
 
@@ -126,6 +125,7 @@ namespace Quantum::Kernel::Arch::IA32 {
 
       // get next task from ready queue
       TaskControlBlock* nextTask = PopFromReadyQueue();
+
       if (nextTask == nullptr) {
         // nothing ready; fall back to idle task
         nextTask = _idleTask;
@@ -140,7 +140,10 @@ namespace Quantum::Kernel::Arch::IA32 {
 
         if (previousTask != nullptr) {
           // switch from previous to next
-          Task::SwitchContext(&previousTask->StackPointer, nextTask->StackPointer);
+          Task::SwitchContext(
+            &previousTask->StackPointer,
+            nextTask->StackPointer
+          );
         } else {
           // first task switch - just load the new context
           Task::SwitchContext(nullptr, nextTask->StackPointer);
@@ -150,7 +153,8 @@ namespace Quantum::Kernel::Arch::IA32 {
         _currentTask->State = TaskState::Running;
       }
 
-      // we are now running on the next task's stack; safe to free a terminated previous task
+      // we are now running on the next task's stack; safe to free a terminated
+      // previous task
       if (
         previousTask &&
         previousTask != _idleTask &&
@@ -160,12 +164,44 @@ namespace Quantum::Kernel::Arch::IA32 {
         Memory::Free(previousTask);
       }
     }
+
+    // context switch is implemented in assembly
+    extern "C" [[gnu::naked]] void DoSwitchContext(
+      TaskContext** currentStackPointer,
+      TaskContext* nextStackPointer
+    ) {
+      asm volatile(
+        // Save caller-saved + base registers for current task
+        "push %%ebp\n"
+        "push %%ebx\n"
+        "push %%esi\n"
+        "push %%edi\n"
+
+        // Store ESP into *currentStackPointer if provided
+        "mov 20(%%esp), %%eax\n"   // currentStackPointer argument (after pushes)
+        "test %%eax, %%eax\n"
+        "jz 1f\n"
+        "mov %%esp, (%%eax)\n"
+
+        "1:\n"
+        // Load nextStackPointer argument (after pushes)
+        "mov 24(%%esp), %%eax\n"
+        "mov %%eax, %%esp\n"       // switch to next task's stack
+
+        // Restore next task context
+        "pop %%edi\n"
+        "pop %%esi\n"
+        "pop %%ebx\n"
+        "pop %%ebp\n"
+
+        "ret\n"                    // return to next task's EIP
+        :::
+      );
+    }
   }
 
   void Task::Initialize() {
-    #ifdef TASK_DEBUG
-      Logger::Write(LogLevel::Info, "Creating idle task");
-    #endif
+    Logger::Write(LogLevel::Debug, "Creating idle task");
 
     // create the idle task (runs when nothing else is ready)
     TaskControlBlock* idleTask = Create(IdleTask, 4096);
@@ -176,16 +212,14 @@ namespace Quantum::Kernel::Arch::IA32 {
 
     // keep idle task out of the ready queue; it is used as a fallback when
     // nothing else is runnable. We start with no current task so the first
-    // schedule doesn't try to save over the idle task's pristine stack.
+    // schedule doesn't try to save over the idle task's pristine stack
     _currentTask = nullptr;
     idleTask->State = TaskState::Ready;
     _idleTask = idleTask;
     _readyQueueHead = nullptr;
     _readyQueueTail = nullptr;
 
-    #ifdef TASK_DEBUG
-      Logger::Write(LogLevel::Info, "Idle task created successfully");
-    #endif
+    Logger::Write(LogLevel::Debug, "Idle task created successfully");
   }
 
   TaskControlBlock* Task::Create(void (*entryPoint)(), UInt32 stackSize) {
@@ -196,6 +230,7 @@ namespace Quantum::Kernel::Arch::IA32 {
 
     if (tcb == nullptr) {
       Logger::Write(LogLevel::Error, "Failed to allocate TCB");
+
       return nullptr;
     }
 
@@ -205,6 +240,7 @@ namespace Quantum::Kernel::Arch::IA32 {
     if (stack == nullptr) {
       Logger::Write(LogLevel::Error, "Failed to allocate task stack");
       Memory::Free(tcb);
+
       return nullptr;
     }
 
@@ -218,7 +254,7 @@ namespace Quantum::Kernel::Arch::IA32 {
     // set up initial stack frame
     // stack grows downward, so place context and call frame below the canary
     const UInt32 canaryBytes = sizeof(UInt32);
-    const UInt32 callFrameBytes = sizeof(TaskContext) + 2 * sizeof(UInt32); // dummy return + entry arg
+    const UInt32 callFrameBytes = sizeof(TaskContext) + 2 * sizeof(UInt32);
 
     if (stackSize <= canaryBytes + callFrameBytes) {
       PANIC("Task stack too small");
@@ -226,8 +262,8 @@ namespace Quantum::Kernel::Arch::IA32 {
 
     UInt8* stackBytes = static_cast<UInt8*>(stack);
     UInt8* frameBase = stackBytes + stackSize - canaryBytes - callFrameBytes;
-
     TaskContext* context = reinterpret_cast<TaskContext*>(frameBase);
+
     context->Edi = 0;
     context->Esi = 0;
     context->Ebx = 0;
@@ -235,38 +271,36 @@ namespace Quantum::Kernel::Arch::IA32 {
     context->Eip = reinterpret_cast<UInt32>(&TaskWrapper);
 
     UInt32* callArea = reinterpret_cast<UInt32*>(context + 1);
-    callArea[0] = 0; // dummy return address
-    callArea[1] = reinterpret_cast<UInt32>(entryPoint); // argument to TaskWrapper
 
-    // store the stack pointer in the TCB (context is where SwitchContext expects ESP)
+    callArea[0] = 0; // dummy return address
+    callArea[1] = reinterpret_cast<UInt32>(entryPoint); // TaskWrapper
+
+    // store the stack pointer in the TCB
+    // (context is where SwitchContext expects ESP)
     tcb->StackPointer = context;
 
     // add to ready queue
     AddToReadyQueue(tcb);
 
-    #ifdef TASK_DEBUG
-      Logger::WriteFormatted(
-        LogLevel::Info,
-        "Created task ID=%u, entry=%p, stack=%p-%p size=%p",
-        tcb->Id,
-        entryPoint,
-        stack,
-        reinterpret_cast<UInt8*>(stack) + stackSize,
-        stackSize
-      );
-    #endif
+    Logger::WriteFormatted(
+      LogLevel::Debug,
+      "Created task ID=%u, entry=%p, stack=%p-%p size=%p",
+      tcb->Id,
+      entryPoint,
+      stack,
+      reinterpret_cast<UInt8*>(stack) + stackSize,
+      stackSize
+    );
 
     return tcb;
   }
 
   void Task::Exit() {
-    #ifdef TASK_DEBUG
-      Logger::WriteFormatted(
-        LogLevel::Trace,
-        "Task %u exiting",
-        _currentTask->Id
-      );
-    #endif
+    Logger::WriteFormatted(
+      LogLevel::Debug,
+      "Task %u exiting",
+      _currentTask->Id
+    );
 
     // mark task as terminated; defer freeing stack/TCB until after next switch
     _currentTask->State = TaskState::Terminated;
@@ -288,12 +322,14 @@ namespace Quantum::Kernel::Arch::IA32 {
 
   void Task::EnablePreemption() {
     _preemptionEnabled = true;
-    Logger::Write(LogLevel::Info, "Preemptive multitasking enabled");
+
+    Logger::Write(LogLevel::Debug, "Preemptive multitasking enabled");
   }
 
   void Task::DisablePreemption() {
     _preemptionEnabled = false;
-    Logger::Write(LogLevel::Info, "Preemptive multitasking disabled");
+
+    Logger::Write(LogLevel::Debug, "Preemptive multitasking disabled");
   }
 
   void Task::Tick() {
@@ -303,41 +339,10 @@ namespace Quantum::Kernel::Arch::IA32 {
     }
   }
 
-  // context switch is implemented in assembly
-  extern "C" void __attribute__((naked)) SwitchContextAsm(
+  void Task::SwitchContext(
     TaskContext** currentStackPointer,
     TaskContext* nextStackPointer
   ) {
-    asm volatile(
-      // Save caller-saved + base registers for current task
-      "push %%ebp\n"
-      "push %%ebx\n"
-      "push %%esi\n"
-      "push %%edi\n"
-
-      // Store ESP into *currentStackPointer if provided
-      "mov 20(%%esp), %%eax\n"   // currentStackPointer argument (after pushes)
-      "test %%eax, %%eax\n"
-      "jz 1f\n"
-      "mov %%esp, (%%eax)\n"
-
-      "1:\n"
-      // Load nextStackPointer argument (after pushes)
-      "mov 24(%%esp), %%eax\n"
-      "mov %%eax, %%esp\n"       // switch to next task's stack
-
-      // Restore next task context
-      "pop %%edi\n"
-      "pop %%esi\n"
-      "pop %%ebx\n"
-      "pop %%ebp\n"
-
-      "ret\n"                    // return to next task's EIP
-      :::
-    );
-  }
-
-  void Task::SwitchContext(TaskContext** currentStackPointer, TaskContext* nextStackPointer) {
-    SwitchContextAsm(currentStackPointer, nextStackPointer);
+    DoSwitchContext(currentStackPointer, nextStackPointer);
   }
 }

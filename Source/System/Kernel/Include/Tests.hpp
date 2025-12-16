@@ -1,14 +1,14 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Include/Tests.hpp
-// (c) 2025 Brandon Belna - MIT License
-//------------------------------------------------------------------------------
-// Minimal in-kernel test harness for subsystem verification.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Include/Tests.hpp
+ * Kernel test harness for subsystem verification.
+ */
 
 #pragma once
 
-#include <Types.hpp>
+#include <Types/Primitives.hpp>
 #include <Types/String.hpp>
 
 namespace Quantum::Kernel {

@@ -1,14 +1,14 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Drivers/Console.cpp
-// (c) 2025 Brandon Belna - MIT LIcense
-//------------------------------------------------------------------------------
-// The kernel's console driver.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Drivers/Console.cpp
+ * Architecture-agnostic console driver.
+ */
 
 #include <Console.hpp>
 #include <Helpers/CStringHelper.hpp>
-#include <Types.hpp>
+#include <Types/Primitives.hpp>
 
 #if defined(QUANTUM_ARCH_IA32)
   #include <Arch/IA32/Drivers/VGAConsole.hpp>

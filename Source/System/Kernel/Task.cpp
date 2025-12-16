@@ -1,14 +1,14 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Task.cpp
-// (c) 2025 Brandon Belna - MIT LIcense
-//------------------------------------------------------------------------------
-// Architecture-agnostic task management entry points.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Task.cpp
+ * Architecture-agnostic task management.
+ */
 
 #include <Logger.hpp>
 #include <Task.hpp>
-#include <Types.hpp>
+#include <Types/Primitives.hpp>
 
 #if defined(QUANTUM_ARCH_IA32)
   #include <Arch/IA32/Task.hpp>

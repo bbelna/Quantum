@@ -1,10 +1,10 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/CppRuntime.cpp
-// (c) 2025 Brandon Belna - MIT License
-//------------------------------------------------------------------------------
-// Minimal C++ runtime shims for freestanding kernel builds.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Runtime/CppRuntime.cpp
+ * Minimal C++ runtime shims for freestanding kernel builds.
+ */
 
 extern "C" {
   /**

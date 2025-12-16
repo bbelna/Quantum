@@ -1,17 +1,17 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Arch/IA32/Memory.cpp
-// (c) 2025 Brandon Belna - MIT LIcense
-//------------------------------------------------------------------------------
-// IA32 paging setup and simple physical page allocator.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Arch/IA32/Memory.cpp
+ * IA32 paging and memory functions.
+ */
 
 #include <Arch/IA32/LinkerSymbols.hpp>
 #include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/Memory.hpp>
 #include <Kernel.hpp>
 #include <Logger.hpp>
-#include <Types.hpp>
+#include <Types/Primitives.hpp>
 #include <Types/Boot/BootInfo.hpp>
 #include <Types/Memory/MemoryRegion.hpp>
 

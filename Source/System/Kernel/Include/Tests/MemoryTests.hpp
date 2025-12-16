@@ -1,10 +1,10 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Include/Tests/MemoryTests.hpp
-// (c) 2025 Brandon Belna - MIT License
-//------------------------------------------------------------------------------
-// Memory subsystem test registrations.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Include/Tests/MemoryTests.hpp
+ * Memory subsystem tests.
+ */
 
 #pragma once
 

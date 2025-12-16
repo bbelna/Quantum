@@ -1,18 +1,18 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Include/Arch/IA32/Drivers/PIC.hpp
-// (c) 2025 Brandon Belna - MIT LIcense
-//------------------------------------------------------------------------------
-// Programmable Interrupt Controller (8259A) driver.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Include/Arch/IA32/Drivers/PIC.hpp
+ * 8259A Programmable Interrupt Controller (PIC) driver.
+ */
 
 #pragma once
 
-#include <Types.hpp>
+#include <Types/Primitives.hpp>
 
 namespace Quantum::Kernel::Arch::IA32::Drivers {
   /**
-   * 8259A Programmable Interrupt Controller (PIC) helper.
+   * 8259A Programmable Interrupt Controller (PIC) driver.
    */
   class PIC {
     public:

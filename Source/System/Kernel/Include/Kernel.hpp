@@ -1,14 +1,14 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Include/Kernel.hpp
-// (c) 2025 Brandon Belna - MIT LIcense
-//------------------------------------------------------------------------------
-// Declaration of the Kernel class.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Include/Kernel.hpp
+ * Core kernel implementation.
+ */
 
 #pragma once
 
-#include <Types.hpp>
+#include <Types/Primitives.hpp>
 #include <Types/String.hpp>
 
 #define PANIC(msg) ::Quantum::Kernel::Kernel::Panic((msg), __FILE__, __LINE__, __FUNCTION__)
@@ -17,7 +17,7 @@ namespace Quantum::Kernel {
   using String = Types::String;
 
   /**
-   * Core kernel entry points and panic handling.
+   * Core kernel implementation.
    */
   class Kernel {
     public:

@@ -1,10 +1,10 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Arch/IA32/Exceptions.cpp
-// (c) 2025 Brandon Belna - MIT LIcense
-//------------------------------------------------------------------------------
-// Default IA32 exception handlers.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Arch/IA32/Exceptions.cpp
+ * IA32 exception handler registration.
+ */
 
 #include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/Exceptions.hpp>

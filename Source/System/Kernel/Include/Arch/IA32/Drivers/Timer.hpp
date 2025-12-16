@@ -1,18 +1,18 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Include/Arch/IA32/Drivers/Timer.hpp
-// (c) 2025 Brandon Belna - MIT LIcense
-//------------------------------------------------------------------------------
-// PIT timer driver for IA32.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Include/Arch/IA32/Drivers/Timer.hpp
+ * IA32 PIT timer driver.
+ */
 
 #pragma once
 
-#include <Types.hpp>
+#include <Types/Primitives.hpp>
 
 namespace Quantum::Kernel::Arch::IA32::Drivers {
   /**
-   * IA32 PIT timer driver class.
+   * IA32 PIT timer driver.
    */
   class Timer {
     public:

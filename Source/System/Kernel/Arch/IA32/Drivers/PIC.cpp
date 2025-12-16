@@ -1,10 +1,10 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Arch/IA32/Drivers/PIC.cpp
-// (c) 2025 Brandon Belna - MIT LIcense
-//------------------------------------------------------------------------------
-// 8259A PIC implementation.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Arch/IA32/Drivers/PIC.cpp
+ * 8259A Programmable Interrupt Controller (PIC) driver.
+ */
 
 #include <Arch/IA32/Drivers/PIC.hpp>
 #include <Arch/IA32/Drivers/IO.hpp>

@@ -1,15 +1,15 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Include/Arch/IA32/IDT.hpp
-// (c) 2025 Brandon Belna - MIT LIcense
-//------------------------------------------------------------------------------
-// IDT setup for IA32.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Include/Arch/IA32/IDT.hpp
+ * IA32 Interrupt Descriptor Table management.
+ */
 
 #pragma once
 
 #include <Interrupts.hpp>
-#include <Types.hpp>
+#include <Types/Primitives.hpp>
 #include <Arch/IA32/InterruptContext.hpp>
 
 namespace Quantum::Kernel::Arch::IA32 {

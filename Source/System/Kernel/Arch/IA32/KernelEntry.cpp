@@ -1,10 +1,10 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Arch/IA32/KernelEntry.cpp
-// (c) 2025 Brandon Belna - MIT LIcense
-//------------------------------------------------------------------------------
-// IA32 entry point that calls starts the kernel.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Arch/IA32/KernelEntry.cpp
+ * IA32 kernel entry routines.
+ */
 
 #include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/Drivers/VGAConsole.hpp>
@@ -14,7 +14,7 @@
 #include <Arch/IA32/Memory.hpp>
 #include <Logger.hpp>
 #include <Memory.hpp>
-#include <Types.hpp>
+#include <Types/Primitives.hpp>
 #include <Types/Writer.hpp>
 
 using namespace Quantum::Kernel;

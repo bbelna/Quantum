@@ -1,10 +1,10 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Arch/IA32/IDT.cpp
-// (c) 2025 Brandon Belna - MIT LIcense
-//------------------------------------------------------------------------------
-// IA32 kernel Interrupt Descriptor Table (IDT) setup.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Arch/IA32/IDT.cpp
+ * IA32 Interrupt Descriptor Table management.
+ */
 
 #include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/Drivers/PIC.hpp>

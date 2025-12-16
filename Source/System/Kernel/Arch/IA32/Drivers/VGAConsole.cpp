@@ -1,10 +1,10 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Arch/IA32/Drivers/VGAConsole.cpp
-// (c) 2025 Brandon Belna - MIT LIcense
-//------------------------------------------------------------------------------
-// IA32 kernel VGA console driver.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Arch/IA32/Drivers/VGAConsole.cpp
+ * IA32 VGA text-mode console driver.
+ */
 
 #include <Arch/IA32/Drivers/IO.hpp>
 #include <Arch/IA32/Drivers/VGAConsole.hpp>

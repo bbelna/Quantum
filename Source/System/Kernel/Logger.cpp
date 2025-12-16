@@ -1,14 +1,14 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Logger.cpp
-// (c) 2025 Brandon Belna - MIT LIcense
-//------------------------------------------------------------------------------
-// Kernel logging and tracing interface.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Logger.cpp
+ * Kernel logging and tracing interface.
+ */
 
 #include <Helpers/CStringHelper.hpp>
 #include <Logger.hpp>
-#include <Types.hpp>
+#include <Types/Primitives.hpp>
 #include <Types/String.hpp>
 #include <Types/Writer.hpp>
 

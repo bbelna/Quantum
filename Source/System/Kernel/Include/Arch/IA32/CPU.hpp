@@ -1,23 +1,24 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Include/Arch/IA32/CPU.hpp
-// (c) 2025 Brandon Belna - MIT LIcense
-//------------------------------------------------------------------------------
-// CPU control for IA32.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Include/Arch/IA32/CPU.hpp
+ * IA32 CPU control.
+ */
 
 #pragma once
 
 #include <CPU.hpp>
 #include <Logger.hpp>
-#include <Types.hpp>
+#include <Types/CPU/CPUInfo.hpp>
+#include <Types/Primitives.hpp>
 
 namespace Quantum::Kernel::Arch::IA32 {
   using LogLevel = Logger::Level;
-  using CPUInfo = Quantum::Kernel::CPU::CPUInfo;
+  using CPUInfo = Quantum::Kernel::Types::CPU::CPUInfo;
 
   /**
-   * Low-level IA32 CPU control helpers.
+   * IA32 CPU control.
    */
   class CPU {
     public:

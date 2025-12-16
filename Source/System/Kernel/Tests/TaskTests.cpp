@@ -1,10 +1,10 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Tests/TaskTests.cpp
-// (c) 2025 Brandon Belna - MIT License
-//------------------------------------------------------------------------------
-// Tasking tests.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Tests/TaskTests.cpp
+ * Tasking tests.
+ */
 
 #include <Task.hpp>
 #include <Tests.hpp>

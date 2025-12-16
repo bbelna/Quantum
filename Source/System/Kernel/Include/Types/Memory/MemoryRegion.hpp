@@ -1,19 +1,18 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Include/Types/MemoryRegion.hpp
-// (c) 2025 Brandon Belna - MIT LIcense
-//------------------------------------------------------------------------------
-// Describes a single physical memory segment reported by BIOS E820.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Include/Types/Memory/MemoryRegion.hpp
+ * Describes a single physical memory segment reported by BIOS E820.
+ */
 
 #pragma once
 
-#include <Types.hpp>
+#include <Types/Primitives.hpp>
 
 namespace Quantum::Kernel::Types::Memory {
   /**
    * Describes a single physical memory segment reported by BIOS E820.
-   * type == 1 indicates usable RAM; other values are reserved or ACPI data.
    */
   struct MemoryRegion {
     /**

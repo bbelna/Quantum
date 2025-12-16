@@ -1,14 +1,14 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Tests.cpp
-// (c) 2025 Brandon Belna - MIT License
-//------------------------------------------------------------------------------
-// Test harness for subsystem verification.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Tests.cpp
+ * Test harness for subsystem verification.
+ */
 
 #include <Logger.hpp>
 #include <Tests.hpp>
-#include <Types.hpp>
+#include <Types/Primitives.hpp>
 #include <Tests/MemoryTests.hpp>
 #include <Tests/TaskTests.hpp>
 
@@ -59,7 +59,7 @@ namespace Quantum::Kernel {
     void LogFooter() {
       Logger::WriteFormatted(
         _testsFailed == 0 ? LogLevel::Info : LogLevel::Error,
-        "Kernel tests complete: passed=%p failed=%p total=%p",
+        "Kernel tests complete: passed=%x failed=%x total=%x",
         _testsPassed,
         _testsFailed,
         _testCount

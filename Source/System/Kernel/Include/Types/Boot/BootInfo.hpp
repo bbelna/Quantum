@@ -1,14 +1,14 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Include/BootInfo.hpp
-// (c) 2025 Brandon Belna - MIT LIcense
-//------------------------------------------------------------------------------
-// Bootloader-provided memory map and metadata passed into the kernel.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Include/Types/Boot/BootInfo.hpp
+ * Bootloader-provided memory map and metadata passed into the kernel.
+ */
 
 #pragma once
 
-#include <Types.hpp>
+#include <Types/Primitives.hpp>
 #include <Types/Memory/MemoryRegion.hpp>
 
 namespace Quantum::Kernel::Types::Boot {

@@ -1,15 +1,15 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Memory.cpp
-// (c) 2025 Brandon Belna - MIT LIcense
-//------------------------------------------------------------------------------
-// Architecture-agnostic memory manager entry points.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Memory.cpp
+ * Architecture-agnostic memory manager.
+ */
 
 #include <Kernel.hpp>
 #include <Logger.hpp>
 #include <Memory.hpp>
-#include <Types.hpp>
+#include <Types/Primitives.hpp>
 
 #if defined(QUANTUM_ARCH_IA32)
   #include <Arch/IA32/Memory.hpp>

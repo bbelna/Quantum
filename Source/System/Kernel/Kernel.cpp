@@ -1,10 +1,10 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Kernel.cpp
-// (c) 2025 Brandon Belna - MIT LIcense
-//------------------------------------------------------------------------------
-// The core kernel implementation for Quantum.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Kernel.cpp
+ * Core kernel implementation.
+ */
 
 #include <CPU.hpp>
 #include <Helpers/CStringHelper.hpp>
@@ -15,7 +15,7 @@
 #include <Memory.hpp>
 #include <Task.hpp>
 #include <Tests.hpp>
-#include <Types.hpp>
+#include <Types/Primitives.hpp>
 
 namespace Quantum::Kernel {
   using CStringHelper = Helpers::CStringHelper;
