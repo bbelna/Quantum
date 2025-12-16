@@ -13,13 +13,13 @@
 #if defined(QUANTUM_ARCH_IA32)
   #include <Arch/IA32/Drivers/VGAConsole.hpp>
 
-  namespace Arch = Quantum::Kernel::Arch::IA32;
+  namespace Arch = Quantum::System::Kernel::Arch::IA32;
   using ConsoleDriver = Arch::Drivers::VGAConsole;
 #else
   #error "No architecture selected for console driver"
 #endif
 
-namespace Quantum::Kernel {
+namespace Quantum::System::Kernel {
   using Helpers::CStringHelper;
 
   namespace {
@@ -58,7 +58,7 @@ namespace Quantum::Kernel {
      * @param args Variable argument list.
      */
     void WriteFormattedVariableArguments(
-      const char* format,
+      CString format,
       VariableArgumentsList args
     ) {
       if (!format) {
@@ -145,16 +145,16 @@ namespace Quantum::Kernel {
     ConsoleDriver::WriteCharacter(c);
   }
 
-  void Console::Write(const char* str) {
+  void Console::Write(CString str) {
     ConsoleDriver::Write(str);
   }
 
-  void Console::WriteLine(const char* str) {
+  void Console::WriteLine(CString str) {
     Write(str);
     WriteCharacter('\n');
   }
 
-  void Console::WriteFormatted(const char* format, ...) {
+  void Console::WriteFormatted(CString format, ...) {
     VariableArgumentsList args;
 
     VARIABLE_ARGUMENTS_START(args, format);

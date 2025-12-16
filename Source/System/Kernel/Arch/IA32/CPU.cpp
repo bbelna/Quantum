@@ -8,10 +8,11 @@
 
 #include <Arch/IA32/CPU.hpp>
 #include <Logger.hpp>
+#include <Types/Logging/Level.hpp>
 #include <Types/Primitives.hpp>
 
-namespace Quantum::Kernel::Arch::IA32 {
-  using LogLevel = Logger::Level;
+namespace Quantum::System::Kernel::Arch::IA32 {
+  using LogLevel = Types::Logging::Level;
   using IA32CPUInfo = CPU::IA32CPUInfo;
 
   namespace {

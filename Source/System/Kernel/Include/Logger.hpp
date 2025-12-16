@@ -8,11 +8,13 @@
 
 #pragma once
 
+#include <Types/Logging/Level.hpp>
 #include <Types/Primitives.hpp>
 #include <Types/String.hpp>
 #include <Types/Writer.hpp>
 
-namespace Quantum::Kernel {
+namespace Quantum::System::Kernel {
+  using Level = Types::Logging::Level;
   using String = Types::String;
   using Writer = Types::Writer;
 
@@ -21,19 +23,6 @@ namespace Quantum::Kernel {
    */
   class Logger {
     public:
-      /**
-       * Log levels.
-       */
-      enum class Level : UInt8 {
-        Verbose,
-        Debug,
-        Trace,
-        Info,
-        Warning,
-        Error,
-        Panic
-      };
-
       /**
        * Initializes the logger with the given sinks and minimum log level.
        * @param minimumLevel

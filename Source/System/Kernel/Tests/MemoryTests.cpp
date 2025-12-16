@@ -10,7 +10,7 @@
 #include <Tests.hpp>
 #include <Tests/MemoryTests.hpp>
 
-namespace Quantum::Kernel {
+namespace Quantum::System::Kernel {
   namespace {
     /**
      * Verifies basic allocate/free round-trip.

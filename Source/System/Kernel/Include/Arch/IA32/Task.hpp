@@ -11,7 +11,7 @@
 #include <Task.hpp>
 #include <Types/Primitives.hpp>
 
-namespace Quantum::Kernel::Arch::IA32 {
+namespace Quantum::System::Kernel::Arch::IA32 {
   /**
    * IA32 CPU context saved during task switches.
    * Matches the layout expected by the context switch assembly routine.

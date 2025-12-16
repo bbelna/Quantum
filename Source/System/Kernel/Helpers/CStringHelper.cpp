@@ -8,7 +8,7 @@
 
 #include <Helpers/CStringHelper.hpp>
 
-namespace Quantum::Kernel::Helpers {
+namespace Quantum::System::Kernel::Helpers {
   namespace {
     constexpr Size _bufferSize = 12;
     static char _staticBuffer[_bufferSize] = {};

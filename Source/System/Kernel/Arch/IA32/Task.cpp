@@ -12,10 +12,11 @@
 #include <Kernel.hpp>
 #include <Logger.hpp>
 #include <Memory.hpp>
+#include <Types/Logging/Level.hpp>
 #include <Types/Primitives.hpp>
 
-namespace Quantum::Kernel::Arch::IA32 {
-  using LogLevel = Logger::Level;
+namespace Quantum::System::Kernel::Arch::IA32 {
+  using LogLevel = Types::Logging::Level;
 
   namespace {
     /**

@@ -11,11 +11,12 @@
 #include <CPU.hpp>
 #include <Logger.hpp>
 #include <Types/CPU/CPUInfo.hpp>
+#include <Types/Logging/Level.hpp>
 #include <Types/Primitives.hpp>
 
-namespace Quantum::Kernel::Arch::IA32 {
-  using LogLevel = Logger::Level;
-  using CPUInfo = Quantum::Kernel::Types::CPU::CPUInfo;
+namespace Quantum::System::Kernel::Arch::IA32 {
+  using LogLevel = Types::Logging::Level;
+  using CPUInfo = Quantum::System::Kernel::Types::CPU::CPUInfo;
 
   /**
    * IA32 CPU control.

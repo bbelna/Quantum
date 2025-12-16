@@ -10,7 +10,7 @@
 
 #include <Types/Primitives.hpp>
 
-namespace Quantum::Kernel::Types::Memory {
+namespace Quantum::System::Kernel::Types::Memory {
   /**
    * Describes a single physical memory segment reported by BIOS E820.
    */

@@ -12,7 +12,7 @@
 #include <Interrupts.hpp>
 #include <Types/Primitives.hpp>
 
-namespace Quantum::Kernel::Arch::IA32::Drivers {
+namespace Quantum::System::Kernel::Arch::IA32::Drivers {
   namespace {
     /**
      * Scancode to ASCII mapping for standard keys.

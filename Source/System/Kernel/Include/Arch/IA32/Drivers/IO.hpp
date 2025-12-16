@@ -10,7 +10,7 @@
 
 #include <Types/Primitives.hpp>
 
-namespace Quantum::Kernel::Arch::IA32::Drivers::IO {
+namespace Quantum::System::Kernel::Arch::IA32::Drivers::IO {
   /**
    * Outputs a byte to the specified port.
    * @param port

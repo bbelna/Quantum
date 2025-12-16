@@ -10,7 +10,7 @@
 
 #include <Types/Primitives.hpp>
 
-namespace Quantum::Kernel {
+namespace Quantum::System::Kernel {
   /**
    * Register snapshot captured on interrupt entry for IA32.
    */

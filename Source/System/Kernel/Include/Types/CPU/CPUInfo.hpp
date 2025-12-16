@@ -8,7 +8,7 @@
 
 #pragma once
 
-namespace Quantum::Kernel::Types::CPU {
+namespace Quantum::System::Kernel::Types::CPU {
   /**
    * Arch-independent CPU information.
    */

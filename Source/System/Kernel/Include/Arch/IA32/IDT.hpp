@@ -12,8 +12,8 @@
 #include <Types/Primitives.hpp>
 #include <Arch/IA32/InterruptContext.hpp>
 
-namespace Quantum::Kernel::Arch::IA32 {
-  using Quantum::Kernel::InterruptHandler;
+namespace Quantum::System::Kernel::Arch::IA32 {
+  using Quantum::System::Kernel::InterruptHandler;
 
   /**
    * An entry in the IA32 Interrupt Descriptor Table (IDT).

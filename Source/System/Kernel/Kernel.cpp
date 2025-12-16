@@ -15,11 +15,12 @@
 #include <Memory.hpp>
 #include <Task.hpp>
 #include <Tests.hpp>
+#include <Types/Logging/Level.hpp>
 #include <Types/Primitives.hpp>
 
-namespace Quantum::Kernel {
+namespace Quantum::System::Kernel {
   using CStringHelper = Helpers::CStringHelper;
-  using LogLevel = Logger::Level;
+  using LogLevel = Types::Logging::Level;
 
   namespace {
     /**

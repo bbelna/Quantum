@@ -12,7 +12,7 @@
 #include <Types/Writer.hpp>
 #include <Types/String.hpp>
 
-namespace Quantum::Kernel::Arch::IA32::Drivers {
+namespace Quantum::System::Kernel::Arch::IA32::Drivers {
   using Writer = Types::Writer;
   using String = Types::String;
 

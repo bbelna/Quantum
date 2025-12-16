@@ -13,11 +13,12 @@
 #include <Interrupts.hpp>
 #include <Kernel.hpp>
 #include <Logger.hpp>
+#include <Types/Logging/Level.hpp>
 
-namespace Quantum::Kernel::Arch::IA32 {
-  using CPU = Quantum::Kernel::Arch::IA32::CPU;
-  using Kernel = Quantum::Kernel::Kernel;
-  using LogLevel = Logger::Level;
+namespace Quantum::System::Kernel::Arch::IA32 {
+  using CPU = Quantum::System::Kernel::Arch::IA32::CPU;
+  using Kernel = Quantum::System::Kernel::Kernel;
+  using LogLevel = Types::Logging::Level;
 
   namespace {
     /**

@@ -10,7 +10,7 @@
 #include <Tests.hpp>
 #include <Tests/TaskTests.hpp>
 
-namespace Quantum::Kernel {
+namespace Quantum::System::Kernel {
   namespace {
     /**
      * Shared counter incremented by cooperating tasks.

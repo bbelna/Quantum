@@ -10,7 +10,7 @@
 
 #include <Types/Primitives.hpp>
 
-namespace Quantum::Kernel::Types {
+namespace Quantum::System::Kernel::Types {
   /**
    * Simple immutable string view class for kernel use.
    */

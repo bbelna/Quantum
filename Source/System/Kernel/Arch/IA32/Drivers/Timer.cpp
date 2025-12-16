@@ -11,10 +11,11 @@
 #include <Arch/IA32/Drivers/Timer.hpp>
 #include <Interrupts.hpp>
 #include <Logger.hpp>
+#include <Types/Logging/Level.hpp>
 #include <Types/Primitives.hpp>
 
-namespace Quantum::Kernel::Arch::IA32::Drivers {
-  using LogLevel = Logger::Level;
+namespace Quantum::System::Kernel::Arch::IA32::Drivers {
+  using LogLevel = Types::Logging::Level;
 
   namespace {
     /**

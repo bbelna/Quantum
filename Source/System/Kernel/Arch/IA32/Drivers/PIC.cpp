@@ -9,7 +9,7 @@
 #include <Arch/IA32/Drivers/PIC.hpp>
 #include <Arch/IA32/Drivers/IO.hpp>
 
-namespace Quantum::Kernel::Arch::IA32::Drivers {
+namespace Quantum::System::Kernel::Arch::IA32::Drivers {
   namespace {
     /**
      * PIC EOI command value.

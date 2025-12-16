@@ -11,13 +11,13 @@
 #if defined(QUANTUM_ARCH_IA32)
   #include <Arch/IA32/CPU.hpp>
 
-  namespace Arch = Quantum::Kernel::Arch::IA32;
+  namespace Arch = Quantum::System::Kernel::Arch::IA32;
   using ArchCPU = Arch::CPU;
 #else
   #error "No architecture selected for CPU"
 #endif
 
-namespace Quantum::Kernel {
+namespace Quantum::System::Kernel {
   /**
    * Halts the CPU forever.
    */

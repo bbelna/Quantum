@@ -8,12 +8,13 @@
 
 #include <Logger.hpp>
 #include <Tests.hpp>
+#include <Types/Logging/Level.hpp>
 #include <Types/Primitives.hpp>
 #include <Tests/MemoryTests.hpp>
 #include <Tests/TaskTests.hpp>
 
-namespace Quantum::Kernel {
-  using LogLevel = Logger::Level;
+namespace Quantum::System::Kernel {
+  using LogLevel = Types::Logging::Level;
 
   namespace {
     /**

@@ -9,7 +9,7 @@
 #include <Arch/IA32/Drivers/IO.hpp>
 #include <Arch/IA32/Drivers/VGAConsole.hpp>
 
-namespace Quantum::Kernel::Arch::IA32::Drivers {
+namespace Quantum::System::Kernel::Arch::IA32::Drivers {
   namespace {
     /**
      * The number of text-mode columns.

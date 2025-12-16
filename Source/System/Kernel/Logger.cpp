@@ -8,13 +8,14 @@
 
 #include <Helpers/CStringHelper.hpp>
 #include <Logger.hpp>
+#include <Types/Logging/Level.hpp>
 #include <Types/Primitives.hpp>
 #include <Types/String.hpp>
 #include <Types/Writer.hpp>
 
-namespace Quantum::Kernel {
+namespace Quantum::System::Kernel {
   using CStringHelper = Helpers::CStringHelper;
-  using Level = Logger::Level;
+  using Level = Types::Logging::Level;
   using String = Types::String;
   using Writer = Types::Writer;
 

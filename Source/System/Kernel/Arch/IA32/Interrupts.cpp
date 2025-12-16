@@ -13,8 +13,8 @@
 #include <Arch/IA32/Drivers/Timer.hpp>
 #include <Arch/IA32/Drivers/PS2Keyboard.hpp>
 
-namespace Quantum::Kernel {
-  using namespace Quantum::Kernel::Arch;
+namespace Quantum::System::Kernel {
+  using namespace Quantum::System::Kernel::Arch;
 
   void Interrupts::Initialize() {
     IA32::IDT::Initialize();

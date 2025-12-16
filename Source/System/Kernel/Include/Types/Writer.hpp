@@ -10,7 +10,7 @@
 
 #include <Types/String.hpp>
 
-namespace Quantum::Kernel::Types {
+namespace Quantum::System::Kernel::Types {
   using Types::String;
 
   /**

@@ -9,20 +9,25 @@
 #include <Kernel.hpp>
 #include <Logger.hpp>
 #include <Memory.hpp>
+#include <Types/Logging/Level.hpp>
 #include <Types/Primitives.hpp>
+#include <Types/Memory/FreeBlock.hpp>
+#include <Types/Memory/AlignedMetadata.hpp>
 
 #if defined(QUANTUM_ARCH_IA32)
   #include <Arch/IA32/Memory.hpp>
   #include <Arch/IA32/CPU.hpp>
 
-  using ArchMemory = Quantum::Kernel::Arch::IA32::Memory;
-  using ArchCPU = Quantum::Kernel::Arch::IA32::CPU;
+  using ArchMemory = Quantum::System::Kernel::Arch::IA32::Memory;
+  using ArchCPU = Quantum::System::Kernel::Arch::IA32::CPU;
 #else
   #error "No architecture selected for memory manager"
 #endif
 
-namespace Quantum::Kernel {
-  using LogLevel = Logger::Level;
+namespace Quantum::System::Kernel {
+  using AlignedMetadata = Types::Memory::AlignedMetadata;
+  using FreeBlock = Types::Memory::FreeBlock;
+  using LogLevel = Types::Logging::Level;
 
   namespace {
     /**
@@ -44,6 +49,36 @@ namespace Quantum::Kernel {
      * Number of guard pages after the heap.
      */
     constexpr UInt32 _heapGuardPagesAfter  = 1;
+
+    /**
+     * Magic tag placed before aligned allocations.
+     */
+    constexpr UInt32 _alignedMagic = 0xA11A0CED;
+
+    /**
+     * Number of fixed-size bins.
+     */
+    constexpr UInt32 _binCount = 4;
+
+    /**
+     * Sizes of fixed-size bins.
+     */
+    constexpr UInt32 _binSizes[_binCount] = { 16, 32, 64, 128 };
+
+    /**
+     * Poison pattern used to fill newly allocated payloads.
+     */
+    constexpr UInt8 _poisonAllocated = 0xAA;
+
+    /**
+     * Poison pattern used to fill freed payloads.
+     */
+    constexpr UInt8 _poisonFreed = 0x55;
+
+    /**
+     * Canary value stored at the end of each allocation.
+     */
+    constexpr UInt32 _canaryValue = 0xDEADC0DE;
 
     /**
      * Pointer to the start of the heap region.
@@ -77,10 +112,24 @@ namespace Quantum::Kernel {
     UInt32 _requiredTailPages = 2;
 
     /**
+     * Head of the general free list.
+     */
+    FreeBlock* _freeList = nullptr;
+
+    /**
+     * Free lists for each fixed-size bin.
+     */
+    FreeBlock* _binFreeLists[_binCount]
+      = { nullptr, nullptr, nullptr, nullptr };
+
+    /**
      * Aligns a value to the next multiple of alignment.
-     * @param value Value to align.
-     * @param alignment Alignment boundary (power of two).
-     * @return Aligned value.
+     * @param value
+     *   Value to align.
+     * @param alignment
+     *   Alignment boundary (power of two).
+     * @return
+     *   Aligned value.
      */
     inline UInt32 AlignUp(UInt32 value, UInt32 alignment) {
       return (value + alignment - 1) & ~(alignment - 1);
@@ -88,86 +137,21 @@ namespace Quantum::Kernel {
 
     /**
      * Aligns a value down to the nearest alignment boundary.
-     * @param value Value to align.
-     * @param alignment Alignment boundary (power of two).
-     * @return Aligned value at or below input.
+     * @param value
+     *   Value to align.
+     * @param alignment
+     *   Alignment boundary (power of two).
+     * @return
+     *   Aligned value at or below input.
      */
     inline UInt32 AlignDown(UInt32 value, UInt32 alignment) {
       return value & ~(alignment - 1);
     }
 
     /**
-     * Header for each heap allocation or free block.
-     */
-    struct FreeBlock {
-      /**
-       * Bytes in block payload.
-       */
-      UInt32 size;
-
-      /**
-       * Next free block in list.
-       */
-      FreeBlock* next;
-    };
-
-    /**
-     * Metadata stored immediately before an aligned payload.
-     */
-    struct AlignedMetadata {
-      /**
-       * Alignment marker to detect metadata.
-       */
-      UInt32 magic;
-
-      /**
-       * Owning free-block header for the allocation.
-       */
-      FreeBlock* block;
-
-      /**
-       * Offset from the start of the block payload to the aligned address.
-       */
-      UInt32 payloadOffset;
-    };
-
-    /**
-     * Head of the general free list.
-     */
-    FreeBlock* freeList = nullptr;
-
-    /**
-     * Number of fixed-size bins.
-     */
-    constexpr UInt32 binCount = 4;
-
-    /**
-     * Sizes of fixed-size bins.
-     */
-    constexpr UInt32 binSizes[binCount] = { 16, 32, 64, 128 };
-
-    /**
-     * Free lists for each fixed-size bin.
-     */
-    FreeBlock* binFreeLists[binCount] = { nullptr, nullptr, nullptr, nullptr };
-
-    /**
-     * Poison pattern used to fill newly allocated payloads.
-     */
-    constexpr UInt8 poisonAllocated = 0xAA;
-
-    /**
-     * Poison pattern used to fill freed payloads.
-     */
-    constexpr UInt8 poisonFreed = 0x55;
-
-    /**
-     * Canary value stored at the end of each allocation.
-     */
-    constexpr UInt32 canaryValue = 0xDEADC0DE;
-
-    /**
      * Writes the canary for a free block at the end of its payload.
+     * @param block
+     *   Block to write canary for.
      */
     inline void SetFreeBlockCanary(FreeBlock* block) {
       if (block->size < sizeof(UInt32)) {
@@ -177,18 +161,14 @@ namespace Quantum::Kernel {
       UInt8* payload = reinterpret_cast<UInt8*>(block) + sizeof(FreeBlock);
       UInt32 usable = block->size - sizeof(UInt32);
       UInt32* canary = reinterpret_cast<UInt32*>(payload + usable);
-      *canary = canaryValue;
+      *canary = _canaryValue;
     }
-
-    /**
-     * Magic tag placed before aligned allocations.
-     */
-    constexpr UInt32 alignedMagic = 0xA11A0CED;
 
     /**
      * Maps the next page in the heap virtual range, keeping a guard page
      * unmapped immediately after the mapped region.
-     * @return Pointer to the start of the mapped page.
+     * @return
+     *   Pointer to the start of the mapped page.
      */
     UInt8* MapNextHeapPage() {
       UInt8* pageStart = _heapMappedEnd;
@@ -229,7 +209,7 @@ namespace Quantum::Kernel {
         _heapMappedEnd = _heapBase;
         _heapMappedBytes = 0;
         _guardAddress = _heapBase;
-        freeList = nullptr;
+        _freeList = nullptr;
       }
     }
 
@@ -237,7 +217,7 @@ namespace Quantum::Kernel {
      * Merges adjacent free blocks to reduce fragmentation.
      */
     void CoalesceAdjacentFreeBlocks() {
-      FreeBlock* current = freeList;
+      FreeBlock* current = _freeList;
 
       while (current && current->next) {
         UInt8* currentEnd
@@ -254,27 +234,27 @@ namespace Quantum::Kernel {
       }
 
       // refresh canaries for all free blocks after any coalescing
-      current = freeList;
+      current = _freeList;
 
       while (current) {
         SetFreeBlockCanary(current);
+
         current = current->next;
       }
     }
 
     /**
-     * Reclaims pages only from the end of the heap so the mapped region
-     * remains contiguous. This avoids holes that would invalidate the
-     * heapMappedBytes "end" invariant used by the allocator sanity checks.
+     * Reclaims pages from the end of the heap so the mapped region remains
+     * contiguous.
      */
     void ReclaimPageSpans() {
-      if (!freeList) {
+      if (!_freeList) {
         return;
       }
 
       // find the highest-addressed free block (end of heap)
       FreeBlock* previous = nullptr;
-      FreeBlock* current = freeList;
+      FreeBlock* current = _freeList;
 
       while (current->next) {
         previous = current;
@@ -316,13 +296,13 @@ namespace Quantum::Kernel {
       for (UInt32 i = 0; i < pagesToReclaim; ++i) {
         UInt32 virtualPage
           = reinterpret_cast<UInt32>(reclaimStart) + i * _heapPageSize;
-        UInt32 pte = ArchMemory::GetPageTableEntry(virtualPage);
+        UInt32 pageTableEntry = ArchMemory::GetPageTableEntry(virtualPage);
 
-        if ((pte & 0x1) == 0) {
+        if ((pageTableEntry & 0x1) == 0) {
           continue;
         }
 
-        UInt32 physical = pte & ~0xFFFu;
+        UInt32 physical = pageTableEntry & ~0xFFFu;
         ArchMemory::UnmapPage(virtualPage);
 
         if (physical) {
@@ -349,25 +329,27 @@ namespace Quantum::Kernel {
         if (previous) {
           previous->next = nullptr;
         } else {
-          freeList = nullptr;
+          _freeList = nullptr;
         }
       } else {
         current->size = newSize;
         current->next = nullptr;
+
         SetFreeBlockCanary(current);
       }
     }
 
     /**
      * Inserts a free block into the sorted free list and coalesces neighbors.
-     * @param block Block to insert.
+     * @param block
+     *   Block to insert.
      */
     void InsertFreeBlockSorted(FreeBlock* block) {
-      if (!freeList || block < freeList) {
-        block->next = freeList;
-        freeList = block;
+      if (!_freeList || block < _freeList) {
+        block->next = _freeList;
+        _freeList = block;
       } else {
-        FreeBlock* current = freeList;
+        FreeBlock* current = _freeList;
 
         while (current->next && current->next < block) {
           current = current->next;
@@ -383,22 +365,31 @@ namespace Quantum::Kernel {
 
     /**
      * Attempts to satisfy an allocation from the general free list.
-     * @param needed Total bytes requested including header.
-     * @return Pointer to payload or `nullptr` if none fit.
+     * @param needed
+     *   Total bytes requested including header.
+     * @return
+     *   Pointer to payload or `nullptr` if none fit.
      */
     void* AllocateFromFreeList(UInt32 needed) {
       FreeBlock* previous = nullptr;
-      FreeBlock* current = freeList;
+      FreeBlock* current = _freeList;
 
       while (current) {
         // sanity: block must fit within mapped heap
         UInt8* blockStart = reinterpret_cast<UInt8*>(current);
         UInt8* blockEnd = blockStart + sizeof(FreeBlock) + current->size;
 
-        if (blockStart < _heapBase || blockEnd > _heapBase + _heapMappedBytes) {
+        if (
+          blockStart < _heapBase ||
+          blockEnd > _heapBase + _heapMappedBytes
+        ) {
+          Logger::Write(
+            LogLevel::Error,
+            "AllocateFromFreeList: corrupt block"
+          );
           Logger::WriteFormatted(
             LogLevel::Error,
-            "AllocateFromFreeList: corrupt block addr=%p size=%p end=%p (heap base=%p end=%p needed=%p)",
+            "addr=%p size=%p end=%p (heap base=%p end=%p needed=%p)",
             blockStart,
             current->size,
             blockEnd,
@@ -409,7 +400,8 @@ namespace Quantum::Kernel {
           
           // dump entire free list
           Logger::Write(LogLevel::Error, "Free list dump:");
-          FreeBlock* dump = freeList;
+
+          FreeBlock* dump = _freeList;
           int count = 0;
           
           while (dump && count < 20) {
@@ -439,23 +431,26 @@ namespace Quantum::Kernel {
           if (total >= needed + sizeof(FreeBlock) + 8) {
             UInt8* newBlockAddr = reinterpret_cast<UInt8*>(current) + needed;
             FreeBlock* newBlock = reinterpret_cast<FreeBlock*>(newBlockAddr);
+
             newBlock->size = total - needed - sizeof(FreeBlock);
             newBlock->next = current->next;
+
             SetFreeBlockCanary(newBlock);
+
             current->size = needed - sizeof(FreeBlock);
             current->next = nullptr;
 
             if (previous) {
               previous->next = newBlock;
             } else {
-              freeList = newBlock;
+              _freeList = newBlock;
             }
           } else {
             // remove entire block
             if (previous) {
               previous->next = current->next;
             } else {
-              freeList = current->next;
+              _freeList = current->next;
             }
           }
 
@@ -471,12 +466,14 @@ namespace Quantum::Kernel {
 
     /**
      * Determines the bin index for a requested payload size.
-     * @param size Payload bytes requested.
-     * @return Bin index or -1 if it does not fit in a fixed bin.
+     * @param size
+     *   Payload bytes requested.
+     * @return
+     *   Bin index or -1 if it does not fit in a fixed bin.
      */
     int BinIndexForSize(UInt32 size) {
-      for (UInt32 i = 0; i < binCount; ++i) {
-        if (size <= binSizes[i]) {
+      for (UInt32 i = 0; i < _binCount; ++i) {
+        if (size <= _binSizes[i]) {
           return static_cast<int>(i);
         }
       }
@@ -485,10 +482,30 @@ namespace Quantum::Kernel {
     }
 
     /**
-     * Allocates from a fixed-size bin if available, otherwise falls back to free list.
-     * @param binSize Bin payload size to request.
-     * @param neededWithHeader Total bytes including header.
-     * @return Pointer to payload or nullptr.
+     * Derives the original payload size (without canary/padding) from a stored
+     * block size.
+     * @param blockSize
+     *   Size stored in the block header (payload + canary + padding).
+     * @return
+     *   Payload size rounded down to the allocator's 8-byte alignment.
+     */
+    UInt32 PayloadSizeFromBlock(UInt32 blockSize) {
+      if (blockSize <= sizeof(UInt32)) {
+        return 0;
+      }
+
+      return AlignDown(blockSize - sizeof(UInt32), 8);
+    }
+
+    /**
+     * Allocates from a fixed-size bin if available, otherwise falls back to
+     * free list.
+     * @param binSize
+     *   Bin payload size to request.
+     * @param neededWithHeader
+     *   Total bytes including header.
+     * @return
+     *   Pointer to payload or nullptr.
      */
     void* AllocateFromBin(UInt32 binSize, UInt32 neededWithHeader) {
       int index = BinIndexForSize(binSize);
@@ -496,9 +513,27 @@ namespace Quantum::Kernel {
       if (index < 0) {
         return nullptr;
       } else {
-        if (binFreeLists[index]) {
-          FreeBlock* block = binFreeLists[index];
-          binFreeLists[index] = block->next;
+        if (_binFreeLists[index]) {
+          FreeBlock* block = _binFreeLists[index];
+
+          _binFreeLists[index] = block->next;
+
+          UInt32 totalBytes = block->size + sizeof(FreeBlock);
+
+          if (totalBytes < neededWithHeader) {
+            Logger::WriteFormatted(
+              LogLevel::Error,
+              "AllocateFromBin: undersized block for bin index=%d "
+                "blockSize=%p needed=%p",
+              index,
+              block->size,
+              neededWithHeader
+            );
+
+            InsertFreeBlockSorted(block);
+
+            return AllocateFromFreeList(neededWithHeader);
+          }
 
           return reinterpret_cast<UInt8*>(block) + sizeof(FreeBlock);
         }
@@ -512,33 +547,40 @@ namespace Quantum::Kernel {
 
     /**
      * Returns a freed block either to a size bin or the general free list.
-     * @param block Block being freed.
+     * @param block
+     *   Block being freed.
      */
     void InsertIntoBinOrFreeList(FreeBlock* block) {
-      int index = BinIndexForSize(block->size);
+      UInt32 payloadSize = PayloadSizeFromBlock(block->size);
+      int index = (payloadSize > 0) ? BinIndexForSize(payloadSize) : -1;
 
       if (index >= 0) {
-        block->next = binFreeLists[index];
-        binFreeLists[index] = block;
+        block->next = _binFreeLists[index];
+        _binFreeLists[index] = block;
+
         SetFreeBlockCanary(block);
       } else {
         InsertFreeBlockSorted(block);
       }
     }
-
   }
 
   void Memory::Initialize(UInt32 bootInfoPhysicalAddress) {
     ArchMemory::InitializePaging(bootInfoPhysicalAddress);
 
-    ArchMemory::PhysicalAllocatorState physicalState = ArchMemory::GetPhysicalAllocatorState();
-    UInt64 totalBytes = static_cast<UInt64>(physicalState.TotalPages) * _heapPageSize;
-    UInt64 usedBytes = static_cast<UInt64>(physicalState.UsedPages) * _heapPageSize;
-    UInt64 freeBytes = static_cast<UInt64>(physicalState.FreePages) * _heapPageSize;
+    ArchMemory::PhysicalAllocatorState physicalState
+      = ArchMemory::GetPhysicalAllocatorState();
+    UInt64 totalBytes
+      = static_cast<UInt64>(physicalState.TotalPages) * _heapPageSize;
+    UInt64 usedBytes
+      = static_cast<UInt64>(physicalState.UsedPages) * _heapPageSize;
+    UInt64 freeBytes
+      = static_cast<UInt64>(physicalState.FreePages) * _heapPageSize;
 
     Logger::WriteFormatted(
       LogLevel::Debug,
-      "Physical allocator: pages total=%p used=%p free=%p bytes total=%p used=%p free=%p",
+      "Physical allocator: pages total=%p used=%p free=%p bytes total=%p "
+        "used=%p free=%p",
       physicalState.TotalPages,
       physicalState.UsedPages,
       physicalState.FreePages,
@@ -562,10 +604,12 @@ namespace Quantum::Kernel {
   void* Memory::Allocate(Size size) {
     UInt32 requested = AlignUp(static_cast<UInt32>(size), 8);
     int binIndex = BinIndexForSize(requested);
-    UInt32 binSize = (binIndex >= 0) ? binSizes[binIndex] : requested;
-    UInt32 payloadSize = AlignUp(binSize + sizeof(UInt32), 8); // space for canary
+    UInt32 binSize = (binIndex >= 0) ? _binSizes[binIndex] : requested;
+    UInt32 payloadSize
+      = AlignUp(binSize + sizeof(UInt32), 8); // space for canary
     UInt32 needed = payloadSize + sizeof(FreeBlock);
     UInt32 pagesNeeded = (needed + _heapPageSize - 1) / _heapPageSize;
+
     if (pagesNeeded > _requiredTailPages) {
       _requiredTailPages = pagesNeeded;
     }
@@ -595,7 +639,8 @@ namespace Quantum::Kernel {
         break;
       }
 
-      // Map enough contiguous pages to satisfy this allocation in a single block.
+      // map enough contiguous pages to satisfy this allocation in a single
+      // block
       UInt32 pagesToMap = (needed + _heapPageSize - 1) / _heapPageSize;
       if (pagesToMap == 0) {
         pagesToMap = 1;
@@ -617,7 +662,8 @@ namespace Quantum::Kernel {
 
     if (pointer) {
       UInt8* payload = reinterpret_cast<UInt8*>(pointer);
-      FreeBlock* blk = reinterpret_cast<FreeBlock*>(payload - sizeof(FreeBlock));
+      FreeBlock* blk
+        = reinterpret_cast<FreeBlock*>(payload - sizeof(FreeBlock));
 
       if (blk->size < sizeof(UInt32)) {
         PANIC("Heap alloc: block too small for canary");
@@ -626,11 +672,11 @@ namespace Quantum::Kernel {
       UInt32 usable = blk->size - sizeof(UInt32);
 
       for (UInt32 i = 0; i < usable; ++i) {
-        payload[i] = poisonAllocated;
+        payload[i] = _poisonAllocated;
       }
 
       UInt32* canary = reinterpret_cast<UInt32*>(payload + usable);
-      *canary = canaryValue;
+      *canary = _canaryValue;
 
       Logger::WriteFormatted(
         LogLevel::Debug,
@@ -662,15 +708,15 @@ namespace Quantum::Kernel {
 
     UInt32 padding = static_cast<UInt32>(alignment) + sizeof(AlignedMetadata);
     void* raw = Allocate(size + padding);
-
     UInt8* rawBytes = reinterpret_cast<UInt8*>(raw);
     UIntPtr rawAddress = reinterpret_cast<UIntPtr>(rawBytes);
     UIntPtr alignedAddress = (rawAddress + alignment - 1) & ~(alignment - 1);
-
     AlignedMetadata* metadata
       = reinterpret_cast<AlignedMetadata*>(alignedAddress) - 1;
-    metadata->magic = alignedMagic;
-    metadata->block = reinterpret_cast<FreeBlock*>(rawBytes - sizeof(FreeBlock));
+
+    metadata->magic = _alignedMagic;
+    metadata->block
+      = reinterpret_cast<FreeBlock*>(rawBytes - sizeof(FreeBlock));
     metadata->payloadOffset
       = static_cast<UInt32>(alignedAddress - (rawAddress));
 
@@ -685,15 +731,16 @@ namespace Quantum::Kernel {
     usable -= sizeof(UInt32);
 
     for (UInt32 i = 0; i < usable; ++i) {
-      alignedPayload[i] = poisonAllocated;
+      alignedPayload[i] = _poisonAllocated;
     }
 
     UInt32* canary = reinterpret_cast<UInt32*>(alignedPayload + usable);
-    *canary = canaryValue;
+    *canary = _canaryValue;
 
     Logger::WriteFormatted(
       LogLevel::Debug,
-      "Heap alloc aligned ptr=%p block=%p payload=%p offset=%p usable=%p size=%p canary=%p",
+      "Heap alloc aligned ptr=%p block=%p payload=%p offset=%p usable=%p "
+        "size=%p canary=%p",
       alignedPayload,
       block,
       reinterpret_cast<UInt8*>(block) + sizeof(FreeBlock),
@@ -722,17 +769,21 @@ namespace Quantum::Kernel {
       PANIC("Heap free: pointer out of range");
     }
 
-    FreeBlock* block = reinterpret_cast<FreeBlock*>(bytePointer - sizeof(FreeBlock));
+    FreeBlock* block
+      = reinterpret_cast<FreeBlock*>(bytePointer - sizeof(FreeBlock));
     UInt8* blockBytes = reinterpret_cast<UInt8*>(block);
     UInt8* payload = reinterpret_cast<UInt8*>(block) + sizeof(FreeBlock);
 
     // if the pointer is not at the block payload start, it may be an aligned
     // allocation; verify metadata before using it
-    if (bytePointer != payload && bytePointer >= _heapBase + sizeof(AlignedMetadata)) {
+    if (
+      bytePointer != payload &&
+      bytePointer >= _heapBase + sizeof(AlignedMetadata)
+    ) {
       AlignedMetadata* metadata
         = reinterpret_cast<AlignedMetadata*>(bytePointer) - 1;
 
-      if (metadata->magic == alignedMagic) {
+      if (metadata->magic == _alignedMagic) {
         UInt8* candidateBlockBytes
           = reinterpret_cast<UInt8*>(metadata->block);
 
@@ -780,9 +831,9 @@ namespace Quantum::Kernel {
       PANIC("Heap free: block too small for canary");
     }
 
-    UInt32 offset = 0;
-
-    offset = (bytePointer > payload) ? static_cast<UInt32>(bytePointer - payload) : 0;
+    UInt32 offset = (bytePointer > payload)
+      ? static_cast<UInt32>(bytePointer - payload)
+      : 0;
 
     if (offset >= block->size) {
       PANIC("Heap free: offset beyond block size");
@@ -798,10 +849,11 @@ namespace Quantum::Kernel {
     UInt8* alignedPayload = payload + offset;
     UInt32* canary = reinterpret_cast<UInt32*>(alignedPayload + usable);
 
-    if (*canary != canaryValue) {
+    if (*canary != _canaryValue) {
       Logger::WriteFormatted(
         LogLevel::Error,
-        "Heap free: canary mismatch ptr=%p block=%p payload=%p offset=%p usable=%p size=%p canary=%p expected=%p",
+        "Heap free: canary mismatch ptr=%p block=%p payload=%p offset=%p "
+          "usable=%p size=%p canary=%p expected=%p",
         bytePointer,
         block,
         payload,
@@ -809,7 +861,7 @@ namespace Quantum::Kernel {
         usable,
         block->size,
         *canary,
-        canaryValue
+        _canaryValue
       );
       Logger::WriteFormatted(
         LogLevel::Error,
@@ -822,7 +874,7 @@ namespace Quantum::Kernel {
     }
 
     for (UInt32 i = 0; i < usable; ++i) {
-      alignedPayload[i] = poisonFreed;
+      alignedPayload[i] = _poisonFreed;
     }
 
     InsertIntoBinOrFreeList(block);
@@ -835,7 +887,7 @@ namespace Quantum::Kernel {
 
     UInt32 freeBytes = 0;
     UInt32 blocks = 0;
-    FreeBlock* current = freeList;
+    FreeBlock* current = _freeList;
 
     while (current) {
       freeBytes += current->size;
@@ -924,7 +976,7 @@ namespace Quantum::Kernel {
     bool ok = true;
 
     // verify free list ordering and bounds
-    FreeBlock* current = freeList;
+    FreeBlock* current = _freeList;
     FreeBlock* last = nullptr;
 
     while (current) {
@@ -945,23 +997,33 @@ namespace Quantum::Kernel {
     }
 
     // verify canaries of all free blocks (payload poisoned but canary intact)
-    current = freeList;
+    current = _freeList;
 
     while (current) {
       UInt8* payload = reinterpret_cast<UInt8*>(current) + sizeof(FreeBlock);
 
       if (current->size < sizeof(UInt32)) {
-        Logger::Write(LogLevel::Error, "VerifyHeap: free block too small for canary");
+        Logger::Write(
+          LogLevel::Error,
+          "VerifyHeap: free block too small for canary"
+        );
+
         ok = false;
+
         break;
       }
 
       UInt32 usable = current->size - sizeof(UInt32);
       UInt32* canary = reinterpret_cast<UInt32*>(payload + usable);
 
-      if (*canary != canaryValue) {
-        Logger::Write(LogLevel::Error, "VerifyHeap: free block canary corrupted");
+      if (*canary != _canaryValue) {
+        Logger::Write(
+          LogLevel::Error,
+          "VerifyHeap: free block canary corrupted"
+        );
+
         ok = false;
+
         break;
       }
 
@@ -970,7 +1032,9 @@ namespace Quantum::Kernel {
 
     // dump free list snapshot for debugging
     Logger::Write(LogLevel::Debug, "Free list dump:");
-    current = freeList;
+
+    current = _freeList;
+
     int count = 0;
 
     while (current && count < 20) {
@@ -1005,12 +1069,12 @@ namespace Quantum::Kernel {
     EnsureHeapInitialized();
 
     // clear bin free lists
-    for (UInt32 i = 0; i < binCount; ++i) {
-      binFreeLists[i] = nullptr;
+    for (UInt32 i = 0; i < _binCount; ++i) {
+      _binFreeLists[i] = nullptr;
     }
 
     // reset main free list and mapping trackers (keep existing mapped pages)
-    freeList = nullptr;
+    _freeList = nullptr;
 
     // rebuild a single free block over all currently mapped pages
     UInt32 mapped = _heapMappedBytes;
@@ -1023,11 +1087,13 @@ namespace Quantum::Kernel {
     }
 
     FreeBlock* block = reinterpret_cast<FreeBlock*>(_heapBase);
+
     block->size = mapped - sizeof(FreeBlock);
     block->next = nullptr;
+
     SetFreeBlockCanary(block);
 
-    freeList = block;
+    _freeList = block;
 
     CoalesceAdjacentFreeBlocks();
     ReclaimPageSpans();

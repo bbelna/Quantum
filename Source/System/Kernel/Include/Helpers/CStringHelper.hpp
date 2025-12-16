@@ -10,7 +10,7 @@
 
 #include <Types/Primitives.hpp>
 
-namespace Quantum::Kernel::Helpers {
+namespace Quantum::System::Kernel::Helpers {
   /**
    * C-string helper utilities.
    */

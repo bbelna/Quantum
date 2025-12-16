@@ -8,7 +8,7 @@
 
 #include <Helpers/DebugHelper.hpp>
 
-namespace Quantum::Kernel::Helpers {
+namespace Quantum::System::Kernel::Helpers {
   CString DebugHelper::TrimSourceFile(CString filePath) {
     if (!filePath) {
       return filePath;

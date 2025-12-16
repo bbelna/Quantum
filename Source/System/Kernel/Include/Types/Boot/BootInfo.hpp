@@ -11,7 +11,7 @@
 #include <Types/Primitives.hpp>
 #include <Types/Memory/MemoryRegion.hpp>
 
-namespace Quantum::Kernel::Types::Boot {
+namespace Quantum::System::Kernel::Types::Boot {
   using MemoryRegion = Types::Memory::MemoryRegion;
 
   /**

@@ -14,13 +14,14 @@
 #include <Arch/IA32/Memory.hpp>
 #include <Logger.hpp>
 #include <Memory.hpp>
+#include <Types/Logging/Level.hpp>
 #include <Types/Primitives.hpp>
 #include <Types/Writer.hpp>
 
-using namespace Quantum::Kernel;
+using namespace Quantum::System::Kernel;
 
 using CPU = Arch::IA32::CPU;
-using LogLevel = Logger::Level;
+using LogLevel = Types::Logging::Level;
 using VGAConsole = Arch::IA32::Drivers::VGAConsole;
 using Writer = Types::Writer;
 

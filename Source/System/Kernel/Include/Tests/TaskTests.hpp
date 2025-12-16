@@ -8,7 +8,7 @@
 
 #pragma once
 
-namespace Quantum::Kernel {
+namespace Quantum::System::Kernel {
   /**
    * Registers tasking-related kernel tests.
    */

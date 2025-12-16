@@ -10,7 +10,7 @@
 
 #include <Types/Primitives.hpp>
 
-namespace Quantum::Kernel::Arch::IA32::Drivers {
+namespace Quantum::System::Kernel::Arch::IA32::Drivers {
   /**
    * IA32 PIT timer driver.
    */

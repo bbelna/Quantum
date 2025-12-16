@@ -11,7 +11,7 @@
 #include <Types/Primitives.hpp>
 #include <Types/String.hpp>
 
-namespace Quantum::Kernel {
+namespace Quantum::System::Kernel {
   /**
    * Signature for kernel test functions.
    */
@@ -84,4 +84,4 @@ namespace Quantum::Kernel {
 }
 
 #define TEST_ASSERT(cond, msg) \
-  ::Quantum::Kernel::Tests::Assert((cond), (msg), __FILE__, __LINE__)
+  ::Quantum::System::Kernel::Tests::Assert((cond), (msg), __FILE__, __LINE__)

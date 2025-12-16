@@ -10,7 +10,7 @@
 
 #include <Types/Primitives.hpp>
 
-namespace Quantum::Kernel::Arch::IA32 {
+namespace Quantum::System::Kernel::Arch::IA32 {
   /**
    * IA32 paging and memory functions.
    */

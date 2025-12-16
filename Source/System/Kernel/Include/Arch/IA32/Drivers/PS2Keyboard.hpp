@@ -8,7 +8,7 @@
 
 #pragma once
 
-namespace Quantum::Kernel::Arch::IA32::Drivers {
+namespace Quantum::System::Kernel::Arch::IA32::Drivers {
   /**
    * IA32 PS/2 (IRQ1) keyboard driver.
    */

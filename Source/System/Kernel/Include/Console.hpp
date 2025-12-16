@@ -10,7 +10,7 @@
 
 #include <Types/Primitives.hpp>
 
-namespace Quantum::Kernel {
+namespace Quantum::System::Kernel {
   /**
    * Architecture-agnostic console driver.
    */
@@ -33,14 +33,14 @@ namespace Quantum::Kernel {
        * @param str
        *   The string to write.
        */
-      static void Write(const char* str);
+      static void Write(CString str);
 
       /**
        * Writes a line (string followed by newline) to the console.
        * @param str
        *   The string to write.
        */
-      static void WriteLine(const char* str);
+      static void WriteLine(CString str);
 
       /**
        * Writes a formatted string to the console.
@@ -49,7 +49,7 @@ namespace Quantum::Kernel {
        * @param ...
        *   Format arguments.
        */
-      static void WriteFormatted(const char* format, ...);
+      static void WriteFormatted(CString format, ...);
 
       /**
        * Writes a 32-bit value in hexadecimal format to the console.
