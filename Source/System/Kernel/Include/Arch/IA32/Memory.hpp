@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <Arch/IA32/Types/Memory/PhysicalAllocatorState.hpp>
 #include <Types/Primitives.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
@@ -16,25 +17,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
    */
   class Memory {
     public:
-      /**
-       * State of the physical allocator.
-       */
-      struct PhysicalAllocatorState {
-        /**
-         * Total pages managed by the allocator.
-         */
-        UInt32 TotalPages;
-
-        /**
-         * Pages currently marked used.
-         */
-        UInt32 UsedPages;
-
-        /**
-         * Pages currently available.
-         */
-        UInt32 FreePages;
-      };
+      using PhysicalAllocatorState = Types::Memory::PhysicalAllocatorState;
 
       /**
        * Base virtual address where the kernel will be mapped in the

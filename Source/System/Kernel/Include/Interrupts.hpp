@@ -10,9 +10,14 @@
 
 #include <Types/Primitives.hpp>
 
-namespace Quantum::System::Kernel {
-  struct InterruptContext;
+#if defined(QUANTUM_ARCH_IA32)
+  #include <Arch/IA32/Types/IDT/InterruptContext.hpp>
 
+  using InterruptContext
+    = Quantum::System::Kernel::Arch::IA32::Types::IDT::InterruptContext;
+#endif
+
+namespace Quantum::System::Kernel {
   using InterruptHandler = void(*)(InterruptContext& ctx);
 
   /**

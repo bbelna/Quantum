@@ -23,7 +23,7 @@ typedef signed int Int32;
 typedef signed long long Int64;
 
 typedef UInt32 UIntPtr;
-typedef Int32  IntPtr;
+typedef Int32 IntPtr;
 typedef UInt32 Size;
 
 typedef const char* CString;

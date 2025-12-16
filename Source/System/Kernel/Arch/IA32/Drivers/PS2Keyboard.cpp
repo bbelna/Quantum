@@ -9,10 +9,14 @@
 #include <Arch/IA32/Drivers/IO.hpp>
 #include <Arch/IA32/Drivers/PIC.hpp>
 #include <Arch/IA32/Drivers/PS2Keyboard.hpp>
+#include <Arch/IA32/Types/IDT/InterruptContext.hpp>
 #include <Interrupts.hpp>
 #include <Types/Primitives.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32::Drivers {
+  using InterruptContext
+    = Quantum::System::Kernel::Arch::IA32::Types::IDT::InterruptContext;
+
   namespace {
     /**
      * Scancode to ASCII mapping for standard keys.

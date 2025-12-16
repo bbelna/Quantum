@@ -8,63 +8,22 @@
 
 #pragma once
 
+#include <Arch/IA32/Types/IDT/IDTDescriptor.hpp>
+#include <Arch/IA32/Types/IDT/IDTEntry.hpp>
+#include <Arch/IA32/Types/IDT/InterruptContext.hpp>
 #include <Interrupts.hpp>
 #include <Types/Primitives.hpp>
-#include <Arch/IA32/InterruptContext.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using Quantum::System::Kernel::InterruptHandler;
-
-  /**
-   * An entry in the IA32 Interrupt Descriptor Table (IDT).
-   */
-  struct IDTEntry {
-    /**
-     * Bits 0..15 of handler address.
-     */
-    UInt16 OffsetLow;
-
-    /**
-     * Code segment selector.
-     */
-    UInt16 Selector;
-
-    /**
-     * Always zero.
-     */
-    UInt8 Zero;
-
-    /**
-     * Type and attributes (present, DPL, gate type).
-     */
-    UInt8 TypeAttribute;
-
-    /**
-     * Bits 16..31 of handler address.
-     */
-    UInt16 OffsetHigh;
-  } __attribute__((packed));
-
-  /**
-   * The IDT descriptor structure for the `lidt` instruction.
-   */
-  struct IDTDescriptor {
-    /**
-     * Size of the IDT in bytes minus one.
-     */
-    UInt16 Limit;
-
-    /**
-     * Linear base address of the IDT.
-     */
-    UInt32 Base;
-  } __attribute__((packed));
-
   /**
    * IA32 Interrupt Descriptor Table manager.
    */
   class IDT {
     public:
+      using IDTDescriptor = Types::IDT::IDTDescriptor;
+      using IDTEntry = Types::IDT::IDTEntry;
+      using InterruptHandler = Quantum::System::Kernel::InterruptHandler;
+
       /**
        * Initializes the IA32 Interrupt Descriptor Table (IDT).
        */

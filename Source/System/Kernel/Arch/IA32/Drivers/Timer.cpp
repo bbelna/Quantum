@@ -6,6 +6,7 @@
  * IA32 PIT timer driver.
  */
 
+#include <Arch/IA32/Types/IDT/InterruptContext.hpp>
 #include <Arch/IA32/Drivers/IO.hpp>
 #include <Arch/IA32/Drivers/PIC.hpp>
 #include <Arch/IA32/Drivers/Timer.hpp>
@@ -15,7 +16,9 @@
 #include <Types/Primitives.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32::Drivers {
-  using LogLevel = Types::Logging::Level;
+  using InterruptContext
+    = Quantum::System::Kernel::Arch::IA32::Types::IDT::InterruptContext;
+  using LogLevel = Quantum::System::Kernel::Types::Logging::Level;
 
   namespace {
     /**

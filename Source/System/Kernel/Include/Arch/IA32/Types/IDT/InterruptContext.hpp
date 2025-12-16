@@ -2,7 +2,7 @@
  * Quantum
  * (c) 2025 Brandon Belna - MIT License
  *
- * System/Kernel/Include/Arch/IA32/InterruptContext.hpp
+ * System/Kernel/Include/Arch/IA32/Types/IDT/InterruptContext.hpp
  * IA32 interrupt context.
  */
 
@@ -10,7 +10,7 @@
 
 #include <Types/Primitives.hpp>
 
-namespace Quantum::System::Kernel {
+namespace Quantum::System::Kernel::Arch::IA32::Types::IDT {
   /**
    * Register snapshot captured on interrupt entry for IA32.
    */

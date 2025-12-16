@@ -11,8 +11,6 @@
 #include <Types/String.hpp>
 
 namespace Quantum::System::Kernel::Types {
-  using Types::String;
-
   /**
    * Abstract writer interface for writing data.
    */

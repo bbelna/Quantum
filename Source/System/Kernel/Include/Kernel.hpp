@@ -14,13 +14,13 @@
 #define PANIC(msg) ::Quantum::System::Kernel::Kernel::Panic((msg), __FILE__, __LINE__, __FUNCTION__)
 
 namespace Quantum::System::Kernel {
-  using String = Types::String;
-
   /**
    * Core kernel implementation.
    */
   class Kernel {
     public:
+      using String = Types::String;
+
       /**
        * Initializes the kernel.
        * @param bootInfoPhysicalAddress

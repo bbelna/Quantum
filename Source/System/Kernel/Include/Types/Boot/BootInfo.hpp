@@ -29,7 +29,7 @@ namespace Quantum::System::Kernel::Types::Boot {
     UInt32 Reserved;
 
     /**
-     * E820 entries captured during boot.
+     * Firmware memory map entries.
      */
     MemoryRegion Entries[32];
   };

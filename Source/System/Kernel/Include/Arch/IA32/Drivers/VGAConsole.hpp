@@ -13,8 +13,10 @@
 #include <Types/String.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32::Drivers {
-  using Writer = Types::Writer;
-  using String = Types::String;
+  namespace QK = Quantum::System::Kernel;
+
+  using Writer = QK::Types::Writer;
+  using String = QK::Types::String;
 
   /**
    * IA32 VGA text-mode console driver.

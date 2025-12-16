@@ -17,9 +17,11 @@
 #include <Types/Memory/MemoryRegion.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using BootInfo = Types::Boot::BootInfo;
-  using LogLevel = Types::Logging::Level;
-  using MemoryRegion = Types::Memory::MemoryRegion;
+  namespace QK = Quantum::System::Kernel;
+
+  using BootInfo = QK::Types::Boot::BootInfo;
+  using LogLevel = QK::Types::Logging::Level;
+  using MemoryRegion = QK::Types::Memory::MemoryRegion;
 
   namespace {
     /**

@@ -8,17 +8,19 @@
 
 #include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/Exceptions.hpp>
-#include <Arch/IA32/InterruptContext.hpp>
 #include <Arch/IA32/Memory.hpp>
+#include <Arch/IA32/Types/IDT/InterruptContext.hpp>
 #include <Interrupts.hpp>
 #include <Kernel.hpp>
 #include <Logger.hpp>
 #include <Types/Logging/Level.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using CPU = Quantum::System::Kernel::Arch::IA32::CPU;
-  using Kernel = Quantum::System::Kernel::Kernel;
-  using LogLevel = Types::Logging::Level;
+  namespace QK = Quantum::System::Kernel;
+
+  using CPU = CPU;
+  using InterruptContext = Types::IDT::InterruptContext;
+  using LogLevel = QK::Types::Logging::Level;
 
   namespace {
     /**

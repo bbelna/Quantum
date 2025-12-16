@@ -14,15 +14,15 @@
 #include <Types/Writer.hpp>
 
 namespace Quantum::System::Kernel {
-  using Level = Types::Logging::Level;
-  using String = Types::String;
-  using Writer = Types::Writer;
-
   /**
    * The kernel logger class.
    */
   class Logger {
     public:
+      using Level = Types::Logging::Level;
+      using String = Types::String;
+      using Writer = Types::Writer;
+
       /**
        * Initializes the logger with the given sinks and minimum log level.
        * @param minimumLevel

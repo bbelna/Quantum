@@ -138,11 +138,13 @@ namespace Quantum::System::Kernel::Arch::IA32::Drivers {
       case '\b':
         if (_cursorColumn > 0) {
           _cursorColumn--;
-          _buffer[Index(_cursorRow, _cursorColumn)] = MakeEntry(' ', _defaultColor);
+          _buffer[Index(_cursorRow, _cursorColumn)]
+            = MakeEntry(' ', _defaultColor);
         } else if (_cursorRow > 0) {
           _cursorRow--;
           _cursorColumn = 79;
-          _buffer[Index(_cursorRow, _cursorColumn)] = MakeEntry(' ', _defaultColor);
+          _buffer[Index(_cursorRow, _cursorColumn)]
+            = MakeEntry(' ', _defaultColor);
         }
         break;
       default: {

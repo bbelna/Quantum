@@ -9,12 +9,16 @@
 #include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/Drivers/PIC.hpp>
 #include <Arch/IA32/IDT.hpp>
-#include <Arch/IA32/InterruptContext.hpp>
+#include <Arch/IA32/Types/IDT/IDTEntry.hpp>
+#include <Arch/IA32/Types/IDT/IDTDescriptor.hpp>
+#include <Arch/IA32/Types/IDT/InterruptContext.hpp>
 #include <Logger.hpp>
 #include <Types/Logging/Level.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using LogLevel = Types::Logging::Level;
+  using namespace Types::IDT;
+
+  using LogLevel = Quantum::System::Kernel::Types::Logging::Level;
   using PIC = Drivers::PIC;
 
   namespace {

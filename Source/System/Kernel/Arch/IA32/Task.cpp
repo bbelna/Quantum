@@ -16,7 +16,9 @@
 #include <Types/Primitives.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using LogLevel = Types::Logging::Level;
+  namespace QK = Quantum::System::Kernel;
+
+  using LogLevel = QK::Types::Logging::Level;
 
   namespace {
     /**

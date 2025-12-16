@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include <Types/Primitives.hpp>
+
 namespace Quantum::System::Kernel::Types::CPU {
   /**
    * Arch-independent CPU information.
