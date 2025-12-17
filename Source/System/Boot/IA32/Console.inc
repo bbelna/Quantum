@@ -21,14 +21,37 @@ Print:
   push si
   push di
 
-.print_loop:
-  lodsb                  ; AL = [DS:SI], SI++
-  test al, al
-  jz .done               ; if AL == 0 → end of string
+  xor bh, bh          ; page 0
+  mov bl, 0x0F        ; bright white on black
 
-  mov ah, 0x0E           ; teletype output
-  mov bh, 0x00           ; page 0
-  mov bl, 0x07           ; attribute (ignored in text TTY, but fine)
+.print_loop:
+  lodsb               ; AL = [DS:SI], SI++
+  test al, al
+  jz .done
+
+  ; handle '\n' as CRLF
+  cmp al, 0x0A
+  jne .write_char
+  mov ah, 0x0E
+  mov al, 0x0D
+  int 0x10
+  mov al, 0x0A
+  int 0x10
+  jmp .print_loop
+
+.write_char:
+  ; get current cursor position -> DH=row, DL=col
+  mov ah, 0x03
+  int 0x10
+
+  ; write character AL with attribute BL at current cursor
+  mov ah, 0x09
+  mov cx, 1
+  int 0x10
+
+  ; advance cursor by 1 column
+  inc dl
+  mov ah, 0x02
   int 0x10
 
   jmp .print_loop
@@ -41,6 +64,20 @@ Print:
   pop bx
   pop ax
   ret
+
+; ------------------------------------------------------------------------------
+; PRINT_STR
+; ------------------------------------------------------------------------------
+; Safely prints a zero-terminated string via BIOS TTY (INT 10h/AH=0Eh)
+; In: DS:SI -> zero-terminated string
+; Out: all registers preserved (AX, BX, CX, DX, SI, DI)
+; ------------------------------------------------------------------------------
+%macro PRINT_STR 1
+  push si
+  mov si, %1
+  call Print
+  pop si
+%endmacro
 
 ; ------------------------------------------------------------------------------
 ; PrintHex8
@@ -131,7 +168,7 @@ DebugPrint:
   ret
 
 ; ------------------------------------------------------------------------------
-; DBG macro
+; DBG
 ; ------------------------------------------------------------------------------
 ; Safely prints a zero-terminated string at DS:SI to QEMU debug console
 ; (port 0xE9). i.e., preserves SI.

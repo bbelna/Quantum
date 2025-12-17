@@ -6,15 +6,15 @@
  * IA32 PS/2 keyboard driver.
  */
 
+#include <Interrupts.hpp>
 #include <Arch/IA32/IO.hpp>
 #include <Arch/IA32/PIC.hpp>
 #include <Arch/IA32/PS2Keyboard.hpp>
 #include <Arch/IA32/Types/IDT/InterruptContext.hpp>
-#include <Interrupts.hpp>
 #include <Types/Primitives.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using InterruptContext = Types::IDT::InterruptContext;
+  using Types::IDT::InterruptContext;
 
   namespace {
     /**

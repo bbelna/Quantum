@@ -8,11 +8,12 @@
 
 #pragma once
 
-#include <Types/CPU/CPUInfo.hpp>
+#include <Prelude.hpp>
 #include <Types/Primitives.hpp>
+#include <Types/CPU/CPUInfo.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32::Types::CPU {
-  using CPUInfo = Quantum::System::Kernel::Types::CPU::CPUInfo;
+  using Kernel::Types::CPU::CPUInfo;
 
   /**
    * IA32-specific CPU information.

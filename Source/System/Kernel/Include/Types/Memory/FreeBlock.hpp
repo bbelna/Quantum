@@ -6,7 +6,6 @@
  * Describes a free block of memory used in the memory management system.
  */
 
-
 #pragma once
 
 #include <Types/Primitives.hpp>

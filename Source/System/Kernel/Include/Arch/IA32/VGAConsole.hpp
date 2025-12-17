@@ -8,15 +8,14 @@
 
 #pragma once
 
+#include <Prelude.hpp>
 #include <Types/Primitives.hpp>
 #include <Types/Writer.hpp>
 #include <Types/String.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  namespace QK = Quantum::System::Kernel;
-
-  using Writer = QK::Types::Writer;
-  using String = QK::Types::String;
+  using Kernel::Types::Writer;
+  using Kernel::Types::String;
 
   /**
    * IA32 VGA text-mode console driver.

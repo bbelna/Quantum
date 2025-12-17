@@ -8,7 +8,11 @@
 
 #pragma once
 
+#include <Arch/IA32/Types/IDT/InterruptContext.hpp>
+
 namespace Quantum::System::Kernel::Arch::IA32 {
+  using Types::IDT::InterruptContext;
+
   /**
    * IA32 exception handler registration.
    */

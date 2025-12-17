@@ -92,7 +92,7 @@ namespace Quantum::System::Kernel::Tests {
       Task::Create(TaskA, 4096);
       Task::Create(TaskB, 4096);
 
-      // Yield until both tasks have run to completion.
+      // yield until both tasks have run to completion
       while (taskCounter < 4) {
         Task::Yield();
       }

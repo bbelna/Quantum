@@ -87,10 +87,24 @@ MemMapEntryCount        equ BootInfoPhysical        ; dword
 NoKernelMsg        db "KERNEL.QX not found!", 0
 DiskErrorMsg       db "Disk read error!", 0
 FATErrorMsg        db "FAT error!", 0
+QuantumMsg         db 0xDB, 0xDB, " Quantum", 0x0A, 0x0A, 0
+BootMsg            db "Loading system, please wait...", 0x0A, 0
+
+%include "Console.inc"
 
 Start:
-  ; start by clearing the console to indicate stage2 has started
   call ClearConsole
+
+  ; hide cursor
+  mov ah, 0x01
+  mov ch, 0x20
+  mov cl, 0x00
+  int 0x10
+
+  ; start by clearing the console and printing the boot message to indicate
+  ; stage2 has started
+  PRINT_STR QuantumMsg
+  PRINT_STR BootMsg
 
   cli
   xor ax, ax
@@ -566,7 +580,5 @@ GDTEnd:
 GDTDescriptor:
   dw GDTEnd - GDTStart - 1
   dd GDTStart
-
-%include "Console.inc"
 
 times Stage2Sectors*512 - ($-$$) db 0

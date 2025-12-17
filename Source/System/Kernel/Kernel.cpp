@@ -7,20 +7,20 @@
  */
 
 #include <CPU.hpp>
-#include <Helpers/CStringHelper.hpp>
-#include <Helpers/DebugHelper.hpp>
 #include <Interrupts.hpp>
 #include <Kernel.hpp>
 #include <Logger.hpp>
 #include <Memory.hpp>
 #include <Task.hpp>
 #include <Testing.hpp>
-#include <Types/Logging/Level.hpp>
+#include <Helpers/CStringHelper.hpp>
+#include <Helpers/DebugHelper.hpp>
 #include <Types/Primitives.hpp>
+#include <Types/Logging/LogLevel.hpp>
 
 namespace Quantum::System::Kernel {
   using CStringHelper = Helpers::CStringHelper;
-  using LogLevel = Types::Logging::Level;
+  using LogLevel = Types::Logging::LogLevel;
 
   namespace {
     /**

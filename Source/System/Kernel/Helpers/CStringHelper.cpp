@@ -10,9 +10,27 @@
 
 namespace Quantum::System::Kernel::Helpers {
   namespace {
+    /**
+     * Buffer size for integer to C-string conversions.
+     */
     constexpr Size _bufferSize = 12;
+
+    /**
+     * Static buffer for integer to C-string conversions.
+     */
     static char _staticBuffer[_bufferSize] = {};
 
+    /**
+     * Writes an integer value to the given buffer as a C-string.
+     * @param value
+     *   The integer value.
+     * @param buffer
+     *   The output buffer.
+     * @param length
+     *   The length of the output buffer.
+     * @return
+     *   True on success, false if the buffer is too small.
+     */
     bool WriteIntToBuffer(Int32 value, CStringMutable buffer, Size length) {
       if (length == 0) {
         return false;
@@ -52,21 +70,45 @@ namespace Quantum::System::Kernel::Helpers {
       return true;
     }
 
+    /**
+     * Appends a single character to `buffer[out]`, respecting length.
+     * @param buffer
+     *   Destination buffer.
+     * @param length
+     *   Size of the destination buffer.
+     * @param out
+     *   Current output index (updated on success).
+     * @param c
+     *   Character to append.
+     * @return
+     *   True on success; false if buffer is too small.
+     */
     bool AppendChar(CStringMutable buffer, Size length, Size& out, char c) {
       if (!buffer || length == 0) {
         return false;
-      }
-
-      if (out + 1 >= length) {
+      } else if (out + 1 >= length) {
         // no room for this char + null terminator
         return false;
-      }
+      } else {
+        buffer[out++] = c;
 
-      buffer[out++] = c;
-      return true;
+        return true;
+      }
     }
 
-    // Append a C-string to buffer[out], respecting length.
+    /**
+     * Appends a null-terminated string to `buffer[out]`, respecting length.
+     * @param buffer
+     *   Destination buffer.
+     * @param length
+     *   Size of the destination buffer.
+     * @param out
+     *   Current output index (updated on success).
+     * @param str
+     *   String to append.
+     * @return
+     *   True on success; false if buffer is too small.
+     */
     bool AppendString(
       CStringMutable buffer,
       Size length,
@@ -90,6 +132,24 @@ namespace Quantum::System::Kernel::Helpers {
       return true;
     }
 
+    /**
+     * Appends an unsigned integer in the given base to `buffer[out]`,
+     * respecting length.
+     * @param buffer
+     *   Destination buffer.
+     * @param length
+     *   Size of the destination buffer.
+     * @param out
+     *   Current output index (updated on success).
+     * @param value
+     *   Unsigned integer to append.
+     * @param base
+     *   Base to use (2-16).
+     * @param prefixHex
+     *   If true and base is 16, prefixes with "0x".
+     * @return
+     *   True on success; false if buffer is too small.
+     */
     bool AppendUnsigned(
       CStringMutable buffer,
       Size length,
@@ -104,7 +164,7 @@ namespace Quantum::System::Kernel::Helpers {
 
       char temp[16] = {};
       Size idx = 0;
-      const char* digits = "0123456789ABCDEF";
+      CString digits = "0123456789ABCDEF";
 
       do {
         temp[idx++] = digits[value % base];

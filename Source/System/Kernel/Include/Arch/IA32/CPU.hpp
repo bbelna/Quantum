@@ -8,20 +8,20 @@
 
 #pragma once
 
-#include <Arch/IA32/Types/CPU/IA32CPUInfo.hpp>
 #include <CPU.hpp>
 #include <Logger.hpp>
-#include <Types/Logging/Level.hpp>
+#include <Arch/IA32/Types/CPU/IA32CPUInfo.hpp>
+#include <Types/Logging/LogLevel.hpp>
 #include <Types/Primitives.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
+  using Types::CPU::IA32CPUInfo;
+
   /**
    * IA32 CPU control.
    */
   class CPU {
     public:
-      using IA32CPUInfo = Types::CPU::IA32CPUInfo;
-
       /**
        * Halts the CPU until the next interrupt.
        */

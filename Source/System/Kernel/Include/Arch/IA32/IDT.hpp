@@ -8,24 +8,23 @@
 
 #pragma once
 
+#include <Interrupts.hpp>
+#include <Prelude.hpp>
 #include <Arch/IA32/Types/IDT/IDTDescriptor.hpp>
 #include <Arch/IA32/Types/IDT/IDTEntry.hpp>
 #include <Arch/IA32/Types/IDT/InterruptContext.hpp>
-#include <Interrupts.hpp>
 #include <Types/Primitives.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
+  using namespace Types::IDT;
+
+  using Kernel::Types::Interrupts::InterruptHandler;
+
   /**
    * IA32 Interrupt Descriptor Table manager.
    */
   class IDT {
     public:
-      using IDTDescriptor = Types::IDT::IDTDescriptor;
-      using IDTEntry = Types::IDT::IDTEntry;
-      using InterruptContext = Types::IDT::InterruptContext;
-      using InterruptHandler
-        = Quantum::System::Kernel::Types::Interrupts::InterruptHandler;
-
       /**
        * Initializes the IA32 Interrupt Descriptor Table (IDT).
        */

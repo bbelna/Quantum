@@ -12,13 +12,13 @@
 #include <Types/Primitives.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
+  using Types::Memory::PhysicalAllocatorState;
+
   /**
    * IA32 paging and memory functions.
    */
   class Memory {
     public:
-      using PhysicalAllocatorState = Types::Memory::PhysicalAllocatorState;
-
       /**
        * Base virtual address where the kernel will be mapped in the
        * higher-half. Identity mappings remain available for now to ease the

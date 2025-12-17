@@ -6,25 +6,28 @@
  * IA32 kernel entry routines.
  */
 
-#include <Arch/IA32/CPU.hpp>
-#include <Arch/IA32/VGAConsole.hpp>
-#include <Arch/IA32/KernelEntry.hpp>
-#include <Arch/IA32/LinkerSymbols.hpp>
 #include <Kernel.hpp>
-#include <Arch/IA32/Memory.hpp>
 #include <Logger.hpp>
 #include <Memory.hpp>
-#include <Types/Logging/Level.hpp>
+#include <Arch/IA32/CPU.hpp>
+#include <Arch/IA32/KernelEntry.hpp>
+#include <Arch/IA32/LinkerSymbols.hpp>
+#include <Arch/IA32/Memory.hpp>
+#include <Arch/IA32/VGAConsole.hpp>
 #include <Types/Primitives.hpp>
 #include <Types/Writer.hpp>
+#include <Types/Logging/LogLevel.hpp>
 
 using namespace Quantum::System::Kernel;
 
-using CPU = Arch::IA32::CPU;
-using LogLevel = Types::Logging::Level;
-using VGAConsole = Arch::IA32::VGAConsole;
-using Writer = Types::Writer;
+using Arch::IA32::CPU;
+using Arch::IA32::VGAConsole;
+using Types::Logging::LogLevel;
+using Types::Writer;
 
+/**
+ * The GDT descriptor defined in the assembly GDT file.
+ */
 extern "C" void* GDTDescriptor32;
 
 namespace {
@@ -46,10 +49,29 @@ namespace {
   [[gnu::section(".text.start.data")]]
   alignas(4096) UInt32 _bootstrapKernelTables[8][1024];
 
+  /**
+   * Present page flag.
+   */
   constexpr UInt32 _pagePresent = 0x1;
+
+  /**
+   * Writable page flag.
+   */
   constexpr UInt32 _pageWrite = 0x2;
+
+  /**
+   * Recursive page table slot.
+   */
   constexpr UInt32 _recursiveSlot = 1023;
+
+  /**
+   * IA32 page size.
+   */
   constexpr UInt32 _pageSize = 4096;
+
+  /**
+   * Size of the identity-mapped window during bootstrap.
+   */
   constexpr UInt32 _identityWindowBytes = 16 * 1024 * 1024;
 
   /**
@@ -224,6 +246,7 @@ void InitializeKernelLogging() {
   VGAConsole::Initialize();
 
   static Writer* writerArray[1];
+
   writerArray[0] = &VGAConsole::GetWriter();
 
   Logger::Initialize(LogLevel::Trace, writerArray, 1);

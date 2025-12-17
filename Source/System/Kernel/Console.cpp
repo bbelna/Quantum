@@ -36,7 +36,7 @@ namespace Quantum::System::Kernel {
 
       char buffer[16] = {};
       Size idx = 0;
-      const char* digits = "0123456789ABCDEF";
+      CString digits = "0123456789ABCDEF";
 
       do {
         buffer[idx++] = digits[value % base];
@@ -65,7 +65,7 @@ namespace Quantum::System::Kernel {
         return;
       }
 
-      for (const char* p = format; *p != '\0'; ++p) {
+      for (CString p = format; *p != '\0'; ++p) {
         if (*p != '%') {
           ConsoleDriver::WriteCharacter(*p);
 
@@ -80,7 +80,7 @@ namespace Quantum::System::Kernel {
 
         switch (*p) {
           case 's': {
-            const char* str = VARIABLE_ARGUMENTS(args, const char*);
+            CString str = VARIABLE_ARGUMENTS(args, CString);
 
             ConsoleDriver::Write(str ? str : "(null)");
 

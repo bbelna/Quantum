@@ -8,8 +8,8 @@
 
 #include <Logger.hpp>
 #include <Task.hpp>
-#include <Types/Logging/Level.hpp>
 #include <Types/Primitives.hpp>
+#include <Types/Logging/LogLevel.hpp>
 
 #if defined(QUANTUM_ARCH_IA32)
   #include <Arch/IA32/Task.hpp>
@@ -21,7 +21,7 @@
 #endif
 
 namespace Quantum::System::Kernel {
-  using LogLevel = Types::Logging::Level;
+  using LogLevel = Types::Logging::LogLevel;
 
   void Task::Initialize() {
     ArchTask::Initialize();

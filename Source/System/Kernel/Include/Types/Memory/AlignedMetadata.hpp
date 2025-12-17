@@ -1,3 +1,11 @@
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Include/Types/Memory/AlignedMetadata.hpp
+ * Metadata stored immediately before an aligned payload.
+ */
+
 #pragma once
 
 #include <Types/Primitives.hpp>

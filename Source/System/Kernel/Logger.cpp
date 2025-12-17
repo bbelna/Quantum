@@ -6,24 +6,17 @@
  * Kernel logging and tracing interface.
  */
 
-#include <Helpers/CStringHelper.hpp>
 #include <Logger.hpp>
-#include <Types/Logging/Level.hpp>
-#include <Types/Primitives.hpp>
-#include <Types/String.hpp>
-#include <Types/Writer.hpp>
+#include <Helpers/CStringHelper.hpp>
 
 namespace Quantum::System::Kernel {
-  using CStringHelper = Helpers::CStringHelper;
-  using Level = Types::Logging::Level;
-  using String = Types::String;
-  using Writer = Types::Writer;
+  using Helpers::CStringHelper;
 
   namespace {
     /**
      * The minimum log level.
      */
-    Level _minimumLevel = Level::Trace;
+    LogLevel _minimumLevel = LogLevel::Trace;
 
     /**
      * The array of writers.
@@ -37,7 +30,7 @@ namespace Quantum::System::Kernel {
   };
 
   void Logger::Initialize(
-    Level minimumLevel,
+    LogLevel minimumLevel,
     Writer** writers,
     Size writerCount
   ) {
@@ -46,7 +39,7 @@ namespace Quantum::System::Kernel {
     _writerCount = writerCount;
   }
 
-  void Logger::Write(Level level, String message) {
+  void Logger::Write(LogLevel level, String message) {
     if (level < _minimumLevel) {
       return;
     }
@@ -56,7 +49,7 @@ namespace Quantum::System::Kernel {
     }
   }
 
-  void Logger::WriteFormatted(Level level, String formattedMessage, ...) {
+  void Logger::WriteFormatted(LogLevel level, String formattedMessage, ...) {
     VariableArgumentsList args;
 
     if (level >= _minimumLevel) {

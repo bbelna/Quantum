@@ -6,22 +6,22 @@
  * IA32 paging and memory functions.
  */
 
-#include <Arch/IA32/LinkerSymbols.hpp>
-#include <Arch/IA32/CPU.hpp>
-#include <Arch/IA32/Memory.hpp>
 #include <Kernel.hpp>
 #include <Logger.hpp>
-#include <Types/Boot/BootInfo.hpp>
-#include <Types/Logging/Level.hpp>
+#include <Prelude.hpp>
+#include <Arch/IA32/CPU.hpp>
+#include <Arch/IA32/LinkerSymbols.hpp>
+#include <Arch/IA32/Memory.hpp>
 #include <Types/Primitives.hpp>
+#include <Types/Boot/BootInfo.hpp>
+#include <Types/Logging/LogLevel.hpp>
 #include <Types/Memory/MemoryRegion.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  namespace QK = Quantum::System::Kernel;
-
-  using BootInfo = QK::Types::Boot::BootInfo;
-  using LogLevel = QK::Types::Logging::Level;
-  using MemoryRegion = QK::Types::Memory::MemoryRegion;
+  using Types::Memory::PhysicalAllocatorState;
+  using Kernel::Types::Boot::BootInfo;
+  using Kernel::Types::Logging::LogLevel;
+  using Kernel::Types::Memory::MemoryRegion;
 
   namespace {
     /**
@@ -848,7 +848,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     return table[tableIndex];
   }
 
-  Memory::PhysicalAllocatorState Memory::GetPhysicalAllocatorState() {
+  PhysicalAllocatorState Memory::GetPhysicalAllocatorState() {
     PhysicalAllocatorState state{};
 
     state.TotalPages = _pageCount;

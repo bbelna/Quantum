@@ -8,8 +8,8 @@
 
 #pragma once
 
-#include <Types/Interrupts/InterruptContext.hpp>
 #include <Types/Primitives.hpp>
+#include <Types/Interrupts/InterruptContext.hpp>
 
 namespace Quantum::System::Kernel {
   using InterruptContext = Types::Interrupts::InterruptContext;

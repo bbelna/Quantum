@@ -8,47 +8,14 @@
 
 #pragma once
 
-#include <Arch/IA32/Types/IDT/InterruptContext.hpp>
+#include <Prelude.hpp>
 #include <Task.hpp>
+#include <Arch/IA32/Types/Tasks/TaskControlBlock.hpp>
 #include <Types/Primitives.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using TaskContext = Types::IDT::InterruptContext;
-
-  /**
-   * Task control block for IA32 architecture.
-   */
-  struct TaskControlBlock {
-    /**
-     * Unique task identifier.
-     */
-    UInt32 Id;
-
-    /**
-     * Current task state.
-     */
-    TaskState State;
-
-    /**
-     * Pointer to the saved interrupt context for the task.
-     */
-    TaskContext* Context;
-
-    /**
-     * Base address of the task's kernel stack.
-     */
-    void* StackBase;
-
-    /**
-     * Size of the task's kernel stack in bytes.
-     */
-    UInt32 StackSize;
-
-    /**
-     * Pointer to the next task in the scheduler queue.
-     */
-    TaskControlBlock* Next;
-  };
+  using namespace Kernel::Types::Tasks;
+  using namespace Types::Tasks;
 
   /**
    * Low-level task management for IA32.
@@ -83,7 +50,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
       /**
        * Gets the currently executing task.
-       * @return Pointer to the current task control block.
+       * @return
+       *   Pointer to the current task control block.
        */
       static TaskControlBlock* GetCurrent();
 
@@ -99,6 +67,10 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
       /**
        * Scheduler tick handler.
+       * @param context
+       *   Current interrupt context.
+       * @return
+       *   Updated task context to switch to.
        */
       static TaskContext* Tick(TaskContext& context);
   };

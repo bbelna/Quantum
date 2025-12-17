@@ -9,17 +9,21 @@
 #include <Kernel.hpp>
 #include <Logger.hpp>
 #include <Memory.hpp>
-#include <Types/Logging/Level.hpp>
 #include <Types/Primitives.hpp>
+#include <Types/Logging/LogLevel.hpp>
 #include <Types/Memory/FreeBlock.hpp>
 #include <Types/Memory/AlignedMetadata.hpp>
 
 #if defined(QUANTUM_ARCH_IA32)
-  #include <Arch/IA32/Memory.hpp>
   #include <Arch/IA32/CPU.hpp>
+  #include <Arch/IA32/Memory.hpp>
+  #include <Arch/IA32/Prelude.hpp>
+  #include <Arch/IA32/Types/Memory/PhysicalAllocatorState.hpp>
 
-  using ArchMemory = Quantum::System::Kernel::Arch::IA32::Memory;
-  using ArchCPU = Quantum::System::Kernel::Arch::IA32::CPU;
+  using ArchPhysicalAllocatorState
+    = KernelIA32::Types::Memory::PhysicalAllocatorState;
+  using ArchMemory = KernelIA32::Memory;
+  using ArchCPU = KernelIA32::CPU;
 #else
   #error "No architecture selected for memory manager"
 #endif
@@ -27,7 +31,7 @@
 namespace Quantum::System::Kernel {
   using AlignedMetadata = Types::Memory::AlignedMetadata;
   using FreeBlock = Types::Memory::FreeBlock;
-  using LogLevel = Types::Logging::Level;
+  using LogLevel = Types::Logging::LogLevel;
 
   namespace {
     /**
@@ -570,7 +574,7 @@ namespace Quantum::System::Kernel {
   void Memory::Initialize(UInt32 bootInfoPhysicalAddress) {
     ArchMemory::InitializePaging(bootInfoPhysicalAddress);
 
-    ArchMemory::PhysicalAllocatorState physicalState
+    ArchPhysicalAllocatorState physicalState
       = ArchMemory::GetPhysicalAllocatorState();
     UInt64 totalBytes
       = static_cast<UInt64>(physicalState.TotalPages) * _heapPageSize;

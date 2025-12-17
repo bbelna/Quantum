@@ -6,21 +6,20 @@
  * IA32 task context and control structures.
  */
 
-#include <Arch/IA32/CPU.hpp>
-#include <Arch/IA32/Task.hpp>
 #include <CPU.hpp>
 #include <Kernel.hpp>
 #include <Logger.hpp>
 #include <Memory.hpp>
-#include <Types/Interrupts/InterruptContext.hpp>
-#include <Types/Logging/Level.hpp>
+#include <Prelude.hpp>
+#include <Arch/IA32/CPU.hpp>
+#include <Arch/IA32/Task.hpp>
 #include <Types/Primitives.hpp>
+#include <Types/Interrupts/InterruptContext.hpp>
+#include <Types/Logging/LogLevel.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  namespace QK = Quantum::System::Kernel;
-
-  using LogLevel = QK::Types::Logging::Level;
-  using InterruptContext = Types::IDT::InterruptContext;
+  using Kernel::Types::Logging::LogLevel;
+  using Types::IDT::InterruptContext;
 
   namespace {
     /**

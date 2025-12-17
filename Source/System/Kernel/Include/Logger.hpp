@@ -8,21 +8,21 @@
 
 #pragma once
 
-#include <Types/Logging/Level.hpp>
 #include <Types/Primitives.hpp>
 #include <Types/String.hpp>
 #include <Types/Writer.hpp>
+#include <Types/Logging/LogLevel.hpp>
 
 namespace Quantum::System::Kernel {
+  using Types::Logging::LogLevel;
+  using Types::String;
+  using Types::Writer;
+
   /**
    * The kernel logger class.
    */
   class Logger {
     public:
-      using Level = Types::Logging::Level;
-      using String = Types::String;
-      using Writer = Types::Writer;
-
       /**
        * Initializes the logger with the given sinks and minimum log level.
        * @param minimumLevel
@@ -33,7 +33,7 @@ namespace Quantum::System::Kernel {
        *   Number of writers.
        */
       static void Initialize(
-        Level minimumLevel,
+        LogLevel minimumLevel,
         Writer** writers,
         Size writerCount
       );
@@ -45,7 +45,7 @@ namespace Quantum::System::Kernel {
        * @param message
        *   The message to write.
        */
-      static void Write(Level level, String message);
+      static void Write(LogLevel level, String message);
 
       /**
        * Writes a formatted message to the kernel log.
@@ -56,6 +56,6 @@ namespace Quantum::System::Kernel {
        * @param ...
        *   Format arguments.
        */
-      static void WriteFormatted(Level level, String formattedMessage, ...);
+      static void WriteFormatted(LogLevel level, String formattedMessage, ...);
   };
 }

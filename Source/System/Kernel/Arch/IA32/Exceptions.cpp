@@ -6,21 +6,18 @@
  * IA32 exception handler registration.
  */
 
+#include <Interrupts.hpp>
+#include <Kernel.hpp>
+#include <Logger.hpp>
+#include <Prelude.hpp>
 #include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/Exceptions.hpp>
 #include <Arch/IA32/Memory.hpp>
 #include <Arch/IA32/Types/IDT/InterruptContext.hpp>
-#include <Interrupts.hpp>
-#include <Kernel.hpp>
-#include <Logger.hpp>
-#include <Types/Logging/Level.hpp>
+#include <Types/Logging/LogLevel.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  namespace QK = Quantum::System::Kernel;
-
-  using CPU = CPU;
-  using InterruptContext = Types::IDT::InterruptContext;
-  using LogLevel = QK::Types::Logging::Level;
+  using LogLevel = Kernel::Types::Logging::LogLevel;
 
   namespace {
     /**

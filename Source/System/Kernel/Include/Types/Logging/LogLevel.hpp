@@ -2,7 +2,7 @@
  * Quantum
  * (c) 2025 Brandon Belna - MIT License
  *
- * System/Kernel/Include/Types/Logging/Level.hpp
+ * System/Kernel/Include/Types/Logging/LogLevel.hpp
  * Log level enumeration.
  */
 
@@ -12,7 +12,7 @@ namespace Quantum::System::Kernel::Types::Logging {
   /**
    * Log levels.
    */
-  enum Level {
+  enum LogLevel {
     Verbose,
     Debug,
     Trace,
