@@ -9,10 +9,12 @@
 #pragma once
 
 #include <Arch/IA32/Types/Memory/PhysicalAllocatorState.hpp>
+#include <Arch/IA32/Types/IDT/InterruptContext.hpp>
 #include <Types/Primitives.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   using Types::Memory::PhysicalAllocatorState;
+  using Types::IDT::InterruptContext;
 
   /**
    * IA32 paging and memory functions.
@@ -24,12 +26,12 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * higher-half. Identity mappings remain available for now to ease the
        * transition.
        */
-      static constexpr UInt32 kernelVirtualBase = 0xC0000000;
+      static constexpr UInt32 KernelVirtualBase = 0xC0000000;
 
       /**
        * Page-directory slot reserved for the recursive/self map.
        */
-      static constexpr UInt32 recursiveSlot = 1023;
+      static constexpr UInt32 RecursiveSlot = 1023;
 
       /**
        * Initializes paging with identity mappings based on the boot memory map.
@@ -167,5 +169,24 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        *   State of the physical allocator.
        */
       static PhysicalAllocatorState GetPhysicalAllocatorState();
+
+      /**
+       * Handles a page fault. Currently a stub that logs fault information and
+       * returns false to signal an unhandled fault; future implementations can
+       * resolve faults (e.g., demand paging).
+       * @param context
+       *   Interrupt context at the time of the fault.
+       * @param faultAddress
+       *   Address that triggered the fault (CR2).
+       * @param errorCode
+       *   Page-fault error code from the CPU.
+       * @return
+       *   True if the fault was handled; false if it should escalate.
+       */
+      static bool HandlePageFault(
+        const InterruptContext& context,
+        UInt32 faultAddress,
+        UInt32 errorCode
+      );
   };
 }

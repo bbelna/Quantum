@@ -78,11 +78,11 @@ KernelName        db 'K','E','R','N','E','L',' ',' ','Q','X',' '
 
 ; E820 memory map buffer (BootInfo layout)
 BootInfoPhysical        equ 0x8000
-BootInfoTotalBytes      equ 8 + (32 * 20)           ; entryCount/res + 32 entries
-MemMapEntriesOffset     equ BootInfoPhysical + 8    ; after entryCount/reserved
+BootInfoTotalBytes      equ 8 + (32 * 20)         ; entryCount/res + 32 entries
+MemMapEntriesOffset     equ BootInfoPhysical + 8  ; after entryCount/reserved
 MemMapEntrySize         equ 20
 MemMapMaxEntries        equ 32
-MemMapEntryCount        equ BootInfoPhysical        ; dword
+MemMapEntryCount        equ BootInfoPhysical      ; dword
 
 NoKernelMsg        db "KERNEL.QX not found!", 0
 DiskErrorMsg       db "Disk read error!", 0

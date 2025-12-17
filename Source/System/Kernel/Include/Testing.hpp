@@ -14,8 +14,8 @@
 #include <Types/Tests/TestFunction.hpp>
 
 namespace Quantum::System::Kernel {
-  using TestCase = Types::Tests::TestCase;
-  using TestFunction = Types::Tests::TestFunction;
+  using Types::Tests::TestCase;
+  using Types::Tests::TestFunction;
 
   /**
    * Kernel test harness.

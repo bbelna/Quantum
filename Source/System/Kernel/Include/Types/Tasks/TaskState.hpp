@@ -12,7 +12,7 @@ namespace Quantum::System::Kernel::Types::Tasks {
   /**
    * Task state enumeration.
    */
-  enum class TaskState : UInt8 {
+  enum TaskState {
     /**
      * Task is ready to run.
      */

@@ -17,7 +17,10 @@ Install the stuff you need in WSL:
 sudo apt update
 sudo apt install -y build-essential nasm mtools dosfstools
 ```
-You can then, in a normal non-WSL PowerShell, run `.\Build` to build. If successful, a floppy disk image will be outputted to `Build\Quantum.img`.
+
+Then update `.\Tools\Build.ps1` with the project path on your Windows machine and from within WSL.
+
+Now you're all set up. In a normal non-WSL PowerShell, run `.\Build` to build. If successful, a floppy disk image will be outputted to `Build\Quantum.img`.
 
 To build a version that performs kernel testing, run `.\Build -t`.
 

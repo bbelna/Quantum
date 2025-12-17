@@ -10,34 +10,11 @@
 
 #include <Types/Primitives.hpp>
 #include <Types/Interrupts/InterruptContext.hpp>
+#include <Types/Tasks/TaskState.hpp>
 
 namespace Quantum::System::Kernel {
-  using InterruptContext = Types::Interrupts::InterruptContext;
-
-  /**
-   * Task state enumeration.
-   */
-  enum class TaskState : UInt8 {
-    /**
-     * Task is ready to run.
-     */
-    Ready = 0,
-
-    /**
-     * Task is currently executing.
-     */
-    Running = 1,
-
-    /**
-     * Task is blocked waiting for an event.
-     */
-    Blocked = 2,
-
-    /**
-     * Task has terminated.
-     */
-    Terminated = 3
-  };
+  using Types::Interrupts::InterruptContext;
+  using Types::Tasks::TaskState;
 
   /**
    * Forward declaration of architecture-specific task control block.

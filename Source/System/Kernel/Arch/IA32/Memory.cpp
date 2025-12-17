@@ -15,6 +15,7 @@
 #include <Types/Primitives.hpp>
 #include <Types/Boot/BootInfo.hpp>
 #include <Types/Logging/LogLevel.hpp>
+#include <Arch/IA32/Types/IDT/InterruptContext.hpp>
 #include <Types/Memory/MemoryRegion.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
@@ -22,6 +23,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   using Kernel::Types::Boot::BootInfo;
   using Kernel::Types::Logging::LogLevel;
   using Kernel::Types::Memory::MemoryRegion;
+  using Types::IDT::InterruptContext;
 
   namespace {
     /**
@@ -166,7 +168,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       UInt32 kernelPhysicalBase = reinterpret_cast<UInt32>(&__phys_start);
       UInt32 kernelVirtualBase = reinterpret_cast<UInt32>(&__virt_start);
 
-      if (virtualAddress >= Memory::kernelVirtualBase) {
+      if (virtualAddress >= Memory::KernelVirtualBase) {
         UInt32 offset = virtualAddress - kernelVirtualBase;
 
         return kernelPhysicalBase + offset;
@@ -660,7 +662,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
     for (UInt32 offset = 0; offset < kernelSizeBytes; offset += _pageSize) {
       UInt32 physicalAddress = kernelPhysicalStart + offset;
-      UInt32 virtualAddress = kernelVirtualBase + offset;
+      UInt32 virtualAddress = KernelVirtualBase + offset;
 
       MapPage(virtualAddress, physicalAddress, true, false, true);
     }
@@ -670,7 +672,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       reinterpret_cast<UInt32>(_pageDirectory)
     );
 
-    _pageDirectory[Memory::recursiveSlot]
+    _pageDirectory[Memory::RecursiveSlot]
       = pageDirectoryPhysical | _pagePresent | _pageWrite;
 
     // load directory and enable paging,
@@ -856,5 +858,44 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     state.FreePages = _pageCount - _usedPages;
 
     return state;
+  }
+
+  bool Memory::HandlePageFault(
+    const InterruptContext& context,
+    UInt32 faultAddress,
+    UInt32 errorCode
+  ) {
+    CString accessType = (errorCode & 0x2) ? "write" : "read";
+    CString mode = (errorCode & 0x4) ? "user" : "kernel";
+    bool presentViolation = (errorCode & 0x1) != 0;
+    bool reservedBit = (errorCode & 0x8) != 0;
+    bool instructionFetch = (errorCode & 0x10) != 0;
+
+    UInt32 pde = GetPageDirectoryEntry(faultAddress);
+    UInt32 pte = GetPageTableEntry(faultAddress);
+
+    Logger::WriteFormatted(
+      LogLevel::Error,
+      "Page fault: addr=%p (%s %s) err=%p present=%s reserved=%s instr=%s",
+      faultAddress,
+      accessType,
+      mode,
+      errorCode,
+      presentViolation ? "yes" : "no",
+      reservedBit ? "yes" : "no",
+      instructionFetch ? "yes" : "no"
+    );
+    Logger::WriteFormatted(
+      LogLevel::Error,
+      "PF context: EIP=%p ESP=%p CR2=%p PDE=%p PTE=%p",
+      context.EIP,
+      context.ESP,
+      faultAddress,
+      pde,
+      pte
+    );
+
+    // stub: escalate for now; future VM/pager can service demand faults
+    return false;
   }
 }

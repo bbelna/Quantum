@@ -4,16 +4,19 @@ param(
 )
 
 # Paths
+$ProjectPath = "D:\Development\Git\Quantum"
 $ProjectPathWSL = "/mnt/d/Development/Git/Quantum"
-$ImageWinPath   = "D:\Development\Git\Quantum\Build\Quantum.img"
+$ImageWinPath   = $ProjectPath + "\Build\Quantum.img"
 
 Write-Host "=== Building Quantum (WSL) ==="
 
 # Build inside WSL
 $makeCmd = "cd $ProjectPathWSL && "
+
 if ($Tests) {
     $makeCmd += "export EXTRA_CFLAGS32='-DKERNEL_TESTS' && "
 }
+
 $makeCmd += "make clean && make all"
 
 wsl -e bash -lc $makeCmd
@@ -26,7 +29,24 @@ Write-Host "`n[OK] Build completed."
 
 # Optional run
 if ($Run) {
-    .\Debug
+    $ToolsPath = Join-Path $ProjectPath "Tools"
+
+    $originalLocation = Get-Location
+    $switched = $false
+
+    try {
+        if ($originalLocation.Path -ne $ToolsPath) {
+            Push-Location $ToolsPath
+            $switched = $true
+        }
+
+        .\Debug
+    }
+    finally {
+        if ($switched) {
+            Pop-Location
+        }
+    }
 }
 else {
     Write-Host "`nUse --run to automatically start QEMU."

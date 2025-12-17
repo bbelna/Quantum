@@ -13,12 +13,12 @@ namespace Quantum::System::Kernel::Types::Logging {
    * Log levels.
    */
   enum LogLevel {
-    Verbose,
-    Debug,
-    Trace,
-    Info,
-    Warning,
-    Error,
-    Panic
+    Verbose = 0,
+    Debug = 100,
+    Trace = 200,
+    Info = 300,
+    Warning = 400,
+    Error = 500,
+    Panic = 600
   };
 }

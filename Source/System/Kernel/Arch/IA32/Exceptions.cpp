@@ -84,44 +84,22 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       return &context;
     }
 
-    void DumpPageFaultDetails(UInt32 faultAddress, UInt32 errorCode) {
-      const char* accessType = (errorCode & 0x2) ? "write" : "read";
-      const char* mode = (errorCode & 0x4) ? "user" : "kernel";
-      bool presentViolation = (errorCode & 0x1) != 0;
-      bool reservedBit = (errorCode & 0x8) != 0;
-      bool instructionFetch = (errorCode & 0x10) != 0;
-
-      UInt32 pde = Memory::GetPageDirectoryEntry(faultAddress);
-      UInt32 pte = Memory::GetPageTableEntry(faultAddress);
-
-      Logger::WriteFormatted(
-        LogLevel::Trace,
-        "Page fault at %p (%s %s) err=%p present=%s reserved=%s instr=%s",
-        faultAddress,
-        accessType,
-        mode,
-        errorCode,
-        presentViolation ? "yes" : "no",
-        reservedBit ? "yes" : "no",
-        instructionFetch ? "yes" : "no"
-      );
-      Logger::WriteFormatted(
-        LogLevel::Trace,
-        "PDE=%p PTE=%p",
-        pde,
-        pte
-      );
-    }
-
     static InterruptContext* OnPageFault(InterruptContext& context) {
       UInt32 faultAddress;
 
       asm volatile("mov %%cr2, %0" : "=r"(faultAddress));
 
       DumpContext(context, faultAddress);
-      DumpPageFaultDetails(faultAddress, context.ErrorCode);
 
-      PANIC("Page fault");
+      bool handled = Memory::HandlePageFault(
+        context,
+        faultAddress,
+        context.ErrorCode
+      );
+
+      if (!handled) {
+        PANIC("Page fault");
+      }
 
       return &context;
     }

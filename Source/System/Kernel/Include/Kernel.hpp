@@ -17,7 +17,7 @@
   )
 
 namespace Quantum::System::Kernel {
-  using String = Types::String;
+  using Types::String;
 
   /**
    * Initializes the kernel.
