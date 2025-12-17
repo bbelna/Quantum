@@ -34,7 +34,7 @@ namespace Quantum::System::Kernel {
     }
   }
 
-  void Kernel::Initialize(UInt32 bootInfoPhysicalAddress) {
+  void Initialize(UInt32 bootInfoPhysicalAddress) {
     Memory::Initialize(bootInfoPhysicalAddress);
     Interrupts::Initialize();
     Task::Initialize();
@@ -48,7 +48,7 @@ namespace Quantum::System::Kernel {
     Task::Yield();
   }
 
-  void Kernel::Panic(
+  void Panic(
     String message,
     String file,
     UInt32 line,

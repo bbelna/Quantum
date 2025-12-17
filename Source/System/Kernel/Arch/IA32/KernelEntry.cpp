@@ -197,7 +197,7 @@ extern "C" void StartKernel(UInt32 bootInfoPhysicalAddress) {
   ClearBSS();
   InitializeKernelLogging();
 
-  Kernel::Initialize(bootInfoPhysicalAddress);
+  Initialize(bootInfoPhysicalAddress);
 
   PANIC("Returned from Kernel::Initialize()");
 }
