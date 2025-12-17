@@ -18,6 +18,8 @@
 namespace Quantum::System::Kernel::Arch::IA32 {
   using namespace Types::IDT;
 
+  using InterruptHandler
+    = Quantum::System::Kernel::Types::Interrupts::InterruptHandler;
   using LogLevel = Quantum::System::Kernel::Types::Logging::Level;
   using PIC = Drivers::PIC;
 

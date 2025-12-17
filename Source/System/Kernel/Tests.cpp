@@ -9,8 +9,8 @@
 #include <Logger.hpp>
 #include <Tests.hpp>
 #include <Types/Logging/Level.hpp>
-#include <Types/Primitives.hpp>
 #include <Tests/MemoryTests.hpp>
+#include <Types/Primitives.hpp>
 #include <Tests/TaskTests.hpp>
 
 namespace Quantum::System::Kernel {
@@ -68,7 +68,7 @@ namespace Quantum::System::Kernel {
     }
   }
 
-  void Tests::Register(CString name, TestFunc func) {
+  void Tests::Register(CString name, TestFunction func) {
     if (_testCount < _maxTests) {
       _tests[_testCount++] = TestCase{ name, func };
     } else {

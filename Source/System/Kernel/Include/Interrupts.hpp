@@ -8,23 +8,17 @@
 
 #pragma once
 
+#include <Types/Interrupts/InterruptHandler.hpp>
 #include <Types/Primitives.hpp>
 
-#if defined(QUANTUM_ARCH_IA32)
-  #include <Arch/IA32/Types/IDT/InterruptContext.hpp>
-
-  using InterruptContext
-    = Quantum::System::Kernel::Arch::IA32::Types::IDT::InterruptContext;
-#endif
-
 namespace Quantum::System::Kernel {
-  using InterruptHandler = void(*)(InterruptContext& ctx);
-
   /**
    * Kernel interrupt controller for registering handlers.
    */
   class Interrupts {
     public:
+      using InterruptHandler = Types::Interrupts::InterruptHandler;
+
       /**
        * Initializes the kernel interrupt subsystem.
        */

@@ -10,20 +10,12 @@
 
 #include <Types/Primitives.hpp>
 #include <Types/String.hpp>
+#include <Types/Tests/TestCase.hpp>
+#include <Types/Tests/TestFunction.hpp>
 
 namespace Quantum::System::Kernel {
-  /**
-   * Signature for kernel test functions.
-   */
-  using TestFunc = bool (*)();
-
-  /**
-   * Test case descriptor.
-   */
-  struct TestCase {
-    const char* Name;
-    TestFunc Func;
-  };
+  using TestCase = Types::Tests::TestCase;
+  using TestFunction = Types::Tests::TestFunction;
 
   /**
    * Kernel test harness.
@@ -37,7 +29,7 @@ namespace Quantum::System::Kernel {
        * @param func
        *   Test function returning true on success.
        */
-      static void Register(const char* name, TestFunc func);
+      static void Register(CString name, TestFunction func);
 
       /**
        * Runs all registered tests and logs results.

@@ -11,7 +11,10 @@
 #include <Types/Primitives.hpp>
 #include <Types/String.hpp>
 
-#define PANIC(msg) ::Quantum::System::Kernel::Kernel::Panic((msg), __FILE__, __LINE__, __FUNCTION__)
+#define PANIC(msg) \
+  ::Quantum::System::Kernel::Kernel::Panic(\
+    (msg), __FILE__, __LINE__, __FUNCTION__\
+  )
 
 namespace Quantum::System::Kernel {
   /**

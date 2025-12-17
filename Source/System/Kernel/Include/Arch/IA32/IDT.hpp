@@ -22,7 +22,9 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     public:
       using IDTDescriptor = Types::IDT::IDTDescriptor;
       using IDTEntry = Types::IDT::IDTEntry;
-      using InterruptHandler = Quantum::System::Kernel::InterruptHandler;
+      using InterruptContext = Types::IDT::InterruptContext;
+      using InterruptHandler
+        = Quantum::System::Kernel::Types::Interrupts::InterruptHandler;
 
       /**
        * Initializes the IA32 Interrupt Descriptor Table (IDT).
