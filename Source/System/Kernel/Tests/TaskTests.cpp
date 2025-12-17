@@ -7,10 +7,10 @@
  */
 
 #include <Task.hpp>
-#include <Tests.hpp>
+#include <Testing.hpp>
 #include <Tests/TaskTests.hpp>
 
-namespace Quantum::System::Kernel {
+namespace Quantum::System::Kernel::Tests {
   namespace {
     /**
      * Flag to stop long-running spinner tasks used for preemption testing.
@@ -83,7 +83,8 @@ namespace Quantum::System::Kernel {
 
     /**
      * Verifies cooperative yields between two tasks.
-     * @return True if the test passes.
+     * @return
+     *   True if the test passes.
      */
     bool TestTaskYield() {
       taskCounter = 0;
@@ -104,6 +105,8 @@ namespace Quantum::System::Kernel {
     /**
      * Verifies that timer-driven preemption switches between busy tasks even
      * without cooperative yields.
+     * @return
+     *   True if the test passes.
      */
     bool TestTaskPreemption() {
       preemptCounterA = 0;
@@ -144,7 +147,7 @@ namespace Quantum::System::Kernel {
   }
 
   void TaskTests::RegisterTests() {
-    Tests::Register("Task yield scheduling", TestTaskYield);
-    Tests::Register("Task preemption scheduling", TestTaskPreemption);
+    Testing::Register("Task yield scheduling", TestTaskYield);
+    Testing::Register("Task preemption scheduling", TestTaskPreemption);
   }
 }

@@ -7,14 +7,15 @@
  */
 
 #include <Memory.hpp>
-#include <Tests.hpp>
+#include <Testing.hpp>
 #include <Tests/MemoryTests.hpp>
 
-namespace Quantum::System::Kernel {
+namespace Quantum::System::Kernel::Tests {
   namespace {
     /**
      * Verifies basic allocate/free round-trip.
-     * @return True if the test passes.
+     * @return
+     *   True if the test passes.
      */
     bool TestMemoryAllocation() {
       void* a = Memory::Allocate(64);
@@ -31,6 +32,6 @@ namespace Quantum::System::Kernel {
   }
 
   void MemoryTests::RegisterTests() {
-    Tests::Register("Memory alloc/free", TestMemoryAllocation);
+    Testing::Register("Memory alloc/free", TestMemoryAllocation);
   }
 }

@@ -14,7 +14,7 @@
 #include <Logger.hpp>
 #include <Memory.hpp>
 #include <Task.hpp>
-#include <Tests.hpp>
+#include <Testing.hpp>
 #include <Types/Logging/Level.hpp>
 #include <Types/Primitives.hpp>
 
@@ -27,8 +27,8 @@ namespace Quantum::System::Kernel {
      * Kernel test runner task entry point.
      */
     void KernelTestRunner() {
-      Tests::RegisterBuiltins();
-      Tests::RunAll();
+      Testing::RegisterBuiltins();
+      Testing::RunAll();
       Logger::Write(LogLevel::Info, "Kernel tests task finished");
       Task::Exit();
     }

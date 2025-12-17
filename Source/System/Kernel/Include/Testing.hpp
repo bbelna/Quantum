@@ -20,7 +20,7 @@ namespace Quantum::System::Kernel {
   /**
    * Kernel test harness.
    */
-  class Tests {
+  class Testing {
     public:
       /**
        * Registers a test by name and function.
@@ -76,4 +76,4 @@ namespace Quantum::System::Kernel {
 }
 
 #define TEST_ASSERT(cond, msg) \
-  ::Quantum::System::Kernel::Tests::Assert((cond), (msg), __FILE__, __LINE__)
+  ::Quantum::System::Kernel::Testing::Assert((cond), (msg), __FILE__, __LINE__)

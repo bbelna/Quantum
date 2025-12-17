@@ -8,7 +8,7 @@
 
 #pragma once
 
-namespace Quantum::System::Kernel {
+namespace Quantum::System::Kernel::Tests {
   /**
    * Registers memory-related kernel tests.
    */

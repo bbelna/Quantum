@@ -132,6 +132,8 @@ namespace {
 /**
  * Enables paging using the bootstrap page tables, then jumps to the higher-half
  * entry point with a higher-half stack.
+ * @param bootInfoPhysicalAddress
+ *   Physical address of the boot info structure.
  */
 extern "C" [[noreturn]] [[gnu::section(".text.start")]]
 void EnablePagingAndJump(

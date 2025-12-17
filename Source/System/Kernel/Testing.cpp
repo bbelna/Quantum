@@ -7,13 +7,15 @@
  */
 
 #include <Logger.hpp>
-#include <Tests.hpp>
+#include <Testing.hpp>
 #include <Types/Logging/Level.hpp>
 #include <Tests/MemoryTests.hpp>
 #include <Types/Primitives.hpp>
 #include <Tests/TaskTests.hpp>
 
 namespace Quantum::System::Kernel {
+  using namespace Tests;
+
   using LogLevel = Types::Logging::Level;
 
   namespace {
@@ -68,7 +70,7 @@ namespace Quantum::System::Kernel {
     }
   }
 
-  void Tests::Register(CString name, TestFunction func) {
+  void Testing::Register(CString name, TestFunction func) {
     if (_testCount < _maxTests) {
       _tests[_testCount++] = TestCase{ name, func };
     } else {
@@ -76,7 +78,7 @@ namespace Quantum::System::Kernel {
     }
   }
 
-  void Tests::Assert(
+  void Testing::Assert(
     bool condition,
     CString message,
     CString file,
@@ -95,7 +97,7 @@ namespace Quantum::System::Kernel {
     }
   }
 
-  void Tests::RunAll() {
+  void Testing::RunAll() {
     if (_testCount > 0) {
       LogHeader();
 
@@ -121,15 +123,15 @@ namespace Quantum::System::Kernel {
     }
   }
 
-  UInt32 Tests::Passed() {
+  UInt32 Testing::Passed() {
     return _testsPassed;
   }
 
-  UInt32 Tests::Failed() {
+  UInt32 Testing::Failed() {
     return _testsFailed;
   }
 
-  void Tests::RegisterBuiltins() {
+  void Testing::RegisterBuiltins() {
     MemoryTests::RegisterTests();
     TaskTests::RegisterTests();
   }
