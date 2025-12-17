@@ -16,5 +16,7 @@ namespace Quantum::System::Kernel::Types::Interrupts {
   #if defined(QUANTUM_ARCH_IA32)
     using InterruptContext
       = Quantum::System::Kernel::Arch::IA32::Types::IDT::InterruptContext;
+  #else
+    using InterruptContext = void;
   #endif
 }

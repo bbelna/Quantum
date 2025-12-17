@@ -73,14 +73,18 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
     }
 
-    static void OnDivideByZero(InterruptContext& context) {
+    static InterruptContext* OnDivideByZero(InterruptContext& context) {
       DumpContext(context);
       PANIC("Divide by zero fault");
+
+      return &context;
     }
 
-    static void OnGeneralProtection(InterruptContext& context) {
+    static InterruptContext* OnGeneralProtection(InterruptContext& context) {
       DumpContext(context);
       PANIC("General protection fault");
+
+      return &context;
     }
 
     void DumpPageFaultDetails(UInt32 faultAddress, UInt32 errorCode) {
@@ -112,7 +116,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       );
     }
 
-    static void OnPageFault(InterruptContext& context) {
+    static InterruptContext* OnPageFault(InterruptContext& context) {
       UInt32 faultAddress;
 
       asm volatile("mov %%cr2, %0" : "=r"(faultAddress));
@@ -121,6 +125,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       DumpPageFaultDetails(faultAddress, context.ErrorCode);
 
       PANIC("Page fault");
+
+      return &context;
     }
   }
 

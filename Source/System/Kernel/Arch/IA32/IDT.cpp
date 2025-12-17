@@ -161,7 +161,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     _handlerTable[vector] = handler;
   }
 
-  void IDT::DispatchInterrupt(InterruptContext* ctx) {
+  InterruptContext* IDT::DispatchInterrupt(InterruptContext* ctx) {
     UInt8 vector = static_cast<UInt8>(ctx->Vector);
     bool isIRQ = vector >= _irqBase && vector < (_irqBase + _irqCount);
     bool spurious
@@ -170,9 +170,14 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         vector == static_cast<UInt8>(_irqBase + 15)
       );
     bool handled = _handlerTable[vector] != nullptr;
+    InterruptContext* nextContext = ctx;
 
     if (handled) {
-      _handlerTable[vector](*ctx);
+      InterruptContext* maybeNext = _handlerTable[vector](*ctx);
+
+      if (maybeNext != nullptr) {
+        nextContext = maybeNext;
+      }
     } else if (isIRQ && !spurious) {
       Logger::Write(LogLevel::Error, "Unhandled IRQ");
     } else {
@@ -183,9 +188,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     if (isIRQ) {
       PIC::SendEOI(vector - _irqBase);
     }
+
+    return nextContext;
   }
 
-  extern "C" void IDTExceptionHandler(InterruptContext* ctx) {
-    IDT::DispatchInterrupt(ctx);
+  extern "C" InterruptContext* IDTExceptionHandler(InterruptContext* ctx) {
+    return IDT::DispatchInterrupt(ctx);
   }
 }

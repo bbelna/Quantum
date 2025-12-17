@@ -12,12 +12,14 @@
 #include <Arch/IA32/Types/IDT/InterruptContext.hpp>
 #include <Interrupts.hpp>
 #include <Logger.hpp>
+#include <Task.hpp>
 #include <Types/Logging/Level.hpp>
 #include <Types/Primitives.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   using InterruptContext = Types::IDT::InterruptContext;
   using LogLevel = Quantum::System::Kernel::Types::Logging::Level;
+  using Task = Quantum::System::Kernel::Task;
 
   namespace {
     /**
@@ -58,13 +60,15 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     /**
      * PIT timer interrupt handler.
      */
-    void TimerHandler(InterruptContext&) {
+    InterruptContext* TimerHandler(InterruptContext& context) {
       ++_tickCount;
 
       // heartbeat every second (at 100 Hz)
       if (_tickLoggingEnabled && (_tickCount % _pitFreqHz) == 0) {
         Logger::Write(LogLevel::Trace, "Tick");
       }
+
+      return Task::Tick(context);
     }
   }
 

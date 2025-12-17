@@ -149,7 +149,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     /**
      * Keyboard interrupt handler (IRQ1).
      */
-    void KeyboardHandler(InterruptContext&) {
+    InterruptContext* KeyboardHandler(InterruptContext& context) {
       UInt8 scancode = IO::InByte(0x60);
 
       if (scancode == 0xE0) {
@@ -193,6 +193,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
           Enqueue(ch);
         }
       }
+
+      return &context;
     }
   }
 

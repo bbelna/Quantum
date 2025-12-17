@@ -8,9 +8,12 @@
 
 #pragma once
 
+#include <Types/Interrupts/InterruptContext.hpp>
 #include <Types/Primitives.hpp>
 
 namespace Quantum::System::Kernel {
+  using InterruptContext = Types::Interrupts::InterruptContext;
+
   /**
    * Task state enumeration.
    */
@@ -95,6 +98,6 @@ namespace Quantum::System::Kernel {
       /**
        * Scheduler tick handler (called from timer interrupt).
        */
-      static void Tick();
+      static InterruptContext* Tick(InterruptContext& context);
   };
 }

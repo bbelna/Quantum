@@ -81,6 +81,10 @@ LoadIDT:
   push esp              ; arg0: InterruptContext*
   call IDTExceptionHandler
   add esp, 4            ; pop arg
+  test eax, eax         ; swap to returned context if provided
+  jz .%1_no_swap
+  mov esp, eax
+.%1_no_swap:
   popa
   add esp, 8            ; drop vector + error
   iretd

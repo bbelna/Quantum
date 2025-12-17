@@ -12,6 +12,7 @@
 #include <Kernel.hpp>
 #include <Logger.hpp>
 #include <Memory.hpp>
+#include <Types/Interrupts/InterruptContext.hpp>
 #include <Types/Logging/Level.hpp>
 #include <Types/Primitives.hpp>
 
@@ -19,6 +20,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   namespace QK = Quantum::System::Kernel;
 
   using LogLevel = QK::Types::Logging::Level;
+  using InterruptContext = Types::IDT::InterruptContext;
 
   namespace {
     /**
@@ -52,6 +54,23 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     bool _preemptionEnabled = false;
 
     /**
+     * When true, force a reschedule even if preemption is disabled (used by
+     * cooperative yields).
+     */
+    volatile bool _forceReschedule = false;
+
+    /**
+     * Task pending cleanup (deferred until we are on a different stack).
+     */
+    TaskControlBlock* _pendingCleanup = nullptr;
+
+    /**
+     * Becomes true after the first explicit yield; prevents timer interrupts
+     * from preempting during early boot before the scheduler is ready.
+     */
+    bool _schedulerActive = false;
+
+    /**
      * Adds a task to the ready queue.
      */
     void AddToReadyQueue(TaskControlBlock* task) {
@@ -71,6 +90,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
     /**
      * Removes and returns the next task from the ready queue.
+     * @return
+     *   Pointer to the next ready task, or `nullptr` if none are ready.
      */
     TaskControlBlock* PopFromReadyQueue() {
       if (_readyQueueHead == nullptr) {
@@ -88,6 +109,53 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       task->Next = nullptr;
 
       return task;
+    }
+
+    /**
+     * Picks the next task to run and returns its saved context pointer.
+     * If `currentContext` is provided, saves it to the current TCB before
+     * switching.
+     */
+    TaskContext* Schedule(TaskContext* currentContext) {
+      if (_pendingCleanup && _pendingCleanup != _currentTask) {
+        Memory::Free(_pendingCleanup->StackBase);
+        Memory::Free(_pendingCleanup);
+        _pendingCleanup = nullptr;
+      }
+
+      TaskControlBlock* previousTask = _currentTask;
+
+      if (previousTask != nullptr && currentContext != nullptr) {
+        previousTask->Context = currentContext;
+
+        if (
+          previousTask->State == TaskState::Running &&
+          previousTask != _idleTask
+        ) {
+          previousTask->State = TaskState::Ready;
+          AddToReadyQueue(previousTask);
+        }
+      }
+
+      TaskControlBlock* nextTask = PopFromReadyQueue();
+
+      if (nextTask == nullptr) {
+        nextTask = _idleTask;
+      }
+
+      _currentTask = nextTask;
+      nextTask->State = TaskState::Running;
+
+      if (
+        previousTask &&
+        previousTask != _idleTask &&
+        previousTask->State == TaskState::Terminated &&
+        previousTask != nextTask
+      ) {
+        _pendingCleanup = previousTask;
+      }
+
+      return nextTask->Context;
     }
 
     /**
@@ -112,98 +180,17 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       Logger::Write(LogLevel::Debug, "Task completed, exiting");
       Task::Exit();
     }
-
-    /**
-     * Performs the actual context switch logic and task scheduling.
-     */
-    void DoSchedule() {
-      // if current task is still running and not idle, move it back to ready queue
-      if (
-        _currentTask != nullptr &&
-        _currentTask->State == TaskState::Running &&
-        _currentTask != _idleTask
-      ) {
-        AddToReadyQueue(_currentTask);
-      }
-
-      // get next task from ready queue
-      TaskControlBlock* nextTask = PopFromReadyQueue();
-
-      if (nextTask == nullptr) {
-        // nothing ready; fall back to idle task
-        nextTask = _idleTask;
-      }
-
-      // if switching to a different task, perform context switch
-      TaskControlBlock* previousTask = _currentTask;
-
-      if (nextTask != _currentTask) {
-        _currentTask = nextTask;
-        nextTask->State = TaskState::Running;
-
-        if (previousTask != nullptr) {
-          // switch from previous to next
-          Task::SwitchContext(
-            &previousTask->StackPointer,
-            nextTask->StackPointer
-          );
-        } else {
-          // first task switch - just load the new context
-          Task::SwitchContext(nullptr, nextTask->StackPointer);
-        }
-      } else {
-        // same task - just update state
-        _currentTask->State = TaskState::Running;
-      }
-
-      // we are now running on the next task's stack; safe to free a terminated
-      // previous task
-      if (
-        previousTask &&
-        previousTask != _idleTask &&
-        previousTask->State == TaskState::Terminated
-      ) {
-        Memory::Free(previousTask->StackBase);
-        Memory::Free(previousTask);
-      }
-    }
-
-    // context switch is implemented in assembly
-    extern "C" [[gnu::naked]] void DoSwitchContext(
-      TaskContext** currentStackPointer,
-      TaskContext* nextStackPointer
-    ) {
-      asm volatile(
-        // Save caller-saved + base registers for current task
-        "push %%ebp\n"
-        "push %%ebx\n"
-        "push %%esi\n"
-        "push %%edi\n"
-
-        // Store ESP into *currentStackPointer if provided
-        "mov 20(%%esp), %%eax\n"   // currentStackPointer argument (after pushes)
-        "test %%eax, %%eax\n"
-        "jz 1f\n"
-        "mov %%esp, (%%eax)\n"
-
-        "1:\n"
-        // Load nextStackPointer argument (after pushes)
-        "mov 24(%%esp), %%eax\n"
-        "mov %%eax, %%esp\n"       // switch to next task's stack
-
-        // Restore next task context
-        "pop %%edi\n"
-        "pop %%esi\n"
-        "pop %%ebx\n"
-        "pop %%ebp\n"
-
-        "ret\n"                    // return to next task's EIP
-        :::
-      );
-    }
   }
 
   void Task::Initialize() {
+    _preemptionEnabled = false;
+    _forceReschedule = false;
+    _pendingCleanup = nullptr;
+    _schedulerActive = false;
+    _currentTask = nullptr;
+    _readyQueueHead = nullptr;
+    _readyQueueTail = nullptr;
+
     Logger::Write(LogLevel::Debug, "Creating idle task");
 
     // create the idle task (runs when nothing else is ready)
@@ -214,11 +201,13 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     }
 
     // keep idle task out of the ready queue; it is used as a fallback when
-    // nothing else is runnable. We start with no current task so the first
-    // schedule doesn't try to save over the idle task's pristine stack
-    _currentTask = nullptr;
+    // nothing else is runnable
     idleTask->State = TaskState::Ready;
     _idleTask = idleTask;
+
+    // remove the idle task from the queue; Create() enqueues by default
+    // we want the ready queue to hold only runnable work, with idle as a
+    // separate fallback
     _readyQueueHead = nullptr;
     _readyQueueTail = nullptr;
 
@@ -254,33 +243,43 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     tcb->StackSize = stackSize;
     tcb->Next = nullptr;
 
-    // set up initial stack frame
-    // stack grows downward, so place context and call frame below the canary
-    const UInt32 canaryBytes = sizeof(UInt32);
-    const UInt32 callFrameBytes = sizeof(TaskContext) + 2 * sizeof(UInt32);
+    // ensure stack can hold the bootstrap frame
+    const UInt32 minFrame = sizeof(TaskContext) + 8;
 
-    if (stackSize <= canaryBytes + callFrameBytes) {
+    if (stackSize <= minFrame) {
       PANIC("Task stack too small");
     }
 
+    // set up initial stack frame that matches the interrupt context layout
+    // stack grows downward; reserve space for a dummy return + entry arg
     UInt8* stackBytes = static_cast<UInt8*>(stack);
-    UInt8* frameBase = stackBytes + stackSize - canaryBytes - callFrameBytes;
-    TaskContext* context = reinterpret_cast<TaskContext*>(frameBase);
-
-    context->Edi = 0;
-    context->Esi = 0;
-    context->Ebx = 0;
-    context->Ebp = 0;
-    context->Eip = reinterpret_cast<UInt32>(&TaskWrapper);
-
-    UInt32* callArea = reinterpret_cast<UInt32*>(context + 1);
+    UInt32 userEsp = reinterpret_cast<UInt32>(stackBytes + stackSize - 8);
+    UInt32* callArea = reinterpret_cast<UInt32*>(userEsp);
 
     callArea[0] = 0; // dummy return address
-    callArea[1] = reinterpret_cast<UInt32>(entryPoint); // TaskWrapper
+    callArea[1] = reinterpret_cast<UInt32>(entryPoint); // TaskWrapper argument
 
-    // store the stack pointer in the TCB
-    // (context is where SwitchContext expects ESP)
-    tcb->StackPointer = context;
+    // place the saved context below the call frame
+    TaskContext* context = reinterpret_cast<TaskContext*>(
+      userEsp - sizeof(TaskContext)
+    );
+
+    context->EDI = 0;
+    context->ESI = 0;
+    context->EBP = 0;
+    context->ESP = userEsp - 20; // value ESP would have before pusha
+    context->EBX = 0;
+    context->EDX = 0;
+    context->ECX = 0;
+    context->EAX = 0;
+    context->Vector = 0;
+    context->ErrorCode = 0;
+    context->EIP = reinterpret_cast<UInt32>(&TaskWrapper);
+    context->CS = 0x08;
+    context->EFlags = 0x202;
+
+    // store the saved context pointer in the TCB
+    tcb->Context = context;
 
     // add to ready queue
     AddToReadyQueue(tcb);
@@ -307,16 +306,20 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
     // mark task as terminated; defer freeing stack/TCB until after next switch
     _currentTask->State = TaskState::Terminated;
+    _schedulerActive = true;
+    _forceReschedule = true;
 
-    // schedule next task (never returns)
-    DoSchedule();
+    asm volatile("int $32" ::: "memory");
 
     // should never reach here
     PANIC("Exit returned from scheduler");
   }
 
   void Task::Yield() {
-    DoSchedule();
+    _schedulerActive = true;
+    _forceReschedule = true;
+
+    asm volatile("int $32" ::: "memory");
   }
 
   TaskControlBlock* Task::GetCurrent() {
@@ -335,17 +338,16 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     Logger::Write(LogLevel::Debug, "Preemptive multitasking disabled");
   }
 
-  void Task::Tick() {
+  TaskContext* Task::Tick(TaskContext& context) {
     // called from timer interrupt
-    if (_preemptionEnabled) {
-      DoSchedule();
-    }
-  }
+    bool shouldSchedule
+      = (_preemptionEnabled && _schedulerActive) || _forceReschedule;
+    _forceReschedule = false;
 
-  void Task::SwitchContext(
-    TaskContext** currentStackPointer,
-    TaskContext* nextStackPointer
-  ) {
-    DoSwitchContext(currentStackPointer, nextStackPointer);
+    if (!shouldSchedule) {
+      return &context;
+    }
+
+    return Schedule(&context);
   }
 }

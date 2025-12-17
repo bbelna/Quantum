@@ -8,21 +8,12 @@
 
 #pragma once
 
+#include <Arch/IA32/Types/IDT/InterruptContext.hpp>
 #include <Task.hpp>
 #include <Types/Primitives.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  /**
-   * IA32 CPU context saved during task switches.
-   * Matches the layout expected by the context switch assembly routine.
-   */
-  struct TaskContext {
-    UInt32 Edi;
-    UInt32 Esi;
-    UInt32 Ebx;
-    UInt32 Ebp;
-    UInt32 Eip;
-  };
+  using TaskContext = Types::IDT::InterruptContext;
 
   /**
    * Task control block for IA32 architecture.
@@ -39,10 +30,9 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     TaskState State;
 
     /**
-     * Pointer to the saved stack pointer (ESP).
-     * Points to a `TaskContext` structure on the stack.
+     * Pointer to the saved interrupt context for the task.
      */
-    TaskContext* StackPointer;
+    TaskContext* Context;
 
     /**
      * Base address of the task's kernel stack.
@@ -110,18 +100,6 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       /**
        * Scheduler tick handler.
        */
-      static void Tick();
-
-      /**
-       * Performs a context switch from the current task to the next task.
-       * @param currentStackPointer
-       *   Pointer to store the current task's ESP.
-       * @param nextStackPointer
-       *   The next task's ESP to restore.
-       */
-      static void SwitchContext(
-        TaskContext** currentStackPointer,
-        TaskContext* nextStackPointer
-      );
+      static TaskContext* Tick(TaskContext& context);
   };
 }

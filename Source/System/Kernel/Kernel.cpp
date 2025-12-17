@@ -38,6 +38,7 @@ namespace Quantum::System::Kernel {
     Memory::Initialize(bootInfoPhysicalAddress);
     Interrupts::Initialize();
     Task::Initialize();
+    Task::EnablePreemption();
 
     #ifdef KERNEL_TESTS
       // spawn test runner task and start scheduling

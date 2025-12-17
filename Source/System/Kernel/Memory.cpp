@@ -161,6 +161,7 @@ namespace Quantum::System::Kernel {
       UInt8* payload = reinterpret_cast<UInt8*>(block) + sizeof(FreeBlock);
       UInt32 usable = block->size - sizeof(UInt32);
       UInt32* canary = reinterpret_cast<UInt32*>(payload + usable);
+
       *canary = _canaryValue;
     }
 
@@ -281,8 +282,8 @@ namespace Quantum::System::Kernel {
 
       UInt32 reclaimablePages
         = static_cast<UInt32>((heapEnd - reclaimStart) / _heapPageSize);
-
       UInt32 reserveTailPages = _requiredTailPages;
+
       if (reserveTailPages < 2) {
         reserveTailPages = 2;
       }
@@ -303,6 +304,7 @@ namespace Quantum::System::Kernel {
         }
 
         UInt32 physical = pageTableEntry & ~0xFFFu;
+
         ArchMemory::UnmapPage(virtualPage);
 
         if (physical) {
@@ -642,17 +644,20 @@ namespace Quantum::System::Kernel {
       // map enough contiguous pages to satisfy this allocation in a single
       // block
       UInt32 pagesToMap = (needed + _heapPageSize - 1) / _heapPageSize;
+
       if (pagesToMap == 0) {
         pagesToMap = 1;
       }
 
       UInt8* firstPage = MapNextHeapPage();
+
       for (UInt32 i = 1; i < pagesToMap; ++i) {
         MapNextHeapPage();
       }
 
       UInt32 totalBytes = pagesToMap * _heapPageSize;
       FreeBlock* block = reinterpret_cast<FreeBlock*>(firstPage);
+
       block->size = totalBytes - sizeof(FreeBlock);
       block->next = nullptr;
 
@@ -676,6 +681,7 @@ namespace Quantum::System::Kernel {
       }
 
       UInt32* canary = reinterpret_cast<UInt32*>(payload + usable);
+
       *canary = _canaryValue;
 
       Logger::WriteFormatted(
@@ -735,6 +741,7 @@ namespace Quantum::System::Kernel {
     }
 
     UInt32* canary = reinterpret_cast<UInt32*>(alignedPayload + usable);
+
     *canary = _canaryValue;
 
     Logger::WriteFormatted(
@@ -846,6 +853,7 @@ namespace Quantum::System::Kernel {
     }
 
     usable -= sizeof(UInt32);
+
     UInt8* alignedPayload = payload + offset;
     UInt32* canary = reinterpret_cast<UInt32*>(alignedPayload + usable);
 
@@ -882,9 +890,6 @@ namespace Quantum::System::Kernel {
 
   Memory::HeapState Memory::GetHeapState() {
     HeapState state{};
-
-    state.mappedBytes = _heapMappedBytes;
-
     UInt32 freeBytes = 0;
     UInt32 blocks = 0;
     FreeBlock* current = _freeList;
@@ -895,6 +900,7 @@ namespace Quantum::System::Kernel {
       current = current->next;
     }
 
+    state.mappedBytes = _heapMappedBytes;
     state.freeBytes = freeBytes;
     state.freeBlocks = blocks;
 
@@ -931,6 +937,7 @@ namespace Quantum::System::Kernel {
 
     for (Size i = 0; i < 32; ++i) {
       pa[i] = static_cast<UInt8>(i);
+
       if (pa[i] != static_cast<UInt8>(i)) {
         PANIC("Heap write/read mismatch");
       }
@@ -938,6 +945,7 @@ namespace Quantum::System::Kernel {
 
     for (Size i = 0; i < 64; ++i) {
       pb[i] = static_cast<UInt8>(0xA5);
+
       if (pb[i] != static_cast<UInt8>(0xA5)) {
         PANIC("Heap write/read mismatch");
       }
@@ -966,7 +974,6 @@ namespace Quantum::System::Kernel {
       after.freeBytes,
       after.freeBlocks
     );
-
     Logger::Write(LogLevel::Trace, "Memory self-test passed");
   }
 

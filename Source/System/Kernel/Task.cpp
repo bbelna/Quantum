@@ -53,7 +53,7 @@ namespace Quantum::System::Kernel {
     ArchTask::DisablePreemption();
   }
 
-  void Task::Tick() {
-    ArchTask::Tick();
+  InterruptContext* Task::Tick(InterruptContext& context) {
+    return ArchTask::Tick(context);
   }
 }

@@ -45,6 +45,6 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * @param context
        *   Interrupt context captured by the stub.
        */
-      static void DispatchInterrupt(InterruptContext* context);
+      static InterruptContext* DispatchInterrupt(InterruptContext* context);
   };
 }

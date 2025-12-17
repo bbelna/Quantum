@@ -556,6 +556,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         SetPageUsed(0);
 
         freePages = 0;
+
         for (UInt32 i = 0; i < _pageCount; ++i) {
           if (PageFree(i)) {
             ++freePages;
@@ -564,6 +565,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       freePages = 0;
+
       for (UInt32 i = 0; i < _pageCount; ++i) {
         if (PageFree(i)) {
           ++freePages;
@@ -595,10 +597,12 @@ namespace Quantum::System::Kernel::Arch::IA32 {
           if (pageIndex >= _pageCount) break;
 
           SetPageUsed(pageIndex);
+
           ++_usedPages;
 
           if (zero) {
             UInt8* memory = reinterpret_cast<UInt8*>(pageIndex * _pageSize);
+
             for (UInt32 b = 0; b < _pageSize; ++b) {
               memory[b] = 0;
             }
@@ -816,6 +820,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     for (UInt32 p = startPage; p < endPage; ++p) {
       if (PageUsed(p)) {
         ClearPageUsed(p);
+
         if (_usedPages > 0) {
           --_usedPages;
         }
