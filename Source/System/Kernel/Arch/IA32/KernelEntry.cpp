@@ -79,7 +79,6 @@ namespace {
     }
 
     // map kernel higher-half: map the loaded higher-half image
-    // [__hh_phys_start, __phys_end) at [__hh_virt_start, __hh_virt_start + size)
     UInt32 kernelPhysicalStart = reinterpret_cast<UInt32>(&__hh_phys_start);
     UInt32 kernelPhysicalEnd   = reinterpret_cast<UInt32>(&__phys_end);
     UInt32 kernelImageBytes    = kernelPhysicalEnd - kernelPhysicalStart;
@@ -97,7 +96,9 @@ namespace {
         UInt32 tablePhysical = 0;
 
         if (pageDirectoryIndex < 4) {
-          tablePhysical = reinterpret_cast<UInt32>(_bootstrapPageTables[pageDirectoryIndex]);
+          tablePhysical = reinterpret_cast<UInt32>(
+            _bootstrapPageTables[pageDirectoryIndex]
+          );
         } else if (nextKernelTable < 8) {
           UInt32* table = _bootstrapKernelTables[nextKernelTable++];
 
@@ -108,17 +109,22 @@ namespace {
           tablePhysical = reinterpret_cast<UInt32>(table);
         }
 
-        _bootstrapPageDirectory[pageDirectoryIndex] = tablePhysical | _pagePresent | _pageWrite;
+        _bootstrapPageDirectory[pageDirectoryIndex]
+          = tablePhysical | _pagePresent | _pageWrite;
       }
 
-      UInt32* table = reinterpret_cast<UInt32*>(_bootstrapPageDirectory[pageDirectoryIndex] & ~0xFFFu);
+      UInt32* table = reinterpret_cast<UInt32*>(
+        _bootstrapPageDirectory[pageDirectoryIndex] & ~0xFFFu
+      );
 
       table[pageTableIndex] = physicalAddress | _pagePresent | _pageWrite;
     }
 
     // install recursive mapping
     _bootstrapPageDirectory[_recursiveSlot]
-      = reinterpret_cast<UInt32>(_bootstrapPageDirectory) | _pagePresent | _pageWrite;
+      = reinterpret_cast<UInt32>(_bootstrapPageDirectory)
+      | _pagePresent
+      | _pageWrite;
   }
 
 }
@@ -133,7 +139,8 @@ void EnablePagingAndJump(
 ) {
   BuildBootstrapPaging();
 
-  UInt32 pageDirectoryPhysical = reinterpret_cast<UInt32>(_bootstrapPageDirectory);
+  UInt32 pageDirectoryPhysical
+    = reinterpret_cast<UInt32>(_bootstrapPageDirectory);
 
   asm volatile("mov %0, %%cr3" : : "r"(pageDirectoryPhysical) : "memory");
 
