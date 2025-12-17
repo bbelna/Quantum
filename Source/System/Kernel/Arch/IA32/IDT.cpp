@@ -7,8 +7,8 @@
  */
 
 #include <Arch/IA32/CPU.hpp>
-#include <Arch/IA32/Drivers/PIC.hpp>
 #include <Arch/IA32/IDT.hpp>
+#include <Arch/IA32/PIC.hpp>
 #include <Arch/IA32/Types/IDT/IDTEntry.hpp>
 #include <Arch/IA32/Types/IDT/IDTDescriptor.hpp>
 #include <Arch/IA32/Types/IDT/InterruptContext.hpp>
@@ -21,7 +21,6 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   using InterruptHandler
     = Quantum::System::Kernel::Types::Interrupts::InterruptHandler;
   using LogLevel = Quantum::System::Kernel::Types::Logging::Level;
-  using PIC = Drivers::PIC;
 
   namespace {
     /**

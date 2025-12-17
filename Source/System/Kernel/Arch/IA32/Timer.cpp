@@ -2,22 +2,21 @@
  * Quantum
  * (c) 2025 Brandon Belna - MIT License
  *
- * System/Kernel/Arch/IA32/Drivers/Timer.cpp
+ * System/Kernel/Arch/IA32/Timer.cpp
  * IA32 PIT timer driver.
  */
 
+#include <Arch/IA32/IO.hpp>
+#include <Arch/IA32/PIC.hpp>
+#include <Arch/IA32/Timer.hpp>
 #include <Arch/IA32/Types/IDT/InterruptContext.hpp>
-#include <Arch/IA32/Drivers/IO.hpp>
-#include <Arch/IA32/Drivers/PIC.hpp>
-#include <Arch/IA32/Drivers/Timer.hpp>
 #include <Interrupts.hpp>
 #include <Logger.hpp>
 #include <Types/Logging/Level.hpp>
 #include <Types/Primitives.hpp>
 
-namespace Quantum::System::Kernel::Arch::IA32::Drivers {
-  using InterruptContext
-    = Quantum::System::Kernel::Arch::IA32::Types::IDT::InterruptContext;
+namespace Quantum::System::Kernel::Arch::IA32 {
+  using InterruptContext = Types::IDT::InterruptContext;
   using LogLevel = Quantum::System::Kernel::Types::Logging::Level;
 
   namespace {

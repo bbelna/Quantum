@@ -2,20 +2,19 @@
  * Quantum
  * (c) 2025 Brandon Belna - MIT License
  *
- * System/Kernel/Arch/IA32/Drivers/PS2Keyboard.cpp
+ * System/Kernel/Arch/IA32/PS2Keyboard.cpp
  * IA32 PS/2 keyboard driver.
  */
 
-#include <Arch/IA32/Drivers/IO.hpp>
-#include <Arch/IA32/Drivers/PIC.hpp>
-#include <Arch/IA32/Drivers/PS2Keyboard.hpp>
+#include <Arch/IA32/IO.hpp>
+#include <Arch/IA32/PIC.hpp>
+#include <Arch/IA32/PS2Keyboard.hpp>
 #include <Arch/IA32/Types/IDT/InterruptContext.hpp>
 #include <Interrupts.hpp>
 #include <Types/Primitives.hpp>
 
-namespace Quantum::System::Kernel::Arch::IA32::Drivers {
-  using InterruptContext
-    = Quantum::System::Kernel::Arch::IA32::Types::IDT::InterruptContext;
+namespace Quantum::System::Kernel::Arch::IA32 {
+  using InterruptContext = Types::IDT::InterruptContext;
 
   namespace {
     /**

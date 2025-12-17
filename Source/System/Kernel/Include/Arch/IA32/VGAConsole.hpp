@@ -2,7 +2,7 @@
  * Quantum
  * (c) 2025 Brandon Belna - MIT License
  *
- * System/Kernel/Include/Arch/IA32/Drivers/VGAConsole.hpp
+ * System/Kernel/Include/Arch/IA32/VGAConsole.hpp
  * IA32 VGA text-mode console driver.
  */
 
@@ -12,7 +12,7 @@
 #include <Types/Writer.hpp>
 #include <Types/String.hpp>
 
-namespace Quantum::System::Kernel::Arch::IA32::Drivers {
+namespace Quantum::System::Kernel::Arch::IA32 {
   namespace QK = Quantum::System::Kernel;
 
   using Writer = QK::Types::Writer;

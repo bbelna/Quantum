@@ -2,7 +2,7 @@
  * Quantum
  * (c) 2025 Brandon Belna - MIT License
  *
- * System/Kernel/Include/Arch/IA32/Drivers/Timer.hpp
+ * System/Kernel/Include/Arch/IA32/Timer.hpp
  * IA32 PIT timer driver.
  */
 
@@ -10,7 +10,7 @@
 
 #include <Types/Primitives.hpp>
 
-namespace Quantum::System::Kernel::Arch::IA32::Drivers {
+namespace Quantum::System::Kernel::Arch::IA32 {
   /**
    * IA32 PIT timer driver.
    */

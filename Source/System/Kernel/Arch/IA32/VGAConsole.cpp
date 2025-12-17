@@ -2,14 +2,14 @@
  * Quantum
  * (c) 2025 Brandon Belna - MIT License
  *
- * System/Kernel/Arch/IA32/Drivers/VGAConsole.cpp
+ * System/Kernel/Arch/IA32/VGAConsole.cpp
  * IA32 VGA text-mode console driver.
  */
 
-#include <Arch/IA32/Drivers/IO.hpp>
-#include <Arch/IA32/Drivers/VGAConsole.hpp>
+#include <Arch/IA32/IO.hpp>
+#include <Arch/IA32/VGAConsole.hpp>
 
-namespace Quantum::System::Kernel::Arch::IA32::Drivers {
+namespace Quantum::System::Kernel::Arch::IA32 {
   namespace {
     /**
      * The number of text-mode columns.

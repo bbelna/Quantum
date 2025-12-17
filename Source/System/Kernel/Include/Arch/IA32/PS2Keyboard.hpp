@@ -2,13 +2,13 @@
  * Quantum
  * (c) 2025 Brandon Belna - MIT License
  *
- * System/Kernel/Include/Arch/IA32/Drivers/PS2Keyboard.hpp
+ * System/Kernel/Include/Arch/IA32/PS2Keyboard.hpp
  * IA32 PS/2 keyboard driver.
  */
 
 #pragma once
 
-namespace Quantum::System::Kernel::Arch::IA32::Drivers {
+namespace Quantum::System::Kernel::Arch::IA32 {
   /**
    * IA32 PS/2 (IRQ1) keyboard driver.
    */

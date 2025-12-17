@@ -7,7 +7,7 @@
  */
 
 #include <Arch/IA32/CPU.hpp>
-#include <Arch/IA32/Drivers/VGAConsole.hpp>
+#include <Arch/IA32/VGAConsole.hpp>
 #include <Arch/IA32/KernelEntry.hpp>
 #include <Arch/IA32/LinkerSymbols.hpp>
 #include <Kernel.hpp>
@@ -22,7 +22,7 @@ using namespace Quantum::System::Kernel;
 
 using CPU = Arch::IA32::CPU;
 using LogLevel = Types::Logging::Level;
-using VGAConsole = Arch::IA32::Drivers::VGAConsole;
+using VGAConsole = Arch::IA32::VGAConsole;
 using Writer = Types::Writer;
 
 extern "C" void* GDTDescriptor32;

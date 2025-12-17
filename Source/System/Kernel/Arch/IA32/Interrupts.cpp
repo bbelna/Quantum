@@ -10,8 +10,8 @@
 #include <Arch/IA32/IDT.hpp>
 #include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/Exceptions.hpp>
-#include <Arch/IA32/Drivers/Timer.hpp>
-#include <Arch/IA32/Drivers/PS2Keyboard.hpp>
+#include <Arch/IA32/PS2Keyboard.hpp>
+#include <Arch/IA32/Timer.hpp>
 
 namespace Quantum::System::Kernel {
   using namespace Quantum::System::Kernel::Arch;
@@ -20,8 +20,8 @@ namespace Quantum::System::Kernel {
     IA32::IDT::Initialize();
     IA32::Exceptions::InstallDefaultHandlers();
 
-    IA32::Drivers::Timer::Initialize();
-    IA32::Drivers::PS2Keyboard::Initialize();
+    IA32::Timer::Initialize();
+    IA32::PS2Keyboard::Initialize();
 
     IA32::CPU::EnableInterrupts();
   }

@@ -13,8 +13,8 @@
 namespace Quantum::System::Kernel::Types::Interrupts {
   /**
    * An interrupt handler function.
-   * @param ctx
+   * @param context
    *   Reference to the interrupt context.
    */
-  typedef void(*InterruptHandler)(InterruptContext& ctx);
+  typedef void(*InterruptHandler)(InterruptContext& context);
 }

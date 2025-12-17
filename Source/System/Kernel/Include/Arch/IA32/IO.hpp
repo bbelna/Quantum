@@ -2,7 +2,7 @@
  * Quantum
  * (c) 2025 Brandon Belna - MIT License
  *
- * System/Kernel/Include/Arch/IA32/Drivers/IO.hpp
+ * System/Kernel/Include/Arch/IA32/IO.hpp
  * IA32 port I/O primitives.
  */
 
@@ -10,7 +10,7 @@
 
 #include <Types/Primitives.hpp>
 
-namespace Quantum::System::Kernel::Arch::IA32::Drivers::IO {
+namespace Quantum::System::Kernel::Arch::IA32::IO {
   /**
    * Outputs a byte to the specified port.
    * @param port
