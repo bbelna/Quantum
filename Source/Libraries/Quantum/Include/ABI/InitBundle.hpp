@@ -14,18 +14,24 @@
 
 namespace Quantum::ABI {
   /**
-   * Retrieves INIT.BND bundle info from the kernel.
-   * @param out
-   *   Output structure populated by the kernel.
-   * @return
-   *   True if the bundle exists; false if not available.
+   * INIT bundle ABI helpers.
    */
-  inline bool GetInitBundleInfo(Types::InitBundleInfo& out) {
-    UInt32 result = InvokeSystemCall(
-      Types::SystemCall::GetInitBundleInfo,
-      reinterpret_cast<UInt32>(&out)
-    );
+  class InitBundle {
+    public:
+      /**
+       * Retrieves INIT.BND bundle info from the kernel.
+       * @param out
+       *   Output structure populated by the kernel.
+       * @return
+       *   True if the bundle exists; false if not available.
+       */
+      static bool GetInfo(Types::InitBundleInfo& out) {
+        UInt32 result = InvokeSystemCall(
+          Types::SystemCall::GetInitBundleInfo,
+          reinterpret_cast<UInt32>(&out)
+        );
 
-    return result == 0;
-  }
+        return result == 0;
+      }
+  };
 }

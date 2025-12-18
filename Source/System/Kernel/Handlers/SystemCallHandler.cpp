@@ -12,6 +12,7 @@
 #include <Logger.hpp>
 #include <Task.hpp>
 #include <Prelude.hpp>
+#include <ABI/Prelude.hpp>
 #include <ABI/Types/InitBundleInfo.hpp>
 #include <ABI/Types/IPC.hpp>
 #include <ABI/Types/SystemCall.hpp>
@@ -19,11 +20,11 @@
 #include <Types/Logging/LogLevel.hpp>
 
 namespace Quantum::System::Kernel::Handlers {
-  using ::Quantum::ABI::Types::InitBundleInfo;
-  using ::Quantum::ABI::Types::IPC::Message;
-  using ::Quantum::ABI::Types::SystemCall;
+  using ABI::Types::InitBundleInfo;
+  using ABI::Types::IPC::Message;
+  using ABI::Types::IPC::MaxPayloadBytes;
+  using ABI::Types::SystemCall;
   using Kernel::Console;
-  using Kernel::IPC::MaxPayloadBytes;
   using Kernel::Logger;
   using Kernel::Task;
   using Kernel::Types::Logging::LogLevel;

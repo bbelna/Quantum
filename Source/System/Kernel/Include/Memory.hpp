@@ -9,8 +9,11 @@
 #pragma once
 
 #include <Types/Primitives.hpp>
+#include <Types/Memory/HeapState.hpp>
 
 namespace Quantum::System::Kernel {
+  using Types::Memory::HeapState;
+
   class Memory {
     public:
       /**
@@ -59,26 +62,6 @@ namespace Quantum::System::Kernel {
        *   Pointer to memory to free.
        */
       static void Free(void* pointer);
-
-      /**
-       * Snapshot of current heap state.
-       */
-      struct HeapState {
-        /**
-         * Total heap bytes currently mapped.
-         */
-        UInt32 mappedBytes;
-
-        /**
-         * Total free bytes tracked by the heap.
-         */
-        UInt32 freeBytes;
-
-        /**
-         * Number of free blocks in the heap.
-         */
-        UInt32 freeBlocks;
-      };
 
       /**
        * Retrieves the current heap state.

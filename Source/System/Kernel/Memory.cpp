@@ -877,8 +877,8 @@ namespace Quantum::System::Kernel {
         LogLevel::Error,
         "Heap state: mapped=%p freeBytes=%p freeBlocks=%p",
         _heapMappedBytes,
-        GetHeapState().freeBytes,
-        GetHeapState().freeBlocks
+        GetHeapState().FreeBytes,
+        GetHeapState().FreeBlocks
       );
       PANIC("Heap free: canary corrupted");
     }
@@ -890,7 +890,7 @@ namespace Quantum::System::Kernel {
     InsertIntoBinOrFreeList(block);
   }
 
-  Memory::HeapState Memory::GetHeapState() {
+  HeapState Memory::GetHeapState() {
     HeapState state{};
     UInt32 freeBytes = 0;
     UInt32 blocks = 0;
@@ -902,9 +902,9 @@ namespace Quantum::System::Kernel {
       current = current->next;
     }
 
-    state.mappedBytes = _heapMappedBytes;
-    state.freeBytes = freeBytes;
-    state.freeBlocks = blocks;
+    state.MappedBytes = _heapMappedBytes;
+    state.FreeBytes = freeBytes;
+    state.FreeBlocks = blocks;
 
     return state;
   }
@@ -915,9 +915,9 @@ namespace Quantum::System::Kernel {
     Logger::WriteFormatted(
       LogLevel::Debug,
       "Heap mapped bytes: %p, free bytes: %p, free blocks: %p",
-      state.mappedBytes,
-      state.freeBytes,
-      state.freeBlocks
+      state.MappedBytes,
+      state.FreeBytes,
+      state.FreeBlocks
     );
   }
 
@@ -958,23 +958,23 @@ namespace Quantum::System::Kernel {
 
     HeapState after = GetHeapState();
 
-    if (after.freeBytes < before.freeBytes) {
+    if (after.FreeBytes < before.FreeBytes) {
       PANIC("Free bytes decreased unexpectedly");
     }
 
     Logger::WriteFormatted(
       LogLevel::Debug,
       "Memory state before self-test: %p mapped, %p free, %p blocks",
-      before.mappedBytes,
-      before.freeBytes,
-      before.freeBlocks
+      before.MappedBytes,
+      before.FreeBytes,
+      before.FreeBlocks
     );
     Logger::WriteFormatted(
       LogLevel::Debug,
       "Memory state after self-test: %p mapped, %p free, %p blocks",
-      after.mappedBytes,
-      after.freeBytes,
-      after.freeBlocks
+      after.MappedBytes,
+      after.FreeBytes,
+      after.FreeBlocks
     );
     Logger::Write(LogLevel::Trace, "Memory self-test passed");
   }

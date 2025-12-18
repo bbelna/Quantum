@@ -10,12 +10,12 @@
 #include <Task.hpp>
 #include <Types/Primitives.hpp>
 
-namespace Quantum::System::Kernel::IPC {
+namespace Quantum::System::Kernel {
   namespace {
     struct Message {
       UInt32 SenderId;
       UInt32 Length;
-      UInt8 Data[MaxPayloadBytes];
+      UInt8 Data[IPC::MaxPayloadBytes];
     };
 
     struct Port {
@@ -25,7 +25,7 @@ namespace Quantum::System::Kernel::IPC {
       UInt32 Head;
       UInt32 Tail;
       UInt32 Count;
-      Message Queue[MaxQueueDepth];
+      Message Queue[IPC::MaxQueueDepth];
     };
 
     constexpr UInt32 _maxPorts = 16;
@@ -52,7 +52,7 @@ namespace Quantum::System::Kernel::IPC {
     }
   }
 
-  UInt32 CreatePort() {
+  UInt32 IPC::CreatePort() {
     for (UInt32 i = 0; i < _maxPorts; ++i) {
       if (!_ports[i].Used) {
         _ports[i].Used = true;
@@ -69,7 +69,12 @@ namespace Quantum::System::Kernel::IPC {
     return 0;
   }
 
-  bool Send(UInt32 portId, UInt32 senderId, const void* buffer, UInt32 length) {
+  bool IPC::Send(
+    UInt32 portId,
+    UInt32 senderId,
+    const void* buffer,
+    UInt32 length
+  ) {
     if (!buffer || length == 0 || length > MaxPayloadBytes) {
       return false;
     }
@@ -97,7 +102,7 @@ namespace Quantum::System::Kernel::IPC {
     return true;
   }
 
-  bool Receive(
+  bool IPC::Receive(
     UInt32 portId,
     UInt32& outSenderId,
     void* outBuffer,

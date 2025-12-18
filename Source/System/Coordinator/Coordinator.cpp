@@ -60,7 +60,7 @@ namespace Quantum::System::Coordinator {
     Console::WriteLine("Coordinator");
 
     Quantum::ABI::Types::InitBundleInfo info{};
-    bool ok = Quantum::ABI::GetInitBundleInfo(info);
+    bool ok = Quantum::ABI::InitBundle::GetInfo(info);
 
     if (!ok || info.Base == 0 || info.Size == 0) {
       Console::WriteLine("INIT.BND not available");
