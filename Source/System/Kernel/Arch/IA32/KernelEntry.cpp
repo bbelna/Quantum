@@ -13,6 +13,7 @@
 #include <Arch/IA32/KernelEntry.hpp>
 #include <Arch/IA32/LinkerSymbols.hpp>
 #include <Arch/IA32/Memory.hpp>
+#include <Arch/IA32/TSS.hpp>
 #include <Arch/IA32/VGAConsole.hpp>
 #include <Types/Primitives.hpp>
 #include <Types/Writer.hpp>
@@ -227,6 +228,7 @@ extern "C" [[gnu::section(".text.start.entry")]] void KernelEntry() {
 extern "C" void StartKernel(UInt32 bootInfoPhysicalAddress) {
   ClearBSS();
   InitializeKernelLogging();
+  Arch::IA32::TSS::Initialize(0);
 
   Initialize(bootInfoPhysicalAddress);
 
@@ -249,5 +251,5 @@ void InitializeKernelLogging() {
 
   writerArray[0] = &VGAConsole::GetWriter();
 
-  Logger::Initialize(LogLevel::Trace, writerArray, 1);
+  Logger::Initialize(LogLevel::Info, writerArray, 1);
 }

@@ -733,6 +733,10 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
     table[pageTableIndex] = (physicalAddress & ~0xFFF) | flags;
 
+    if (user) {
+      _pageDirectory[pageDirectoryIndex] |= _pageUser;
+    }
+
     CPU::InvalidatePage(virtualAddress);
   }
 

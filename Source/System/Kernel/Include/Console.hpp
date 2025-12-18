@@ -36,6 +36,15 @@ namespace Quantum::System::Kernel {
       static void Write(CString str);
 
       /**
+       * Writes a buffer with the given length to the console.
+       * @param buffer
+       *   Pointer to bytes to write.
+       * @param length
+       *   Number of bytes to write.
+       */
+      static void Write(CString buffer, UInt32 length);
+
+      /**
        * Writes a line (string followed by newline) to the console.
        * @param str
        *   The string to write.

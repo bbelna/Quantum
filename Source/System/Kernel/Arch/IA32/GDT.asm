@@ -39,6 +39,15 @@ GDT:
   ;      • base_high = 0x00
   dq 0x00CF92000000FFFF
 
+  ; 4) User code segment: base=0, limit=0xFFFFF, type=0xFA, flags=0xCF
+  dq 0x00CFFA000000FFFF
+
+  ; 5) User data segment: base=0, limit=0xFFFFF, type=0xF2, flags=0xCF
+  dq 0x00CFF2000000FFFF
+
+  ; 6) TSS descriptor (filled in at runtime)
+  dq 0x0000000000000000
+
 GDTEnd:
 
 SECTION .text.start

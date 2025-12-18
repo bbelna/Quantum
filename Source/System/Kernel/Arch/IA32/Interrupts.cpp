@@ -11,12 +11,15 @@
 #include <Arch/IA32/IDT.hpp>
 #include <Arch/IA32/Interrupts.hpp>
 #include <Arch/IA32/PS2Keyboard.hpp>
+#include <Arch/IA32/SystemCall.hpp>
 #include <Arch/IA32/Timer.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   void Interrupts::Initialize() {
     IDT::Initialize();
     Exceptions::InstallDefaultHandlers();
+
+    SystemCall::Initialize();
 
     Timer::Initialize();
     PS2Keyboard::Initialize();

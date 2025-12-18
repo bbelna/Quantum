@@ -146,7 +146,23 @@ namespace Quantum::System::Kernel {
   }
 
   void Console::Write(CString str) {
-    ConsoleDriver::Write(str);
+    if (!str) {
+      return;
+    }
+
+    UInt32 length = static_cast<UInt32>(CStringHelper::Length(str));
+
+    Write(str, length);
+  }
+
+  void Console::Write(CString buffer, UInt32 length) {
+    if (!buffer || length == 0) {
+      return;
+    }
+
+    for (UInt32 i = 0; i < length; ++i) {
+      ConsoleDriver::WriteCharacter(buffer[i]);
+    }
   }
 
   void Console::WriteLine(CString str) {

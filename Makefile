@@ -19,6 +19,13 @@ BOOT_MEDIUM ?= Floppy
 
 BOOT_DIR   := $(SRC_ROOT)/System/Boot/$(ARCH)
 KERNEL_DIR := $(SRC_ROOT)/System/Kernel
+COORD_DIR  := $(SRC_ROOT)/System/Coordinator
+LIBQ_INCLUDE := $(PROJECT_ROOT)/Source/Libraries/Quantum/Include
+COORD_INCLUDE := $(COORD_DIR)/Include
+COORD_ELF := $(BUILD_DIR)/Coordinator/Coordinator.elf
+COORD_BIN := $(BUILD_DIR)/Coordinator/Coordinator.bin
+COORD_BIN_OBJ := $(BUILD_DIR)/Coordinator/Coordinator.bin.o
+COORD_BIN_REL := Build/Coordinator/Coordinator.bin
 
 # Toolchain defaults (can be overridden by environment)
 ASM       ?= nasm
@@ -47,7 +54,13 @@ IMG_SECTORS := 2880       # 1.44 MB / 512 B
 IMG_BS      := 512
 FAT12_LABEL := QUANTUM
 
-.PHONY: default all boot kernel img clean boot-clean kernel-clean
+# INIT bundle
+INIT_MANIFEST ?= $(PROJECT_ROOT)/InitManifest.json
+INIT_BUNDLE   ?= $(BUILD_DIR)/INIT.BND
+BUNDLER       ?= python3 $(PROJECT_ROOT)/Tools/Bundle.py
+HAS_INIT_MANIFEST := $(wildcard $(INIT_MANIFEST))
+
+.PHONY: default all boot kernel coordinator img clean boot-clean kernel-clean
 
 default: clean all
 
@@ -57,16 +70,43 @@ boot: $(BOOT_STAGE1_BIN) $(BOOT_STAGE2_BIN)
 
 kernel: $(KER_BIN)
 
+coordinator: $(COORD_BIN)
+
+# Build INIT.BND if manifest is present
+.PHONY: init-bundle
+init-bundle:
+ifeq ($(HAS_INIT_MANIFEST),)
+	@echo "INIT manifest not found ($(INIT_MANIFEST)); skipping bundle."
+else
+	@echo "Bundling INIT.BND from $(INIT_MANIFEST)"
+	@$(BUNDLER) --manifest "$(INIT_MANIFEST)" --output "$(INIT_BUNDLE)" --base "$(PROJECT_ROOT)"
+endif
+
 $(BOOT_STAGE1_BIN):
 	$(MAKE) -C $(BOOT_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) ARCH=$(ARCH) BOOT_MEDIUM=$(BOOT_MEDIUM) stage1
 
 $(BOOT_STAGE2_BIN):
 	$(MAKE) -C $(BOOT_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) ARCH=$(ARCH) BOOT_MEDIUM=$(BOOT_MEDIUM) stage2
 
-$(KER_BIN):
-	$(MAKE) -C $(KERNEL_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) ARCH=$(ARCH) kernel
+$(KER_BIN): $(COORD_BIN_OBJ)
+	$(MAKE) -C $(KERNEL_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) ARCH=$(ARCH) EXTRA_OBJS="$(COORD_BIN_OBJ)" kernel
 
-$(IMG): $(KER_BIN) $(BOOT_STAGE1_BIN) $(BOOT_STAGE2_BIN)
+$(COORD_ELF): $(COORD_DIR)/Coordinator.cpp $(COORD_DIR)/Include/Coordinator.hpp $(COORD_DIR)/Link.ld
+	@mkdir -p $(dir $@)
+	$(CC32) $(CFLAGS32) -m32 -ffreestanding -nostdlib -static -Wl,--no-pie \
+		-I$(LIBQ_INCLUDE) -I$(COORD_INCLUDE) \
+		-T $(COORD_DIR)/Link.ld \
+		$< -o $@
+	@echo "[OK] Linked Coordinator.elf -> $@"
+
+$(COORD_BIN): $(COORD_ELF)
+	$(OBJCOPY32) -O binary $< $@
+	@echo "[OK] Created Coordinator.bin -> $@"
+
+$(COORD_BIN_OBJ): $(COORD_BIN)
+	$(OBJCOPY32) -I binary -O elf32-i386 -B i386 $(COORD_BIN_REL) $@
+
+$(IMG): $(KER_BIN) $(BOOT_STAGE1_BIN) $(BOOT_STAGE2_BIN) init-bundle
 	@mkdir -p $(dir $@)
 	@echo "Creating blank 1.44 MB image: $@"
 	dd if=/dev/zero of=$@ bs=$(IMG_BS) count=$(IMG_SECTORS) conv=notrunc status=none
@@ -78,6 +118,12 @@ $(IMG): $(KER_BIN) $(BOOT_STAGE1_BIN) $(BOOT_STAGE2_BIN)
 	dd if=$(BOOT_STAGE1_BIN) of=$@ bs=$(IMG_BS) seek=0 count=1 conv=notrunc status=none
 	@echo "Installing Stage 2 bootloader (sectors 1-4)"
 	dd if=$(BOOT_STAGE2_BIN) of=$@ bs=$(IMG_BS) seek=1 count=4 conv=notrunc,sync status=none
+	@if [ -f "$(INIT_BUNDLE)" ]; then \
+		echo "Copying INIT.BND into FAT12 root directory"; \
+		$(MCOPY) -i $@ $(INIT_BUNDLE) ::/INIT.BND; \
+	else \
+		echo "INIT.BND not present; skipping bundle copy."; \
+	fi
 	@echo "[OK] Built FAT12 floppy image -> $@"
 
 boot-clean:

@@ -40,6 +40,17 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       static void SetHandler(UInt8 vector, InterruptHandler handler);
 
       /**
+       * Sets an IDT gate entry with a specific type attribute.
+       * @param vector
+       *   The interrupt vector number (0-255).
+       * @param stub
+       *   ISR stub address.
+       * @param typeAttribute
+       *   IDT type attribute (e.g., 0x8E for ring0, 0xEE for ring3).
+       */
+      static void SetGate(UInt8 vector, void (*stub)(), UInt8 typeAttribute);
+
+      /**
        * Dispatches an interrupt to the registered handler.
        * @param context
        *   Interrupt context captured by the stub.

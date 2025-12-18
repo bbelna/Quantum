@@ -115,14 +115,14 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     IRQ12, IRQ13, IRQ14, IRQ15
   };
 
-  static void SetIDTGate(UInt8 vector, void (*stub)()) {
+  void IDT::SetGate(UInt8 vector, void (*stub)(), UInt8 typeAttribute) {
     UInt32 addr = reinterpret_cast<UInt32>(stub);
     IDTEntry& e = _idtEntries[vector];
 
     e.OffsetLow = addr & 0xFFFF;
     e.Selector = 0x08; // code segment selector
     e.Zero = 0;
-    e.TypeAttribute = 0x8E; // present, ring 0, 32-bit interrupt gate
+    e.TypeAttribute = typeAttribute;
     e.OffsetHigh = (addr >> 16) & 0xFFFF;
   }
 
@@ -134,11 +134,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     }
 
     for (UInt8 i = 0; i < _exceptionCount; ++i) {
-      SetIDTGate(i, exceptionStubs[i]);
+      IDT::SetGate(i, exceptionStubs[i], 0x8E);
     }
 
     for (UInt8 i = 0; i < _irqCount; ++i) {
-      SetIDTGate(_irqBase + i, irqStubs[i]);
+      IDT::SetGate(_irqBase + i, irqStubs[i], 0x8E);
     }
 
     _idtDescriptor.Limit = sizeof(_idtEntries) - 1;

@@ -57,6 +57,7 @@ global IRQ12
 global IRQ13
 global IRQ14
 global IRQ15
+global SYSCALL80
 extern IDTExceptionHandler
 
 ; void LoadIDT(IDTDescriptor* desc);
@@ -157,6 +158,11 @@ ISR_NOERR IRQ12, 44   ; PS/2 Mouse
 ISR_NOERR IRQ13, 45   ; FPU
 ISR_NOERR IRQ14, 46   ; Primary ATA
 ISR_NOERR IRQ15, 47   ; Secondary ATA
+
+;------------------------------------------------------------------------------
+; System call (vector 0x80)
+;------------------------------------------------------------------------------
+ISR_NOERR SYSCALL80, 128
 
 .hang:
   hlt
