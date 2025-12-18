@@ -4,5 +4,11 @@
     "type": "init",
     "required": true,
     "path": "Build/Coordinator/Coordinator.qx"
+  },
+  {
+    "name": "floppy",
+    "type": "driver",
+    "required": false,
+    "path": "Build/Drivers/Storage/Floppy/Floppy.qx"
   }
 ]
