@@ -11,12 +11,10 @@
 #include <Types/Primitives.hpp>
 
 #if defined(QUANTUM_ARCH_IA32)
-  #include <Arch/IA32/VGAConsole.hpp>
+#include <Arch/IA32/VGAConsole.hpp>
 
-  namespace Arch = Quantum::System::Kernel::Arch::IA32;
-  using ConsoleDriver = Arch::VGAConsole;
-#else
-  #error "No architecture selected for console driver"
+namespace Arch = Quantum::System::Kernel::Arch::IA32;
+using ConsoleDriver = Arch::VGAConsole;
 #endif
 
 namespace Quantum::System::Kernel {

@@ -12,12 +12,10 @@
 #include <Types/Logging/LogLevel.hpp>
 
 #if defined(QUANTUM_ARCH_IA32)
-  #include <Arch/IA32/Task.hpp>
+#include <Arch/IA32/Task.hpp>
 
-  using ArchTask = Quantum::System::Kernel::Arch::IA32::Task;
-  using ArchTCB = Quantum::System::Kernel::Arch::IA32::TaskControlBlock;
-#else
-  #error "No architecture selected for task management"
+using ArchTask = Quantum::System::Kernel::Arch::IA32::Task;
+using ArchTCB = Quantum::System::Kernel::Arch::IA32::TaskControlBlock;
 #endif
 
 namespace Quantum::System::Kernel {

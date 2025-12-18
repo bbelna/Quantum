@@ -2,17 +2,17 @@
  * Quantum
  * (c) 2025 Brandon Belna - MIT License
  *
- * Libraries/Quantum/Include/Types/ABI/SystemCallId.hpp
+ * Libraries/Quantum/Include/ABI/Types/SystemCall.hpp
  * System call identifiers.
  */
 
 #pragma once
 
-namespace Quantum::Types::ABI {
+namespace Quantum::ABI::Types {
   /**
    * System call identifiers.
    */
-  enum SystemCallId {
+  enum SystemCall {
     Write = 0,
     Exit = 1,
     Yield = 2

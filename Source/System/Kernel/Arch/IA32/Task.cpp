@@ -312,6 +312,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
     // should never reach here
     PANIC("Exit returned from scheduler");
+
+    __builtin_unreachable();
   }
 
   void Task::Yield() {

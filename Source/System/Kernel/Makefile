@@ -12,7 +12,6 @@ KERNEL_SRC_DIR := $(SRC_ROOT)/System/Kernel
 KERNEL_ARCH    := $(KERNEL_SRC_DIR)/Arch/$(ARCH)
 KERNEL_INCLUDE := $(KERNEL_SRC_DIR)/Include
 LIBQ_INCLUDE   := $(PROJECT_ROOT)/Source/Libraries/Quantum/Include
-SYSTEM_INCLUDE := $(PROJECT_ROOT)/Source/System
 
 ASM     ?= nasm
 CC32    ?= x86_64-linux-gnu-gcc
@@ -28,6 +27,7 @@ OBJCOPY32 ?= x86_64-linux-gnu-objcopy
 
 KER_COMMON_SRCS := \
 	$(wildcard $(KERNEL_SRC_DIR)/*.cpp) \
+	$(wildcard $(KERNEL_SRC_DIR)/Handlers/*.cpp) \
 	$(wildcard $(KERNEL_SRC_DIR)/Helpers/*.cpp) \
 	$(wildcard $(KERNEL_SRC_DIR)/Runtime/*.cpp) \
 	$(wildcard $(KERNEL_SRC_DIR)/Tests/*.cpp)
@@ -41,7 +41,6 @@ KERNEL_ARCH_ASM := \
 	$(wildcard $(KERNEL_ARCH)/*.asm)
 
 KER_OBJ_DIR := $(BUILD_DIR)/Kernel/$(ARCH)
-EXTRA_OBJS ?=
 KERNEL_ARCH_OBJS := \
 	$(patsubst $(KERNEL_SRC_DIR)/%.cpp,$(KER_OBJ_DIR)/%.cpp.o,$(KERNEL_ARCH_CPP))
 KERNEL_ARCH_ASM_OBJS := \
@@ -50,8 +49,7 @@ KERNEL_ARCH_ASM_OBJS := \
 KER_OBJS := \
 	$(patsubst $(KERNEL_SRC_DIR)/%.cpp,$(KER_OBJ_DIR)/%.cpp.o,$(KER_COMMON_SRCS)) \
 	$(KERNEL_ARCH_OBJS) \
-	$(KERNEL_ARCH_ASM_OBJS) \
-	$(EXTRA_OBJS)
+	$(KERNEL_ARCH_ASM_OBJS)
 
 KER_ELF := $(KER_OBJ_DIR)/Kernel.elf
 KER_BIN := $(KER_OBJ_DIR)/Kernel.qx
@@ -64,7 +62,7 @@ kernel: $(KER_BIN)
 
 $(KER_OBJ_DIR)/%.cpp.o: $(KERNEL_SRC_DIR)/%.cpp
 	@mkdir -p $(dir $@)
-	$(CC32) $(CFLAGS32) -I$(KERNEL_INCLUDE) -I$(LIBQ_INCLUDE) -I$(SYSTEM_INCLUDE) -c $< -o $@
+	$(CC32) $(CFLAGS32) -I$(KERNEL_INCLUDE) -I$(LIBQ_INCLUDE) -c $< -o $@
 
 $(KER_OBJ_DIR)/%.asm.o: $(KERNEL_SRC_DIR)/%.asm
 	@mkdir -p $(dir $@)

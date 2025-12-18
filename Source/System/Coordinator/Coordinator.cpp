@@ -17,12 +17,3 @@ namespace Quantum::System::Coordinator {
     Task::Exit(1);
   }
 }
-
-extern "C" [[gnu::section(".text.start")]] void _start() {
-  Quantum::System::Coordinator::Main();
-  Quantum::Task::Exit(0);
-
-  for (;;) {
-    // do nothing
-  }
-}

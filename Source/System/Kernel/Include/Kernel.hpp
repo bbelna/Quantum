@@ -10,6 +10,7 @@
 
 #include <Types/Primitives.hpp>
 #include <Types/String.hpp>
+#include <Types/Interrupts/InterruptContext.hpp>
 
 #define PANIC(msg) \
   ::Quantum::System::Kernel::Panic(\
@@ -18,6 +19,7 @@
 
 namespace Quantum::System::Kernel {
   using Types::String;
+  using Types::Interrupts::InterruptContext;
 
   /**
    * Initializes the kernel.
@@ -27,7 +29,17 @@ namespace Quantum::System::Kernel {
   void Initialize(UInt32 bootInfoPhysicalAddress);
 
   /**
-   * Panic the kernel with a message. Use the macro `PANIC(msg)` to include
+   * Handles a system call interrupt.
+   * @param context
+   *   Interrupt context at the time of the system call.
+   * @return
+   *   Updated interrupt context.
+   */
+  InterruptContext* HandleSystemCall(InterruptContext& context);
+
+  /**
+   * Panic the kernel with a message.
+   * Do not invoke directly. Use the macro `PANIC(msg)` as it captures
    * file, line, and function information automatically.
    * @param message
    *   Panic message.

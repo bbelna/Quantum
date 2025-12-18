@@ -15,17 +15,15 @@
 #include <Types/Memory/AlignedMetadata.hpp>
 
 #if defined(QUANTUM_ARCH_IA32)
-  #include <Arch/IA32/CPU.hpp>
-  #include <Arch/IA32/Memory.hpp>
-  #include <Arch/IA32/Prelude.hpp>
-  #include <Arch/IA32/Types/Memory/PhysicalAllocatorState.hpp>
+#include <Arch/IA32/CPU.hpp>
+#include <Arch/IA32/Memory.hpp>
+#include <Arch/IA32/Prelude.hpp>
+#include <Arch/IA32/Types/Memory/PhysicalAllocatorState.hpp>
 
-  using ArchPhysicalAllocatorState
-    = KernelIA32::Types::Memory::PhysicalAllocatorState;
-  using ArchMemory = KernelIA32::Memory;
-  using ArchCPU = KernelIA32::CPU;
-#else
-  #error "No architecture selected for memory manager"
+using ArchPhysicalAllocatorState
+  = KernelIA32::Types::Memory::PhysicalAllocatorState;
+using ArchMemory = KernelIA32::Memory;
+using ArchCPU = KernelIA32::CPU;
 #endif
 
 namespace Quantum::System::Kernel {
@@ -597,9 +595,9 @@ namespace Quantum::System::Kernel {
     DumpState();
 
     #ifdef MEMORY_TEST
-      Memory::Test();
-      Memory::ResetHeap();
-      Memory::VerifyHeap();
+    Memory::Test();
+    Memory::ResetHeap();
+    Memory::VerifyHeap();
     #endif
   }
 

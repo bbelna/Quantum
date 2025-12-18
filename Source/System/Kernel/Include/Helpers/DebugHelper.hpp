@@ -26,5 +26,19 @@ namespace Quantum::System::Kernel::Helpers {
        *   original pointer if no trim marker is found.
        */
       static CString TrimSourceFile(CString filePath);
+
+      /**
+       * Generates a formatted panic info string including file, line, and
+       * function information.
+       * @param file
+       *   Source file name (may be null).
+       * @param line
+       *   Line number.
+       * @param function
+       *   Function name (may be null).
+       * @return
+       *   Formatted panic info string.
+       */
+      static CString GetPanicInfo(CString file, UInt32 line, CString function);
   };
 }

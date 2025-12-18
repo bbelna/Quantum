@@ -9,7 +9,7 @@
 #include <Arch/IA32/IDT.hpp>
 #include <Arch/IA32/SystemCall.hpp>
 #include <Interrupts.hpp>
-#include <SystemCall.hpp>
+#include <Kernel.hpp>
 #include <Types/Primitives.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
@@ -17,7 +17,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
   namespace {
     InterruptContext* OnSystemCall(InterruptContext& context) {
-      return Kernel::SystemCall::Handle(context);
+      return Kernel::HandleSystemCall(context);
     }
   }
 

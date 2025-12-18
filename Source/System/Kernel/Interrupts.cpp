@@ -9,10 +9,10 @@
 #include <Interrupts.hpp>
 
 #if defined(QUANTUM_ARCH_IA32)
-  #include <Arch/IA32/Interrupts.hpp>
-  #include <Arch/IA32/Prelude.hpp>
+#include <Arch/IA32/Interrupts.hpp>
+#include <Arch/IA32/Prelude.hpp>
 
-  using ArchInterrupts = KernelIA32::Interrupts;
+using ArchInterrupts = KernelIA32::Interrupts;
 #endif
 
 namespace Quantum::System::Kernel {

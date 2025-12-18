@@ -8,8 +8,9 @@
 
 #pragma once
 
+#include <ABI/InvokeSystemCall.hpp>
+#include <ABI/Types/SystemCall.hpp>
 #include <Types/Primitives.hpp>
-#include <Types/ABI/SystemCall.hpp>
 
 namespace Quantum {
   /**
@@ -21,7 +22,7 @@ namespace Quantum {
        * Yields the current task.
        */
       static inline void Yield() {
-        Types::ABI::Invoke(Types::ABI::SystemCallId::Yield);
+        ABI::InvokeSystemCall(ABI::Types::SystemCall::Yield);
       }
 
       /**
@@ -30,7 +31,7 @@ namespace Quantum {
        *   Optional exit code (currently ignored by the kernel).
        */
       static inline void Exit(UInt32 code = 0) {
-        Types::ABI::Invoke(Types::ABI::SystemCallId::Exit, code);
+        ABI::InvokeSystemCall(ABI::Types::SystemCall::Exit, code);
       }
   };
 }

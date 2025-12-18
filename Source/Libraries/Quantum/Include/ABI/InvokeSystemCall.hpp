@@ -2,19 +2,21 @@
  * Quantum
  * (c) 2025 Brandon Belna - MIT License
  *
- * Libraries/Quantum/Include/Types/ABI/SystemCall.hpp
- * User-mode system call invocation helpers.
+ * Libraries/Quantum/Include/ABI/InvokeSystemCall.hpp
+ * System call invocation interface.
  */
 
 #pragma once
 
-#include <Types/ABI/SystemCallId.hpp>
+#include <ABI/Types/SystemCall.hpp>
 #include <Types/Primitives.hpp>
 
-namespace Quantum::Types::ABI {
+namespace Quantum::ABI {
+  using Types::SystemCall;
+
   /**
-   * Invokes a system call via int 0x80.
-   * @param callId
+   * Invokes a system call via `int 0x80`.
+   * @param call
    *   System call identifier.
    * @param arg1
    *   First argument (EBX).
@@ -25,8 +27,8 @@ namespace Quantum::Types::ABI {
    * @return
    *   Result returned in EAX.
    */
-  inline UInt32 Invoke(
-    SystemCallId callId,
+  inline UInt32 InvokeSystemCall(
+    SystemCall call,
     UInt32 arg1 = 0,
     UInt32 arg2 = 0,
     UInt32 arg3 = 0
@@ -36,7 +38,7 @@ namespace Quantum::Types::ABI {
     asm volatile(
       "int $0x80"
       : "=a"(result)
-      : "a"(static_cast<UInt32>(callId)),
+      : "a"(static_cast<UInt32>(call)),
         "b"(arg1),
         "c"(arg2),
         "d"(arg3)
