@@ -63,6 +63,11 @@ namespace Quantum::System::Kernel {
       static TaskControlBlock* GetCurrent();
 
       /**
+       * Gets the task id of the currently executing task (0 if none).
+       */
+      static UInt32 GetCurrentId();
+
+      /**
        * Enables preemptive multitasking via timer interrupts.
        */
       static void EnablePreemption();

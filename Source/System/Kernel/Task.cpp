@@ -43,6 +43,12 @@ namespace Quantum::System::Kernel {
     return reinterpret_cast<TaskControlBlock*>(ArchTask::GetCurrent());
   }
 
+  UInt32 Task::GetCurrentId() {
+    auto* tcb = ArchTask::GetCurrent();
+
+    return tcb ? tcb->Id : 0;
+  }
+
   void Task::EnablePreemption() {
     ArchTask::EnablePreemption();
   }

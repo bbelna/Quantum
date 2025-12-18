@@ -16,6 +16,9 @@ namespace Quantum::ABI::Types {
     Write = 0,
     Exit = 1,
     Yield = 2,
-    GetInitBundleInfo = 3
+    GetInitBundleInfo = 3,
+    IPC_CreatePort = 4,
+    IPC_Send = 5,
+    IPC_Receive = 6
   };
 }
