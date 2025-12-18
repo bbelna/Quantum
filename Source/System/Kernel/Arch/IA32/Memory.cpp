@@ -12,10 +12,10 @@
 #include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/LinkerSymbols.hpp>
 #include <Arch/IA32/Memory.hpp>
+#include <Arch/IA32/Types/IDT/InterruptContext.hpp>
 #include <Types/Primitives.hpp>
 #include <Types/Boot/BootInfo.hpp>
 #include <Types/Logging/LogLevel.hpp>
-#include <Arch/IA32/Types/IDT/InterruptContext.hpp>
 #include <Types/Memory/MemoryRegion.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
@@ -482,6 +482,13 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         ) {
           SetPageUsed(p);
         }
+      }
+
+      if (bootInfo && bootInfo->InitBundleSize > 0) {
+        Memory::ReservePhysicalRange(
+          bootInfo->InitBundlePhysical,
+          bootInfo->InitBundleSize
+        );
       }
 
       // never hand out the null page

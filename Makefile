@@ -19,6 +19,9 @@ BOOT_MEDIUM ?= Floppy
 
 BOOT_DIR   := $(SRC_ROOT)/System/Boot/$(ARCH)
 KERNEL_DIR := $(SRC_ROOT)/System/Kernel
+COORD_DIR  := $(SRC_ROOT)/System/Coordinator
+LIBQ_INCLUDE := $(PROJECT_ROOT)/Source/Libraries/Quantum/Include
+COORD_INCLUDE := $(COORD_DIR)/Include
 
 # Toolchain defaults (can be overridden by environment)
 ASM       ?= nasm
@@ -63,6 +66,8 @@ boot: $(BOOT_STAGE1_BIN) $(BOOT_STAGE2_BIN)
 
 kernel: $(KER_BIN)
 
+coordinator: $(COORD_QX)
+
 # Build INIT.BND if manifest is present
 .PHONY: init-bundle
 init-bundle:
@@ -82,7 +87,12 @@ $(BOOT_STAGE2_BIN):
 $(KER_BIN):
 	$(MAKE) -C $(KERNEL_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) ARCH=$(ARCH) kernel
 
-$(IMG): $(KER_BIN) $(BOOT_STAGE1_BIN) $(BOOT_STAGE2_BIN) init-bundle
+COORD_QX := $(BUILD_DIR)/Coordinator/Coordinator.qx
+
+$(COORD_QX):
+	$(MAKE) -C $(COORD_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) ARCH=$(ARCH) coordinator
+
+$(IMG): $(KER_BIN) $(BOOT_STAGE1_BIN) $(BOOT_STAGE2_BIN) $(COORD_QX) init-bundle
 	@mkdir -p $(dir $@)
 	@echo "Creating blank 1.44 MB image: $@"
 	dd if=/dev/zero of=$@ bs=$(IMG_BS) count=$(IMG_SECTORS) conv=notrunc status=none

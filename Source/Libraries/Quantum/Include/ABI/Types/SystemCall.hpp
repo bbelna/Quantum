@@ -15,6 +15,7 @@ namespace Quantum::ABI::Types {
   enum SystemCall {
     Write = 0,
     Exit = 1,
-    Yield = 2
+    Yield = 2,
+    GetInitBundleInfo = 3
   };
 }

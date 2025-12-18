@@ -7,14 +7,17 @@
  */
 
 #include <Console.hpp>
+#include <Kernel.hpp>
 #include <Logger.hpp>
 #include <Task.hpp>
 #include <Prelude.hpp>
+#include <ABI/Types/InitBundleInfo.hpp>
 #include <ABI/Types/SystemCall.hpp>
 #include <Handlers/SystemCallHandler.hpp>
 #include <Types/Logging/LogLevel.hpp>
 
 namespace Quantum::System::Kernel::Handlers {
+  using ::Quantum::ABI::Types::InitBundleInfo;
   using ::Quantum::ABI::Types::SystemCall;
   using Kernel::Console;
   using Kernel::Logger;
@@ -42,6 +45,23 @@ namespace Quantum::System::Kernel::Handlers {
 
       case SystemCall::Yield: {
         Task::Yield();
+
+        break;
+      }
+
+      case SystemCall::GetInitBundleInfo: {
+        InitBundleInfo* info
+          = reinterpret_cast<InitBundleInfo*>(context.EBX);
+        UInt32 base = 0;
+        UInt32 size = 0;
+        bool ok = Kernel::GetInitBundleInfo(base, size);
+
+        if (info) {
+          info->Base = base;
+          info->Size = size;
+        }
+
+        context.EAX = ok ? 0 : 1;
 
         break;
       }

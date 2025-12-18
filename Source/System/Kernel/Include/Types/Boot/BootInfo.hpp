@@ -29,6 +29,16 @@ namespace Quantum::System::Kernel::Types::Boot {
     UInt32 Reserved;
 
     /**
+     * Physical address of the INIT.BND bundle (0 if none).
+     */
+    UInt32 InitBundlePhysical;
+
+    /**
+     * Size of the INIT.BND bundle in bytes (0 if none).
+     */
+    UInt32 InitBundleSize;
+
+    /**
      * Firmware memory map entries.
      */
     MemoryRegion Entries[32];

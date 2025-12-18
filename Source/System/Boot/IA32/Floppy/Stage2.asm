@@ -76,10 +76,21 @@ KernelDestLinear          dd 0
 
 KernelName        db 'K','E','R','N','E','L',' ',' ','Q','X',' '
 
+InitBundleSizeLow          dw 0
+InitBundleSizeHigh         dw 0
+InitBundleSizeBytes        dd 0
+InitBundleSectors          dw 0
+InitBundleBaseLinear       dd 0
+InitBundleDestLinear       dd 0
+
+InitBundleName    db 'I','N','I','T',' ',' ',' ',' ','B','N','D',' '
+
 ; E820 memory map buffer (BootInfo layout)
 BootInfoPhysical        equ 0x8000
-BootInfoTotalBytes      equ 8 + (32 * 20)         ; entryCount/res + 32 entries
-MemMapEntriesOffset     equ BootInfoPhysical + 8  ; after entryCount/reserved
+BootInfoTotalBytes      equ 16 + (32 * 20)        ; entryCount/res + bundle 
+                                                  ; + 32 entries
+MemMapEntriesOffset     equ BootInfoPhysical + 16 ; after entryCount/reserved
+                                                  ; /bundle
 MemMapEntrySize         equ 20
 MemMapMaxEntries        equ 32
 MemMapEntryCount        equ BootInfoPhysical      ; dword
@@ -88,7 +99,8 @@ NoKernelMsg        db "KERNEL.QX not found!", 0
 DiskErrorMsg       db "Disk read error!", 0
 FATErrorMsg        db "FAT error!", 0
 QuantumMsg         db 0xDB, 0xDB, " Quantum", 0x0A, 0x0A, 0
-BootMsg            db "Loading system, please wait...", 0x0A, 0
+BootMsg            db "Loading system, please wait", 0
+DotMsg             db '.', 0
 
 %include "Console.inc"
 
@@ -117,10 +129,21 @@ Start:
   mov [BootDrive], dl          ; preserve BIOS drive
 
   call SetupFromBPB
+  PRINT_STR DotMsg
   call LoadFAT
+  PRINT_STR DotMsg
   call FindKernel
+  PRINT_STR DotMsg
   call LoadKernel              ; loads to 0x00010000
+  PRINT_STR DotMsg
+  call FindInitBundle
+  PRINT_STR DotMsg
+  call LoadInitBundle
+  PRINT_STR DotMsg
   call CollectE820
+  PRINT_STR DotMsg
+  call StoreInitBundleInfo
+  PRINT_STR DotMsg
   call EnterProtectedMode
 
 .Hang:
@@ -287,6 +310,94 @@ FindKernel:
   call Print
   jmp Start.Hang
 
+FindInitBundle:
+  xor ax, ax
+  mov es, ax                   ; ensure ReadSectorLBA writes to low memory
+  mov ax, [FirstRootSector]
+  mov [TempLBA], ax
+
+  mov cx, [RootDirSectors]      ; number of root dir sectors
+
+.NextRootSector:
+  mov bx, RootDirBuffer
+  mov ax, [TempLBA]
+  call ReadSectorLBA
+
+  mov si, RootDirBuffer
+  mov bx, 16                    ; 512 / 32 = 16 entries per sector
+
+.ScanEntry:
+  mov al, [si]                  ; first byte
+  cmp al, 0x00
+  je .NoMoreEntries             ; end of directory
+
+  cmp al, 0xE5
+  je .NextEntry                 ; deleted
+
+  mov al, [si + 11]             ; attribute
+  test al, 0x08
+  jnz .NextEntry                ; volume label
+  test al, 0x10
+  jnz .NextEntry                ; directory
+
+  ; compare 11-byte name
+  push si
+  mov di, InitBundleName
+  mov cx, 11
+  repe cmpsb                    ; compare DS:SI with ES:DI (DS=ES=0)
+  pop si
+  je .FoundBundle
+
+.NextEntry:
+  add si, 32                    ; next directory entry
+  dec bx                        ; decrement entry counter
+  jnz .ScanEntry
+
+  inc word [TempLBA]            ; next root dir sector
+  loop .NextRootSector
+  jmp .NoMoreEntries
+
+.NoMoreEntries:
+  mov si, NoBundleMsg
+  call Print
+  jmp Start.Hang
+
+.FoundBundle:
+  mov ax, [si + 26]             ; first cluster
+  cmp ax, 2
+  jb .BadCluster
+
+  mov [CurrentCluster], ax
+  mov [SavedFirstCluster], ax
+
+  ; file size (32-bit)
+  mov ax, [si + 28]
+  mov [InitBundleSizeLow], ax
+  mov ax, [si + 30]
+  mov [InitBundleSizeHigh], ax
+  mov ax, [InitBundleSizeLow]
+  mov [InitBundleSizeBytes], ax
+  mov ax, [InitBundleSizeHigh]
+  mov [InitBundleSizeBytes + 2], ax
+
+  ; Compute number of sectors = ceil(size / BytesPerSector)
+  mov ax, [InitBundleSizeLow]
+  mov dx, [InitBundleSizeHigh]
+  mov bx, [BytesPerSector]      ; 512
+  dec bx
+  add ax, bx
+  adc dx, 0
+  inc bx
+  div bx                        ; DX:AX / BX -> AX = sectors
+  mov [InitBundleSectors], ax
+
+  ret
+
+.BadCluster:
+  mov si, FATErrorMsg
+  call Print
+  jmp Start.Hang
+
 ClusterToLBA:
   sub ax, 2                      ; (cluster - 2)
   xor dx, dx
@@ -366,6 +477,82 @@ LoadKernel:
 .NextCluster:
   mov ax, si                     ; current cluster
   call GetNextCluster            ; AX = next
+  mov si, ax
+  jmp .LoadCluster
+
+  .Done:
+    ret
+
+  .FATError:
+    mov si, FATErrorMsg
+    call Print
+    jmp Start.Hang
+
+LoadInitBundle:
+  ; Destination linear address for INIT.BND (load below 1 MB so real-mode
+  ; segment:offset can address it; keep it page-aligned and away from the
+  ; kernel image at 0x10000).
+  mov eax, 0x00030000
+  mov [InitBundleBaseLinear], eax
+  mov [InitBundleDestLinear], eax
+
+  mov cx, [InitBundleSectors]
+  cmp cx, 0
+  je .Done
+
+  mov ax, [SavedFirstCluster]
+  mov si, ax
+
+.LoadCluster:
+  cmp cx, 0
+  je .Done
+
+  mov ax, si
+  cmp ax, 0x0FF8
+  jae .Done
+
+  cmp ax, 2
+  jb .FATError
+
+  push cx
+  call ClusterToLBA
+  mov dx, ax
+  pop cx
+
+  mov di, [SectorsPerCluster]
+  cmp di, cx
+  jbe .SectorsOk
+  mov di, cx
+
+.SectorsOk:
+  cmp di, 0
+  je .NextCluster
+
+.ClusterSectorLoop:
+  cmp di, 0
+  je .NextCluster
+
+  mov eax, [InitBundleDestLinear]
+  mov bx, ax
+  and bx, 0x000F
+  shr eax, 4
+  mov es, ax
+
+  mov ax, dx
+  call ReadSectorLBA
+
+  mov bx, [BytesPerSector]
+  add word [InitBundleDestLinear], bx
+  adc word [InitBundleDestLinear + 2], 0
+
+  inc dx
+  dec di
+  dec cx
+  jmp .ClusterSectorLoop
+
+.NextCluster:
+  mov ax, si
+  call GetNextCluster
   mov si, ax
   jmp .LoadCluster
 
@@ -516,6 +703,15 @@ CollectE820:
 .Done:
   ret
 
+StoreInitBundleInfo:
+  xor ax, ax
+  mov ds, ax
+  mov eax, [InitBundleBaseLinear]
+  mov dword [BootInfoPhysical + 8], eax
+  mov eax, [InitBundleSizeBytes]
+  mov dword [BootInfoPhysical + 12], eax
+  ret
+
 EnableA20:
   ; Fast A20 (port 0x92)
   in   al, 0x92
@@ -582,3 +778,4 @@ GDTDescriptor:
   dd GDTStart
 
 times Stage2Sectors*512 - ($-$$) db 0
+NoBundleMsg        db "INIT.BND not found!", 0

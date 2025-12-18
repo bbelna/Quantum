@@ -38,6 +38,17 @@ namespace Quantum::System::Kernel {
   InterruptContext* HandleSystemCall(InterruptContext& context);
 
   /**
+   * Retrieves the INIT.BND mapping for user space.
+   * @param base
+   *   Receives the user-space virtual base.
+   * @param size
+   *   Receives the bundle size in bytes.
+   * @return
+   *   True if INIT.BND is present and mapped; false otherwise.
+   */
+  bool GetInitBundleInfo(UInt32& base, UInt32& size);
+
+  /**
    * Panic the kernel with a message.
    * Do not invoke directly. Use the macro `PANIC(msg)` as it captures
    * file, line, and function information automatically.

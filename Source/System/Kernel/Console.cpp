@@ -84,6 +84,7 @@ namespace Quantum::System::Kernel {
 
             break;
           }
+
           case 'c': {
             char c = static_cast<char>(VARIABLE_ARGUMENTS(args, int));
 
@@ -91,6 +92,7 @@ namespace Quantum::System::Kernel {
 
             break;
           }
+
           case 'd': {
             Int32 v = VARIABLE_ARGUMENTS(args, Int32);
 
@@ -98,6 +100,7 @@ namespace Quantum::System::Kernel {
 
             break;
           }
+
           case 'u': {
             UInt32 v = VARIABLE_ARGUMENTS(args, UInt32);
 
@@ -105,6 +108,7 @@ namespace Quantum::System::Kernel {
 
             break;
           }
+
           case 'x': {
             UInt32 v = VARIABLE_ARGUMENTS(args, UInt32);
 
@@ -112,6 +116,7 @@ namespace Quantum::System::Kernel {
 
             break;
           }
+
           case 'p': {
             UInt32 v = VARIABLE_ARGUMENTS(args, UInt32);
 
@@ -119,11 +124,13 @@ namespace Quantum::System::Kernel {
 
             break;
           }
+
           case '%': {
             ConsoleDriver::WriteCharacter('%');
 
             break;
           }
+
           default: {
             ConsoleDriver::WriteCharacter('%');
             ConsoleDriver::WriteCharacter(*p);

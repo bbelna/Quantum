@@ -1,0 +1,8 @@
+[
+  {
+    "name": "coordinator",
+    "type": "init",
+    "required": true,
+    "path": "Build/Coordinator/Coordinator.qx"
+  }
+]
