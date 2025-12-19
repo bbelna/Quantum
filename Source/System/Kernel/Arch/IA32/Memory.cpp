@@ -12,18 +12,16 @@
 #include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/LinkerSymbols.hpp>
 #include <Arch/IA32/Memory.hpp>
-#include <Arch/IA32/Types/IDT/InterruptContext.hpp>
+#include <Arch/IA32/Interrupts.hpp>
 #include <Types/Primitives.hpp>
 #include <Types/Boot/BootInfo.hpp>
 #include <Types/Logging/LogLevel.hpp>
 #include <Types/Memory/MemoryRegion.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using Types::Memory::PhysicalAllocatorState;
   using Kernel::Types::Boot::BootInfo;
   using Kernel::Types::Logging::LogLevel;
   using Kernel::Types::Memory::MemoryRegion;
-  using Types::IDT::InterruptContext;
 
   namespace {
     /**
@@ -861,8 +859,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     return table[tableIndex];
   }
 
-  PhysicalAllocatorState Memory::GetPhysicalAllocatorState() {
-    PhysicalAllocatorState state{};
+  Memory::PhysicalAllocatorState Memory::GetPhysicalAllocatorState() {
+    Memory::PhysicalAllocatorState state{};
 
     state.TotalPages = _pageCount;
     state.UsedPages = _usedPages;
@@ -872,7 +870,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   }
 
   bool Memory::HandlePageFault(
-    const InterruptContext& context,
+    const Interrupts::Context& context,
     UInt32 faultAddress,
     UInt32 errorCode
   ) {

@@ -6,14 +6,13 @@
  * IA32 exception handler registration.
  */
 
-#include <Interrupts.hpp>
 #include <Kernel.hpp>
 #include <Logger.hpp>
 #include <Prelude.hpp>
 #include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/Exceptions.hpp>
+#include <Arch/IA32/Interrupts.hpp>
 #include <Arch/IA32/Memory.hpp>
-#include <Arch/IA32/Types/IDT/InterruptContext.hpp>
 #include <Types/Logging/LogLevel.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
@@ -28,7 +27,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
      *   Optional, defaults to 0. The faulting address (for page faults).
      */
     void DumpContext(
-      const InterruptContext& context,
+      const Interrupts::Context& context,
       UInt32 faultAddress = 0
     ) {
       Logger::WriteFormatted(
@@ -70,21 +69,21 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
     }
 
-    static InterruptContext* OnDivideByZero(InterruptContext& context) {
+    static Interrupts::Context* OnDivideByZero(Interrupts::Context& context) {
       DumpContext(context);
       PANIC("Divide by zero fault");
 
       return &context;
     }
 
-    static InterruptContext* OnGeneralProtection(InterruptContext& context) {
+    static Interrupts::Context* OnGeneralProtection(Interrupts::Context& context) {
       DumpContext(context);
       PANIC("General protection fault");
 
       return &context;
     }
 
-    static InterruptContext* OnPageFault(InterruptContext& context) {
+    static Interrupts::Context* OnPageFault(Interrupts::Context& context) {
       UInt32 faultAddress;
 
       asm volatile("mov %%cr2, %0" : "=r"(faultAddress));

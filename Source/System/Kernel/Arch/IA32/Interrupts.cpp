@@ -27,7 +27,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     CPU::EnableInterrupts();
   }
 
-  void Interrupts::RegisterHandler(UInt8 vector, InterruptHandler handler) {
+  void Interrupts::RegisterHandler(UInt8 vector, Interrupts::Handler handler) {
     IDT::SetHandler(vector, handler);
   }
 }

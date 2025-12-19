@@ -111,8 +111,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     asm volatile("invlpg (%0)" :: "r"(address) : "memory");
   }
 
-  IA32CPUInfo CPU::GetInfo() {
-    IA32CPUInfo info = {};
+  CPU::Info CPU::GetInfo() {
+    Info info = {};
 
     // check if CPUID is supported
     if (!IsCPUIDSupported()) {
@@ -120,12 +120,13 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
       // fill in minimal info for pre-486 CPUs
       for (int i = 0; i < 31; i++) {
-        info.vendor[i] = "Unknown"[i];
-        if (info.vendor[i] == '\0') break;
+        info.Vendor[i] = "Unknown"[i];
+
+        if (info.Vendor[i] == '\0') break;
       }
 
-      info.vendor[31] = '\0';
-      info.coreCount = 1;
+      info.Vendor[31] = '\0';
+      info.CoreCount = 1;
 
       return info;
     }
@@ -137,13 +138,13 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     info.MaxBasicFunction = eax;
 
     // Vendor string: EBX, EDX, ECX (in that order)
-    *reinterpret_cast<UInt32*>(info.vendor + 0) = ebx;
-    *reinterpret_cast<UInt32*>(info.vendor + 4) = edx;
-    *reinterpret_cast<UInt32*>(info.vendor + 8) = ecx;
+    *reinterpret_cast<UInt32*>(info.Vendor + 0) = ebx;
+    *reinterpret_cast<UInt32*>(info.Vendor + 4) = edx;
+    *reinterpret_cast<UInt32*>(info.Vendor + 8) = ecx;
 
-    info.vendor[12] = '\0';
+    info.Vendor[12] = '\0';
 
-    Logger::WriteFormatted(LogLevel::Info, "CPU Vendor: %s", info.vendor);
+    Logger::WriteFormatted(LogLevel::Info, "CPU Vendor: %s", info.Vendor);
 
     // function 1: get processor info and feature flags
     if (info.MaxBasicFunction >= 1) {
@@ -207,10 +208,10 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       info.HasAVX = (ecx & (1 << 28)) != 0;
       info.HasRDRAND = (ecx & (1 << 30)) != 0;
 
-      // fill base CPUInfo fields
-      info.hasHardwareFPU = info.HasFPU;
-      info.hasSIMD = info.HasSSE || info.HasMMX;
-      info.coreCount = 1; // Will be updated if we parse topology
+      // fill base fields
+      info.HasHardwareFPU = info.HasFPU;
+      info.HasSIMD = info.HasSSE || info.HasMMX;
+      info.CoreCount = 1; // will be updated if we parse topology
 
       Logger::WriteFormatted(
         LogLevel::Info, 
@@ -250,12 +251,12 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       info.HasPage1GB = (edx & (1 << 26)) != 0;
       info.HasRDTSCP = (edx & (1 << 27)) != 0;
       info.HasLM = (edx & (1 << 29)) != 0;
-      info.hasVirtualization = (ecx & (1 << 2)) != 0; // AMD SVM
+      info.HasVirtualization = (ecx & (1 << 2)) != 0; // AMD SVM
     }
 
     // function 0x80000002-0x80000004: processor brand string
     if (info.MaxExtendedFunction >= 0x80000004) {
-      char* modelPtr = info.model;
+      char* modelPtr = info.Model;
 
       for (UInt32 func = 0x80000002; func <= 0x80000004; func++) {
         ExecuteCPUID(func, eax, ebx, ecx, edx);
@@ -268,25 +269,25 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         modelPtr += 16;
       }
 
-      info.model[47] = '\0';
+      info.Model[47] = '\0';
 
       // trim leading spaces
-      char* trimmed = info.model;
+      char* trimmed = info.Model;
 
       while (*trimmed == ' ') trimmed++;
 
-      if (trimmed != info.model) {
+      if (trimmed != info.Model) {
         UInt32 i = 0;
 
         while (trimmed[i] != '\0' && i < 63) {
-          info.model[i] = trimmed[i];
+          info.Model[i] = trimmed[i];
           i++;
         }
 
-        info.model[i] = '\0';
+        info.Model[i] = '\0';
       }
 
-      Logger::WriteFormatted(LogLevel::Info, "CPU Model: %s", info.model);
+      Logger::WriteFormatted(LogLevel::Info, "CPU Model: %s", info.Model);
     }
     
     Logger::WriteFormatted(

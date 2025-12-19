@@ -8,23 +8,62 @@
 
 #pragma once
 
+#include <Arch/IA32/Interrupts.hpp>
 #include <Interrupts.hpp>
 #include <Prelude.hpp>
-#include <Arch/IA32/Types/IDT/IDTDescriptor.hpp>
-#include <Arch/IA32/Types/IDT/IDTEntry.hpp>
-#include <Arch/IA32/Types/IDT/InterruptContext.hpp>
 #include <Types/Primitives.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using namespace Types::IDT;
-
-  using Kernel::Types::Interrupts::InterruptHandler;
-
   /**
    * IA32 Interrupt Descriptor Table manager.
    */
   class IDT {
     public:
+      /**
+       * The IDT descriptor structure for the `lidt` instruction.
+       */
+      struct Descriptor {
+        /**
+         * Size of the IDT in bytes minus one.
+         */
+        UInt16 Limit;
+
+        /**
+         * Linear base address of the IDT.
+         */
+        UInt32 Base;
+      } __attribute__((packed));
+
+      /**
+       * An entry in the IA32 Interrupt Descriptor Table (IDT).
+       */
+      struct Entry {
+        /**
+         * Bits 0..15 of handler address.
+         */
+        UInt16 OffsetLow;
+
+        /**
+         * Code segment selector.
+         */
+        UInt16 Selector;
+
+        /**
+         * Always zero.
+         */
+        UInt8 Zero;
+
+        /**
+         * Type and attributes (present, DPL, gate type).
+         */
+        UInt8 TypeAttribute;
+
+        /**
+         * Bits 16..31 of handler address.
+         */
+        UInt16 OffsetHigh;
+      } __attribute__((packed));
+
       /**
        * Initializes the IA32 Interrupt Descriptor Table (IDT).
        */
@@ -37,7 +76,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * @param handler
        *   The interrupt handler function.
        */
-      static void SetHandler(UInt8 vector, InterruptHandler handler);
+      static void SetHandler(UInt8 vector, Interrupts::Handler handler);
 
       /**
        * Sets an IDT gate entry with a specific type attribute.
@@ -55,6 +94,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * @param context
        *   Interrupt context captured by the stub.
        */
-      static InterruptContext* DispatchInterrupt(InterruptContext* context);
+      static Interrupts::Context* DispatchInterrupt(
+        Interrupts::Context* context
+      );
   };
 }

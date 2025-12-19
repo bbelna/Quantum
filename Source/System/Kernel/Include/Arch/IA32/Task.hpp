@@ -9,8 +9,8 @@
 #pragma once
 
 #include <Prelude.hpp>
-#include <Task.hpp>
-#include <Arch/IA32/Types/Tasks/TaskControlBlock.hpp>
+#include <Arch/IA32/Interrupts.hpp>
+#include <Types/Tasks/TaskState.hpp>
 #include <Types/Primitives.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
@@ -22,6 +22,46 @@ namespace Quantum::System::Kernel::Arch::IA32 {
    */
   class Task {
     public:
+      /**
+       * Task context structure for IA32 architecture.
+       */
+      using Context = Interrupts::Context;
+
+      /**
+       * Task control block for IA32 architecture.
+       */
+      struct ControlBlock {
+        /**
+         * Unique task identifier.
+         */
+        UInt32 Id;
+
+        /**
+         * Current task state.
+         */
+        TaskState State;
+
+        /**
+         * Pointer to the saved interrupt context for the task.
+         */
+        Context* SavedContext;
+
+        /**
+         * Base address of the task's kernel stack.
+         */
+        void* StackBase;
+
+        /**
+         * Size of the task's kernel stack in bytes.
+         */
+        UInt32 StackSize;
+
+        /**
+         * Pointer to the next task in the scheduler queue.
+         */
+        ControlBlock* Next;
+      };
+
       /**
        * Initializes the IA32 task subsystem.
        */
@@ -36,7 +76,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * @return
        *   Pointer to the task control block, or nullptr on failure.
        */
-      static TaskControlBlock* Create(void (*entryPoint)(), UInt32 stackSize);
+      static ControlBlock* Create(void (*entryPoint)(), UInt32 stackSize);
 
       /**
        * Terminates the current task.
@@ -53,7 +93,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * @return
        *   Pointer to the current task control block.
        */
-      static TaskControlBlock* GetCurrent();
+      static ControlBlock* GetCurrent();
 
       /**
        * Enables preemptive multitasking.
@@ -72,6 +112,6 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * @return
        *   Updated task context to switch to.
        */
-      static TaskContext* Tick(TaskContext& context);
+      static Context* Tick(Context& context);
   };
 }

@@ -7,15 +7,11 @@
  */
 
 #include <Arch/IA32/TSS.hpp>
-#include <Arch/IA32/Types/GDT/GDTEntry.hpp>
-#include <Arch/IA32/Types/Tasks/TSS.hpp>
+#include <Arch/IA32/GDT.hpp>
 #include <Types/Primitives.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   namespace {
-    using GDTEntry = Types::GDT::GDTEntry;
-    using TSS32 = Types::Tasks::TSS32;
-
     /**
      * Dedicated ring0 stack for privilege transitions.
      */
@@ -24,7 +20,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     /**
      * TSS instance.
      */
-    TSS32 _tss = {};
+    TSS::Structure _tss = {};
 
     /**
      * GDT table provided by assembly.
@@ -34,8 +30,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     constexpr UInt32 _tssEntryIndex = 5;
 
     void WriteTSSDescriptor(UInt32 base, UInt32 limit) {
-      GDTEntry* entries = reinterpret_cast<GDTEntry*>(GDT);
-      GDTEntry& tssEntry = entries[_tssEntryIndex];
+      GDT::Entry* entries = reinterpret_cast<GDT::Entry*>(GDT);
+      GDT::Entry& tssEntry = entries[_tssEntryIndex];
 
       tssEntry.LimitLow = static_cast<UInt16>(limit & 0xFFFF);
       tssEntry.BaseLow = static_cast<UInt16>(base & 0xFFFF);
@@ -47,7 +43,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   }
 
   void TSS::Initialize(UInt32 kernelStackTop) {
-    for (UInt32 i = 0; i < sizeof(TSS32); ++i) {
+    for (UInt32 i = 0; i < sizeof(TSS::Structure); ++i) {
       reinterpret_cast<UInt8*>(&_tss)[i] = 0;
     }
 
@@ -58,11 +54,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
     _tss.SS0 = KernelDataSelector;
     _tss.ESP0 = kernelStackTop;
-    _tss.IOMapBase = sizeof(TSS32);
+    _tss.IOMapBase = sizeof(TSS::Structure);
 
     WriteTSSDescriptor(
       reinterpret_cast<UInt32>(&_tss),
-      sizeof(TSS32) - 1
+      sizeof(TSS::Structure) - 1
     );
 
     UInt16 selector = TSSSelector;

@@ -6,20 +6,18 @@
  * IA32 task context and control structures.
  */
 
+#include <Arch/IA32/CPU.hpp>
+#include <Arch/IA32/Task.hpp>
 #include <CPU.hpp>
 #include <Kernel.hpp>
 #include <Logger.hpp>
 #include <Memory.hpp>
 #include <Prelude.hpp>
-#include <Arch/IA32/CPU.hpp>
-#include <Arch/IA32/Task.hpp>
 #include <Types/Primitives.hpp>
-#include <Types/Interrupts/InterruptContext.hpp>
 #include <Types/Logging/LogLevel.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   using Kernel::Types::Logging::LogLevel;
-  using Types::IDT::InterruptContext;
 
   namespace {
     /**
@@ -30,22 +28,22 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     /**
      * Pointer to the currently executing task.
      */
-    TaskControlBlock* _currentTask = nullptr;
+    Task::ControlBlock* _currentTask = nullptr;
 
     /**
      * Pointer to the idle task (never exits).
      */
-    TaskControlBlock* _idleTask = nullptr;
+    Task::ControlBlock* _idleTask = nullptr;
 
     /**
      * Head of the ready queue (circular linked list).
      */
-    TaskControlBlock* _readyQueueHead = nullptr;
+    Task::ControlBlock* _readyQueueHead = nullptr;
 
     /**
      * Tail of the ready queue.
      */
-    TaskControlBlock* _readyQueueTail = nullptr;
+    Task::ControlBlock* _readyQueueTail = nullptr;
 
     /**
      * Whether preemptive scheduling is enabled.
@@ -61,7 +59,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     /**
      * Task pending cleanup (deferred until we are on a different stack).
      */
-    TaskControlBlock* _pendingCleanup = nullptr;
+    Task::ControlBlock* _pendingCleanup = nullptr;
 
     /**
      * Becomes true after the first explicit yield; prevents timer interrupts
@@ -72,7 +70,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     /**
      * Adds a task to the ready queue.
      */
-    void AddToReadyQueue(TaskControlBlock* task) {
+    void AddToReadyQueue(Task::ControlBlock* task) {
       task->State = TaskState::Ready;
       task->Next = nullptr;
 
@@ -92,12 +90,12 @@ namespace Quantum::System::Kernel::Arch::IA32 {
      * @return
      *   Pointer to the next ready task, or `nullptr` if none are ready.
      */
-    TaskControlBlock* PopFromReadyQueue() {
+    Task::ControlBlock* PopFromReadyQueue() {
       if (_readyQueueHead == nullptr) {
         return nullptr;
       }
 
-      TaskControlBlock* task = _readyQueueHead;
+      Task::ControlBlock* task = _readyQueueHead;
 
       _readyQueueHead = task->Next;
 
@@ -115,17 +113,17 @@ namespace Quantum::System::Kernel::Arch::IA32 {
      * If `currentContext` is provided, saves it to the current TCB before
      * switching.
      */
-    TaskContext* Schedule(TaskContext* currentContext) {
+    Task::Context* Schedule(Task::Context* currentContext) {
       if (_pendingCleanup && _pendingCleanup != _currentTask) {
         Memory::Free(_pendingCleanup->StackBase);
         Memory::Free(_pendingCleanup);
         _pendingCleanup = nullptr;
       }
 
-      TaskControlBlock* previousTask = _currentTask;
+      Task::ControlBlock* previousTask = _currentTask;
 
       if (previousTask != nullptr && currentContext != nullptr) {
-        previousTask->Context = currentContext;
+        previousTask->SavedContext = currentContext;
 
         if (
           previousTask->State == TaskState::Running &&
@@ -136,7 +134,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         }
       }
 
-      TaskControlBlock* nextTask = PopFromReadyQueue();
+      Task::ControlBlock* nextTask = PopFromReadyQueue();
 
       if (nextTask == nullptr) {
         nextTask = _idleTask;
@@ -154,7 +152,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         _pendingCleanup = previousTask;
       }
 
-      return nextTask->Context;
+      return nextTask->SavedContext;
     }
 
     /**
@@ -193,7 +191,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     Logger::Write(LogLevel::Debug, "Creating idle task");
 
     // create the idle task (runs when nothing else is ready)
-    TaskControlBlock* idleTask = Create(IdleTask, 4096);
+    Task::ControlBlock* idleTask = Create(IdleTask, 4096);
 
     if (idleTask == nullptr) {
       PANIC("Failed to create idle task");
@@ -213,10 +211,10 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     Logger::Write(LogLevel::Debug, "Idle task created successfully");
   }
 
-  TaskControlBlock* Task::Create(void (*entryPoint)(), UInt32 stackSize) {
+  Task::ControlBlock* Task::Create(void (*entryPoint)(), UInt32 stackSize) {
     // allocate the task control block
-    TaskControlBlock* tcb = static_cast<TaskControlBlock*>(
-      Memory::Allocate(sizeof(TaskControlBlock))
+    Task::ControlBlock* tcb = static_cast<Task::ControlBlock*>(
+      Memory::Allocate(sizeof(Task::ControlBlock))
     );
 
     if (tcb == nullptr) {
@@ -243,7 +241,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     tcb->Next = nullptr;
 
     // ensure stack can hold the bootstrap frame
-    const UInt32 minFrame = sizeof(TaskContext) + 8;
+    const UInt32 minFrame = sizeof(Task::Context) + 8;
 
     if (stackSize <= minFrame) {
       PANIC("Task stack too small");
@@ -259,8 +257,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     callArea[1] = reinterpret_cast<UInt32>(entryPoint); // TaskWrapper argument
 
     // place the saved context below the call frame
-    TaskContext* context = reinterpret_cast<TaskContext*>(
-      userEsp - sizeof(TaskContext)
+    Task::Context* context = reinterpret_cast<Task::Context*>(
+      userEsp - sizeof(Task::Context)
     );
 
     context->EDI = 0;
@@ -278,7 +276,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     context->EFlags = 0x202;
 
     // store the saved context pointer in the TCB
-    tcb->Context = context;
+    tcb->SavedContext = context;
 
     // add to ready queue
     AddToReadyQueue(tcb);
@@ -323,7 +321,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     asm volatile("int $32" ::: "memory");
   }
 
-  TaskControlBlock* Task::GetCurrent() {
+  Task::ControlBlock* Task::GetCurrent() {
     return _currentTask;
   }
 
@@ -339,7 +337,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     Logger::Write(LogLevel::Debug, "Preemptive multitasking disabled");
   }
 
-  TaskContext* Task::Tick(TaskContext& context) {
+  Task::Context* Task::Tick(Task::Context& context) {
     // called from timer interrupt
     bool shouldSchedule
       = (_preemptionEnabled && _schedulerActive) || _forceReschedule;

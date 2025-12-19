@@ -9,6 +9,7 @@
 #include <Logger.hpp>
 #include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/IDT.hpp>
+#include <Arch/IA32/Interrupts.hpp>
 #include <Arch/IA32/PIC.hpp>
 #include <Types/Logging/LogLevel.hpp>
 
@@ -34,17 +35,17 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     /**
      * IDT entries array.
      */
-    static IDTEntry _idtEntries[256];
+    static IDT::Entry _idtEntries[256];
 
     /**
      * IDT descriptor for `lidt` instruction.
      */
-    static IDTDescriptor _idtDescriptor;
+    static IDT::Descriptor _idtDescriptor;
 
     /**
      * Interrupt handler table.
      */
-    static InterruptHandler _handlerTable[256] = { nullptr };
+    static Interrupts::Handler _handlerTable[256] = { nullptr };
   }
 
   extern "C" void ISR0();
@@ -95,7 +96,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   extern "C" void IRQ13();
   extern "C" void IRQ14();
   extern "C" void IRQ15();
-  extern "C" void LoadIDT(IDTDescriptor*);
+  extern "C" void LoadIDT(IDT::Descriptor*);
 
   static void (*const exceptionStubs[_exceptionCount])() = {
     ISR0,  ISR1,  ISR2,  ISR3,
@@ -117,7 +118,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
   void IDT::SetGate(UInt8 vector, void (*stub)(), UInt8 typeAttribute) {
     UInt32 addr = reinterpret_cast<UInt32>(stub);
-    IDTEntry& e = _idtEntries[vector];
+    IDT::Entry& e = _idtEntries[vector];
 
     e.OffsetLow = addr & 0xFFFF;
     e.Selector = 0x08; // code segment selector
@@ -129,7 +130,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   void IDT::Initialize() {
     // zero entire table and handler table
     for (int i = 0; i < 256; ++i) {
-      _idtEntries[i] = IDTEntry{};
+      _idtEntries[i] = IDT::Entry{};
       _handlerTable[i] = nullptr;
     }
 
@@ -150,11 +151,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     PIC::MaskAll();
   }
 
-  void IDT::SetHandler(UInt8 vector, InterruptHandler handler) {
+  void IDT::SetHandler(UInt8 vector, Interrupts::Handler handler) {
     _handlerTable[vector] = handler;
   }
 
-  InterruptContext* IDT::DispatchInterrupt(InterruptContext* ctx) {
+  Interrupts::Context* IDT::DispatchInterrupt(Interrupts::Context* ctx) {
     UInt8 vector = static_cast<UInt8>(ctx->Vector);
     bool isIRQ = vector >= _irqBase && vector < (_irqBase + _irqCount);
     bool spurious
@@ -163,10 +164,10 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         vector == static_cast<UInt8>(_irqBase + 15)
       );
     bool handled = _handlerTable[vector] != nullptr;
-    InterruptContext* nextContext = ctx;
+    Interrupts::Context* nextContext = ctx;
 
     if (handled) {
-      InterruptContext* maybeNext = _handlerTable[vector](*ctx);
+      Interrupts::Context* maybeNext = _handlerTable[vector](*ctx);
 
       if (maybeNext != nullptr) {
         nextContext = maybeNext;
@@ -185,7 +186,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     return nextContext;
   }
 
-  extern "C" InterruptContext* IDTExceptionHandler(InterruptContext* ctx) {
+  extern "C" Interrupts::Context* IDTExceptionHandler(Interrupts::Context* ctx) {
     return IDT::DispatchInterrupt(ctx);
   }
 }

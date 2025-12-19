@@ -15,7 +15,7 @@
 #include <Arch/IA32/Task.hpp>
 
 using ArchTask = Quantum::System::Kernel::Arch::IA32::Task;
-using ArchTCB = Quantum::System::Kernel::Arch::IA32::TaskControlBlock;
+using ArchTCB = Quantum::System::Kernel::Arch::IA32::Task::ControlBlock;
 #endif
 
 namespace Quantum::System::Kernel {
@@ -25,8 +25,8 @@ namespace Quantum::System::Kernel {
     ArchTask::Initialize();
   }
 
-  TaskControlBlock* Task::Create(void (*entryPoint)(), UInt32 stackSize) {
-    return reinterpret_cast<TaskControlBlock*>(
+  Task::ControlBlock* Task::Create(void (*entryPoint)(), UInt32 stackSize) {
+    return reinterpret_cast<Task::ControlBlock*>(
       ArchTask::Create(entryPoint, stackSize)
     );
   }
@@ -39,8 +39,8 @@ namespace Quantum::System::Kernel {
     ArchTask::Yield();
   }
 
-  TaskControlBlock* Task::GetCurrent() {
-    return reinterpret_cast<TaskControlBlock*>(ArchTask::GetCurrent());
+  Task::ControlBlock* Task::GetCurrent() {
+    return reinterpret_cast<Task::ControlBlock*>(ArchTask::GetCurrent());
   }
 
   UInt32 Task::GetCurrentId() {

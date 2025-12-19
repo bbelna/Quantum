@@ -10,12 +10,10 @@
 #include <Arch/IA32/IO.hpp>
 #include <Arch/IA32/PIC.hpp>
 #include <Arch/IA32/PS2Keyboard.hpp>
-#include <Arch/IA32/Types/IDT/InterruptContext.hpp>
+#include <Arch/IA32/Interrupts.hpp>
 #include <Types/Primitives.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using Types::IDT::InterruptContext;
-
   namespace {
     /**
      * Scancode to ASCII mapping for standard keys.
@@ -149,7 +147,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     /**
      * Keyboard interrupt handler (IRQ1).
      */
-    InterruptContext* KeyboardHandler(InterruptContext& context) {
+    Interrupts::Context* KeyboardHandler(Interrupts::Context& context) {
       UInt8 scancode = IO::InByte(0x60);
 
       if (scancode == 0xE0) {

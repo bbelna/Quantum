@@ -18,10 +18,9 @@
 #include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/Memory.hpp>
 #include <Arch/IA32/Prelude.hpp>
-#include <Arch/IA32/Types/Memory/PhysicalAllocatorState.hpp>
 
 using ArchPhysicalAllocatorState
-  = KernelIA32::Types::Memory::PhysicalAllocatorState;
+  = KernelIA32::Memory::PhysicalAllocatorState;
 using ArchMemory = KernelIA32::Memory;
 using ArchCPU = KernelIA32::CPU;
 #endif

@@ -12,20 +12,25 @@
 #include <Types/Interrupts/InterruptContext.hpp>
 #include <Types/Tasks/TaskState.hpp>
 
+#if defined(QUANTUM_ARCH_IA32)
+#include <Arch/IA32/Task.hpp>
+#endif
+
 namespace Quantum::System::Kernel {
   using Types::Interrupts::InterruptContext;
   using Types::Tasks::TaskState;
-
-  /**
-   * Forward declaration of architecture-specific task control block.
-   */
-  struct TaskControlBlock;
 
   /**
    * Task management and scheduling.
    */
   class Task {
     public:
+      #if defined(QUANTUM_ARCH_IA32)
+      using ControlBlock = Arch::IA32::Task::ControlBlock;
+      #else
+      using ControlBlock = void;
+      #endif
+
       /**
        * Initializes the task subsystem and creates the idle task.
        */
@@ -40,7 +45,7 @@ namespace Quantum::System::Kernel {
        * @return
        *   Pointer to the task control block, or nullptr on failure.
        */
-      static TaskControlBlock* Create(
+      static ControlBlock* Create(
         void (*entryPoint)(),
         UInt32 stackSize = 4096
       );
@@ -60,7 +65,7 @@ namespace Quantum::System::Kernel {
        * @return
        *   Pointer to the current task control block.
        */
-      static TaskControlBlock* GetCurrent();
+      static ControlBlock* GetCurrent();
 
       /**
        * Gets the task id of the currently executing task (0 if none).

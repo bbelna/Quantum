@@ -60,7 +60,7 @@ global IRQ15
 global SYSCALL80
 extern IDTExceptionHandler
 
-; void LoadIDT(IDTDescriptor* desc);
+; void LoadIDT(IDT::Descriptor* desc);
 LoadIDT:
   mov eax, [esp + 4]  ; arg0: pointer to descriptor
   lidt [eax]

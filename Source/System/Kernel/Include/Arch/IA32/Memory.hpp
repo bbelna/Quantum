@@ -8,19 +8,35 @@
 
 #pragma once
 
-#include <Arch/IA32/Types/Memory/PhysicalAllocatorState.hpp>
-#include <Arch/IA32/Types/IDT/InterruptContext.hpp>
+#include <Arch/IA32/Interrupts.hpp>
 #include <Types/Primitives.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using Types::Memory::PhysicalAllocatorState;
-  using Types::IDT::InterruptContext;
-
   /**
    * IA32 paging and memory functions.
    */
   class Memory {
     public:
+      /**
+       * State of the physical allocator.
+       */
+      struct PhysicalAllocatorState {
+        /**
+         * Total pages managed by the allocator.
+         */
+        UInt32 TotalPages;
+
+        /**
+         * Pages currently marked used.
+         */
+        UInt32 UsedPages;
+
+        /**
+         * Pages currently available.
+         */
+        UInt32 FreePages;
+      };
+
       /**
        * Base virtual address where the kernel will be mapped in the
        * higher-half. Identity mappings remain available for now to ease the
@@ -184,7 +200,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        *   True if the fault was handled; false if it should escalate.
        */
       static bool HandlePageFault(
-        const InterruptContext& context,
+        const Interrupts::Context& context,
         UInt32 faultAddress,
         UInt32 errorCode
       );

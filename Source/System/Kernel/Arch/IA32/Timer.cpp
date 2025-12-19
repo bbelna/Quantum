@@ -9,18 +9,16 @@
 #include <Interrupts.hpp>
 #include <Logger.hpp>
 #include <Prelude.hpp>
-#include <Task.hpp>
 #include <Arch/IA32/IO.hpp>
 #include <Arch/IA32/PIC.hpp>
+#include <Arch/IA32/Task.hpp>
 #include <Arch/IA32/Timer.hpp>
-#include <Arch/IA32/Types/IDT/InterruptContext.hpp>
+#include <Arch/IA32/Interrupts.hpp>
 #include <Types/Primitives.hpp>
 #include <Types/Logging/LogLevel.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using Kernel::Task;
   using Kernel::Types::Logging::LogLevel;
-  using Types::IDT::InterruptContext;
 
   namespace {
     /**
@@ -61,7 +59,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     /**
      * PIT timer interrupt handler.
      */
-    InterruptContext* TimerHandler(InterruptContext& context) {
+    Interrupts::Context* TimerHandler(Interrupts::Context& context) {
       ++_tickCount;
 
       // heartbeat every second (at 100 Hz)
