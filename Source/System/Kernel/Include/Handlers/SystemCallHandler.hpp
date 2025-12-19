@@ -8,11 +8,9 @@
 
 #pragma once
 
-#include <Types/Interrupts/InterruptContext.hpp>
+#include <Interrupts.hpp>
 
 namespace Quantum::System::Kernel::Handlers {
-  using Types::Interrupts::InterruptContext;
-
   /**
    * System call handler.
    */
@@ -25,6 +23,6 @@ namespace Quantum::System::Kernel::Handlers {
        * @return
        *   Updated interrupt context.
        */
-      static InterruptContext* Handle(InterruptContext& context);
+      static Interrupts::Context* Handle(Interrupts::Context& context);
   };
 }

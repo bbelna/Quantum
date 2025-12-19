@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <Types/Primitives.hpp>
+#include <Types.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   /**
@@ -23,67 +23,67 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         /**
          * General-purpose register EDI (pusha order).
          */
-        UInt32 EDI;
+        UInt32 edi;
 
         /**
          * General-purpose register ESI (pusha order).
          */
-        UInt32 ESI;
+        UInt32 esi;
 
         /**
          * Base pointer captured during pusha.
          */
-        UInt32 EBP;
+        UInt32 ebp;
 
         /**
          * Value before pusha for ESP.
          */
-        UInt32 ESP;
+        UInt32 esp;
 
         /**
          * General-purpose register EBX (pusha order).
          */
-        UInt32 EBX;
+        UInt32 ebx;
 
         /**
          * General-purpose register EDX (pusha order).
          */
-        UInt32 EDX;
+        UInt32 edx;
 
         /**
          * General-purpose register ECX (pusha order).
          */
-        UInt32 ECX;
+        UInt32 ecx;
 
         /**
          * General-purpose register EAX (pusha order).
          */
-        UInt32 EAX;
+        UInt32 eax;
 
         /**
          * Software-pushed vector.
          */
-        UInt32 Vector;
+        UInt32 vector;
 
         /**
          * Software-pushed hardware/synthetic error code.
          */
-        UInt32 ErrorCode;
+        UInt32 errorCode;
 
         /**
          * Instruction pointer at the time of the interrupt.
          */
-        UInt32 EIP;
+        UInt32 eip;
 
         /**
          * Code segment selector at the time of the interrupt.
          */
-        UInt32 CS;
+        UInt32 cs;
 
         /**
          * CPU flags at the time of the interrupt.
          */
-        UInt32 EFlags;
+        UInt32 eflags;
       };
 
       /**

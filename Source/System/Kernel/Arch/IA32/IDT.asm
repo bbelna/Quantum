@@ -72,14 +72,14 @@ LoadIDT:
 ; ISR_NOERR creates a stub for interrupts without a hardware error code.
 ; ISR_ERR  creates a stub for interrupts that push a hardware error code.
 ; Both build a consistent stack frame and pass a pointer to it to
-; IDTExceptionHandler(InterruptContext*).
+; IDTExceptionHandler(Interrupts::Context*).
 ;------------------------------------------------------------------------------
 %macro ISR_NOERR 2
 %1:
   push dword 0          ; synthetic error code (placed below vector)
   push dword %2         ; vector number
   pusha                 ; save regs (now ESP points at EDI in context)
-  push esp              ; arg0: InterruptContext*
+  push esp              ; arg0: Interrupts::Context*
   call IDTExceptionHandler
   add esp, 4            ; pop arg
   test eax, eax         ; swap to returned context if provided
@@ -95,7 +95,7 @@ LoadIDT:
 %1:
   push dword %2         ; vector number (hardware error already on stack)
   pusha                 ; save regs
-  push esp              ; arg0: InterruptContext*
+  push esp              ; arg0: Interrupts::Context*
   call IDTExceptionHandler
   add esp, 4            ; pop arg
   popa

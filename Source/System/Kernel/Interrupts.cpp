@@ -10,17 +10,18 @@
 
 #if defined(QUANTUM_ARCH_IA32)
 #include <Arch/IA32/Interrupts.hpp>
-#include <Arch/IA32/Prelude.hpp>
-
-using ArchInterrupts = KernelIA32::Interrupts;
 #endif
 
 namespace Quantum::System::Kernel {
+  #if defined(QUANTUM_ARCH_IA32)
+  using ArchInterrupts = Arch::IA32::Interrupts;
+  #endif
+
   void Interrupts::Initialize() {
     ArchInterrupts::Initialize();
   }
 
-  void Interrupts::RegisterHandler(UInt8 vector, InterruptHandler handler) {
+  void Interrupts::RegisterHandler(UInt8 vector, Interrupts::Handler handler) {
     ArchInterrupts::RegisterHandler(vector, handler);
   }
 }

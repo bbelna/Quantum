@@ -8,20 +8,19 @@
 
 #pragma once
 
+#include <Logger.hpp>
 #include <Prelude.hpp>
-#include <Types/Primitives.hpp>
-#include <Types/Writer.hpp>
-#include <Types/String.hpp>
+#include <Types.hpp>
+#include <String.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using Kernel::Types::Writer;
-  using Kernel::Types::String;
-
   /**
    * IA32 VGA text-mode console driver.
    */
   class VGAConsole {
     public:
+      using Writer = Logger::Writer;
+
       /**
        * Initializes the console driver.
        */

@@ -8,20 +8,28 @@
 
 #pragma once
 
-#include <Types/Primitives.hpp>
-#include <Types/String.hpp>
-#include <Types/Tests/TestCase.hpp>
-#include <Types/Tests/TestFunction.hpp>
+#include <Types.hpp>
+#include <String.hpp>
 
 namespace Quantum::System::Kernel {
-  using Types::Tests::TestCase;
-  using Types::Tests::TestFunction;
-
   /**
    * Kernel test harness.
    */
   class Testing {
     public:
+      /**
+       * Signature for kernel test functions.
+       */
+      typedef bool (*TestFunction)();
+
+      /**
+       * Test case descriptor.
+       */
+      struct TestCase {
+        CString Name;
+        TestFunction Func;
+      };
+
       /**
        * Registers a test by name and function.
        * @param name

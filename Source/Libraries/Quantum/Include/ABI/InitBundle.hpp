@@ -8,9 +8,7 @@
 
 #pragma once
 
-#include <ABI/InvokeSystemCall.hpp>
-#include <ABI/Types/InitBundleInfo.hpp>
-#include <ABI/Types/SystemCall.hpp>
+#include <ABI/SystemCall.hpp>
 
 namespace Quantum::ABI {
   /**
@@ -19,15 +17,30 @@ namespace Quantum::ABI {
   class InitBundle {
     public:
       /**
+       * INIT.BND bundle info.
+       */
+      struct Info {
+        /**
+         * Virtual address of the bundle mapping in user space.
+         */
+        UInt32 base;
+
+        /**
+         * Size of the bundle in bytes.
+         */
+        UInt32 size;
+      };
+
+      /**
        * Retrieves INIT.BND bundle info from the kernel.
        * @param out
        *   Output structure populated by the kernel.
        * @return
        *   True if the bundle exists; false if not available.
        */
-      static bool GetInfo(Types::InitBundleInfo& out) {
+      static bool GetInfo(Info& out) {
         UInt32 result = InvokeSystemCall(
-          Types::SystemCall::GetInitBundleInfo,
+          SystemCall::GetInitBundleInfo,
           reinterpret_cast<UInt32>(&out)
         );
 

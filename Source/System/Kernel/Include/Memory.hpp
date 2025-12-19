@@ -8,14 +8,66 @@
 
 #pragma once
 
-#include <Types/Primitives.hpp>
-#include <Types/Memory/HeapState.hpp>
+#include <Types.hpp>
 
 namespace Quantum::System::Kernel {
-  using Types::Memory::HeapState;
-
   class Memory {
     public:
+      /**
+       * Snapshot of current heap state.
+       */
+      struct HeapState {
+        /**
+         * Total heap bytes currently mapped.
+         */
+        UInt32 mappedBytes;
+
+        /**
+         * Total free bytes tracked by the heap.
+         */
+        UInt32 freeBytes;
+
+        /**
+         * Number of free blocks in the heap.
+         */
+        UInt32 freeBlocks;
+      };
+
+      /**
+       * Represents a free block of memory.
+       */
+      struct FreeBlock {
+        /**
+         * Size of the free block in bytes.
+         */
+        UInt32 size;
+
+        /**
+         * Pointer to the next free block in the linked list.
+         */
+        FreeBlock* next;
+      };
+
+      /**
+       * Metadata stored immediately before an aligned payload.
+       */
+      struct AlignedMetadata {
+        /**
+         * Alignment marker to detect metadata.
+         */
+        UInt32 magic;
+
+        /**
+         * Owning free-block header for the allocation.
+         */
+        FreeBlock* block;
+
+        /**
+         * Offset from the start of the block payload to the aligned address.
+         */
+        UInt32 payloadOffset;
+      };
+
       /**
        * Initializes the kernel memory subsystem (paging + allocators).
        * @param bootInfoPhysicalAddress

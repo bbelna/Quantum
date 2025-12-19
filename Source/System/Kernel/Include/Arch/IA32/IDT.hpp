@@ -11,7 +11,7 @@
 #include <Arch/IA32/Interrupts.hpp>
 #include <Interrupts.hpp>
 #include <Prelude.hpp>
-#include <Types/Primitives.hpp>
+#include <Types.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   /**
@@ -26,12 +26,12 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         /**
          * Size of the IDT in bytes minus one.
          */
-        UInt16 Limit;
+        UInt16 limit;
 
         /**
          * Linear base address of the IDT.
          */
-        UInt32 Base;
+        UInt32 base;
       } __attribute__((packed));
 
       /**
@@ -41,27 +41,27 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         /**
          * Bits 0..15 of handler address.
          */
-        UInt16 OffsetLow;
+        UInt16 offsetLow;
 
         /**
          * Code segment selector.
          */
-        UInt16 Selector;
+        UInt16 selector;
 
         /**
          * Always zero.
          */
-        UInt8 Zero;
+        UInt8 zero;
 
         /**
          * Type and attributes (present, DPL, gate type).
          */
-        UInt8 TypeAttribute;
+        UInt8 typeAttribute;
 
         /**
          * Bits 16..31 of handler address.
          */
-        UInt16 OffsetHigh;
+        UInt16 offsetHigh;
       } __attribute__((packed));
 
       /**

@@ -8,12 +8,10 @@
 
 #pragma once
 
-#include <Types/Primitives.hpp>
-#include <Types/String.hpp>
+#include <Types.hpp>
+#include <String.hpp>
 
 namespace Quantum::System::Kernel::Handlers {
-  using Types::String;
-
   /**
    * Kernel panic handler.
    */

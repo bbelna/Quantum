@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <Types/Primitives.hpp>
+#include <Types.hpp>
 
 namespace Quantum::System::Kernel {
   /**

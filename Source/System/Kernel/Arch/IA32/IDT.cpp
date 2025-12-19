@@ -11,10 +11,9 @@
 #include <Arch/IA32/IDT.hpp>
 #include <Arch/IA32/Interrupts.hpp>
 #include <Arch/IA32/PIC.hpp>
-#include <Types/Logging/LogLevel.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using LogLevel = Kernel::Types::Logging::LogLevel;
+  using LogLevel = Logger::Level;
 
   namespace {
     /**
@@ -120,11 +119,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     UInt32 addr = reinterpret_cast<UInt32>(stub);
     IDT::Entry& e = _idtEntries[vector];
 
-    e.OffsetLow = addr & 0xFFFF;
-    e.Selector = 0x08; // code segment selector
-    e.Zero = 0;
-    e.TypeAttribute = typeAttribute;
-    e.OffsetHigh = (addr >> 16) & 0xFFFF;
+    e.offsetLow = addr & 0xFFFF;
+    e.selector = 0x08; // code segment selector
+    e.zero = 0;
+    e.typeAttribute = typeAttribute;
+    e.offsetHigh = (addr >> 16) & 0xFFFF;
   }
 
   void IDT::Initialize() {
@@ -142,8 +141,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       IDT::SetGate(_irqBase + i, irqStubs[i], 0x8E);
     }
 
-    _idtDescriptor.Limit = sizeof(_idtEntries) - 1;
-    _idtDescriptor.Base = reinterpret_cast<UInt32>(&_idtEntries[0]);
+    _idtDescriptor.limit = sizeof(_idtEntries) - 1;
+    _idtDescriptor.base = reinterpret_cast<UInt32>(&_idtEntries[0]);
 
     LoadIDT(&_idtDescriptor);
 
@@ -156,7 +155,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   }
 
   Interrupts::Context* IDT::DispatchInterrupt(Interrupts::Context* ctx) {
-    UInt8 vector = static_cast<UInt8>(ctx->Vector);
+    UInt8 vector = static_cast<UInt8>(ctx->vector);
     bool isIRQ = vector >= _irqBase && vector < (_irqBase + _irqCount);
     bool spurious
       = !_handlerTable[vector] && (

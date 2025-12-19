@@ -2,11 +2,15 @@
  * Quantum
  * (c) 2025 Brandon Belna - MIT License
  *
- * Libraries/Quantum/Include/Types/Primitives.hpp
+ * System/Kernel/Include/Types.hpp
  * Declaration of primitive types.
  */
 
 #pragma once
+
+#define VARIABLE_ARGUMENTS_START(list, last) ((list) = (VariableArgumentsList)(&last + 1))
+#define VARIABLE_ARGUMENTS_END(list)
+#define VARIABLE_ARGUMENTS(list, type) (list += sizeof(type), *(type *)(list - sizeof(type)))
 
 typedef unsigned char UInt8;
 typedef unsigned short UInt16;
@@ -24,3 +28,5 @@ typedef UInt32 Size;
 
 typedef const char* CString;
 typedef char* CStringMutable;
+
+typedef char* VariableArgumentsList;

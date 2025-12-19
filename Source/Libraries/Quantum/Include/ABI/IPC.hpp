@@ -8,10 +8,8 @@
 
 #pragma once
 
-#include <ABI/InvokeSystemCall.hpp>
-#include <ABI/Types/IPC.hpp>
-#include <ABI/Types/SystemCall.hpp>
-#include <Types/Primitives.hpp>
+#include <ABI/SystemCall.hpp>
+#include <Types.hpp>
 
 namespace Quantum::ABI {
   /**
@@ -20,12 +18,37 @@ namespace Quantum::ABI {
   class IPC {
     public:
       /**
+       * Maximum payload size for an IPC message.
+       */
+      static constexpr UInt32 maxPayloadBytes = 256;
+
+      /**
+       * IPC message layout.
+       */
+      struct Message {
+        /**
+         * Sender task identifier (set by the kernel).
+         */
+        UInt32 senderId;
+
+        /**
+         * Length of the payload in bytes.
+         */
+        UInt32 length;
+
+        /**
+         * Message payload bytes.
+         */
+        UInt8 payload[maxPayloadBytes];
+      };
+
+      /**
        * Creates a new IPC port owned by the caller.
        * @return
        *   Port id on success, 0 on failure.
        */
       static UInt32 CreatePort() {
-        return InvokeSystemCall(Types::SystemCall::IPC_CreatePort);
+        return InvokeSystemCall(SystemCall::IPC_CreatePort);
       }
 
       /**
@@ -39,10 +62,10 @@ namespace Quantum::ABI {
        */
       static UInt32 Send(
         UInt32 portId,
-        const Types::IPC::Message& message
+        const Message& message
       ) {
         return InvokeSystemCall(
-          Types::SystemCall::IPC_Send,
+          SystemCall::IPC_Send,
           portId,
           reinterpret_cast<UInt32>(&message),
           0
@@ -60,10 +83,10 @@ namespace Quantum::ABI {
        */
       static UInt32 Receive(
         UInt32 portId,
-        Types::IPC::Message& outMessage
+        Message& outMessage
       ) {
         return InvokeSystemCall(
-          Types::SystemCall::IPC_Receive,
+          SystemCall::IPC_Receive,
           portId,
           reinterpret_cast<UInt32>(&outMessage),
           0

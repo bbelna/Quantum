@@ -10,7 +10,9 @@
 #include <Helpers/CStringHelper.hpp>
 
 namespace Quantum::System::Kernel {
-  using Helpers::CStringHelper;
+  using CStringHelper = Helpers::CStringHelper;
+  using LogLevel = Logger::Level;
+  using Writer = Logger::Writer;
 
   namespace {
     /**

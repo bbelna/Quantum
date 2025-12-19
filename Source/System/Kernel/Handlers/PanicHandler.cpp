@@ -7,18 +7,17 @@
  */
 
 #include <CPU.hpp>
-#include <Logger.hpp>
-#include <Prelude.hpp>
 #include <Handlers/PanicHandler.hpp>
 #include <Helpers/CStringHelper.hpp>
 #include <Helpers/DebugHelper.hpp>
-#include <Types/Logging/LogLevel.hpp>
+#include <Logger.hpp>
+#include <Prelude.hpp>
 
 namespace Quantum::System::Kernel::Handlers {
-  using Kernel::CPU;
-  using Kernel::Logger;
-  using Helpers::CStringHelper;
-  using Types::Logging::LogLevel;
+  using CPU = Kernel::CPU;
+  using Logger = Kernel::Logger;
+  using CStringHelper = Helpers::CStringHelper;
+  using LogLevel = Logger::Level;
 
   void PanicHandler::Handle(
     String message,

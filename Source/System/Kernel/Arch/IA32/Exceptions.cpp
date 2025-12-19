@@ -6,17 +6,16 @@
  * IA32 exception handler registration.
  */
 
-#include <Kernel.hpp>
-#include <Logger.hpp>
-#include <Prelude.hpp>
 #include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/Exceptions.hpp>
 #include <Arch/IA32/Interrupts.hpp>
 #include <Arch/IA32/Memory.hpp>
-#include <Types/Logging/LogLevel.hpp>
+#include <Kernel.hpp>
+#include <Logger.hpp>
+#include <Prelude.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using LogLevel = Kernel::Types::Logging::LogLevel;
+  using LogLevel = Logger::Level;
 
   namespace {
     /**
@@ -33,31 +32,31 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       Logger::WriteFormatted(
         LogLevel::Trace,
         "EIP=%p CS=%p EFLAGS=%p",
-        context.EIP,
-        context.CS,
-        context.EFlags
+        context.eip,
+        context.cs,
+        context.eflags
       );
       Logger::WriteFormatted(
         LogLevel::Trace,
         "EAX=%p EBX=%p ECX=%p EDX=%p",
-        context.EAX,
-        context.EBX,
-        context.ECX,
-        context.EDX
+        context.eax,
+        context.ebx,
+        context.ecx,
+        context.edx
       );
       Logger::WriteFormatted(
         LogLevel::Trace,
         "ESI=%p EDI=%p EBP=%p ESP=%p",
-        context.ESI,
-        context.EDI,
-        context.EBP,
-        context.ESP
+        context.esi,
+        context.edi,
+        context.ebp,
+        context.esp
       );
       Logger::WriteFormatted(
         LogLevel::Trace,
         "Vector=%p Error=%p",
-        context.Vector,
-        context.ErrorCode
+        context.vector,
+        context.errorCode
       );
       
       if (faultAddress) {
@@ -93,7 +92,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       bool handled = Memory::HandlePageFault(
         context,
         faultAddress,
-        context.ErrorCode
+        context.errorCode
       );
 
       if (!handled) {

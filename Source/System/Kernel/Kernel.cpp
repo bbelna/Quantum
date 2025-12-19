@@ -10,6 +10,7 @@
 #include <Interrupts.hpp>
 #include <Kernel.hpp>
 #include <Logger.hpp>
+#include <Interrupts.hpp>
 #include <Memory.hpp>
 #include <Task.hpp>
 #include <Testing.hpp>
@@ -19,13 +20,11 @@
 #include <Handlers/SystemCallHandler.hpp>
 #include <Helpers/CStringHelper.hpp>
 #include <Helpers/DebugHelper.hpp>
-#include <Types/Primitives.hpp>
-#include <Types/Boot/BootInfo.hpp>
-#include <Types/Logging/LogLevel.hpp>
+#include <Types.hpp>
 
 namespace Quantum::System::Kernel {
-  using Helpers::CStringHelper;
-  using Types::Logging::LogLevel;
+  using CStringHelper = Helpers::CStringHelper;
+  using LogLevel = Logger::Level;
 
   namespace {
     constexpr UInt32 _initBundleVirtualBase = 0xC1000000;
@@ -43,16 +42,16 @@ namespace Quantum::System::Kernel {
     }
 
     void MapInitBundle(UInt32 bootInfoPhysicalAddress) {
-      auto* bootInfo = reinterpret_cast<Types::Boot::BootInfo*>(
+      auto* bootInfo = reinterpret_cast<Arch::IA32::Memory::BootInfo*>(
         bootInfoPhysicalAddress
       );
 
-      if (!bootInfo || bootInfo->InitBundleSize == 0) {
+      if (!bootInfo || bootInfo->initBundleSize == 0) {
         return;
       }
 
-      UInt32 size = bootInfo->InitBundleSize;
-      UInt32 base = bootInfo->InitBundlePhysical;
+      UInt32 size = bootInfo->initBundleSize;
+      UInt32 base = bootInfo->initBundlePhysical;
       Logger::WriteFormatted(
         LogLevel::Debug,
         "INIT.BND boot info: phys=%p size=0x%x",
@@ -261,7 +260,7 @@ namespace Quantum::System::Kernel {
     Task::Yield();
   }
 
-  InterruptContext* HandleSystemCall(InterruptContext& context) {
+  Interrupts::Context* HandleSystemCall(Interrupts::Context& context) {
     return Handlers::SystemCallHandler::Handle(context);
   }
 

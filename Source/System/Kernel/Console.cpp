@@ -8,7 +8,7 @@
 
 #include <Console.hpp>
 #include <Helpers/CStringHelper.hpp>
-#include <Types/Primitives.hpp>
+#include <Types.hpp>
 
 #if defined(QUANTUM_ARCH_IA32)
 #include <Arch/IA32/VGAConsole.hpp>

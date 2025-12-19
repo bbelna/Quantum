@@ -6,36 +6,36 @@
  * System call handler.
  */
 
+#include <ABI/Prelude.hpp>
+#include <ABI/InitBundle.hpp>
+#include <ABI/IPC.hpp>
+#include <ABI/SystemCall.hpp>
 #include <Console.hpp>
 #include <IPC.hpp>
+#include <Interrupts.hpp>
+#include <Handlers/SystemCallHandler.hpp>
 #include <Kernel.hpp>
 #include <Logger.hpp>
 #include <Task.hpp>
 #include <Prelude.hpp>
-#include <ABI/Prelude.hpp>
-#include <ABI/Types/InitBundleInfo.hpp>
-#include <ABI/Types/IPC.hpp>
-#include <ABI/Types/SystemCall.hpp>
-#include <Handlers/SystemCallHandler.hpp>
-#include <Types/Logging/LogLevel.hpp>
 
+// TODO: refactor into arch code
 namespace Quantum::System::Kernel::Handlers {
-  using ABI::Types::InitBundleInfo;
-  using ABI::Types::IPC::Message;
-  using ABI::Types::IPC::MaxPayloadBytes;
-  using ABI::Types::SystemCall;
+  using ABI::InitBundle;
+  using ABI::IPC;
+  using ABI::SystemCall;
   using Kernel::Console;
   using Kernel::Logger;
   using Kernel::Task;
-  using Kernel::Types::Logging::LogLevel;
+  using LogLevel = Logger::Level;
 
-  InterruptContext* SystemCallHandler::Handle(InterruptContext& context) {
-    SystemCall id = static_cast<SystemCall>(context.EAX);
+  Interrupts::Context* SystemCallHandler::Handle(Interrupts::Context& context) {
+    SystemCall id = static_cast<SystemCall>(context.eax);
 
     switch (id) {
       case SystemCall::Write: {
-        CString buffer = reinterpret_cast<CString>(context.EBX);
-        UInt32 length = context.ECX;
+        CString buffer = reinterpret_cast<CString>(context.ebx);
+        UInt32 length = context.ecx;
 
         Console::Write(buffer, length);
 
@@ -55,51 +55,51 @@ namespace Quantum::System::Kernel::Handlers {
       }
 
       case SystemCall::GetInitBundleInfo: {
-        InitBundleInfo* info
-          = reinterpret_cast<InitBundleInfo*>(context.EBX);
+        InitBundle::Info* info
+          = reinterpret_cast<InitBundle::Info*>(context.ebx);
         UInt32 base = 0;
         UInt32 size = 0;
         bool ok = Kernel::GetInitBundleInfo(base, size);
 
         if (info) {
-          info->Base = base;
-          info->Size = size;
+          info->base = base;
+          info->size = size;
         }
 
-        context.EAX = ok ? 0 : 1;
+        context.eax = ok ? 0 : 1;
 
         break;
       }
 
       case SystemCall::IPC_CreatePort: {
         UInt32 portId = Kernel::IPC::CreatePort();
-        context.EAX = portId == 0 ? 1u : portId;
+        context.eax = portId == 0 ? 1u : portId;
 
         break;
       }
 
       case SystemCall::IPC_Send: {
-        UInt32 portId = context.EBX;
-        Message* msg = reinterpret_cast<Message*>(context.ECX);
+        UInt32 portId = context.ebx;
+        IPC::Message* msg = reinterpret_cast<IPC::Message*>(context.ecx);
 
-        if (!msg || msg->Length == 0 || msg->Length > MaxPayloadBytes) {
-          context.EAX = 1;
+        if (!msg || msg->length == 0 || msg->length > IPC::maxPayloadBytes) {
+          context.eax = 1;
           break;
         }
 
         UInt32 sender = Kernel::Task::GetCurrentId();
-        bool ok = Kernel::IPC::Send(portId, sender, msg->Payload, msg->Length);
-        context.EAX = ok ? 0 : 1;
+        bool ok = Kernel::IPC::Send(portId, sender, msg->payload, msg->length);
+        context.eax = ok ? 0 : 1;
 
         break;
       }
 
       case SystemCall::IPC_Receive: {
-        UInt32 portId = context.EBX;
-        Message* msg = reinterpret_cast<Message*>(context.ECX);
+        UInt32 portId = context.ebx;
+        IPC::Message* msg = reinterpret_cast<IPC::Message*>(context.ecx);
 
         if (!msg) {
-          context.EAX = 1;
+          context.eax = 1;
           break;
         }
 
@@ -108,17 +108,17 @@ namespace Quantum::System::Kernel::Handlers {
         bool ok = Kernel::IPC::Receive(
           portId,
           sender,
-          msg->Payload,
-          MaxPayloadBytes,
+          msg->payload,
+          IPC::maxPayloadBytes,
           length
         );
 
         if (ok) {
-          msg->SenderId = sender;
-          msg->Length = length;
+          msg->senderId = sender;
+          msg->length = length;
         }
 
-        context.EAX = ok ? 0 : 1;
+        context.eax = ok ? 0 : 1;
 
         break;
       }

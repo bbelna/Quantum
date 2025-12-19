@@ -8,9 +8,8 @@
 
 #pragma once
 
-#include <ABI/InvokeSystemCall.hpp>
-#include <ABI/Types/SystemCall.hpp>
-#include <Types/Primitives.hpp>
+#include <ABI/SystemCall.hpp>
+#include <Types.hpp>
 
 namespace Quantum {
   namespace {
@@ -51,7 +50,7 @@ namespace Quantum {
         }
 
         ABI::InvokeSystemCall(
-          ABI::Types::SystemCall::Write,
+          ABI::SystemCall::Write,
           reinterpret_cast<UInt32>(str),
           length
         );
@@ -65,7 +64,7 @@ namespace Quantum {
       static inline void WriteLine(const char* str) {
         Write(str);
         ABI::InvokeSystemCall(
-          ABI::Types::SystemCall::Write,
+          ABI::SystemCall::Write,
           reinterpret_cast<UInt32>("\n"),
           1
         );

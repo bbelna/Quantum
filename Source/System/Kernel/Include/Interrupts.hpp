@@ -8,17 +8,34 @@
 
 #pragma once
 
-#include <Types/Primitives.hpp>
-#include <Types/Interrupts/InterruptHandler.hpp>
+#include <Types.hpp>
+
+#if defined(QUANTUM_ARCH_IA32)
+#include <Arch/IA32/Interrupts.hpp>
+#endif
 
 namespace Quantum::System::Kernel {
-  using InterruptHandler = Types::Interrupts::InterruptHandler;
-
   /**
    * Kernel interrupt controller for registering handlers.
    */
   class Interrupts {
     public:
+      #if defined(QUANTUM_ARCH_IA32)
+      using Context = Arch::IA32::Interrupts::Context;
+      #else
+      using Context = void;
+      #endif
+
+      /**
+       * An interrupt handler function.
+       * @param context
+       *   Reference to the interrupt context.
+       * @return
+       *   Pointer to the context to resume after handling (can be the same
+       *   context).
+       */
+      using Handler = Context* (*)(Context& context);
+
       /**
        * Initializes the kernel interrupt subsystem.
        */
@@ -31,6 +48,6 @@ namespace Quantum::System::Kernel {
        * @param handler
        *   The interrupt handler function.
        */
-      static void RegisterHandler(UInt8 vector, InterruptHandler handler);
+      static void RegisterHandler(UInt8 vector, Handler handler);
   };
 }

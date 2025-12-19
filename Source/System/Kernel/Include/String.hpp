@@ -2,15 +2,15 @@
  * Quantum
  * (c) 2025 Brandon Belna - MIT License
  *
- * System/Kernel/Include/Types/String.hpp
+ * System/Kernel/Include/String.hpp
  * Simple string view class for kernel use.
  */
 
 #pragma once
 
-#include <Types/Primitives.hpp>
+#include <Types.hpp>
 
-namespace Quantum::System::Kernel::Types {
+namespace Quantum::System::Kernel {
   /**
    * Simple immutable string view class for kernel use.
    */

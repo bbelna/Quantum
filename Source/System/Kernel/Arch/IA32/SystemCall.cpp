@@ -8,21 +8,21 @@
 
 #include <Arch/IA32/IDT.hpp>
 #include <Arch/IA32/SystemCall.hpp>
-#include <Interrupts.hpp>
+#include <Arch/IA32/Interrupts.hpp>
 #include <Kernel.hpp>
-#include <Types/Primitives.hpp>
+#include <Types.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   extern "C" void SYSCALL80();
 
   namespace {
-    InterruptContext* OnSystemCall(InterruptContext& context) {
+    Interrupts::Context* OnSystemCall(Interrupts::Context& context) {
       return Kernel::HandleSystemCall(context);
     }
   }
 
   void SystemCall::Initialize() {
-    IDT::SetGate(Vector, SYSCALL80, 0xEE);
-    Interrupts::RegisterHandler(Vector, OnSystemCall);
+    IDT::SetGate(vector, SYSCALL80, 0xEE);
+    Interrupts::RegisterHandler(vector, OnSystemCall);
   }
 }

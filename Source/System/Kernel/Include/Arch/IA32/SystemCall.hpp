@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <Types/Primitives.hpp>
+#include <Types.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   /**
@@ -19,7 +19,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       /**
        * System call vector number.
        */
-      static constexpr UInt8 Vector = 0x80;
+      static constexpr UInt8 vector = 0x80;
 
       /**
        * Installs the system call gate and handler.

@@ -8,18 +8,14 @@
 
 #pragma once
 
-#include <Types/Primitives.hpp>
-#include <Types/Interrupts/InterruptContext.hpp>
-#include <Types/Tasks/TaskState.hpp>
+#include <Types.hpp>
+#include <Interrupts.hpp>
 
 #if defined(QUANTUM_ARCH_IA32)
 #include <Arch/IA32/Task.hpp>
 #endif
 
 namespace Quantum::System::Kernel {
-  using Types::Interrupts::InterruptContext;
-  using Types::Tasks::TaskState;
-
   /**
    * Task management and scheduling.
    */
@@ -85,6 +81,6 @@ namespace Quantum::System::Kernel {
       /**
        * Scheduler tick handler (called from timer interrupt).
        */
-      static InterruptContext* Tick(InterruptContext& context);
+      static Interrupts::Context* Tick(Interrupts::Context& context);
   };
 }

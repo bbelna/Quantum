@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <Types/Primitives.hpp>
+#include <Types.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   /**
@@ -20,12 +20,12 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * IA32 GDT entry layout.
        */
       struct [[gnu::packed]] Entry {
-        UInt16 LimitLow;
-        UInt16 BaseLow;
-        UInt8 BaseMid;
-        UInt8 Access;
-        UInt8 Granularity;
-        UInt8 BaseHigh;
+        UInt16 limitLow;
+        UInt16 baseLow;
+        UInt8 baseMid;
+        UInt8 access;
+        UInt8 granularity;
+        UInt8 baseHigh;
       };
   };
 }

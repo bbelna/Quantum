@@ -13,11 +13,10 @@
 #include <Logger.hpp>
 #include <Memory.hpp>
 #include <Prelude.hpp>
-#include <Types/Primitives.hpp>
-#include <Types/Logging/LogLevel.hpp>
+#include <Types.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using Kernel::Types::Logging::LogLevel;
+  using LogLevel = Logger::Level;
 
   namespace {
     /**
@@ -71,8 +70,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
      * Adds a task to the ready queue.
      */
     void AddToReadyQueue(Task::ControlBlock* task) {
-      task->State = TaskState::Ready;
-      task->Next = nullptr;
+      task->state = Task::State::Ready;
+      task->next = nullptr;
 
       if (_readyQueueTail == nullptr) {
         // empty queue
@@ -80,7 +79,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         _readyQueueTail = task;
       } else {
         // append to tail
-        _readyQueueTail->Next = task;
+        _readyQueueTail->next = task;
         _readyQueueTail = task;
       }
     }
@@ -97,13 +96,13 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
       Task::ControlBlock* task = _readyQueueHead;
 
-      _readyQueueHead = task->Next;
+      _readyQueueHead = task->next;
 
       if (_readyQueueHead == nullptr) {
         _readyQueueTail = nullptr;
       }
 
-      task->Next = nullptr;
+      task->next = nullptr;
 
       return task;
     }
@@ -115,7 +114,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
      */
     Task::Context* Schedule(Task::Context* currentContext) {
       if (_pendingCleanup && _pendingCleanup != _currentTask) {
-        Memory::Free(_pendingCleanup->StackBase);
+        Memory::Free(_pendingCleanup->stackBase);
         Memory::Free(_pendingCleanup);
         _pendingCleanup = nullptr;
       }
@@ -123,13 +122,13 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       Task::ControlBlock* previousTask = _currentTask;
 
       if (previousTask != nullptr && currentContext != nullptr) {
-        previousTask->SavedContext = currentContext;
+        previousTask->context = currentContext;
 
         if (
-          previousTask->State == TaskState::Running &&
+          previousTask->state == Task::State::Running &&
           previousTask != _idleTask
         ) {
-          previousTask->State = TaskState::Ready;
+          previousTask->state = Task::State::Ready;
           AddToReadyQueue(previousTask);
         }
       }
@@ -141,18 +140,18 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       _currentTask = nextTask;
-      nextTask->State = TaskState::Running;
+      nextTask->state = Task::State::Running;
 
       if (
         previousTask &&
         previousTask != _idleTask &&
-        previousTask->State == TaskState::Terminated &&
+        previousTask->state == Task::State::Terminated &&
         previousTask != nextTask
       ) {
         _pendingCleanup = previousTask;
       }
 
-      return nextTask->SavedContext;
+      return nextTask->context;
     }
 
     /**
@@ -199,7 +198,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
     // keep idle task out of the ready queue; it is used as a fallback when
     // nothing else is runnable
-    idleTask->State = TaskState::Ready;
+    idleTask->state = Task::State::Ready;
     _idleTask = idleTask;
 
     // remove the idle task from the queue; Create() enqueues by default
@@ -234,11 +233,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     }
 
     // initialize TCB fields
-    tcb->Id = _nextTaskId++;
-    tcb->State = TaskState::Ready;
-    tcb->StackBase = stack;
-    tcb->StackSize = stackSize;
-    tcb->Next = nullptr;
+    tcb->id = _nextTaskId++;
+    tcb->state = Task::State::Ready;
+    tcb->stackBase = stack;
+    tcb->stackSize = stackSize;
+    tcb->next = nullptr;
 
     // ensure stack can hold the bootstrap frame
     const UInt32 minFrame = sizeof(Task::Context) + 8;
@@ -261,22 +260,22 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       userEsp - sizeof(Task::Context)
     );
 
-    context->EDI = 0;
-    context->ESI = 0;
-    context->EBP = 0;
-    context->ESP = userEsp - 20; // value ESP would have before pusha
-    context->EBX = 0;
-    context->EDX = 0;
-    context->ECX = 0;
-    context->EAX = 0;
-    context->Vector = 0;
-    context->ErrorCode = 0;
-    context->EIP = reinterpret_cast<UInt32>(&TaskWrapper);
-    context->CS = 0x08;
-    context->EFlags = 0x202;
+    context->edi = 0;
+    context->esi = 0;
+    context->ebp = 0;
+    context->esp = userEsp - 20; // value ESP would have before pusha
+    context->ebx = 0;
+    context->edx = 0;
+    context->ecx = 0;
+    context->eax = 0;
+    context->vector = 0;
+    context->errorCode = 0;
+    context->eip = reinterpret_cast<UInt32>(&TaskWrapper);
+    context->cs = 0x08;
+    context->eflags = 0x202;
 
     // store the saved context pointer in the TCB
-    tcb->SavedContext = context;
+    tcb->context = context;
 
     // add to ready queue
     AddToReadyQueue(tcb);
@@ -284,7 +283,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     Logger::WriteFormatted(
       LogLevel::Debug,
       "Created task ID=%u, entry=%p, stack=%p-%p size=%p",
-      tcb->Id,
+      tcb->id,
       entryPoint,
       stack,
       reinterpret_cast<UInt8*>(stack) + stackSize,
@@ -298,11 +297,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     Logger::WriteFormatted(
       LogLevel::Debug,
       "Task %u exiting",
-      _currentTask->Id
+      _currentTask->id
     );
 
     // mark task as terminated; defer freeing stack/TCB until after next switch
-    _currentTask->State = TaskState::Terminated;
+    _currentTask->state = Task::State::Terminated;
     _schedulerActive = true;
     _forceReschedule = true;
 

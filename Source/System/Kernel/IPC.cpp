@@ -8,14 +8,14 @@
 
 #include <IPC.hpp>
 #include <Task.hpp>
-#include <Types/Primitives.hpp>
+#include <Types.hpp>
 
 namespace Quantum::System::Kernel {
   namespace {
     struct Message {
       UInt32 SenderId;
       UInt32 Length;
-      UInt8 Data[IPC::MaxPayloadBytes];
+      UInt8 Data[IPC::maxPayloadBytes];
     };
 
     struct Port {
@@ -25,7 +25,7 @@ namespace Quantum::System::Kernel {
       UInt32 Head;
       UInt32 Tail;
       UInt32 Count;
-      Message Queue[IPC::MaxQueueDepth];
+      Message Queue[IPC::maxQueueDepth];
     };
 
     constexpr UInt32 _maxPorts = 16;
@@ -75,7 +75,7 @@ namespace Quantum::System::Kernel {
     const void* buffer,
     UInt32 length
   ) {
-    if (!buffer || length == 0 || length > MaxPayloadBytes) {
+    if (!buffer || length == 0 || length > maxPayloadBytes) {
       return false;
     }
 
@@ -86,7 +86,7 @@ namespace Quantum::System::Kernel {
     }
 
     // block (cooperatively) if queue full
-    while (port->Count >= MaxQueueDepth) {
+    while (port->Count >= maxQueueDepth) {
       Task::Yield();
     }
 
@@ -96,7 +96,7 @@ namespace Quantum::System::Kernel {
     msg.Length = length;
     CopyPayload(msg.Data, buffer, length);
 
-    port->Tail = (port->Tail + 1) % MaxQueueDepth;
+    port->Tail = (port->Tail + 1) % maxQueueDepth;
     ++port->Count;
 
     return true;
@@ -131,7 +131,7 @@ namespace Quantum::System::Kernel {
     UInt32 toCopy = msg.Length < bufferCapacity ? msg.Length : bufferCapacity;
     CopyPayload(outBuffer, msg.Data, toCopy);
 
-    port->Head = (port->Head + 1) % MaxQueueDepth;
+    port->Head = (port->Head + 1) % maxQueueDepth;
     --port->Count;
 
     return true;

@@ -6,22 +6,17 @@
  * IA32 paging and memory functions.
  */
 
-#include <Kernel.hpp>
-#include <Logger.hpp>
-#include <Prelude.hpp>
 #include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/LinkerSymbols.hpp>
 #include <Arch/IA32/Memory.hpp>
 #include <Arch/IA32/Interrupts.hpp>
-#include <Types/Primitives.hpp>
-#include <Types/Boot/BootInfo.hpp>
-#include <Types/Logging/LogLevel.hpp>
-#include <Types/Memory/MemoryRegion.hpp>
+#include <Kernel.hpp>
+#include <Logger.hpp>
+#include <Prelude.hpp>
+#include <Types.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using Kernel::Types::Boot::BootInfo;
-  using Kernel::Types::Logging::LogLevel;
-  using Kernel::Types::Memory::MemoryRegion;
+  using LogLevel = Logger::Level;
 
   namespace {
     /**
@@ -166,7 +161,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       UInt32 kernelPhysicalBase = reinterpret_cast<UInt32>(&__phys_start);
       UInt32 kernelVirtualBase = reinterpret_cast<UInt32>(&__virt_start);
 
-      if (virtualAddress >= Memory::KernelVirtualBase) {
+      if (virtualAddress >= Memory::kernelVirtualBase) {
         UInt32 offset = virtualAddress - kernelVirtualBase;
 
         return kernelPhysicalBase + offset;
@@ -329,13 +324,13 @@ namespace Quantum::System::Kernel::Arch::IA32 {
      *   Physical address of the boot info block.
      */
     void InitializePhysicalAllocator(UInt32 bootInfoPhysicalAddress) {
-      BootInfo* bootInfo = nullptr;
+      Memory::BootInfo* bootInfo = nullptr;
 
       if (
         bootInfoPhysicalAddress >= _pageSize &&
         bootInfoPhysicalAddress < _managedBytes
       ) {
-        bootInfo = reinterpret_cast<BootInfo*>(bootInfoPhysicalAddress);
+        bootInfo = reinterpret_cast<Memory::BootInfo*>(bootInfoPhysicalAddress);
       }
 
       // track the highest usable address from type-1 regions
@@ -343,7 +338,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       UInt32 entryCount = 0;
 
       if (bootInfo) {
-        entryCount = bootInfo->EntryCount;
+        entryCount = bootInfo->entryCount;
 
         if (entryCount > _maxBootEntries) {
           entryCount = _maxBootEntries;
@@ -353,16 +348,16 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       // determine highest usable address to manage (clip to 4 gb)
       if (bootInfo && entryCount > 0) {
         for (UInt32 i = 0; i < entryCount; ++i) {
-          const MemoryRegion& region = bootInfo->Entries[i];
+          const Memory::Region& region = bootInfo->entries[i];
 
-          if (region.Type != 1) {
+          if (region.type != 1) {
             continue;
           }
 
           UInt64 baseAddress
-            = (static_cast<UInt64>(region.BaseHigh) << 32) | region.BaseLow;
+            = (static_cast<UInt64>(region.baseHigh) << 32) | region.baseLow;
           UInt64 lengthBytes
-            = (static_cast<UInt64>(region.LengthHigh) << 32) | region.LengthLow;
+            = (static_cast<UInt64>(region.lengthHigh) << 32) | region.lengthLow;
 
           if (lengthBytes == 0) continue;
 
@@ -409,16 +404,16 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       // free usable pages from the map
       if (bootInfo && entryCount > 0) {
         for (UInt32 i = 0; i < entryCount; ++i) {
-          const MemoryRegion& region = bootInfo->Entries[i];
+          const Memory::Region& region = bootInfo->entries[i];
 
-          if (region.Type != 1) {
+          if (region.type != 1) {
             continue;
           }
 
           UInt64 baseAddress
-            = (static_cast<UInt64>(region.BaseHigh) << 32) | region.BaseLow;
+            = (static_cast<UInt64>(region.baseHigh) << 32) | region.baseLow;
           UInt64 lengthBytes
-            = (static_cast<UInt64>(region.LengthHigh) << 32) | region.LengthLow;
+            = (static_cast<UInt64>(region.lengthHigh) << 32) | region.lengthLow;
 
           if (lengthBytes == 0) continue;
 
@@ -469,7 +464,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
       UInt32 bootInfoPage = bootInfoPhysicalAddress / _pageSize;
       UInt32 bootInfoEndPage
-        = (bootInfoPhysicalAddress + sizeof(BootInfo) + _pageSize - 1)
+        = (bootInfoPhysicalAddress + sizeof(Memory::BootInfo) + _pageSize - 1)
         / _pageSize;
 
       if (bootInfoPage < _pageCount) {
@@ -482,10 +477,10 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         }
       }
 
-      if (bootInfo && bootInfo->InitBundleSize > 0) {
+      if (bootInfo && bootInfo->initBundleSize > 0) {
         Memory::ReservePhysicalRange(
-          bootInfo->InitBundlePhysical,
-          bootInfo->InitBundleSize
+          bootInfo->initBundlePhysical,
+          bootInfo->initBundleSize
         );
       }
 
@@ -667,7 +662,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
     for (UInt32 offset = 0; offset < kernelSizeBytes; offset += _pageSize) {
       UInt32 physicalAddress = kernelPhysicalStart + offset;
-      UInt32 virtualAddress = KernelVirtualBase + offset;
+      UInt32 virtualAddress = kernelVirtualBase + offset;
 
       MapPage(virtualAddress, physicalAddress, true, false, true);
     }
@@ -677,7 +672,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       reinterpret_cast<UInt32>(_pageDirectory)
     );
 
-    _pageDirectory[Memory::RecursiveSlot]
+    _pageDirectory[Memory::recursiveSlot]
       = pageDirectoryPhysical | _pagePresent | _pageWrite;
 
     // load directory and enable paging,
@@ -862,9 +857,9 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   Memory::PhysicalAllocatorState Memory::GetPhysicalAllocatorState() {
     Memory::PhysicalAllocatorState state{};
 
-    state.TotalPages = _pageCount;
-    state.UsedPages = _usedPages;
-    state.FreePages = _pageCount - _usedPages;
+    state.totalPages = _pageCount;
+    state.usedPages = _usedPages;
+    state.freePages = _pageCount - _usedPages;
 
     return state;
   }
@@ -897,8 +892,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     Logger::WriteFormatted(
       LogLevel::Error,
       "PF context: EIP=%p ESP=%p CR2=%p PDE=%p PTE=%p",
-      context.EIP,
-      context.ESP,
+      context.eip,
+      context.esp,
       faultAddress,
       pde,
       pte

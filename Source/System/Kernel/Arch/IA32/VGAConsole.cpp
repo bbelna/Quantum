@@ -10,6 +10,8 @@
 #include <Arch/IA32/VGAConsole.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
+  using Writer = Logger::Writer;
+
   namespace {
     /**
      * The number of text-mode columns.

@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <Types/Primitives.hpp>
+#include <Types.hpp>
 
 namespace Quantum::System::Kernel {
   /**
@@ -19,12 +19,12 @@ namespace Quantum::System::Kernel {
       /**
        * Maximum payload size in bytes for an IPC message.
        */
-      static constexpr UInt32 MaxPayloadBytes = 256;
+      static constexpr UInt32 maxPayloadBytes = 256;
 
       /**
        * Maximum number of queued messages per port.
        */
-      static constexpr UInt32 MaxQueueDepth = 16;
+      static constexpr UInt32 maxQueueDepth = 16;
 
       /**
        * Creates a new IPC port owned by the current task.

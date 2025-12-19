@@ -8,7 +8,7 @@
 
 #include <Arch/IA32/TSS.hpp>
 #include <Arch/IA32/GDT.hpp>
-#include <Types/Primitives.hpp>
+#include <Types.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   namespace {
@@ -33,12 +33,12 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       GDT::Entry* entries = reinterpret_cast<GDT::Entry*>(GDT);
       GDT::Entry& tssEntry = entries[_tssEntryIndex];
 
-      tssEntry.LimitLow = static_cast<UInt16>(limit & 0xFFFF);
-      tssEntry.BaseLow = static_cast<UInt16>(base & 0xFFFF);
-      tssEntry.BaseMid = static_cast<UInt8>((base >> 16) & 0xFF);
-      tssEntry.Access = 0x89; // present, ring0, 32-bit available TSS
-      tssEntry.Granularity = static_cast<UInt8>((limit >> 16) & 0x0F);
-      tssEntry.BaseHigh = static_cast<UInt8>((base >> 24) & 0xFF);
+      tssEntry.limitLow = static_cast<UInt16>(limit & 0xFFFF);
+      tssEntry.baseLow = static_cast<UInt16>(base & 0xFFFF);
+      tssEntry.baseMid = static_cast<UInt8>((base >> 16) & 0xFF);
+      tssEntry.access = 0x89; // present, ring0, 32-bit available TSS
+      tssEntry.granularity = static_cast<UInt8>((limit >> 16) & 0x0F);
+      tssEntry.baseHigh = static_cast<UInt8>((base >> 24) & 0xFF);
     }
   }
 
@@ -52,16 +52,16 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         + sizeof(_ring0Stack);
     }
 
-    _tss.SS0 = KernelDataSelector;
-    _tss.ESP0 = kernelStackTop;
-    _tss.IOMapBase = sizeof(TSS::Structure);
+    _tss.ss0 = kernelDataSelector;
+    _tss.esp0 = kernelStackTop;
+    _tss.ioMapBase = sizeof(TSS::Structure);
 
     WriteTSSDescriptor(
       reinterpret_cast<UInt32>(&_tss),
       sizeof(TSS::Structure) - 1
     );
 
-    UInt16 selector = TSSSelector;
+    UInt16 selector = tssSelector;
 
     asm volatile("ltr %0" :: "r"(selector));
   }
@@ -72,6 +72,6 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         + sizeof(_ring0Stack);
     }
 
-    _tss.ESP0 = kernelStackTop;
+    _tss.esp0 = kernelStackTop;
   }
 }

@@ -8,9 +8,9 @@
 
 #pragma once
 
-#include <Types/Primitives.hpp>
-#include <Types/String.hpp>
-#include <Types/Interrupts/InterruptContext.hpp>
+#include <Interrupts.hpp>
+#include <Types.hpp>
+#include <String.hpp>
 
 #define PANIC(msg) \
   ::Quantum::System::Kernel::Panic(\
@@ -18,9 +18,6 @@
   )
 
 namespace Quantum::System::Kernel {
-  using Types::String;
-  using Types::Interrupts::InterruptContext;
-
   /**
    * Initializes the kernel.
    * @param bootInfoPhysicalAddress
@@ -35,7 +32,7 @@ namespace Quantum::System::Kernel {
    * @return
    *   Updated interrupt context.
    */
-  InterruptContext* HandleSystemCall(InterruptContext& context);
+  Interrupts::Context* HandleSystemCall(Interrupts::Context& context);
 
   /**
    * Retrieves the INIT.BND mapping for user space.

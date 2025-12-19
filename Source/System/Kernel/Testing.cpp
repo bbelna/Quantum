@@ -10,13 +10,12 @@
 #include <Testing.hpp>
 #include <Tests/MemoryTests.hpp>
 #include <Tests/TaskTests.hpp>
-#include <Types/Primitives.hpp>
-#include <Types/Logging/LogLevel.hpp>
+#include <Types.hpp>
 
 namespace Quantum::System::Kernel {
   using namespace Tests;
 
-  using LogLevel = Types::Logging::LogLevel;
+  using LogLevel = Logger::Level;
 
   namespace {
     /**
@@ -27,7 +26,7 @@ namespace Quantum::System::Kernel {
     /**
      * Registered test cases.
      */
-    TestCase _tests[_maxTests];
+    Testing::TestCase _tests[_maxTests];
 
     /**
      * Number of registered tests.
@@ -70,9 +69,9 @@ namespace Quantum::System::Kernel {
     }
   }
 
-  void Testing::Register(CString name, TestFunction func) {
+  void Testing::Register(CString name, Testing::TestFunction func) {
     if (_testCount < _maxTests) {
-      _tests[_testCount++] = TestCase{ name, func };
+      _tests[_testCount++] = Testing::TestCase{ name, func };
     } else {
       Logger::Write(LogLevel::Error, "Test registry full");
     }

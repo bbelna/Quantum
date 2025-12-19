@@ -6,25 +6,23 @@
  * IA32 kernel entry routines.
  */
 
-#include <Kernel.hpp>
-#include <Logger.hpp>
-#include <Memory.hpp>
 #include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/KernelEntry.hpp>
 #include <Arch/IA32/LinkerSymbols.hpp>
 #include <Arch/IA32/Memory.hpp>
 #include <Arch/IA32/TSS.hpp>
 #include <Arch/IA32/VGAConsole.hpp>
-#include <Types/Primitives.hpp>
-#include <Types/Writer.hpp>
-#include <Types/Logging/LogLevel.hpp>
+#include <Kernel.hpp>
+#include <Logger.hpp>
+#include <Memory.hpp>
+#include <Types.hpp>
 
 using namespace Quantum::System::Kernel;
 
-using Arch::IA32::CPU;
-using Arch::IA32::VGAConsole;
-using Types::Logging::LogLevel;
-using Types::Writer;
+using CPU = Arch::IA32::CPU;
+using VGAConsole = Arch::IA32::VGAConsole;
+using LogLevel = Logger::Level;
+using Writer = Logger::Writer;
 
 /**
  * The GDT descriptor defined in the assembly GDT file.

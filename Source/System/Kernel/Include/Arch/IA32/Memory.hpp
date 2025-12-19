@@ -9,7 +9,7 @@
 #pragma once
 
 #include <Arch/IA32/Interrupts.hpp>
-#include <Types/Primitives.hpp>
+#include <Types.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   /**
@@ -24,17 +24,77 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         /**
          * Total pages managed by the allocator.
          */
-        UInt32 TotalPages;
+        UInt32 totalPages;
 
         /**
          * Pages currently marked used.
          */
-        UInt32 UsedPages;
+        UInt32 usedPages;
 
         /**
          * Pages currently available.
          */
-        UInt32 FreePages;
+        UInt32 freePages;
+      };
+
+      /**
+       * Describes a single physical memory segment reported by BIOS E820.
+       */
+      struct Region {
+        /**
+         * Low 32 bits of the physical base address.
+         */
+        UInt32 baseLow;
+
+        /**
+         * High 32 bits of the physical base address.
+         */
+        UInt32 baseHigh;
+
+        /**
+         * Low 32 bits of the segment length in bytes.
+         */
+        UInt32 lengthLow;
+
+        /**
+         * High 32 bits of the segment length in bytes.
+         */
+        UInt32 lengthHigh;
+
+        /**
+         * Region classification (1 = usable, otherwise reserved).
+         */
+        UInt32 type;
+      };
+
+      /**
+       * Bootloader-provided memory map and metadata passed into the kernel.
+       */
+      struct BootInfo {
+        /**
+         * Number of valid entries in the table.
+         */
+        UInt32 entryCount;
+
+        /**
+         * Reserved for future use/alignment.
+         */
+        UInt32 reserved;
+
+        /**
+         * Physical address of the INIT.BND bundle (0 if none).
+         */
+        UInt32 initBundlePhysical;
+
+        /**
+         * Size of the INIT.BND bundle in bytes (0 if none).
+         */
+        UInt32 initBundleSize;
+
+        /**
+         * Firmware memory map entries.
+         */
+        Region entries[32];
       };
 
       /**
@@ -42,12 +102,12 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * higher-half. Identity mappings remain available for now to ease the
        * transition.
        */
-      static constexpr UInt32 KernelVirtualBase = 0xC0000000;
+      static constexpr UInt32 kernelVirtualBase = 0xC0000000;
 
       /**
        * Page-directory slot reserved for the recursive/self map.
        */
-      static constexpr UInt32 RecursiveSlot = 1023;
+      static constexpr UInt32 recursiveSlot = 1023;
 
       /**
        * Initializes paging with identity mappings based on the boot memory map.

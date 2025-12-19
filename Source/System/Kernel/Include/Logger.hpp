@@ -8,21 +8,46 @@
 
 #pragma once
 
-#include <Types/Primitives.hpp>
-#include <Types/String.hpp>
-#include <Types/Writer.hpp>
-#include <Types/Logging/LogLevel.hpp>
+#include <Types.hpp>
+#include <String.hpp>
 
 namespace Quantum::System::Kernel {
-  using Types::Logging::LogLevel;
-  using Types::String;
-  using Types::Writer;
-
   /**
    * The kernel logger class.
    */
   class Logger {
     public:
+      /**
+       * Log levels.
+       */
+      enum Level {
+        Verbose = 0,
+        Debug = 100,
+        Trace = 200,
+        Info = 300,
+        Warning = 400,
+        Error = 500,
+        Panic = 600
+      };
+
+      /**
+       * Abstract writer interface for writing data.
+       */
+      class Writer {
+        public:
+          /**
+           * Writes a message.
+           * @param message
+           *   The message.
+           */
+          virtual void Write(String message);
+
+          /**
+           * Virtual destructor.
+           */
+          virtual ~Writer() = default;
+      };
+
       /**
        * Initializes the logger with the given sinks and minimum log level.
        * @param minimumLevel
@@ -33,7 +58,7 @@ namespace Quantum::System::Kernel {
        *   Number of writers.
        */
       static void Initialize(
-        LogLevel minimumLevel,
+        Level minimumLevel,
         Writer** writers,
         Size writerCount
       );
@@ -45,7 +70,7 @@ namespace Quantum::System::Kernel {
        * @param message
        *   The message to write.
        */
-      static void Write(LogLevel level, String message);
+      static void Write(Level level, String message);
 
       /**
        * Writes a formatted message to the kernel log.
@@ -56,6 +81,6 @@ namespace Quantum::System::Kernel {
        * @param ...
        *   Format arguments.
        */
-      static void WriteFormatted(LogLevel level, String formattedMessage, ...);
+      static void WriteFormatted(Level level, String formattedMessage, ...);
   };
 }

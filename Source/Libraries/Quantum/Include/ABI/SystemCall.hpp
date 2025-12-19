@@ -8,11 +8,21 @@
 
 #pragma once
 
-#include <ABI/Types/SystemCall.hpp>
-#include <Types/Primitives.hpp>
+#include <Types.hpp>
 
 namespace Quantum::ABI {
-  using Types::SystemCall;
+  /**
+   * System call identifiers.
+   */
+  enum SystemCall {
+    Write = 0,
+    Exit = 1,
+    Yield = 2,
+    GetInitBundleInfo = 3,
+    IPC_CreatePort = 4,
+    IPC_Send = 5,
+    IPC_Receive = 6
+  };
 
   /**
    * Invokes a system call via `int 0x80`.

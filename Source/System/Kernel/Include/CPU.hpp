@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <Types/Primitives.hpp>
+#include <Types.hpp>
 
 namespace Quantum::System::Kernel {
   /**
@@ -23,32 +23,32 @@ namespace Quantum::System::Kernel {
         /**
          * The CPU's vendor name.
          */
-        char Vendor[32];
+        char vendor[32];
 
         /**
          * The CPU model/description.
          */
-        char Model[64];
+        char model[64];
 
         /**
          * The number of CPU cores.
          */
-        UInt32 CoreCount;
+        UInt32 coreCount;
 
         /**
          * Whether the CPU supports SIMD instructions.
          */
-        bool HasSIMD;
+        bool hasSIMD;
 
         /**
          * Whether the CPU has a hardware FPU.
          */
-        bool HasHardwareFPU;
+        bool hasHardwareFPU;
 
         /**
          * Whether the CPU supports virtualization extensions.
          */
-        bool HasVirtualization;
+        bool hasVirtualization;
       };
 
       /**

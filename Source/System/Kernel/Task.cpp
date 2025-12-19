@@ -6,20 +6,21 @@
  * Architecture-agnostic task management.
  */
 
+#include <Interrupts.hpp>
 #include <Logger.hpp>
 #include <Task.hpp>
-#include <Types/Primitives.hpp>
-#include <Types/Logging/LogLevel.hpp>
+#include <Types.hpp>
 
 #if defined(QUANTUM_ARCH_IA32)
 #include <Arch/IA32/Task.hpp>
-
-using ArchTask = Quantum::System::Kernel::Arch::IA32::Task;
-using ArchTCB = Quantum::System::Kernel::Arch::IA32::Task::ControlBlock;
 #endif
 
 namespace Quantum::System::Kernel {
-  using LogLevel = Types::Logging::LogLevel;
+  #if defined(QUANTUM_ARCH_IA32)
+  using ArchTask = Arch::IA32::Task;
+  #endif
+
+  using LogLevel = Logger::Level;
 
   void Task::Initialize() {
     ArchTask::Initialize();
@@ -44,9 +45,9 @@ namespace Quantum::System::Kernel {
   }
 
   UInt32 Task::GetCurrentId() {
-    auto* tcb = ArchTask::GetCurrent();
+    auto* tcb = GetCurrent();
 
-    return tcb ? tcb->Id : 0;
+    return tcb ? tcb->id : 0;
   }
 
   void Task::EnablePreemption() {
@@ -57,7 +58,7 @@ namespace Quantum::System::Kernel {
     ArchTask::DisablePreemption();
   }
 
-  InterruptContext* Task::Tick(InterruptContext& context) {
+  Interrupts::Context* Task::Tick(Interrupts::Context& context) {
     return ArchTask::Tick(context);
   }
 }

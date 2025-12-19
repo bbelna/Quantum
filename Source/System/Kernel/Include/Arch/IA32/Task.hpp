@@ -8,15 +8,11 @@
 
 #pragma once
 
-#include <Prelude.hpp>
 #include <Arch/IA32/Interrupts.hpp>
-#include <Types/Tasks/TaskState.hpp>
-#include <Types/Primitives.hpp>
+#include <Prelude.hpp>
+#include <Types.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using namespace Kernel::Types::Tasks;
-  using namespace Types::Tasks;
-
   /**
    * Low-level task management for IA32.
    */
@@ -28,38 +24,63 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       using Context = Interrupts::Context;
 
       /**
+       * Task state enumeration.
+       */
+      enum State {
+        /**
+         * Task is ready to run.
+         */
+        Ready = 0,
+
+        /**
+         * Task is currently executing.
+         */
+        Running = 1,
+
+        /**
+         * Task is blocked waiting for an event.
+         */
+        Blocked = 2,
+
+        /**
+         * Task has terminated.
+         */
+        Terminated = 3
+      };
+
+      /**
        * Task control block for IA32 architecture.
        */
       struct ControlBlock {
         /**
          * Unique task identifier.
          */
-        UInt32 Id;
+        UInt32 id;
 
         /**
          * Current task state.
          */
-        TaskState State;
+        State state;
 
         /**
          * Pointer to the saved interrupt context for the task.
          */
-        Context* SavedContext;
+        Context* context;
 
         /**
          * Base address of the task's kernel stack.
          */
-        void* StackBase;
+        void* stackBase;
 
         /**
          * Size of the task's kernel stack in bytes.
          */
-        UInt32 StackSize;
+        UInt32 stackSize;
 
         /**
          * Pointer to the next task in the scheduler queue.
          */
-        ControlBlock* Next;
+        ControlBlock* next;
       };
 
       /**

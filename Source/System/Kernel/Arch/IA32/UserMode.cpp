@@ -9,7 +9,7 @@
 #include <Arch/IA32/Memory.hpp>
 #include <Arch/IA32/TSS.hpp>
 #include <Arch/IA32/UserMode.hpp>
-#include <Types/Primitives.hpp>
+#include <Types.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   namespace {
@@ -21,8 +21,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   }
 
   void UserMode::Enter(UInt32 entryPoint, UInt32 userStackTop) {
-    const UInt32 userData = TSS::UserDataSelector;
-    const UInt32 userCode = TSS::UserCodeSelector;
+    const UInt32 userData = TSS::userDataSelector;
+    const UInt32 userCode = TSS::userCodeSelector;
 
     asm volatile(
       "cli\n\t"
