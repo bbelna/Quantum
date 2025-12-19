@@ -9,6 +9,7 @@ BUILD_DIR    ?= $(PROJECT_ROOT)/Build
 ARCH ?= IA32
 
 COORD_DIR     := $(SRC_ROOT)/System/Coordinator
+USER_RUNTIME  := $(SRC_ROOT)/System/User/Runtime
 LIBQ_INCLUDE  := $(PROJECT_ROOT)/Source/Libraries/Quantum/Include
 COORD_INCLUDE := $(COORD_DIR)/Include
 
@@ -29,12 +30,12 @@ all: coordinator
 
 coordinator: $(COORD_QX)
 
-$(COORD_ELF): $(COORD_DIR)/Coordinator.cpp $(COORD_DIR)/Main.cpp $(COORD_DIR)/Include/Coordinator.hpp $(COORD_DIR)/Link.ld
+$(COORD_ELF): $(COORD_DIR)/Coordinator.cpp $(COORD_DIR)/Main.cpp $(USER_RUNTIME)/CRT0.cpp $(COORD_DIR)/Include/Coordinator.hpp $(COORD_DIR)/Link.ld
 	@mkdir -p $(dir $@)
 	$(CC32) $(CFLAGS32) -m32 -ffreestanding -nostdlib -static -Wl,--no-pie \
 		-I$(LIBQ_INCLUDE) -I$(COORD_INCLUDE) \
 		-T $(COORD_DIR)/Link.ld \
-		$(COORD_DIR)/Coordinator.cpp $(COORD_DIR)/Main.cpp -o $@
+		$(COORD_DIR)/Coordinator.cpp $(COORD_DIR)/Main.cpp $(USER_RUNTIME)/CRT0.cpp -o $@
 	@echo "[OK] Linked Coordinator.elf -> $@"
 
 $(COORD_QX): $(COORD_ELF)

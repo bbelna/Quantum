@@ -8,6 +8,7 @@
 
 #include "Floppy.hpp"
 
-extern "C" [[gnu::section(".text.start")]] void main() {
+int main() {
   Quantum::System::Drivers::Storage::Floppy::Main();
+  return 0;
 }

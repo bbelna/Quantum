@@ -6,6 +6,7 @@
  * IA32 paging and memory functions.
  */
 
+#include <Arch/IA32/BootInfo.hpp>
 #include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/LinkerSymbols.hpp>
 #include <Arch/IA32/Memory.hpp>
@@ -324,13 +325,15 @@ namespace Quantum::System::Kernel::Arch::IA32 {
      *   Physical address of the boot info block.
      */
     void InitializePhysicalAllocator(UInt32 bootInfoPhysicalAddress) {
-      Memory::BootInfo* bootInfo = nullptr;
+      const BootInfo::View* bootInfo = nullptr;
+      UInt32 bootInfoPhysical = BootInfo::GetPhysicalAddress();
 
-      if (
-        bootInfoPhysicalAddress >= _pageSize &&
-        bootInfoPhysicalAddress < _managedBytes
-      ) {
-        bootInfo = reinterpret_cast<Memory::BootInfo*>(bootInfoPhysicalAddress);
+      if (bootInfoPhysical == 0) {
+        bootInfoPhysical = bootInfoPhysicalAddress;
+      }
+
+      if (bootInfoPhysical >= _pageSize && bootInfoPhysical < _managedBytes) {
+        bootInfo = BootInfo::Get();
       }
 
       // track the highest usable address from type-1 regions
@@ -348,7 +351,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       // determine highest usable address to manage (clip to 4 gb)
       if (bootInfo && entryCount > 0) {
         for (UInt32 i = 0; i < entryCount; ++i) {
-          const Memory::Region& region = bootInfo->entries[i];
+          const BootInfo::Region& region = bootInfo->entries[i];
 
           if (region.type != 1) {
             continue;
@@ -391,6 +394,16 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       UInt32 bitmapPhysical
         = AlignUp(reinterpret_cast<UInt32>(&__phys_bss_end), 4);
 
+      if (bootInfo && bootInfo->initBundleSize > 0) {
+        UInt32 bundleStart = bootInfo->initBundlePhysical;
+        UInt32 bundleEnd = bundleStart + bootInfo->initBundleSize;
+        UInt32 bitmapEnd = bitmapPhysical + bitmapBytes;
+
+        if (!(bitmapEnd <= bundleStart || bitmapPhysical >= bundleEnd)) {
+          bitmapPhysical = AlignUp(bundleEnd, 4);
+        }
+      }
+
       _pageBitmap = reinterpret_cast<UInt32*>(bitmapPhysical);
       _bitmapLengthWords = bitmapBytes / 4;
 
@@ -404,7 +417,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       // free usable pages from the map
       if (bootInfo && entryCount > 0) {
         for (UInt32 i = 0; i < entryCount; ++i) {
-          const Memory::Region& region = bootInfo->entries[i];
+          const BootInfo::Region& region = bootInfo->entries[i];
 
           if (region.type != 1) {
             continue;
@@ -462,9 +475,9 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         / _pageSize
       );
 
-      UInt32 bootInfoPage = bootInfoPhysicalAddress / _pageSize;
+      UInt32 bootInfoPage = bootInfoPhysical / _pageSize;
       UInt32 bootInfoEndPage
-        = (bootInfoPhysicalAddress + sizeof(Memory::BootInfo) + _pageSize - 1)
+        = (bootInfoPhysical + BootInfo::RawSize + _pageSize - 1)
         / _pageSize;
 
       if (bootInfoPage < _pageCount) {

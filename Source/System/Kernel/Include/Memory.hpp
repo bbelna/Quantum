@@ -77,9 +77,31 @@ namespace Quantum::System::Kernel {
 
       /**
        * Allocates one 4 KB page of physical memory.
-       * @return Pointer to the allocated page (identity mapped).
+       * @return
+       *   Pointer to the allocated page (identity mapped).
        */
       static void* AllocatePage(bool zero = false);
+
+      /**
+       * Maps a virtual page to a physical page.
+       * @param virtualAddress
+       *   Virtual address of the page to map.
+       * @param physicalAddress
+       *   Physical address of the page to map.
+       * @param writable
+       *   Whether the page should be writable.
+       * @param user
+       *   Whether the page should be user accessible.
+       * @param global
+       *   Whether the mapping should be marked global.
+       */
+      static void MapPage(
+        UInt32 virtualAddress,
+        UInt32 physicalAddress,
+        bool writable = true,
+        bool user = false,
+        bool global = false
+      );
 
       /**
        * Allocates a block of kernel heap memory.

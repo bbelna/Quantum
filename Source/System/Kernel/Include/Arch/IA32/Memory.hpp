@@ -38,66 +38,6 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       };
 
       /**
-       * Describes a single physical memory segment reported by BIOS E820.
-       */
-      struct Region {
-        /**
-         * Low 32 bits of the physical base address.
-         */
-        UInt32 baseLow;
-
-        /**
-         * High 32 bits of the physical base address.
-         */
-        UInt32 baseHigh;
-
-        /**
-         * Low 32 bits of the segment length in bytes.
-         */
-        UInt32 lengthLow;
-
-        /**
-         * High 32 bits of the segment length in bytes.
-         */
-        UInt32 lengthHigh;
-
-        /**
-         * Region classification (1 = usable, otherwise reserved).
-         */
-        UInt32 type;
-      };
-
-      /**
-       * Bootloader-provided memory map and metadata passed into the kernel.
-       */
-      struct BootInfo {
-        /**
-         * Number of valid entries in the table.
-         */
-        UInt32 entryCount;
-
-        /**
-         * Reserved for future use/alignment.
-         */
-        UInt32 reserved;
-
-        /**
-         * Physical address of the INIT.BND bundle (0 if none).
-         */
-        UInt32 initBundlePhysical;
-
-        /**
-         * Size of the INIT.BND bundle in bytes (0 if none).
-         */
-        UInt32 initBundleSize;
-
-        /**
-         * Firmware memory map entries.
-         */
-        Region entries[32];
-      };
-
-      /**
        * Base virtual address where the kernel will be mapped in the
        * higher-half. Identity mappings remain available for now to ease the
        * transition.

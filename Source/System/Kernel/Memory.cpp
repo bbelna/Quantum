@@ -601,6 +601,22 @@ namespace Quantum::System::Kernel {
     return ArchMemory::AllocatePage(zero);
   }
 
+  void Memory::MapPage(
+    UInt32 virtualAddress,
+    UInt32 physicalAddress,
+    bool writable,
+    bool user,
+    bool global
+  ) {
+    ArchMemory::MapPage(
+      virtualAddress,
+      physicalAddress,
+      writable,
+      user,
+      global
+    );
+  }
+
   void* Memory::Allocate(Size size) {
     UInt32 requested = AlignUp(static_cast<UInt32>(size), 8);
     int binIndex = BinIndexForSize(requested);

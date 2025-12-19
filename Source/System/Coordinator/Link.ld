@@ -1,11 +1,11 @@
 /* Quantum Coordinator linker script (user-mode) */
-ENTRY(main)
+ENTRY(_start)
 
 SECTIONS {
   . = 0x00400000;
 
   .entry : {
-    LONG(main - 0x00400000)
+    LONG(_start - 0x00400000)
   }
 
   .text.start : {

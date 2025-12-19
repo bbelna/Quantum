@@ -6,7 +6,12 @@
  * Core kernel implementation.
  */
 
+#include <BootInfo.hpp>
 #include <CPU.hpp>
+#include <Handlers/PanicHandler.hpp>
+#include <Handlers/SystemCallHandler.hpp>
+#include <Helpers/CStringHelper.hpp>
+#include <Helpers/DebugHelper.hpp>
 #include <Interrupts.hpp>
 #include <Kernel.hpp>
 #include <Logger.hpp>
@@ -14,12 +19,7 @@
 #include <Memory.hpp>
 #include <Task.hpp>
 #include <Testing.hpp>
-#include <Arch/IA32/Memory.hpp>
-#include <Arch/IA32/UserMode.hpp>
-#include <Handlers/PanicHandler.hpp>
-#include <Handlers/SystemCallHandler.hpp>
-#include <Helpers/CStringHelper.hpp>
-#include <Helpers/DebugHelper.hpp>
+#include <UserMode.hpp>
 #include <Types.hpp>
 
 namespace Quantum::System::Kernel {
@@ -41,17 +41,15 @@ namespace Quantum::System::Kernel {
       return (value + alignment - 1) & ~(alignment - 1);
     }
 
-    void MapInitBundle(UInt32 bootInfoPhysicalAddress) {
-      auto* bootInfo = reinterpret_cast<Arch::IA32::Memory::BootInfo*>(
-        bootInfoPhysicalAddress
-      );
+    void MapInitBundle() {
+      BootInfo::InitBundleInfo initBundle{};
 
-      if (!bootInfo || bootInfo->initBundleSize == 0) {
+      if (!BootInfo::GetInitBundleInfo(initBundle)) {
         return;
       }
 
-      UInt32 size = bootInfo->initBundleSize;
-      UInt32 base = bootInfo->initBundlePhysical;
+      UInt32 size = initBundle.size;
+      UInt32 base = initBundle.physical;
       Logger::WriteFormatted(
         LogLevel::Debug,
         "INIT.BND boot info: phys=%p size=0x%x",
@@ -64,8 +62,8 @@ namespace Quantum::System::Kernel {
         UInt32 phys = base + i * 4096;
         UInt32 virt = _initBundleVirtualBase + i * 4096;
 
-        Arch::IA32::Memory::MapPage(virt, phys, false, false, false);
-        Arch::IA32::Memory::MapPage(
+        Memory::MapPage(virt, phys, false, false, false);
+        Memory::MapPage(
           _initBundleUserBase + i * 4096,
           phys,
           false,
@@ -77,6 +75,31 @@ namespace Quantum::System::Kernel {
       _initBundleMappedBase = _initBundleVirtualBase;
       _initBundleMappedSize = size;
       _initBundleMappedUserBase = _initBundleUserBase;
+
+      if (size >= 8) {
+        const UInt8* physMagic = reinterpret_cast<const UInt8*>(base);
+        const UInt8* virtMagic
+          = reinterpret_cast<const UInt8*>(_initBundleMappedBase);
+        UInt32 physMagic0 = *reinterpret_cast<const UInt32*>(physMagic);
+        UInt32 physMagic1 = *reinterpret_cast<const UInt32*>(physMagic + 4);
+        UInt32 virtMagic0 = *reinterpret_cast<const UInt32*>(virtMagic);
+        UInt32 virtMagic1 = *reinterpret_cast<const UInt32*>(virtMagic + 4);
+
+        Logger::WriteFormatted(
+          LogLevel::Debug,
+          "INIT.BND post-map: phys=%p magic0=0x%x magic1=0x%x",
+          base,
+          physMagic0,
+          physMagic1
+        );
+        Logger::WriteFormatted(
+          LogLevel::Debug,
+          "INIT.BND post-map: virt=%p magic0=0x%x magic1=0x%x",
+          _initBundleMappedBase,
+          virtMagic0,
+          virtMagic1
+        );
+      }
     }
 
     struct BundleHeader {
@@ -205,7 +228,7 @@ namespace Quantum::System::Kernel {
         void* phys = Memory::AllocatePage(true);
         UInt32 vaddr = _userProgramBase + i * 4096;
 
-        Arch::IA32::Memory::MapPage(
+        Memory::MapPage(
           vaddr,
           reinterpret_cast<UInt32>(phys),
           true,
@@ -222,8 +245,8 @@ namespace Quantum::System::Kernel {
 
       UInt32 entryOffset = *reinterpret_cast<UInt32*>(dest);
 
-      Arch::IA32::UserMode::MapUserStack(_userStackTop, _userStackSize);
-      Arch::IA32::UserMode::Enter(
+      UserMode::MapUserStack(_userStackTop, _userStackSize);
+      UserMode::Enter(
         _userProgramBase + entryOffset,
         _userStackTop
       );
@@ -243,11 +266,12 @@ namespace Quantum::System::Kernel {
   }
 
   void Initialize(UInt32 bootInfoPhysicalAddress) {
+    BootInfo::Initialize(bootInfoPhysicalAddress);
     Memory::Initialize(bootInfoPhysicalAddress);
     Interrupts::Initialize();
     Task::Initialize();
     Task::EnablePreemption();
-    MapInitBundle(bootInfoPhysicalAddress);
+    MapInitBundle();
 
     Task::Create(LaunchCoordinatorFromBundle, 4096);
 

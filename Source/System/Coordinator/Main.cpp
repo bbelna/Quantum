@@ -11,6 +11,7 @@
 /**
  * Coordinator main entry point.
  */
-extern "C" [[gnu::section(".text.start")]] void main() {
+int main() {
   Quantum::System::Coordinator::Main();
+  return 0;
 }

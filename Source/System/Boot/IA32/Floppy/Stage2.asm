@@ -490,9 +490,9 @@ LoadKernel:
 
 LoadInitBundle:
   ; Destination linear address for INIT.BND (load below 1 MB so real-mode
-  ; segment:offset can address it; keep it page-aligned and away from the
-  ; kernel image at 0x10000).
-  mov eax, 0x00030000
+  ; segment:offset can address it; keep it page-aligned and above the
+  ; kernel image + .bss to avoid overlap).
+  mov eax, 0x00070000
   mov [InitBundleBaseLinear], eax
   mov [InitBundleDestLinear], eax
 
