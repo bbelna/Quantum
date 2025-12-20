@@ -6,6 +6,7 @@
  * Architecture-agnostic memory manager.
  */
 
+#include <Helpers/AlignHelper.hpp>
 #include <Kernel.hpp>
 #include <Logger.hpp>
 #include <Memory.hpp>
@@ -24,6 +25,7 @@ namespace Quantum::System::Kernel {
   #endif
 
   using LogLevel = Logger::Level;
+  using AlignHelper = Helpers::AlignHelper;
 
   namespace {
     /**
@@ -123,32 +125,6 @@ namespace Quantum::System::Kernel {
      */
     Memory::FreeBlock* _binFreeLists[_binCount]
       = { nullptr, nullptr, nullptr, nullptr };
-
-    /**
-     * Aligns a value to the next multiple of alignment.
-     * @param value
-     *   Value to align.
-     * @param alignment
-     *   Alignment boundary (power of two).
-     * @return
-     *   Aligned value.
-     */
-    inline UInt32 AlignUp(UInt32 value, UInt32 alignment) {
-      return (value + alignment - 1) & ~(alignment - 1);
-    }
-
-    /**
-     * Aligns a value down to the nearest alignment boundary.
-     * @param value
-     *   Value to align.
-     * @param alignment
-     *   Alignment boundary (power of two).
-     * @return
-     *   Aligned value at or below input.
-     */
-    inline UInt32 AlignDown(UInt32 value, UInt32 alignment) {
-      return value & ~(alignment - 1);
-    }
 
     /**
      * Writes the canary for a free block at the end of its payload.
@@ -287,7 +263,10 @@ namespace Quantum::System::Kernel {
       }
 
       UInt8* reclaimStart = reinterpret_cast<UInt8*>(
-        AlignUp(reinterpret_cast<UInt32>(blockPayload), _heapPageSize)
+        AlignHelper::Up(
+          reinterpret_cast<UInt32>(blockPayload),
+          _heapPageSize
+        )
       );
 
       if (reclaimStart >= heapEnd) {
@@ -511,7 +490,7 @@ namespace Quantum::System::Kernel {
         return 0;
       }
 
-      return AlignDown(blockSize - sizeof(UInt32), 8);
+      return AlignHelper::Down(blockSize - sizeof(UInt32), 8);
     }
 
     /**
@@ -694,11 +673,11 @@ namespace Quantum::System::Kernel {
   }
 
   void* Memory::Allocate(Size size) {
-    UInt32 requested = AlignUp(static_cast<UInt32>(size), 8);
+    UInt32 requested = AlignHelper::Up(static_cast<UInt32>(size), 8);
     int binIndex = BinIndexForSize(requested);
     UInt32 binSize = (binIndex >= 0) ? _binSizes[binIndex] : requested;
     UInt32 payloadSize
-      = AlignUp(binSize + sizeof(UInt32), 8); // space for canary
+      = AlignHelper::Up(binSize + sizeof(UInt32), 8); // space for canary
     UInt32 needed = payloadSize + sizeof(Memory::FreeBlock);
     UInt32 pagesNeeded = (needed + _heapPageSize - 1) / _heapPageSize;
 

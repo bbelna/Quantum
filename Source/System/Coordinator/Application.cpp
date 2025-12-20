@@ -15,23 +15,8 @@
 
 namespace Quantum::System::Coordinator {
   namespace {
-    struct BundleHeader {
-      char magic[8];
-      UInt16 version;
-      UInt16 entryCount;
-      UInt32 tableOffset;
-      UInt8 reserved[8];
-    };
-
-    struct BundleEntry {
-      char name[32];
-      UInt8 type;
-      UInt8 flags;
-      UInt8 reserved[2];
-      UInt32 offset;
-      UInt32 size;
-      UInt32 checksum;
-    };
+    using BundleHeader = Quantum::ABI::InitBundle::Header;
+    using BundleEntry = Quantum::ABI::InitBundle::Entry;
 
     bool HasMagic(const BundleHeader& header) {
       const char expected[8] = { 'I','N','I','T','B','N','D','\0' };

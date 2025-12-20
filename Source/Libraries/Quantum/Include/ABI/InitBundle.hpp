@@ -17,6 +17,30 @@ namespace Quantum::ABI {
   class InitBundle {
     public:
       /**
+       * INIT.BND header layout.
+       */
+      struct Header {
+        char magic[8];
+        UInt16 version;
+        UInt16 entryCount;
+        UInt32 tableOffset;
+        UInt8 reserved[8];
+      };
+
+      /**
+       * INIT.BND entry table layout.
+       */
+      struct Entry {
+        char name[32];
+        UInt8 type;
+        UInt8 flags;
+        UInt8 reserved[2];
+        UInt32 offset;
+        UInt32 size;
+        UInt32 checksum;
+      };
+
+      /**
        * INIT.BND bundle info.
        */
       struct Info {

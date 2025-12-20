@@ -9,15 +9,14 @@
 #include <Arch/IA32/Memory.hpp>
 #include <Arch/IA32/TSS.hpp>
 #include <Arch/IA32/UserMode.hpp>
+#include <Helpers/AlignHelper.hpp>
 #include <Types.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
+  using AlignHelper = Helpers::AlignHelper;
+
   namespace {
     constexpr UInt32 _pageSize = 4096;
-
-    inline UInt32 AlignUp(UInt32 value, UInt32 alignment) {
-      return (value + alignment - 1) & ~(alignment - 1);
-    }
   }
 
   void UserMode::Enter(UInt32 entryPoint, UInt32 userStackTop) {
@@ -53,7 +52,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       return false;
     }
 
-    UInt32 alignedSize = AlignUp(sizeBytes, _pageSize);
+    UInt32 alignedSize = AlignHelper::Up(sizeBytes, _pageSize);
     UInt32 stackBase = userStackTop - alignedSize;
     UInt32 pages = alignedSize / _pageSize;
 
