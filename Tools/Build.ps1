@@ -1,6 +1,8 @@
 param(
     [switch]$Run,   # enables --run or -Run or -r
-    [switch]$Tests  # enables kernel tests via KERNEL_TESTS
+    [switch]$Tests, # enables kernel tests via KERNEL_TESTS
+    [Alias('c')]
+    [switch]$Clean  # enables make clean before build
 )
 
 # Paths
@@ -19,7 +21,11 @@ if ($Tests) {
     $makeCmd += "export EXTRA_CFLAGS32='-DKERNEL_TESTS' && "
 }
 
-$makeCmd += "make clean && make all"
+if ($Clean) {
+    $makeCmd += "make clean && "
+}
+
+$makeCmd += "make all"
 
 wsl -e bash -lc $makeCmd
 if ($LASTEXITCODE -ne 0) {

@@ -14,38 +14,38 @@ global gdtDescriptor32
 
 SECTION .text.start
 gdt:
-  ; 1) Null descriptor (all zeros)
+  ; Null descriptor (all zeros)
   dq 0x0000000000000000
 
-  ; 2) Code segment: base=0, limit=0xFFFFF, type=0x9A, flags=0xCF
-  ;    0x00CF9A000000FFFF means:
-  ;      • limit_low = 0xFFFF
-  ;      • base_low  = 0x0000
-  ;      • base_mid  = 0x00
-  ;      • access    = 0x9A   (present, ring0, code segment, executable, readable)
-  ;      • flags     = 0xC    (4K granularity, 32-bit, long=0)
-  ;      • limit_high=0xF
-  ;      • base_high = 0x00
+  ; Code segment: base=0, limit=0xFFFFF, type=0x9A, flags=0xCF
+  ; 0x00CF9A000000FFFF means:
+  ;  - limit_low = 0xFFFF
+  ;  - base_low = 0x0000
+  ;  - base_mid = 0x00
+  ;  - access = 0x9A   (present, ring0, code segment, executable, readable)
+  ;  - flags = 0xC    (4K granularity, 32-bit, long=0)
+  ;  - limit_high = 0xF
+  ;  - base_high = 0x00
   dq 0x00CF9A000000FFFF
 
-  ; 3) Data segment: base=0, limit=0xFFFFF, type=0x92, flags=0xCF
-  ;    0x00CF92000000FFFF means:
-  ;      • limit_low = 0xFFFF
-  ;      • base_low  = 0x0000
-  ;      • base_mid  = 0x00
-  ;      • access    = 0x92   (present, ring0, data segment, writable)
-  ;      • flags     = 0xC    (4K granularity, 32-bit)
-  ;      • limit_high=0xF
-  ;      • base_high = 0x00
+  ; Data segment: base=0, limit=0xFFFFF, type=0x92, flags=0xCF
+  ; 0x00CF92000000FFFF means:
+  ;  - limit_low = 0xFFFF
+  ;  - base_low = 0x0000
+  ;  - base_mid = 0x00
+  ;  - access = 0x92   (present, ring0, data segment, writable)
+  ;  - flags = 0xC    (4K granularity, 32-bit)
+  ;  - limit_high = 0xF
+  ;  - base_high = 0x00
   dq 0x00CF92000000FFFF
 
-  ; 4) User code segment: base=0, limit=0xFFFFF, type=0xFA, flags=0xCF
+  ; User code segment: base=0, limit=0xFFFFF, type=0xFA, flags=0xCF
   dq 0x00CFFA000000FFFF
 
-  ; 5) User data segment: base=0, limit=0xFFFFF, type=0xF2, flags=0xCF
+  ; User data segment: base=0, limit=0xFFFFF, type=0xF2, flags=0xCF
   dq 0x00CFF2000000FFFF
 
-  ; 6) TSS descriptor (filled in at runtime)
+  ; TSS descriptor (filled in at runtime)
   dq 0x0000000000000000
 
 gdtEnd:
@@ -53,4 +53,4 @@ gdtEnd:
 SECTION .text.start
 gdtDescriptor32:
   dw gdtEnd - gdt - 1         ; limit = size of GDT - 1 (i.e. 24-1 = 23)
-  dd gdt                       ; base = linear address of GDT
+  dd gdt                      ; base = linear address of GDT

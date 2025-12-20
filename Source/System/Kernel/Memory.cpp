@@ -442,12 +442,6 @@ namespace Quantum::System::Kernel {
       freeBytes
     );
     DumpState();
-
-    #ifdef MEMORY_TEST
-    Memory::Test();
-    Memory::ResetHeap();
-    Memory::VerifyHeap();
-    #endif
   }
 
   void* Memory::AllocatePage(bool zero) {
@@ -848,64 +842,6 @@ namespace Quantum::System::Kernel {
       state.freeBytes,
       state.freeBlocks
     );
-  }
-
-  void Memory::Test() {
-    Logger::Write(LogLevel::Trace, "Performing memory subsystem test");
-
-    Memory::HeapState before = GetHeapState();
-
-    void* a = Allocate(32);
-    void* b = Allocate(64);
-
-    if (!a || !b) {
-      PANIC("Allocation returned null");
-    }
-
-    // write/read patterns to ensure writable pages
-    UInt8* pa = reinterpret_cast<UInt8*>(a);
-    UInt8* pb = reinterpret_cast<UInt8*>(b);
-
-    for (Size i = 0; i < 32; ++i) {
-      pa[i] = static_cast<UInt8>(i);
-
-      if (pa[i] != static_cast<UInt8>(i)) {
-        PANIC("Heap write/read mismatch");
-      }
-    }
-
-    for (Size i = 0; i < 64; ++i) {
-      pb[i] = static_cast<UInt8>(0xA5);
-
-      if (pb[i] != static_cast<UInt8>(0xA5)) {
-        PANIC("Heap write/read mismatch");
-      }
-    }
-
-    Free(b);
-    Free(a);
-
-    Memory::HeapState after = GetHeapState();
-
-    if (after.freeBytes < before.freeBytes) {
-      PANIC("Free bytes decreased unexpectedly");
-    }
-
-    Logger::WriteFormatted(
-      LogLevel::Debug,
-      "Memory state before self-test: %p mapped, %p free, %p blocks",
-      before.mappedBytes,
-      before.freeBytes,
-      before.freeBlocks
-    );
-    Logger::WriteFormatted(
-      LogLevel::Debug,
-      "Memory state after self-test: %p mapped, %p free, %p blocks",
-      after.mappedBytes,
-      after.freeBytes,
-      after.freeBlocks
-    );
-    Logger::Write(LogLevel::Trace, "Memory self-test passed");
   }
 
   bool Memory::VerifyHeap() {

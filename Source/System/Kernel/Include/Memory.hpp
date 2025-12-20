@@ -177,12 +177,6 @@ namespace Quantum::System::Kernel {
       static HeapState GetHeapState();
 
       /**
-       * Runs a simple test of page and heap allocation/free paths.
-       * Only invoked when enabled by build flag.
-       */
-      static void Test();
-
-      /**
        * Prints the current heap state to the console.
        */
       static void DumpState();
