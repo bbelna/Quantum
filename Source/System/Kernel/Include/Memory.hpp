@@ -200,5 +200,187 @@ namespace Quantum::System::Kernel {
        * Rebuilds a fresh free list over the currently mapped heap pages.
        */
       static void ResetHeap();
+
+    private:
+      /**
+       * Heap page size.
+       */
+      static constexpr UInt32 _heapPageSize = 4096;
+
+      /**
+       * Heap start virtual address.
+       */
+      static UInt32 _heapStartVirtualAddress;
+
+      /**
+       * Heap region size in bytes.
+       */
+      static UInt32 _heapRegionBytes;
+
+      /**
+       * Number of guard pages before the heap.
+       */
+      static constexpr UInt32 _heapGuardPagesBefore = 1;
+
+      /**
+       * Number of guard pages after the heap.
+       */
+      static constexpr UInt32 _heapGuardPagesAfter = 1;
+
+      /**
+       * Magic tag placed before aligned allocations.
+       */
+      static constexpr UInt32 _alignedMagic = 0xA11A0CED;
+
+      /**
+       * Number of fixed-size bins.
+       */
+      static constexpr UInt32 _binCount = 4;
+
+      /**
+       * Sizes of fixed-size bins.
+       */
+      static const UInt32 _binSizes[_binCount];
+
+      /**
+       * Poison pattern used to fill newly allocated payloads.
+       */
+      static constexpr UInt8 _poisonAllocated = 0xAA;
+
+      /**
+       * Poison pattern used to fill freed payloads.
+       */
+      static constexpr UInt8 _poisonFreed = 0x55;
+
+      /**
+       * Canary value stored at the end of each allocation.
+       */
+      static constexpr UInt32 _canaryValue = 0xDEADC0DE;
+
+      /**
+       * Pointer to the start of the heap region.
+       */
+      static UInt8* _heapBase;
+
+      /**
+       * Pointer to the end of the mapped heap region (next unmapped byte).
+       */
+      static UInt8* _heapMappedEnd;
+
+      /**
+       * Address of the guard page immediately following the mapped heap.
+       */
+      static UInt8* _guardAddress;
+
+      /**
+       * Number of bytes currently mapped in the heap.
+       */
+      static UInt32 _heapMappedBytes;
+
+      /**
+       * Pointer to the current position in the heap for allocations.
+       */
+      static UInt8* _heapCurrent;
+
+      /**
+       * Tracks the minimum contiguous pages we should keep free at the tail of
+       * the heap to satisfy the largest allocation request seen so far.
+       */
+      static UInt32 _requiredTailPages;
+
+      /**
+       * Head of the general free list.
+       */
+      static FreeBlock* _freeList;
+
+      /**
+       * Free lists for each fixed-size bin.
+       */
+      static FreeBlock* _binFreeLists[_binCount];
+
+      /**
+       * Writes the canary for a free block at the end of its payload.
+       * @param block
+       *   Block to write canary for.
+       */
+      static void SetFreeBlockCanary(FreeBlock* block);
+
+      /**
+       * Maps the next page in the heap virtual range, keeping a guard page
+       * unmapped immediately after the mapped region.
+       * @return
+       *   Pointer to the start of the mapped page.
+       */
+      static UInt8* MapNextHeapPage();
+
+      /**
+       * Lazily initializes heap bookkeeping on first use.
+       */
+      static void EnsureHeapInitialized();
+
+      /**
+       * Merges adjacent free blocks to reduce fragmentation.
+       */
+      static void CoalesceAdjacentFreeBlocks();
+
+      /**
+       * Reclaims pages from the end of the heap so the mapped region remains
+       * contiguous.
+       */
+      static void ReclaimPageSpans();
+
+      /**
+       * Inserts a free block into the sorted free list and coalesces neighbors.
+       * @param block
+       *   Block to insert.
+       */
+      static void InsertFreeBlockSorted(FreeBlock* block);
+
+      /**
+       * Attempts to satisfy an allocation from the general free list.
+       * @param needed
+       *   Total bytes requested including header.
+       * @return
+       *   Pointer to payload or `nullptr` if none fit.
+       */
+      static void* AllocateFromFreeList(UInt32 needed);
+
+      /**
+       * Determines the bin index for a requested payload size.
+       * @param size
+       *   Payload bytes requested.
+       * @return
+       *   Bin index or -1 if it does not fit in a fixed bin.
+       */
+      static int BinIndexForSize(UInt32 size);
+
+      /**
+       * Derives the original payload size (without canary/padding) from a
+       * stored block size.
+       * @param blockSize
+       *   Size stored in the block header (payload + canary + padding).
+       * @return
+       *   Payload size rounded down to the allocator's 8-byte alignment.
+       */
+      static UInt32 PayloadSizeFromBlock(UInt32 blockSize);
+
+      /**
+       * Allocates from a fixed-size bin if available, otherwise falls back to
+       * free list.
+       * @param binSize
+       *   Bin payload size to request.
+       * @param neededWithHeader
+       *   Total bytes including header.
+       * @return
+       *   Pointer to payload or nullptr.
+       */
+      static void* AllocateFromBin(UInt32 binSize, UInt32 neededWithHeader);
+
+      /**
+       * Returns a freed block either to a size bin or the general free list.
+       * @param block
+       *   Block being freed.
+       */
+      static void InsertIntoBinOrFreeList(FreeBlock* block);
   };
 }

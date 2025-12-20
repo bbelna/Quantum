@@ -266,5 +266,217 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         UInt32 faultAddress,
         UInt32 errorCode
       );
+
+    private:
+      /**
+       * Size of a single page in bytes.
+       */
+      static constexpr UInt32 _pageSize = 4096;
+
+      /**
+       * Number of entries per IA32 page directory.
+       */
+      static constexpr UInt32 _pageDirectoryEntries = 1024;
+
+      /**
+       * Number of entries per IA32 page table.
+       */
+      static constexpr UInt32 _pageTableEntries = 1024;
+
+      /**
+       * Page present bit.
+       */
+      static constexpr UInt32 _pagePresent = 0x1;
+
+      /**
+       * Page writable bit.
+       */
+      static constexpr UInt32 _pageWrite = 0x2;
+
+      /**
+       * Page user-accessible bit.
+       */
+      static constexpr UInt32 _pageUser = 0x4;
+
+      /**
+       * Page global bit.
+       */
+      static constexpr UInt32 _pageGlobal = 0x100;
+
+      /**
+       * Virtual address base exposing all page table entries via the recursive
+       * slot.
+       */
+      static constexpr UInt32 _recursivePageTablesBase = 0xFFC00000;
+
+      /**
+       * Virtual address exposing the page directory entries array via the
+       * recursive slot.
+       */
+      static constexpr UInt32 _recursivePageDirectory = 0xFFFFF000;
+
+      /**
+       * Maximum `BootInfo` entries to consume from firmware.
+       */
+      static constexpr UInt32 _maxBootEntries = 32;
+
+      /**
+       * Default managed memory size when no `BootInfo` is present.
+       */
+      static constexpr UInt32 _defaultManagedBytes = 64 * 1024 * 1024;
+
+      /**
+       * Total bytes under management by the physical allocator.
+       */
+      static UInt32 _managedBytes;
+
+      /**
+       * Total number of 4 KB pages under management.
+       */
+      static UInt32 _pageCount;
+
+      /**
+       * Number of pages currently marked used.
+       */
+      static UInt32 _usedPages;
+
+      /**
+       * Kernel page directory storage.
+       */
+      alignas(_pageSize) static UInt32 _pageDirectory[_pageDirectoryEntries];
+
+      /**
+       * First page table used for initial identity mapping.
+       */
+      alignas(_pageSize) static UInt32 _firstPageTable[_pageTableEntries];
+
+      /**
+       * Bitmap tracking physical page usage.
+       */
+      static UInt32* _pageBitmap;
+
+      /**
+       * Length of the page bitmap in 32-bit words.
+       */
+      static UInt32 _bitmapLengthWords;
+
+      /**
+       * Allocates a single physical 4 KB page.
+       * @param zero
+       *   Whether to zero the page before returning it.
+       * @return
+       *   Physical address of the allocated page.
+       */
+      static UInt32 AllocatePhysicalPage(bool zero);
+
+      /**
+       * Converts a kernel virtual address into its physical load address.
+       * @param virtualAddress
+       *   Higher-half virtual address.
+       * @return
+       *   Physical address corresponding to the loaded image.
+       */
+      static UInt32 KernelVirtualToPhysical(UInt32 virtualAddress);
+
+      /**
+       * Computes a bit mask for a specific bit index.
+       * @param bit
+       *   Bit index within the bitmap.
+       * @return
+       *   Mask with the indexed bit set.
+       */
+      static UInt32 BitMask(UInt32 bit);
+
+      /**
+       * Converts a bit index to a bitmap word index.
+       * @param bit
+       *   Bit index within the bitmap.
+       * @return
+       *   Zero-based index of the 32-bit word containing the bit.
+       */
+      static UInt32 BitmapWordIndex(UInt32 bit);
+
+      /**
+       * Marks a page as used in the allocation bitmap.
+       * @param pageIndex
+       *   Page index to mark used.
+       */
+      static void SetPageUsed(UInt32 pageIndex);
+
+      /**
+       * Marks a page as free in the allocation bitmap.
+       * @param pageIndex
+       *   Page index to mark free.
+       */
+      static void ClearPageUsed(UInt32 pageIndex);
+
+      /**
+       * Tests whether a page is free according to the bitmap.
+       * @param pageIndex
+       *   Page index to query.
+       * @return
+       *   True if the page is free; false otherwise.
+       */
+      static bool PageFree(UInt32 pageIndex);
+
+      /**
+       * Tests whether a page is marked used according to the bitmap.
+       * @param pageIndex
+       *   Page index to query.
+       * @return
+       *   True if the page is used; false otherwise.
+       */
+      static bool PageUsed(UInt32 pageIndex);
+
+      /**
+       * Finds the index of the first zero bit; returns -1 if none.
+       * @param value
+       *   32-bit word to scan.
+       * @return
+       *   Bit index [0,31] or -1 if all bits are one.
+       */
+      static int FindFirstZeroBit(UInt32 value);
+
+      /**
+       * Returns a pointer to the page directory entry array via the recursive
+       * mapping.
+       * @return
+       *   Pointer to the page-directory entries.
+       */
+      static UInt32* GetPageDirectoryVirtual();
+
+      /**
+       * Returns a pointer to a page table entries array via the recursive
+       * mapping.
+       * @param pageDirectoryIndex
+       *   Index of the page directory entry to project.
+       * @return
+       *   Pointer to the page-table entries for that page directory entry.
+       */
+      static UInt32* GetPageTableVirtual(UInt32 pageDirectoryIndex);
+
+      /**
+       * Ensures a page table exists for a page directory entry index, allocating
+       * if needed.
+       * @param pageDirectoryIndex
+       *   Index of the page directory entry to populate.
+       * @return
+       *   Pointer to the mapped page-table entries.
+       */
+      static UInt32* EnsurePageTable(UInt32 pageDirectoryIndex);
+
+      /**
+       * Ensures page tables exist for the kernel heap region so all address
+       * spaces can share them.
+       */
+      static void EnsureKernelHeapTables();
+
+      /**
+       * Initializes the physical page allocator using the provided boot info
+       * map.
+       * @param bootInfoPhysicalAddress
+       *   Physical address of the boot info block.
+       */
+      static void InitializePhysicalAllocator(UInt32 bootInfoPhysicalAddress);
   };
 }

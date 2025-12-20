@@ -14,14 +14,8 @@
 namespace Quantum::System::Kernel::Arch::IA32 {
   using LogLevel = Logger::Level;
 
-  namespace {
-    /**
-     * Checks if the CPUID instruction is supported.
-     * @return
-     *   True if CPUID is supported, false otherwise.
-     */
-    static bool IsCPUIDSupported() {
-      UInt32 flags1, flags2;
+  bool CPU::IsCPUIDSupported() {
+    UInt32 flags1, flags2;
 
       // try to flip ID flag (bit 21) in EFLAGS
       asm volatile(
@@ -40,36 +34,22 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         :: "eax"
       );
 
-      // if ID bit changed, CPUID is supported
-      return (flags1 ^ flags2) & 0x200000;
-    }
+    // if ID bit changed, CPUID is supported
+    return (flags1 ^ flags2) & 0x200000;
+  }
 
-    /**
-     * Executes the CPUID instruction with the given function ID.
-     * @param function
-     *   The CPUID function ID.
-     * @param eax
-     *   Reference to store EAX result.
-     * @param ebx
-     *   Reference to store EBX result.
-     * @param ecx
-     *   Reference to store ECX result.
-     * @param edx
-     *   Reference to store EDX result.
-     */
-    static void ExecuteCPUID(
-      UInt32 function,
-      UInt32& eax,
-      UInt32& ebx, 
-      UInt32& ecx,
-      UInt32& edx
-    ) {
-      asm volatile(
-        "cpuid"
-        : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
-        : "a"(function), "c"(0)
-      );
-    }
+  void CPU::ExecuteCPUID(
+    UInt32 function,
+    UInt32& eax,
+    UInt32& ebx,
+    UInt32& ecx,
+    UInt32& edx
+  ) {
+    asm volatile(
+      "cpuid"
+      : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
+      : "a"(function), "c"(0)
+    );
   }
 
   void CPU::Halt() {

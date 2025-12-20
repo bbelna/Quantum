@@ -11,35 +11,24 @@
 #include <Types.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  namespace {
-    /**
-     * Dedicated ring0 stack for privilege transitions.
-     */
-    alignas(16) UInt8 _ring0Stack[4096];
+  alignas(16) UInt8 TSS::_ring0Stack[4096];
+  TSS::Structure TSS::_tss = {};
 
-    /**
-     * TSS instance.
-     */
-    TSS::Structure _tss = {};
+  /**
+   * GDT table provided by assembly.
+   */
+  extern "C" UInt64 gdt[];
 
-    /**
-     * GDT table provided by assembly.
-     */
-    extern "C" UInt64 GDT[];
+  void TSS::WriteTSSDescriptor(UInt32 base, UInt32 limit) {
+    GDT::Entry* entries = reinterpret_cast<GDT::Entry*>(gdt);
+    GDT::Entry& tssEntry = entries[_tssEntryIndex];
 
-    constexpr UInt32 _tssEntryIndex = 5;
-
-    void WriteTSSDescriptor(UInt32 base, UInt32 limit) {
-      GDT::Entry* entries = reinterpret_cast<GDT::Entry*>(GDT);
-      GDT::Entry& tssEntry = entries[_tssEntryIndex];
-
-      tssEntry.limitLow = static_cast<UInt16>(limit & 0xFFFF);
-      tssEntry.baseLow = static_cast<UInt16>(base & 0xFFFF);
-      tssEntry.baseMid = static_cast<UInt8>((base >> 16) & 0xFF);
-      tssEntry.access = 0x89; // present, ring0, 32-bit available TSS
-      tssEntry.granularity = static_cast<UInt8>((limit >> 16) & 0x0F);
-      tssEntry.baseHigh = static_cast<UInt8>((base >> 24) & 0xFF);
-    }
+    tssEntry.limitLow = static_cast<UInt16>(limit & 0xFFFF);
+    tssEntry.baseLow = static_cast<UInt16>(base & 0xFFFF);
+    tssEntry.baseMid = static_cast<UInt8>((base >> 16) & 0xFF);
+    tssEntry.access = 0x89; // present, ring0, 32-bit available TSS
+    tssEntry.granularity = static_cast<UInt8>((limit >> 16) & 0x0F);
+    tssEntry.baseHigh = static_cast<UInt8>((base >> 24) & 0xFF);
   }
 
   void TSS::Initialize(UInt32 kernelStackTop) {

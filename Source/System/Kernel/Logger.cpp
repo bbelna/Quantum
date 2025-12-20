@@ -14,22 +14,9 @@ namespace Quantum::System::Kernel {
   using LogLevel = Logger::Level;
   using Writer = Logger::Writer;
 
-  namespace {
-    /**
-     * The minimum log level.
-     */
-    LogLevel _minimumLevel = LogLevel::Trace;
-
-    /**
-     * The array of writers.
-     */
-    Writer** _writers = nullptr;
-
-    /**
-     * The number of writers.
-     */
-    Size _writerCount = 0;
-  };
+  LogLevel Logger::_minimumLevel = LogLevel::Trace;
+  Writer** Logger::_writers = nullptr;
+  Size Logger::_writerCount = 0;
 
   void Logger::Initialize(
     LogLevel minimumLevel,

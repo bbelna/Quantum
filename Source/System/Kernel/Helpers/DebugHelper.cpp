@@ -1,10 +1,10 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Helpers/DebugHelper.cpp
-// (c) 2025 Brandon Belna - MIT License
-//------------------------------------------------------------------------------
-// Debug/diagnostic helper utilities.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Include/Helpers/DebugHelper.hpp
+ * Debug/diagnostic helper utilities.
+ */
 
 #include <Helpers/CStringHelper.hpp>
 #include <Helpers/DebugHelper.hpp>

@@ -20,348 +20,251 @@
 namespace Quantum::System::Kernel::Arch::IA32 {
   using LogLevel = Logger::Level;
 
-  namespace {
-    /**
-     * Next task ID to assign.
-     */
-    UInt32 _nextTaskId = 1;
+  volatile bool Task::_forceReschedule = false;
+  bool Task::_preemptionEnabled = false;
+  bool Task::_schedulerActive = false;
+  UInt32 Task::_nextTaskId = 1;
+  Task::ControlBlock* Task::_currentTask = nullptr;
+  Task::ControlBlock* Task::_idleTask = nullptr;
+  Task::ControlBlock* Task::_allTasksHead = nullptr;
+  Task::ControlBlock* Task::_readyQueueHead = nullptr;
+  Task::ControlBlock* Task::_readyQueueTail = nullptr;
+  Task::ControlBlock* Task::_pendingCleanup = nullptr;
 
-    /**
-     * Pointer to the currently executing task.
-     */
-    Task::ControlBlock* _currentTask = nullptr;
+  void Task::AddToReadyQueue(Task::ControlBlock* task) {
+    task->state = Task::State::Ready;
+    task->next = nullptr;
 
-    /**
-     * Pointer to the idle task (never exits).
-     */
-    Task::ControlBlock* _idleTask = nullptr;
+    if (_readyQueueTail == nullptr) {
+      // empty queue
+      _readyQueueHead = task;
+      _readyQueueTail = task;
+    } else {
+      // append to tail
+      _readyQueueTail->next = task;
+      _readyQueueTail = task;
+    }
+  }
 
-    /**
-     * Head of the global task list.
-     */
-    Task::ControlBlock* _allTasksHead = nullptr;
+  Task::ControlBlock* Task::PopFromReadyQueue() {
+    if (_readyQueueHead == nullptr) {
+      return nullptr;
+    }
 
-    /**
-     * Head of the ready queue (circular linked list).
-     */
-    Task::ControlBlock* _readyQueueHead = nullptr;
+    Task::ControlBlock* task = _readyQueueHead;
 
-    /**
-     * Tail of the ready queue.
-     */
-    Task::ControlBlock* _readyQueueTail = nullptr;
+    _readyQueueHead = task->next;
 
-    /**
-     * Whether preemptive scheduling is enabled.
-     */
-    bool _preemptionEnabled = false;
+    if (_readyQueueHead == nullptr) {
+      _readyQueueTail = nullptr;
+    }
 
-    /**
-     * When true, force a reschedule even if preemption is disabled (used by
-     * cooperative yields).
-     */
-    volatile bool _forceReschedule = false;
+    task->next = nullptr;
 
-    /**
-     * Task pending cleanup (deferred until we are on a different stack).
-     */
-    Task::ControlBlock* _pendingCleanup = nullptr;
+    return task;
+  }
 
-    /**
-     * Becomes true after the first explicit yield; prevents timer interrupts
-     * from preempting during early boot before the scheduler is ready.
-     */
-    bool _schedulerActive = false;
+  void Task::AddToAllTasks(Task::ControlBlock* task) {
+    task->allNext = _allTasksHead;
+    _allTasksHead = task;
+  }
 
-    /**
-     * Adds a task to the ready queue.
-     */
-    void AddToReadyQueue(Task::ControlBlock* task) {
-      task->state = Task::State::Ready;
-      task->next = nullptr;
+  void Task::RemoveFromAllTasks(Task::ControlBlock* task) {
+    Task::ControlBlock** current = &_allTasksHead;
 
-      if (_readyQueueTail == nullptr) {
-        // empty queue
-        _readyQueueHead = task;
-        _readyQueueTail = task;
-      } else {
-        // append to tail
-        _readyQueueTail->next = task;
-        _readyQueueTail = task;
+    while (*current) {
+      if (*current == task) {
+        *current = task->allNext;
+        task->allNext = nullptr;
+        return;
+      }
+
+      current = &((*current)->allNext);
+    }
+  }
+
+  Task::ControlBlock* Task::FindTaskById(UInt32 id) {
+    Task::ControlBlock* current = _allTasksHead;
+
+    while (current) {
+      if (current->id == id) {
+        return current;
+      }
+
+      current = current->allNext;
+    }
+
+    return nullptr;
+  }
+
+  Task::Context* Task::Schedule(Task::Context* currentContext) {
+    if (_pendingCleanup && _pendingCleanup != _currentTask) {
+      UInt32 cleanupSpace = _pendingCleanup->pageDirectoryPhysical;
+      RemoveFromAllTasks(_pendingCleanup);
+      Memory::Free(_pendingCleanup->stackBase);
+      Memory::Free(_pendingCleanup);
+      Memory::DestroyAddressSpace(cleanupSpace);
+      _pendingCleanup = nullptr;
+    }
+
+    Task::ControlBlock* previousTask = _currentTask;
+
+    if (previousTask != nullptr && currentContext != nullptr) {
+      previousTask->context = currentContext;
+
+      if (
+        previousTask->state == Task::State::Running &&
+        previousTask != _idleTask
+      ) {
+        previousTask->state = Task::State::Ready;
+        AddToReadyQueue(previousTask);
       }
     }
 
-    /**
-     * Removes and returns the next task from the ready queue.
-     * @return
-     *   Pointer to the next ready task, or `nullptr` if none are ready.
-     */
-    Task::ControlBlock* PopFromReadyQueue() {
-      if (_readyQueueHead == nullptr) {
-        return nullptr;
-      }
+    Task::ControlBlock* nextTask = PopFromReadyQueue();
 
-      Task::ControlBlock* task = _readyQueueHead;
-
-      _readyQueueHead = task->next;
-
-      if (_readyQueueHead == nullptr) {
-        _readyQueueTail = nullptr;
-      }
-
-      task->next = nullptr;
-
-      return task;
+    if (nextTask == nullptr) {
+      nextTask = _idleTask;
     }
 
-    /**
-     * Adds a task to the global task list.
-     * @param task
-     *   Pointer to the task to add.
-     */
-    void AddToAllTasks(Task::ControlBlock* task) {
-      task->allNext = _allTasksHead;
-      _allTasksHead = task;
+    _currentTask = nextTask;
+    nextTask->state = Task::State::Running;
+
+    UInt32 previousSpace
+      = previousTask ? previousTask->pageDirectoryPhysical : 0;
+    UInt32 nextSpace = nextTask->pageDirectoryPhysical;
+
+    if (nextSpace != 0 && nextSpace != previousSpace) {
+      Memory::ActivateAddressSpace(nextSpace);
     }
 
-    /**
-     * Removes a task from the global task list.
-     * @param task
-     *   Pointer to the task to remove.
-     */
-    void RemoveFromAllTasks(Task::ControlBlock* task) {
-      Task::ControlBlock** current = &_allTasksHead;
-
-      while (*current) {
-        if (*current == task) {
-          *current = task->allNext;
-          task->allNext = nullptr;
-          return;
-        }
-
-        current = &((*current)->allNext);
-      }
+    if (nextTask->kernelStackTop != 0) {
+      TSS::SetKernelStack(nextTask->kernelStackTop);
     }
 
-    /**
-     * Finds a task by id in the global task list.
-     * @param id
-     *   Task identifier to locate.
-     * @return
-     *   Pointer to the task control block, or `nullptr` if not found.
-     */
-    Task::ControlBlock* FindTaskById(UInt32 id) {
-      Task::ControlBlock* current = _allTasksHead;
+    if (
+      previousTask &&
+      previousTask != _idleTask &&
+      previousTask->state == Task::State::Terminated &&
+      previousTask != nextTask
+    ) {
+      _pendingCleanup = previousTask;
+    }
 
-      while (current) {
-        if (current->id == id) {
-          return current;
-        }
+    return nextTask->context;
+  }
 
-        current = current->allNext;
-      }
+  void Task::IdleTask() {
+    Logger::Write(LogLevel::Trace, "Idle task running");
+
+    for (;;) {
+      CPU::Halt();
+    }
+  }
+
+  void Task::TaskWrapper(void (*entryPoint)()) {
+    // call the actual task function
+    entryPoint();
+
+    // task returned - terminate it
+    Logger::Write(LogLevel::Debug, "Task completed, exiting");
+    Task::Exit();
+  }
+
+  void Task::UserTaskTrampoline() {
+    Task::ControlBlock* tcb = Task::GetCurrent();
+
+    if (!tcb || tcb->userEntryPoint == 0 || tcb->userStackTop == 0) {
+      PANIC("User task missing entry or stack");
+    }
+
+    ::Quantum::System::Kernel::UserMode::Enter(
+      tcb->userEntryPoint,
+      tcb->userStackTop
+    );
+
+    PANIC("User task returned from user mode");
+  }
+
+  Task::ControlBlock* Task::CreateTaskInternal(
+    void (*entryPoint)(),
+    UInt32 stackSize
+  ) {
+    // allocate the task control block
+    Task::ControlBlock* tcb = static_cast<Task::ControlBlock*>(
+      Memory::Allocate(sizeof(Task::ControlBlock))
+    );
+
+    if (tcb == nullptr) {
+      Logger::Write(LogLevel::Error, "Failed to allocate TCB");
 
       return nullptr;
     }
 
-    /**
-     * Picks the next task to run and returns its saved context pointer.
-     * If `currentContext` is provided, saves it to the current TCB before
-     * switching.
-     * @param currentContext
-     *   Pointer to the current task's saved context, or `nullptr` if none.
-     * @return
-     *   Pointer to the next task's saved context.
-     */
-    Task::Context* Schedule(Task::Context* currentContext) {
-      if (_pendingCleanup && _pendingCleanup != _currentTask) {
-        UInt32 cleanupSpace = _pendingCleanup->pageDirectoryPhysical;
-        RemoveFromAllTasks(_pendingCleanup);
-        Memory::Free(_pendingCleanup->stackBase);
-        Memory::Free(_pendingCleanup);
-        Memory::DestroyAddressSpace(cleanupSpace);
-        _pendingCleanup = nullptr;
-      }
+    // allocate the kernel stack
+    void* stack = Memory::Allocate(stackSize);
 
-      Task::ControlBlock* previousTask = _currentTask;
+    if (stack == nullptr) {
+      Logger::Write(LogLevel::Error, "Failed to allocate task stack");
+      Memory::Free(tcb);
 
-      if (previousTask != nullptr && currentContext != nullptr) {
-        previousTask->context = currentContext;
-
-        if (
-          previousTask->state == Task::State::Running &&
-          previousTask != _idleTask
-        ) {
-          previousTask->state = Task::State::Ready;
-          AddToReadyQueue(previousTask);
-        }
-      }
-
-      Task::ControlBlock* nextTask = PopFromReadyQueue();
-
-      if (nextTask == nullptr) {
-        nextTask = _idleTask;
-      }
-
-      _currentTask = nextTask;
-      nextTask->state = Task::State::Running;
-
-      UInt32 previousSpace
-        = previousTask ? previousTask->pageDirectoryPhysical : 0;
-      UInt32 nextSpace = nextTask->pageDirectoryPhysical;
-
-      if (nextSpace != 0 && nextSpace != previousSpace) {
-        Memory::ActivateAddressSpace(nextSpace);
-      }
-
-      if (nextTask->kernelStackTop != 0) {
-        TSS::SetKernelStack(nextTask->kernelStackTop);
-      }
-
-      if (
-        previousTask &&
-        previousTask != _idleTask &&
-        previousTask->state == Task::State::Terminated &&
-        previousTask != nextTask
-      ) {
-        _pendingCleanup = previousTask;
-      }
-
-      return nextTask->context;
+      return nullptr;
     }
 
-    /**
-     * Idle task entry point - runs when no other tasks are ready.
-     */
-    void IdleTask() {
-      Logger::Write(LogLevel::Trace, "Idle task running");
+    // initialize TCB fields
+    tcb->id = _nextTaskId++;
+    tcb->caps = 0;
+    tcb->pageDirectoryPhysical = Memory::GetKernelPageDirectoryPhysical();
+    tcb->state = Task::State::Ready;
+    tcb->stackBase = stack;
+    tcb->stackSize = stackSize;
+    tcb->kernelStackTop = reinterpret_cast<UInt32>(
+      static_cast<UInt8*>(stack) + stackSize
+    );
+    tcb->userEntryPoint = 0;
+    tcb->userStackTop = 0;
+    tcb->next = nullptr;
+    tcb->allNext = nullptr;
 
-      for (;;) {
-        CPU::Halt();
-      }
+    // ensure stack can hold the bootstrap frame
+    const UInt32 minFrame = sizeof(Task::Context) + 8;
+
+    if (stackSize <= minFrame) {
+      PANIC("Task stack too small");
     }
 
-    /**
-     * Task wrapper that calls the actual entry point and exits cleanly.
-     * @param entryPoint
-     *   Function pointer to the task's entry point.
-     */
-    void TaskWrapper(void (*entryPoint)()) {
-      // call the actual task function
-      entryPoint();
+    // set up initial stack frame that matches the interrupt context layout
+    // stack grows downward; reserve space for a dummy return + entry arg
+    UInt8* stackBytes = static_cast<UInt8*>(stack);
+    UInt32 userEsp = reinterpret_cast<UInt32>(stackBytes + stackSize - 8);
+    UInt32* callArea = reinterpret_cast<UInt32*>(userEsp);
 
-      // task returned - terminate it
-      Logger::Write(LogLevel::Debug, "Task completed, exiting");
-      Task::Exit();
-    }
+    callArea[0] = 0; // dummy return address
+    callArea[1] = reinterpret_cast<UInt32>(entryPoint); // TaskWrapper arg
 
-    /**
-     * User task trampoline that enters user mode.
-     */
-    void UserTaskTrampoline() {
-      Task::ControlBlock* tcb = Task::GetCurrent();
+    // place the saved context below the call frame
+    Task::Context* context = reinterpret_cast<Task::Context*>(
+      userEsp - sizeof(Task::Context)
+    );
 
-      if (!tcb || tcb->userEntryPoint == 0 || tcb->userStackTop == 0) {
-        PANIC("User task missing entry or stack");
-      }
+    context->edi = 0;
+    context->esi = 0;
+    context->ebp = 0;
+    context->esp = userEsp - 20; // value ESP would have before pusha
+    context->ebx = 0;
+    context->edx = 0;
+    context->ecx = 0;
+    context->eax = 0;
+    context->vector = 0;
+    context->errorCode = 0;
+    context->eip = reinterpret_cast<UInt32>(&TaskWrapper);
+    context->cs = 0x08;
+    context->eflags = 0x202;
 
-      ::Quantum::System::Kernel::UserMode::Enter(
-        tcb->userEntryPoint,
-        tcb->userStackTop
-      );
+    // store the saved context pointer in the TCB
+    tcb->context = context;
 
-      PANIC("User task returned from user mode");
-    }
-
-    /**
-     * Creates a task control block without enqueuing it.
-     * @param entryPoint
-     *   Function pointer to the task's entry point.
-     * @param stackSize
-     *   Size of the task's kernel stack in bytes.
-     * @return
-     *   Pointer to the task control block, or nullptr on failure.
-     */
-    Task::ControlBlock* CreateTaskInternal(
-      void (*entryPoint)(),
-      UInt32 stackSize
-    ) {
-      // allocate the task control block
-      Task::ControlBlock* tcb = static_cast<Task::ControlBlock*>(
-        Memory::Allocate(sizeof(Task::ControlBlock))
-      );
-
-      if (tcb == nullptr) {
-        Logger::Write(LogLevel::Error, "Failed to allocate TCB");
-
-        return nullptr;
-      }
-
-      // allocate the kernel stack
-      void* stack = Memory::Allocate(stackSize);
-
-      if (stack == nullptr) {
-        Logger::Write(LogLevel::Error, "Failed to allocate task stack");
-        Memory::Free(tcb);
-
-        return nullptr;
-      }
-
-      // initialize TCB fields
-      tcb->id = _nextTaskId++;
-      tcb->caps = 0;
-      tcb->pageDirectoryPhysical = Memory::GetKernelPageDirectoryPhysical();
-      tcb->state = Task::State::Ready;
-      tcb->stackBase = stack;
-      tcb->stackSize = stackSize;
-      tcb->kernelStackTop = reinterpret_cast<UInt32>(
-        static_cast<UInt8*>(stack) + stackSize
-      );
-      tcb->userEntryPoint = 0;
-      tcb->userStackTop = 0;
-      tcb->next = nullptr;
-      tcb->allNext = nullptr;
-
-      // ensure stack can hold the bootstrap frame
-      const UInt32 minFrame = sizeof(Task::Context) + 8;
-
-      if (stackSize <= minFrame) {
-        PANIC("Task stack too small");
-      }
-
-      // set up initial stack frame that matches the interrupt context layout
-      // stack grows downward; reserve space for a dummy return + entry arg
-      UInt8* stackBytes = static_cast<UInt8*>(stack);
-      UInt32 userEsp = reinterpret_cast<UInt32>(stackBytes + stackSize - 8);
-      UInt32* callArea = reinterpret_cast<UInt32*>(userEsp);
-
-      callArea[0] = 0; // dummy return address
-      callArea[1] = reinterpret_cast<UInt32>(entryPoint); // TaskWrapper arg
-
-      // place the saved context below the call frame
-      Task::Context* context = reinterpret_cast<Task::Context*>(
-        userEsp - sizeof(Task::Context)
-      );
-
-      context->edi = 0;
-      context->esi = 0;
-      context->ebp = 0;
-      context->esp = userEsp - 20; // value ESP would have before pusha
-      context->ebx = 0;
-      context->edx = 0;
-      context->ecx = 0;
-      context->eax = 0;
-      context->vector = 0;
-      context->errorCode = 0;
-      context->eip = reinterpret_cast<UInt32>(&TaskWrapper);
-      context->cs = 0x08;
-      context->eflags = 0x202;
-
-      // store the saved context pointer in the TCB
-      tcb->context = context;
-
-      return tcb;
-    }
+    return tcb;
   }
 
   void Task::Initialize() {

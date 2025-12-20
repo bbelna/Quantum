@@ -49,7 +49,7 @@ namespace Quantum::System::Kernel {
       };
 
       /**
-       * Initializes the logger with the given sinks and minimum log level.
+       * Initializes the logger with the given writers and minimum log level.
        * @param minimumLevel
        *   The minimum log level.
        * @param writers
@@ -82,5 +82,21 @@ namespace Quantum::System::Kernel {
        *   Format arguments.
        */
       static void WriteFormatted(Level level, String formattedMessage, ...);
+
+    private:
+      /**
+       * The minimum log level.
+       */
+      static Level _minimumLevel;
+
+      /**
+       * The array of writers.
+       */
+      static Writer** _writers;
+
+      /**
+       * The number of writers.
+       */
+      static Size _writerCount;
   };
 }

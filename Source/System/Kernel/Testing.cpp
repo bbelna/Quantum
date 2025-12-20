@@ -17,56 +17,24 @@ namespace Quantum::System::Kernel {
 
   using LogLevel = Logger::Level;
 
-  namespace {
-    /**
-     * Maximum number of registered tests.
-     */
-    constexpr UInt32 _maxTests = 32;
+  Testing::TestCase Testing::_tests[Testing::_maxTests];
+  UInt32 Testing::_testCount = 0;
+  UInt32 Testing::_testsPassed = 0;
+  UInt32 Testing::_testsFailed = 0;
+  UInt32 Testing::_assertFailures = 0;
 
-    /**
-     * Registered test cases.
-     */
-    Testing::TestCase _tests[_maxTests];
+  void Testing::LogHeader() {
+    Logger::Write(LogLevel::Info, "Running kernel test suite...");
+  }
 
-    /**
-     * Number of registered tests.
-     */
-    UInt32 _testCount = 0;
-
-    /**
-     * Number of passed tests.
-     */
-    UInt32 _testsPassed = 0;
-
-    /**
-     * Number of failed tests.
-     */
-    UInt32 _testsFailed = 0;
-
-    /**
-     * Number of assertion failures recorded.
-     */
-    UInt32 _assertFailures = 0;
-
-    /**
-     * Logs the header before running tests.
-     */
-    void LogHeader() {
-      Logger::Write(LogLevel::Info, "Running kernel test suite...");
-    }
-
-    /**
-     * Logs the footer after running tests.
-     */
-    void LogFooter() {
-      Logger::WriteFormatted(
-        _testsFailed == 0 ? LogLevel::Info : LogLevel::Error,
-        "Kernel tests complete: passed=%x failed=%x total=%x",
-        _testsPassed,
-        _testsFailed,
-        _testCount
-      );
-    }
+  void Testing::LogFooter() {
+    Logger::WriteFormatted(
+      _testsFailed == 0 ? LogLevel::Info : LogLevel::Error,
+      "Kernel tests complete: passed=%x failed=%x total=%x",
+      _testsPassed,
+      _testsFailed,
+      _testCount
+    );
   }
 
   void Testing::Register(CString name, Testing::TestFunction func) {

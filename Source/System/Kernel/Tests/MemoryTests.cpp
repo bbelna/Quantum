@@ -11,24 +11,17 @@
 #include <Tests/MemoryTests.hpp>
 
 namespace Quantum::System::Kernel::Tests {
-  namespace {
-    /**
-     * Verifies basic allocate/free round-trip.
-     * @return
-     *   True if the test passes.
-     */
-    bool TestMemoryAllocation() {
-      void* a = Memory::Allocate(64);
-      void* b = Memory::Allocate(128);
+  bool MemoryTests::TestMemoryAllocation() {
+    void* a = Memory::Allocate(64);
+    void* b = Memory::Allocate(128);
 
-      TEST_ASSERT(a != nullptr, "Allocation a returned null");
-      TEST_ASSERT(b != nullptr, "Allocation b returned null");
+    TEST_ASSERT(a != nullptr, "Allocation a returned null");
+    TEST_ASSERT(b != nullptr, "Allocation b returned null");
 
-      Memory::Free(a);
-      Memory::Free(b);
+    Memory::Free(a);
+    Memory::Free(b);
 
-      return true;
-    }
+    return true;
   }
 
   void MemoryTests::RegisterTests() {

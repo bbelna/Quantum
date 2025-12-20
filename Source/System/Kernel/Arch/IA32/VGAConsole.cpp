@@ -12,99 +12,37 @@
 namespace Quantum::System::Kernel::Arch::IA32 {
   using Writer = Logger::Writer;
 
-  namespace {
-    /**
-     * The number of text-mode columns.
-     */
-    constexpr UInt8 _columns = 80;
+  volatile UInt16* const VGAConsole::_buffer
+    = reinterpret_cast<volatile UInt16*>(0xB8000);
+  UInt8 VGAConsole::_cursorRow = 0;
+  UInt8 VGAConsole::_cursorColumn = 0;
+  UInt16 VGAConsole::_cursorSavedCell = 0;
+  bool VGAConsole::_cursorDrawn = false;
 
-    /**
-     * The number of text-mode rows.
-     */
-    constexpr UInt8 _rows = 25;
+  UInt16 VGAConsole::Index(UInt8 row, UInt8 column) {
+    return static_cast<UInt16>(row * _columns + column);
+  }
 
-    /**
-     * The default text color (light gray on black).
-     */
-    constexpr UInt8 _defaultColor = 0x0F;
+  UInt16 VGAConsole::MakeEntry(char character, UInt8 color) {
+    return static_cast<UInt16>(character) | (static_cast<UInt16>(color) << 8);
+  }
 
-    /**
-     * The VGA text-mode buffer.
-     */
-    volatile UInt16* const _buffer
-      = reinterpret_cast<volatile UInt16*>(0xB8000);
-
-    /**
-     * The current cursor row.
-     */
-    UInt8 _cursorRow = 0;
-
-    /**
-     * The current cursor column.
-     */
-    UInt8 _cursorColumn = 0;
-
-    /**
-     * The saved cell value under the cursor.
-     */
-    UInt16 _cursorSavedCell = 0;
-
-    /**
-     * Whether the cursor is currently drawn.
-     */
-    bool _cursorDrawn = false;
-
-    /**
-     * Calculates the linear index in the VGA buffer for the given row and
-     * column.
-     * @param row
-     *   The row.
-     * @param column
-     *   The column.
-     * @return
-     *   The linear index.
-     */
-    inline UInt16 Index(UInt8 row, UInt8 column) {
-      return static_cast<UInt16>(row * _columns + column);
+  void VGAConsole::HideCursor() {
+    if (_cursorDrawn) {
+      _buffer[Index(_cursorRow, _cursorColumn)] = _cursorSavedCell;
+      _cursorDrawn = false;
     }
+  }
 
-    /**
-     * Creates a VGA text-mode entry from a character and color.
-     * @param character
-     *   The character.
-     * @param color
-     *   The color attribute.
-     * @return
-     *   The VGA text-mode entry.
-     */
-    inline UInt16 MakeEntry(char character, UInt8 color) {
-      return static_cast<UInt16>(character) | (static_cast<UInt16>(color) << 8);
-    }
+  void VGAConsole::DrawCursor() {
+    _cursorSavedCell = _buffer[Index(_cursorRow, _cursorColumn)];
 
-    /**
-     * Hides the cursor.
-     */
-    void HideCursor() {
-      if (_cursorDrawn) {
-        _buffer[Index(_cursorRow, _cursorColumn)] = _cursorSavedCell;
-        _cursorDrawn = false;
-      }
-    }
+    // solid block: fg=white, bg=white (with blink bit set; fine for now)
+    UInt8 blockAttr = 0xFF;
+    UInt16 blockCell = MakeEntry(' ', blockAttr);
 
-    /**
-     * Draws the cursor.
-     */
-    void DrawCursor() {
-      _cursorSavedCell = _buffer[Index(_cursorRow, _cursorColumn)];
-
-      // solid block: fg=white, bg=white (with blink bit set; fine for now)
-      UInt8 blockAttr = 0xFF;
-      UInt16 blockCell = MakeEntry(' ', blockAttr);
-
-      _buffer[Index(_cursorRow, _cursorColumn)] = blockCell;
-      _cursorDrawn = true;
-    }
-
+    _buffer[Index(_cursorRow, _cursorColumn)] = blockCell;
+    _cursorDrawn = true;
   }
 
   void VGAConsole::Initialize() {

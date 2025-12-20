@@ -1,6 +1,6 @@
 OUTPUT_FORMAT("elf32-i386")
 OUTPUT_ARCH(i386)
-ENTRY(KernelEntry)
+ENTRY(Entry)
 
 /* Higher-half virtual base for the kernel image */
 KERNEL_VIRT_BASE = 0xC0000000;
@@ -16,7 +16,7 @@ SECTIONS
   /* Low bootstrap code stays identity mapped */
   .text.start :
   {
-    KEEP(*(.text.start.entry))  /* force KernelEntry first */
+    KEEP(*(.text.start.entry))  /* force Entry first */
     KEEP(*(.text.start))
     *(.text.start.data)
   }

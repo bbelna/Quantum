@@ -9,11 +9,11 @@
 
 BITS 32
 
-global GDT
-global GDTDescriptor32
+global gdt
+global gdtDescriptor32
 
 SECTION .text.start
-GDT:
+gdt:
   ; 1) Null descriptor (all zeros)
   dq 0x0000000000000000
 
@@ -48,9 +48,9 @@ GDT:
   ; 6) TSS descriptor (filled in at runtime)
   dq 0x0000000000000000
 
-GDTEnd:
+gdtEnd:
 
 SECTION .text.start
-GDTDescriptor32:
-  dw GDTEnd - GDT - 1         ; limit = size of GDT - 1 (i.e. 24-1 = 23)
-  dd GDT                       ; base = linear address of GDT
+gdtDescriptor32:
+  dw gdtEnd - gdt - 1         ; limit = size of GDT - 1 (i.e. 24-1 = 23)
+  dd gdt                       ; base = linear address of GDT

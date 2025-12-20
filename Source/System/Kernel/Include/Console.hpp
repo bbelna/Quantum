@@ -66,5 +66,34 @@ namespace Quantum::System::Kernel {
        *   The value to write.
        */
       static void WriteHex32(UInt32 value);
+
+    private:
+      /**
+       * Converts an unsigned integer to a string in the given base.
+       * @param value
+       *   Number to convert.
+       * @param base
+       *   Conversion base (10 or 16).
+       * @param prefixHex
+       *   Whether to prefix 0x for hex.
+       */
+      static void WriteUnsigned(
+        UInt32 value,
+        UInt32 base,
+        bool prefixHex = false
+      );
+
+      /**
+       * Writes a formatted string to the console using a variable argument
+       * list.
+       * @param format
+       *   Format string.
+       * @param args
+       *   Variable argument list.
+       */
+      static void WriteFormattedVariableArguments(
+        CString format,
+        VariableArgumentsList args
+      );
   };
 }

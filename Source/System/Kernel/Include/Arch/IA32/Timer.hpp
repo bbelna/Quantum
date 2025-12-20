@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <Interrupts.hpp>
 #include <Types.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
@@ -34,5 +35,48 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        *   True to enable tick logging, false to disable.
        */
       static void SetTickLoggingEnabled(bool enabled);
+
+    private:
+      /**
+       * PIT channel 0 data port.
+       */
+      static constexpr UInt16 _pitChannel0 = 0x40;
+
+      /**
+       * PIT command port.
+       */
+      static constexpr UInt16 _pitCommand = 0x43;
+
+      /**
+       * PIT input clock frequency in Hz.
+       */
+      static constexpr UInt32 _pitInputHz = 1193180;
+
+      /**
+       * PIT operating mode configuration.
+       */
+      static constexpr UInt16 _pitMode = 0x36;
+
+      /**
+       * Desired PIT frequency in Hz.
+       */
+      static constexpr UInt32 _pitFreqHz = 100;
+
+      /**
+       * Tick count since timer initialization.
+       */
+      static volatile UInt64 _tickCount;
+
+      /**
+       * Whether periodic tick logging is enabled.
+       */
+      static volatile bool _tickLoggingEnabled;
+
+      /**
+       * PIT timer interrupt handler.
+       */
+      static Interrupts::Context* TimerHandler(
+        Interrupts::Context& context
+      );
   };
 }

@@ -15,37 +15,9 @@
 namespace Quantum::System::Kernel::Arch::IA32 {
   using LogLevel = Logger::Level;
 
-  namespace {
-    /**
-     * Total number of ISR exceptions.
-     */
-    constexpr UInt8 _exceptionCount = 32;
-
-    /**
-     * IRQ base vector.
-     */
-    constexpr UInt8 _irqBase = 32;
-
-    /**
-     * Total number of IRQs.
-     */
-    constexpr UInt8 _irqCount = 16;
-
-    /**
-     * IDT entries array.
-     */
-    static IDT::Entry _idtEntries[256];
-
-    /**
-     * IDT descriptor for `lidt` instruction.
-     */
-    static IDT::Descriptor _idtDescriptor;
-
-    /**
-     * Interrupt handler table.
-     */
-    static Interrupts::Handler _handlerTable[256] = { nullptr };
-  }
+  IDT::Entry IDT::_idtEntries[256];
+  IDT::Descriptor IDT::_idtDescriptor{};
+  Interrupts::Handler IDT::_handlerTable[256] = { nullptr };
 
   extern "C" void ISR0();
   extern "C" void ISR1();
@@ -97,7 +69,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   extern "C" void IRQ15();
   extern "C" void LoadIDT(IDT::Descriptor*);
 
-  static void (*const exceptionStubs[_exceptionCount])() = {
+  void (*const IDT::_exceptionStubs[IDT::_exceptionCount])() = {
     ISR0,  ISR1,  ISR2,  ISR3,
     ISR4,  ISR5,  ISR6,  ISR7,
     ISR8,  ISR9,  ISR10, ISR11,
@@ -108,7 +80,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     ISR28, ISR29, ISR30, ISR31
   };
 
-  static void (*const irqStubs[_irqCount])() = {
+  void (*const IDT::_irqStubs[IDT::_irqCount])() = {
     IRQ0,  IRQ1,  IRQ2,  IRQ3,
     IRQ4,  IRQ5,  IRQ6,  IRQ7,
     IRQ8,  IRQ9,  IRQ10, IRQ11,
@@ -134,11 +106,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     }
 
     for (UInt8 i = 0; i < _exceptionCount; ++i) {
-      IDT::SetGate(i, exceptionStubs[i], 0x8E);
+      IDT::SetGate(i, _exceptionStubs[i], 0x8E);
     }
 
     for (UInt8 i = 0; i < _irqCount; ++i) {
-      IDT::SetGate(_irqBase + i, irqStubs[i], 0x8E);
+      IDT::SetGate(_irqBase + i, _irqStubs[i], 0x8E);
     }
 
     _idtDescriptor.limit = sizeof(_idtEntries) - 1;

@@ -88,5 +88,30 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        *   Top of the ring0 stack.
        */
       static void SetKernelStack(UInt32 kernelStackTop);
+
+    private:
+      /**
+       * Dedicated ring0 stack for privilege transitions.
+       */
+      alignas(16) static UInt8 _ring0Stack[4096];
+
+      /**
+       * TSS instance.
+       */
+      static Structure _tss;
+
+      /**
+       * Index of the TSS descriptor in the GDT.
+       */
+      static constexpr UInt32 _tssEntryIndex = 5;
+
+      /**
+       * Writes the TSS descriptor into the GDT.
+       * @param base
+       *   Base address of the TSS.
+       * @param limit
+       *   Limit of the TSS segment.
+       */
+      static void WriteTSSDescriptor(UInt32 base, UInt32 limit);
   };
 }

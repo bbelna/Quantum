@@ -18,5 +18,13 @@ namespace Quantum::System::Kernel::Tests {
        * Registers memory test cases with the harness.
        */
       static void RegisterTests();
+
+    private:
+      /**
+       * Verifies basic allocate/free round-trip.
+       * @return
+       *   True if the test passes.
+       */
+      static bool TestMemoryAllocation();
   };
 }

@@ -97,5 +97,46 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       static Interrupts::Context* DispatchInterrupt(
         Interrupts::Context* context
       );
+
+    private:
+      /**
+       * Total number of ISR exceptions.
+       */
+      static constexpr UInt8 _exceptionCount = 32;
+
+      /**
+       * IRQ base vector.
+       */
+      static constexpr UInt8 _irqBase = 32;
+
+      /**
+       * Total number of IRQs.
+       */
+      static constexpr UInt8 _irqCount = 16;
+
+      /**
+       * IDT entries array.
+       */
+      static Entry _idtEntries[256];
+
+      /**
+       * IDT descriptor for `lidt` instruction.
+       */
+      static Descriptor _idtDescriptor;
+
+      /**
+       * Interrupt handler table.
+       */
+      static Interrupts::Handler _handlerTable[256];
+
+      /**
+       * Exception ISR stub table.
+       */
+      static void (*const _exceptionStubs[_exceptionCount])();
+
+      /**
+       * IRQ ISR stub table.
+       */
+      static void (*const _irqStubs[_irqCount])();
   };
 }

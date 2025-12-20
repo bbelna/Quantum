@@ -22,19 +22,17 @@
 namespace Quantum::System::Kernel {
   using LogLevel = Logger::Level;
 
-  namespace {
-    #ifdef KERNEL_TESTS
-    /**
-     * Kernel test runner task entry point.
-     */
-    void KernelTestRunner() {
-      Testing::RegisterBuiltins();
-      Testing::RunAll();
-      Logger::Write(LogLevel::Info, "Kernel tests task finished");
-      Task::Exit();
-    }
-    #endif
-  }
+  #ifdef KERNEL_TESTS
+  class KernelTestRunner {
+    public:
+      static void Run() {
+        Testing::RegisterBuiltins();
+        Testing::RunAll();
+        Logger::Write(LogLevel::Info, "Kernel tests task finished");
+        Task::Exit();
+      }
+  };
+  #endif
 
   void Initialize(UInt32 bootInfoPhysicalAddress) {
     BootInfo::Initialize(bootInfoPhysicalAddress);
@@ -46,7 +44,7 @@ namespace Quantum::System::Kernel {
 
     #ifdef KERNEL_TESTS
     // spawn test runner task and start scheduling
-    Task::Create(KernelTestRunner, 4096);
+    Task::Create(KernelTestRunner::Run, 4096);
     #else
     Task::Create(InitBundle::LaunchCoordinatorTask, 4096);
     #endif

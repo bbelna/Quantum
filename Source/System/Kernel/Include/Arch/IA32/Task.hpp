@@ -212,5 +212,133 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        *   Updated task context to switch to.
        */
       static Context* Tick(Context& context);
+
+    private:
+      /**
+       * Next task ID to assign.
+       */
+      static UInt32 _nextTaskId;
+
+      /**
+       * Pointer to the currently executing task.
+       */
+      static ControlBlock* _currentTask;
+
+      /**
+       * Pointer to the idle task (never exits).
+       */
+      static ControlBlock* _idleTask;
+
+      /**
+       * Head of the global task list.
+       */
+      static ControlBlock* _allTasksHead;
+
+      /**
+       * Head of the ready queue.
+       */
+      static ControlBlock* _readyQueueHead;
+
+      /**
+       * Tail of the ready queue.
+       */
+      static ControlBlock* _readyQueueTail;
+
+      /**
+       * Whether preemptive scheduling is enabled.
+       */
+      static bool _preemptionEnabled;
+
+      /**
+       * When true, force a reschedule even if preemption is disabled.
+       */
+      static volatile bool _forceReschedule;
+
+      /**
+       * Task pending cleanup (deferred until we are on a different stack).
+       */
+      static ControlBlock* _pendingCleanup;
+
+      /**
+       * Becomes true after the first explicit yield to gate preemption.
+       */
+      static bool _schedulerActive;
+
+      /**
+       * Adds a task to the ready queue.
+       */
+      static void AddToReadyQueue(ControlBlock* task);
+
+      /**
+       * Removes and returns the next task from the ready queue.
+       * @return
+       *   Pointer to the next ready task, or `nullptr` if none are ready.
+       */
+      static ControlBlock* PopFromReadyQueue();
+
+      /**
+       * Adds a task to the global task list.
+       * @param task
+       *   Pointer to the task to add.
+       */
+      static void AddToAllTasks(ControlBlock* task);
+
+      /**
+       * Removes a task from the global task list.
+       * @param task
+       *   Pointer to the task to remove.
+       */
+      static void RemoveFromAllTasks(ControlBlock* task);
+
+      /**
+       * Finds a task by id in the global task list.
+       * @param id
+       *   Task identifier to locate.
+       * @return
+       *   Pointer to the task control block, or `nullptr` if not found.
+       */
+      static ControlBlock* FindTaskById(UInt32 id);
+
+      /**
+       * Picks the next task to run and returns its saved context pointer.
+       * If `currentContext` is provided, saves it to the current TCB before
+       * switching.
+       * @param currentContext
+       *   Pointer to the current task's saved context, or `nullptr` if none.
+       * @return
+       *   Pointer to the next task's saved context.
+       */
+      static Context* Schedule(Context* currentContext);
+
+      /**
+       * Idle task entry point - runs when no other tasks are ready.
+       */
+      static void IdleTask();
+
+      /**
+       * Task wrapper that calls the actual entry point and exits cleanly.
+       * @param entryPoint
+       *   Function pointer to the task's entry point.
+       */
+      static void TaskWrapper(void (*entryPoint)());
+
+      /**
+       * User task trampoline that enters user mode.
+       */
+      static void UserTaskTrampoline();
+
+      /**
+       * Creates a task control block without enqueuing it.
+       * @param entryPoint
+       *   Function pointer to the task's entry point.
+       * @param stackSize
+       *   Size of the task's kernel stack in bytes.
+       * @return
+       *   Pointer to the task control block, or nullptr on failure.
+       */
+      static ControlBlock* CreateTaskInternal(
+        void (*entryPoint)(),
+        UInt32 stackSize
+      );
   };
 }

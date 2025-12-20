@@ -1,190 +1,134 @@
-//------------------------------------------------------------------------------
-// Quantum
-// System/Kernel/Helpers/String.cpp
-// (c) 2025 Brandon Belna - MIT License
-//------------------------------------------------------------------------------
-// C-string helper utilities.
-//------------------------------------------------------------------------------
+/**
+ * Quantum
+ * (c) 2025 Brandon Belna - MIT License
+ *
+ * System/Kernel/Include/Helpers/CStringHelper.hpp
+ * C-string helper utilities.
+ */
 
 #include <Helpers/CStringHelper.hpp>
 
 namespace Quantum::System::Kernel::Helpers {
-  namespace {
-    /**
-     * Buffer size for integer to C-string conversions.
-     */
-    constexpr Size _bufferSize = 12;
+  char CStringHelper::_staticBuffer[CStringHelper::_bufferSize] = {};
 
-    /**
-     * Static buffer for integer to C-string conversions.
-     */
-    static char _staticBuffer[_bufferSize] = {};
+  bool CStringHelper::WriteIntToBuffer(
+    Int32 value,
+    CStringMutable buffer,
+    Size length
+  ) {
+    if (length == 0) {
+      return false;
+    }
 
-    /**
-     * Writes an integer value to the given buffer as a C-string.
-     * @param value
-     *   The integer value.
-     * @param buffer
-     *   The output buffer.
-     * @param length
-     *   The length of the output buffer.
-     * @return
-     *   True on success, false if the buffer is too small.
-     */
-    bool WriteIntToBuffer(Int32 value, CStringMutable buffer, Size length) {
-      if (length == 0) {
-        return false;
-      }
+    // handle sign
+    bool negative = value < 0;
+    UInt32 magnitude = negative
+      ? static_cast<UInt32>(-static_cast<Int64>(value))
+      : static_cast<UInt32>(value);
+    char temp[_bufferSize] = {};
+    Size idx = 0;
+    Size out = 0;
 
-      // handle sign
-      bool negative = value < 0;
-      UInt32 magnitude = negative
-        ? static_cast<UInt32>(-static_cast<Int64>(value))
-        : static_cast<UInt32>(value);
-      char temp[_bufferSize] = {};
-      Size idx = 0;
-      Size out = 0;
+    do {
+      temp[idx++] = static_cast<char>('0' + (magnitude % 10));
+      magnitude /= 10;
+    } while (magnitude > 0 && idx < _bufferSize - 1);
 
-      do {
-        temp[idx++] = static_cast<char>('0' + (magnitude % 10));
-        magnitude /= 10;
-      } while (magnitude > 0 && idx < _bufferSize - 1);
+    // ensure buffer has space for sign + digits + null
+    Size needed = idx + (negative ? 1 : 0) + 1;
 
-      // ensure buffer has space for sign + digits + null
-      Size needed = idx + (negative ? 1 : 0) + 1;
+    if (needed > length) {
+      return false;
+    }
 
-      if (needed > length) {
-        return false;
-      }
+    if (negative) {
+      buffer[out++] = '-';
+    }
 
-      if (negative) {
-        buffer[out++] = '-';
-      }
+    while (idx > 0) {
+      buffer[out++] = temp[--idx];
+    }
 
-      while (idx > 0) {
-        buffer[out++] = temp[--idx];
-      }
+    buffer[out] = '\0';
 
-      buffer[out] = '\0';
+    return true;
+  }
+
+  bool CStringHelper::AppendChar(
+    CStringMutable buffer,
+    Size length,
+    Size& out,
+    char c
+  ) {
+    if (!buffer || length == 0) {
+      return false;
+    } else if (out + 1 >= length) {
+      // no room for this char + null terminator
+      return false;
+    } else {
+      buffer[out++] = c;
 
       return true;
     }
+  }
 
-    /**
-     * Appends a single character to `buffer[out]`, respecting length.
-     * @param buffer
-     *   Destination buffer.
-     * @param length
-     *   Size of the destination buffer.
-     * @param out
-     *   Current output index (updated on success).
-     * @param c
-     *   Character to append.
-     * @return
-     *   True on success; false if buffer is too small.
-     */
-    bool AppendChar(CStringMutable buffer, Size length, Size& out, char c) {
-      if (!buffer || length == 0) {
-        return false;
-      } else if (out + 1 >= length) {
-        // no room for this char + null terminator
-        return false;
-      } else {
-        buffer[out++] = c;
+  bool CStringHelper::AppendString(
+    CStringMutable buffer,
+    Size length,
+    Size& out,
+    CString str
+  ) {
+    if (!buffer || length == 0) {
+      return false;
+    }
 
-        return true;
+    if (!str) {
+      str = "(null)";
+    }
+
+    for (Size i = 0; str[i] != '\0'; ++i) {
+      if (!AppendChar(buffer, length, out, str[i])) {
+        return false;
       }
     }
 
-    /**
-     * Appends a null-terminated string to `buffer[out]`, respecting length.
-     * @param buffer
-     *   Destination buffer.
-     * @param length
-     *   Size of the destination buffer.
-     * @param out
-     *   Current output index (updated on success).
-     * @param str
-     *   String to append.
-     * @return
-     *   True on success; false if buffer is too small.
-     */
-    bool AppendString(
-      CStringMutable buffer,
-      Size length,
-      Size& out,
-      CString str
-    ) {
-      if (!buffer || length == 0) {
-        return false;
-      }
+    return true;
+  }
 
-      if (!str) {
-        str = "(null)";
-      }
-
-      for (Size i = 0; str[i] != '\0'; ++i) {
-        if (!AppendChar(buffer, length, out, str[i])) {
-          return false;
-        }
-      }
-
-      return true;
+  bool CStringHelper::AppendUnsigned(
+    CStringMutable buffer,
+    Size length,
+    Size& out,
+    UInt32 value,
+    UInt32 base,
+    bool prefixHex
+  ) {
+    if (base < 2 || base > 16) {
+      return false;
     }
 
-    /**
-     * Appends an unsigned integer in the given base to `buffer[out]`,
-     * respecting length.
-     * @param buffer
-     *   Destination buffer.
-     * @param length
-     *   Size of the destination buffer.
-     * @param out
-     *   Current output index (updated on success).
-     * @param value
-     *   Unsigned integer to append.
-     * @param base
-     *   Base to use (2-16).
-     * @param prefixHex
-     *   If true and base is 16, prefixes with "0x".
-     * @return
-     *   True on success; false if buffer is too small.
-     */
-    bool AppendUnsigned(
-      CStringMutable buffer,
-      Size length,
-      Size& out,
-      UInt32 value,
-      UInt32 base,
-      bool prefixHex = false
-    ) {
-      if (base < 2 || base > 16) {
+    char temp[16] = {};
+    Size idx = 0;
+    CString digits = "0123456789ABCDEF";
+
+    do {
+      temp[idx++] = digits[value % base];
+      value /= base;
+    } while (value > 0 && idx < sizeof(temp));
+
+    if (prefixHex) {
+      if (!AppendString(buffer, length, out, "0x")) {
         return false;
       }
-
-      char temp[16] = {};
-      Size idx = 0;
-      CString digits = "0123456789ABCDEF";
-
-      do {
-        temp[idx++] = digits[value % base];
-        value /= base;
-      } while (value > 0 && idx < sizeof(temp));
-
-      if (prefixHex) {
-        if (!AppendString(buffer, length, out, "0x")) {
-          return false;
-        }
-      }
-
-      while (idx > 0) {
-        if (!AppendChar(buffer, length, out, temp[--idx])) {
-          return false;
-        }
-      }
-
-      return true;
     }
+
+    while (idx > 0) {
+      if (!AppendChar(buffer, length, out, temp[--idx])) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   bool CStringHelper::ToCString(

@@ -21,437 +21,343 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   using LogLevel = Logger::Level;
   using AlignHelper = Helpers::AlignHelper;
 
-  namespace {
-    /**
-     * Size of a single page in bytes.
-     */
-    constexpr UInt32 _pageSize = 4096;
+  UInt32 Memory::_managedBytes = Memory::_defaultManagedBytes;
+  UInt32 Memory::_pageCount = Memory::_defaultManagedBytes / Memory::_pageSize;
+  UInt32 Memory::_usedPages = 0;
+  alignas(Memory::_pageSize)
+  UInt32 Memory::_pageDirectory[Memory::_pageDirectoryEntries];
+  alignas(Memory::_pageSize)
+  UInt32 Memory::_firstPageTable[Memory::_pageTableEntries];
+  UInt32* Memory::_pageBitmap = nullptr;
+  UInt32 Memory::_bitmapLengthWords = 0;
 
-    /**
-     * Number of entries per IA32 page directory.
-     */
-    constexpr UInt32 _pageDirectoryEntries = 1024;
+  UInt32 Memory::KernelVirtualToPhysical(UInt32 virtualAddress) {
+    // all kernel segments are offset by kernelVirtualBase;
+    // compute delta at runtime
+    UInt32 kernelPhysicalBase = reinterpret_cast<UInt32>(&__phys_start);
+    UInt32 kernelVirtualBase = reinterpret_cast<UInt32>(&__virt_start);
 
-    /**
-     * Number of entries per IA32 page table.
-     */
-    constexpr UInt32 _pageTableEntries = 1024;
+    if (virtualAddress >= Memory::kernelVirtualBase) {
+      UInt32 offset = virtualAddress - kernelVirtualBase;
 
-    /**
-     * Page present bit.
-     */
-    constexpr UInt32 _pagePresent = 0x1;
-
-    /**
-     * Page writable bit.
-     */
-    constexpr UInt32 _pageWrite = 0x2;
-
-    /**
-     * Page user-accessible bit.
-     */
-    constexpr UInt32 _pageUser = 0x4;
-
-    /**
-     * Page global bit.
-     */
-    constexpr UInt32 _pageGlobal = 0x100;
-
-    /**
-     * Virtual address base exposing all page table entries via the recursive
-     * slot.
-     */
-    constexpr UInt32 _recursivePageTablesBase = 0xFFC00000;
-
-    /**
-     * Virtual address exposing the page directory entries array via the
-     * recursive slot.
-     */
-    constexpr UInt32 _recursivePageDirectory = 0xFFFFF000;
-
-    /**
-     * Maximum `BootInfo` entries to consume from firmware.
-     */
-    constexpr UInt32 _maxBootEntries = 32;
-
-    /**
-     * Default managed memory size when no `BootInfo` is present.
-     */
-    constexpr UInt32 _defaultManagedBytes = 64 * 1024 * 1024;
-
-    /**
-     * Total bytes under management by the physical allocator.
-     */
-    UInt32 _managedBytes = _defaultManagedBytes;
-
-    /**
-     * Total number of 4 KB pages under management.
-     */
-    UInt32 _pageCount = _defaultManagedBytes / _pageSize;
-
-    /**
-     * Number of pages currently marked used.
-     */
-    UInt32 _usedPages = 0;
-
-    /**
-     * Kernel page directory storage.
-     */
-    [[gnu::aligned(_pageSize)]]
-    static UInt32 _pageDirectory[1024];
-
-    /**
-     * First page table used for initial identity mapping.
-     */
-    [[gnu::aligned(_pageSize)]]
-    static UInt32 _firstPageTable[1024];
-
-    /**
-     * Bitmap tracking physical page usage.
-     */
-    static UInt32* _pageBitmap = nullptr;
-
-    /**
-     * Length of the page bitmap in 32-bit words.
-     */
-    static UInt32 _bitmapLengthWords = 0;
-
-    /**
-     * Allocates a single physical 4 KB page.
-     * @param zero
-     *   Whether to zero the page before returning it.
-     * @return
-     *   Physical address of the allocated page.
-     */
-    UInt32 AllocatePhysicalPage(bool zero);
-
-    /**
-     * Converts a kernel virtual address into its physical load address.
-     * @param virtualAddress
-     *   Higher-half virtual address.
-     * @return
-     *   Physical address corresponding to the loaded image.
-     */
-    inline UInt32 KernelVirtualToPhysical(UInt32 virtualAddress) {
-      // all kernel segments are offset by kernelVirtualBase;
-      // compute delta at runtime
-      UInt32 kernelPhysicalBase = reinterpret_cast<UInt32>(&__phys_start);
-      UInt32 kernelVirtualBase = reinterpret_cast<UInt32>(&__virt_start);
-
-      if (virtualAddress >= Memory::kernelVirtualBase) {
-        UInt32 offset = virtualAddress - kernelVirtualBase;
-
-        return kernelPhysicalBase + offset;
-      }
-
-      return virtualAddress;
+      return kernelPhysicalBase + offset;
     }
 
-    /**
-     * Computes a bit mask for a specific bit index.
-     * @param bit
-     *   Bit index within the bitmap.
-     * @return
-     *   Mask with the indexed bit set.
-     */
-    inline UInt32 BitMask(UInt32 bit) {
-      return (1u << (bit % 32));
+    return virtualAddress;
+  }
+
+  UInt32 Memory::BitMask(UInt32 bit) {
+    return (1u << (bit % 32));
+  }
+
+  UInt32 Memory::BitmapWordIndex(UInt32 bit) {
+    return bit / 32;
+  }
+
+  void Memory::SetPageUsed(UInt32 pageIndex) {
+    _pageBitmap[BitmapWordIndex(pageIndex)] |= BitMask(pageIndex);
+  }
+
+  void Memory::ClearPageUsed(UInt32 pageIndex) {
+    _pageBitmap[BitmapWordIndex(pageIndex)] &= ~BitMask(pageIndex);
+  }
+
+  bool Memory::PageFree(UInt32 pageIndex) {
+    return
+      (_pageBitmap[BitmapWordIndex(pageIndex)]
+      & BitMask(pageIndex)) == 0;
+  }
+
+  bool Memory::PageUsed(UInt32 pageIndex) {
+    return !PageFree(pageIndex);
+  }
+
+  int Memory::FindFirstZeroBit(UInt32 value) {
+    if (value == 0xFFFFFFFF) return -1;
+
+    for (int i = 0; i < 32; ++i) {
+      if ((value & (1u << i)) == 0) return i;
     }
 
-    /**
-     * Converts a bit index to a bitmap word index.
-     * @param bit
-     *   Bit index within the bitmap.
-     * @return
-     *   Zero-based index of the 32-bit word containing the bit.
-     */
-    inline UInt32 BitmapWordIndex(UInt32 bit) {
-      return bit / 32;
-    }
+    return -1;
+  }
 
-    /**
-     * Marks a page as used in the allocation bitmap.
-     * @param pageIndex
-     *   Page index to mark used.
-     */
-    inline void SetPageUsed(UInt32 pageIndex) {
-      _pageBitmap[BitmapWordIndex(pageIndex)] |= BitMask(pageIndex);
-    }
+  UInt32* Memory::GetPageDirectoryVirtual() {
+    return reinterpret_cast<UInt32*>(_recursivePageDirectory);
+  }
 
-    /**
-     * Marks a page as free in the allocation bitmap.
-     * @param pageIndex
-     *   Page index to mark free.
-     */
-    inline void ClearPageUsed(UInt32 pageIndex) {
-      _pageBitmap[BitmapWordIndex(pageIndex)] &= ~BitMask(pageIndex);
-    }
+  UInt32* Memory::GetPageTableVirtual(UInt32 pageDirectoryIndex) {
+    return reinterpret_cast<UInt32*>(
+      _recursivePageTablesBase + pageDirectoryIndex * _pageSize
+    );
+  }
 
-    /**
-     * Tests whether a page is free according to the bitmap.
-     * @param pageIndex
-     *   Page index to query.
-     * @return
-     *   True if the page is free; false otherwise.
-     */
-    inline bool PageFree(UInt32 pageIndex) {
-      return
-        (_pageBitmap[BitmapWordIndex(pageIndex)]
-        & BitMask(pageIndex)) == 0;
-    }
-
-    /**
-     * Tests whether a page is marked used according to the bitmap.
-     * @param pageIndex
-     *   Page index to query.
-     * @return
-     *   True if the page is used; false otherwise.
-     */
-    inline bool PageUsed(UInt32 pageIndex) {
-      return !PageFree(pageIndex);
-    }
-
-    /**
-     * Finds the index of the first zero bit; returns -1 if none.
-     * @param value
-     *   32-bit word to scan.
-     * @return
-     *   Bit index [0,31] or -1 if all bits are one.
-     */
-    inline int FindFirstZeroBit(UInt32 value) {
-      if (value == 0xFFFFFFFF) return -1;
-
-      for (int i = 0; i < 32; ++i) {
-        if ((value & (1u << i)) == 0) return i;
-      }
-
-      return -1;
-    }
-
-    /**
-     * Returns a pointer to the page directory entry array via the recursive
-     * mapping.
-     * @return
-     *   Pointer to the page-directory entries.
-     */
-    inline UInt32* GetPageDirectoryVirtual() {
-      return reinterpret_cast<UInt32*>(_recursivePageDirectory);
-    }
-
-    /**
-     * Returns a pointer to a page table entries array via the recursive
-     * mapping.
-     * @param pageDirectoryIndex
-     *   Index of the page directory entry to project.
-     * @return
-     *   Pointer to the page-table entries for that page directory entry.
-     */
-    inline UInt32* GetPageTableVirtual(UInt32 pageDirectoryIndex) {
+  UInt32* Memory::EnsurePageTable(UInt32 pageDirectoryIndex) {
+    if (_pageDirectory[pageDirectoryIndex] & _pagePresent) {
+      // identity map keeps tables reachable even before higher-half switch
       return reinterpret_cast<UInt32*>(
-        _recursivePageTablesBase + pageDirectoryIndex * _pageSize
+        _pageDirectory[pageDirectoryIndex] & ~0xFFF
       );
     }
 
-    /**
-     * Ensures a page table exists for a page directory entry index, allocating
-     * if needed.
-     * @param pageDirectoryIndex
-     *   Index of the page directory entry to populate.
-     * @return
-     *   Pointer to the mapped page-table entries.
-     */
-    UInt32* EnsurePageTable(UInt32 pageDirectoryIndex) {
-      if (_pageDirectory[pageDirectoryIndex] & _pagePresent) {
-        // identity map keeps tables reachable even before higher-half switch
-        return reinterpret_cast<UInt32*>(
-          _pageDirectory[pageDirectoryIndex] & ~0xFFF
-        );
-      }
+    UInt32 tablePhysical = 0;
+    UInt32* table = nullptr;
 
-      UInt32 tablePhysical = 0;
-      UInt32* table = nullptr;
+    if (pageDirectoryIndex == 0) {
+      // reuse the kernel's first page table (in .bss) for the first 4 MB
+      table = _firstPageTable;
+      tablePhysical
+        = KernelVirtualToPhysical(reinterpret_cast<UInt32>(_firstPageTable));
+    } else {
+      tablePhysical = AllocatePhysicalPage(true);
+      table = reinterpret_cast<UInt32*>(tablePhysical);
 
-      if (pageDirectoryIndex == 0) {
-        // reuse the kernel's first page table (in .bss) for the first 4 MB
-        table = _firstPageTable;
-        tablePhysical
-          = KernelVirtualToPhysical(reinterpret_cast<UInt32>(_firstPageTable));
-      } else {
-        tablePhysical = AllocatePhysicalPage(true);
-        table = reinterpret_cast<UInt32*>(tablePhysical);
-
-        for (UInt32 i = 0; i < _pageTableEntries; ++i) {
-          table[i] = 0;
-        }
-      }
-
-      _pageDirectory[pageDirectoryIndex]
-        = tablePhysical
-        | _pagePresent
-        | _pageWrite;
-
-      // return using the identity-mapped address
-      // (physical == virtual in the low window).
-      return reinterpret_cast<UInt32*>(tablePhysical);
-    }
-
-    /**
-     * Ensures page tables exist for the kernel heap region so all address
-     * spaces can share them.
-     */
-    void EnsureKernelHeapTables() {
-      constexpr UInt32 heapBase = Memory::kernelHeapBase;
-      constexpr UInt32 heapBytes = Memory::kernelHeapBytes;
-      UInt32 startIndex = heapBase >> 22;
-      UInt32 endIndex = (heapBase + heapBytes - 1) >> 22;
-
-      for (UInt32 index = startIndex; index <= endIndex; ++index) {
-        EnsurePageTable(index);
+      for (UInt32 i = 0; i < _pageTableEntries; ++i) {
+        table[i] = 0;
       }
     }
 
-    /**
-     * Initializes the physical page allocator using the provided boot info map.
-     * @param bootInfoPhysicalAddress
-     *   Physical address of the boot info block.
-     */
-    void InitializePhysicalAllocator(UInt32 bootInfoPhysicalAddress) {
-      const BootInfo::View* bootInfo = nullptr;
-      UInt32 bootInfoPhysical = BootInfo::GetPhysicalAddress();
+    _pageDirectory[pageDirectoryIndex]
+      = tablePhysical
+      | _pagePresent
+      | _pageWrite;
 
-      if (bootInfoPhysical == 0) {
-        bootInfoPhysical = bootInfoPhysicalAddress;
+    // return using the identity-mapped address
+    // (physical == virtual in the low window).
+    return reinterpret_cast<UInt32*>(tablePhysical);
+  }
+
+  void Memory::EnsureKernelHeapTables() {
+    constexpr UInt32 heapBase = Memory::kernelHeapBase;
+    constexpr UInt32 heapBytes = Memory::kernelHeapBytes;
+    UInt32 startIndex = heapBase >> 22;
+    UInt32 endIndex = (heapBase + heapBytes - 1) >> 22;
+
+    for (UInt32 index = startIndex; index <= endIndex; ++index) {
+      EnsurePageTable(index);
+    }
+  }
+
+  void Memory::InitializePhysicalAllocator(UInt32 bootInfoPhysicalAddress) {
+    const BootInfo::View* bootInfo = nullptr;
+    UInt32 bootInfoPhysical = BootInfo::GetPhysicalAddress();
+
+    if (bootInfoPhysical == 0) {
+      bootInfoPhysical = bootInfoPhysicalAddress;
+    }
+
+    if (bootInfoPhysical >= _pageSize && bootInfoPhysical < _managedBytes) {
+      bootInfo = BootInfo::Get();
+    }
+
+    // track the highest usable address from type-1 regions
+    UInt64 maximumUsableAddress = _defaultManagedBytes;
+    UInt32 entryCount = 0;
+
+    if (bootInfo) {
+      entryCount = bootInfo->entryCount;
+
+      if (entryCount > _maxBootEntries) {
+        entryCount = _maxBootEntries;
       }
+    }
 
-      if (bootInfoPhysical >= _pageSize && bootInfoPhysical < _managedBytes) {
-        bootInfo = BootInfo::Get();
-      }
+    // determine highest usable address to manage (clip to 4 gb)
+    if (bootInfo && entryCount > 0) {
+      for (UInt32 i = 0; i < entryCount; ++i) {
+        const BootInfo::Region& region = bootInfo->entries[i];
 
-      // track the highest usable address from type-1 regions
-      UInt64 maximumUsableAddress = _defaultManagedBytes;
-      UInt32 entryCount = 0;
+        if (region.type != 1) {
+          continue;
+        }
 
-      if (bootInfo) {
-        entryCount = bootInfo->entryCount;
+        UInt64 baseAddress
+          = (static_cast<UInt64>(region.baseHigh) << 32) | region.baseLow;
+        UInt64 lengthBytes
+          = (static_cast<UInt64>(region.lengthHigh) << 32) | region.lengthLow;
 
-        if (entryCount > _maxBootEntries) {
-          entryCount = _maxBootEntries;
+        if (lengthBytes == 0) continue;
+
+        UInt64 endAddress  = baseAddress + lengthBytes;
+
+        if (endAddress < baseAddress) continue; // overflow guard
+        if (endAddress > maximumUsableAddress) {
+          maximumUsableAddress = endAddress;
         }
       }
+    }
 
-      // determine highest usable address to manage (clip to 4 gb)
-      if (bootInfo && entryCount > 0) {
-        for (UInt32 i = 0; i < entryCount; ++i) {
-          const BootInfo::Region& region = bootInfo->entries[i];
+    if (maximumUsableAddress == 0) {
+      maximumUsableAddress = _defaultManagedBytes;
+    }
 
-          if (region.type != 1) {
-            continue;
-          }
+    if (maximumUsableAddress > 0xFFFFFFFFULL) {
+      maximumUsableAddress = 0xFFFFFFFFULL;
+    }
 
-          UInt64 baseAddress
-            = (static_cast<UInt64>(region.baseHigh) << 32) | region.baseLow;
-          UInt64 lengthBytes
-            = (static_cast<UInt64>(region.lengthHigh) << 32) | region.lengthLow;
+    _managedBytes = static_cast<UInt32>(maximumUsableAddress & 0xFFFFFFFF);
 
-          if (lengthBytes == 0) continue;
+    if (_managedBytes < _defaultManagedBytes) {
+      _managedBytes = _defaultManagedBytes;
+    }
 
-          UInt64 endAddress  = baseAddress + lengthBytes;
+    _managedBytes = AlignHelper::Up(_managedBytes, _pageSize);
+    _pageCount = _managedBytes / _pageSize;
 
-          if (endAddress < baseAddress) continue; // overflow guard
-          if (endAddress > maximumUsableAddress) {
-            maximumUsableAddress = endAddress;
-          }
+    UInt32 bitmapBytes = AlignHelper::Up((_pageCount + 7) / 8, 4);
+    UInt32 bitmapPhysical
+      = AlignHelper::Up(reinterpret_cast<UInt32>(&__phys_bss_end), 4);
+
+    if (bootInfo && bootInfo->initBundleSize > 0) {
+      UInt32 bundleStart = bootInfo->initBundlePhysical;
+      UInt32 bundleEnd = bundleStart + bootInfo->initBundleSize;
+      UInt32 bitmapEnd = bitmapPhysical + bitmapBytes;
+
+      if (!(bitmapEnd <= bundleStart || bitmapPhysical >= bundleEnd)) {
+        bitmapPhysical = AlignHelper::Up(bundleEnd, 4);
+      }
+    }
+
+    _pageBitmap = reinterpret_cast<UInt32*>(bitmapPhysical);
+    _bitmapLengthWords = bitmapBytes / 4;
+
+    // default all pages to used
+    for (UInt32 i = 0; i < _bitmapLengthWords; ++i) {
+      _pageBitmap[i] = 0xFFFFFFFF;
+    }
+
+    UInt32 freePages = 0;
+
+    // free usable pages from the map
+    if (bootInfo && entryCount > 0) {
+      for (UInt32 i = 0; i < entryCount; ++i) {
+        const BootInfo::Region& region = bootInfo->entries[i];
+
+        if (region.type != 1) {
+          continue;
         }
-      }
 
-      if (maximumUsableAddress == 0) {
-        maximumUsableAddress = _defaultManagedBytes;
-      }
+        UInt64 baseAddress
+          = (static_cast<UInt64>(region.baseHigh) << 32) | region.baseLow;
+        UInt64 lengthBytes
+          = (static_cast<UInt64>(region.lengthHigh) << 32) | region.lengthLow;
 
-      if (maximumUsableAddress > 0xFFFFFFFFULL) {
-        maximumUsableAddress = 0xFFFFFFFFULL;
-      }
+        if (lengthBytes == 0) continue;
 
-      _managedBytes = static_cast<UInt32>(maximumUsableAddress & 0xFFFFFFFF);
+        UInt64 endAddress  = baseAddress + lengthBytes;
 
-      if (_managedBytes < _defaultManagedBytes) {
-        _managedBytes = _defaultManagedBytes;
-      }
+        if (endAddress < baseAddress) continue; // overflow
 
-      _managedBytes = AlignHelper::Up(_managedBytes, _pageSize);
-      _pageCount = _managedBytes / _pageSize;
+        // clip to 32-bit physical range we manage
+        if (baseAddress >= 0x100000000ULL) continue;
+        if (endAddress > 0x100000000ULL) endAddress = 0x100000000ULL;
 
-      UInt32 bitmapBytes = AlignHelper::Up((_pageCount + 7) / 8, 4);
-      UInt32 bitmapPhysical
-        = AlignHelper::Up(reinterpret_cast<UInt32>(&__phys_bss_end), 4);
+        UInt32 startPage = static_cast<UInt32>(baseAddress / _pageSize);
+        UInt32 endPage
+          = static_cast<UInt32>((endAddress + _pageSize - 1) / _pageSize);
 
-      if (bootInfo && bootInfo->initBundleSize > 0) {
-        UInt32 bundleStart = bootInfo->initBundlePhysical;
-        UInt32 bundleEnd = bundleStart + bootInfo->initBundleSize;
-        UInt32 bitmapEnd = bitmapPhysical + bitmapBytes;
+        if (startPage >= _pageCount) continue;
+        if (endPage > _pageCount) endPage = _pageCount;
 
-        if (!(bitmapEnd <= bundleStart || bitmapPhysical >= bundleEnd)) {
-          bitmapPhysical = AlignHelper::Up(bundleEnd, 4);
-        }
-      }
-
-      _pageBitmap = reinterpret_cast<UInt32*>(bitmapPhysical);
-      _bitmapLengthWords = bitmapBytes / 4;
-
-      // default all pages to used
-      for (UInt32 i = 0; i < _bitmapLengthWords; ++i) {
-        _pageBitmap[i] = 0xFFFFFFFF;
-      }
-
-      UInt32 freePages = 0;
-
-      // free usable pages from the map
-      if (bootInfo && entryCount > 0) {
-        for (UInt32 i = 0; i < entryCount; ++i) {
-          const BootInfo::Region& region = bootInfo->entries[i];
-
-          if (region.type != 1) {
-            continue;
-          }
-
-          UInt64 baseAddress
-            = (static_cast<UInt64>(region.baseHigh) << 32) | region.baseLow;
-          UInt64 lengthBytes
-            = (static_cast<UInt64>(region.lengthHigh) << 32) | region.lengthLow;
-
-          if (lengthBytes == 0) continue;
-
-          UInt64 endAddress  = baseAddress + lengthBytes;
-
-          if (endAddress < baseAddress) continue; // overflow
-
-          // clip to 32-bit physical range we manage
-          if (baseAddress >= 0x100000000ULL) continue;
-          if (endAddress > 0x100000000ULL) endAddress = 0x100000000ULL;
-
-          UInt32 startPage = static_cast<UInt32>(baseAddress / _pageSize);
-          UInt32 endPage
-            = static_cast<UInt32>((endAddress + _pageSize - 1) / _pageSize);
-
-          if (startPage >= _pageCount) continue;
-          if (endPage > _pageCount) endPage = _pageCount;
-
-          for (UInt32 p = startPage; p < endPage; ++p) {
-            ClearPageUsed(p);
-            ++freePages;
-          }
-        }
-      } else {
-        // no map provided; treat all managed pages as free initially
-        for (UInt32 i = 0; i < _pageCount; ++i) {
-          ClearPageUsed(i);
+        for (UInt32 p = startPage; p < endPage; ++p) {
+          ClearPageUsed(p);
           ++freePages;
         }
       }
+    } else {
+      // no map provided; treat all managed pages as free initially
+      for (UInt32 i = 0; i < _pageCount; ++i) {
+        ClearPageUsed(i);
+        ++freePages;
+      }
+    }
 
-      // mark bitmap, kernel, page tables, boot info as used
-      UInt32 usedUntil = AlignHelper::Up(bitmapPhysical + bitmapBytes, _pageSize);
-      UInt32 usedPages = usedUntil / _pageSize;
+    // mark bitmap, kernel, page tables, boot info as used
+    UInt32 usedUntil = AlignHelper::Up(bitmapPhysical + bitmapBytes, _pageSize);
+    UInt32 usedPages = usedUntil / _pageSize;
+
+    for (UInt32 i = 0; i < usedPages && i < _pageCount; ++i) {
+      SetPageUsed(i);
+    }
+
+    SetPageUsed(
+      KernelVirtualToPhysical(reinterpret_cast<UInt32>(_pageDirectory))
+      / _pageSize
+    );
+    SetPageUsed(
+      KernelVirtualToPhysical(reinterpret_cast<UInt32>(_firstPageTable))
+      / _pageSize
+    );
+
+    UInt32 bootInfoPage = bootInfoPhysical / _pageSize;
+    UInt32 bootInfoEndPage
+      = (bootInfoPhysical + BootInfo::rawSize + _pageSize - 1)
+      / _pageSize;
+
+    if (bootInfoPage < _pageCount) {
+      for (
+        UInt32 p = bootInfoPage;
+        p < bootInfoEndPage && p < _pageCount;
+        ++p
+      ) {
+        SetPageUsed(p);
+      }
+    }
+
+    if (bootInfo && bootInfo->initBundleSize > 0) {
+      Memory::ReservePhysicalRange(
+        bootInfo->initBundlePhysical,
+        bootInfo->initBundleSize
+      );
+    }
+
+    // never hand out the null page
+    SetPageUsed(0);
+
+    // reserve kernel image pages
+    UInt32 kernelStart = reinterpret_cast<UInt32>(&__phys_start);
+    UInt32 kernelEnd
+      = AlignHelper::Up(reinterpret_cast<UInt32>(&__phys_end), _pageSize);
+    UInt32 kernelStartPage = kernelStart / _pageSize;
+    UInt32 kernelEndPage = kernelEnd / _pageSize;
+
+    if (kernelStartPage < _pageCount) {
+      if (kernelEndPage > _pageCount) {
+        kernelEndPage = _pageCount;
+      }
+
+      for (UInt32 p = kernelStartPage; p < kernelEndPage; ++p) {
+        SetPageUsed(p);
+      }
+    }
+
+    // reserve early protected-mode stack pages (0x80000-0x90000)
+    UInt32 stackBottom = 0x80000;
+    UInt32 stackTop = 0x90000;
+    UInt32 stackStartPage = stackBottom / _pageSize;
+    UInt32 stackEndPage = AlignHelper::Up(stackTop, _pageSize) / _pageSize;
+
+    if (stackStartPage < _pageCount) {
+      if (stackEndPage > _pageCount) {
+        stackEndPage = _pageCount;
+      }
+
+      for (UInt32 p = stackStartPage; p < stackEndPage; ++p) {
+        SetPageUsed(p);
+      }
+    }
+
+    // if nothing was free (bogus map), fall back to freeing everything except
+    // reserved
+    if (freePages == 0) {
+      Logger::Write(
+        LogLevel::Warning,
+        "BootInfo memory map unusable; falling back to default map"
+      );
+
+      for (UInt32 i = 0; i < _pageCount; ++i) {
+        ClearPageUsed(i);
+      }
 
       for (UInt32 i = 0; i < usedPages && i < _pageCount; ++i) {
         SetPageUsed(i);
@@ -466,11 +372,6 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         / _pageSize
       );
 
-      UInt32 bootInfoPage = bootInfoPhysical / _pageSize;
-      UInt32 bootInfoEndPage
-        = (bootInfoPhysical + BootInfo::RawSize + _pageSize - 1)
-        / _pageSize;
-
       if (bootInfoPage < _pageCount) {
         for (
           UInt32 p = bootInfoPage;
@@ -481,94 +382,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         }
       }
 
-      if (bootInfo && bootInfo->initBundleSize > 0) {
-        Memory::ReservePhysicalRange(
-          bootInfo->initBundlePhysical,
-          bootInfo->initBundleSize
-        );
-      }
-
-      // never hand out the null page
       SetPageUsed(0);
-
-      // reserve kernel image pages
-      UInt32 kernelStart = reinterpret_cast<UInt32>(&__phys_start);
-      UInt32 kernelEnd
-        = AlignHelper::Up(reinterpret_cast<UInt32>(&__phys_end), _pageSize);
-      UInt32 kernelStartPage = kernelStart / _pageSize;
-      UInt32 kernelEndPage = kernelEnd / _pageSize;
-
-      if (kernelStartPage < _pageCount) {
-        if (kernelEndPage > _pageCount) {
-          kernelEndPage = _pageCount;
-        }
-
-        for (UInt32 p = kernelStartPage; p < kernelEndPage; ++p) {
-          SetPageUsed(p);
-        }
-      }
-
-      // reserve early protected-mode stack pages (0x80000-0x90000)
-      UInt32 stackBottom = 0x80000;
-      UInt32 stackTop = 0x90000;
-      UInt32 stackStartPage = stackBottom / _pageSize;
-      UInt32 stackEndPage = AlignHelper::Up(stackTop, _pageSize) / _pageSize;
-
-      if (stackStartPage < _pageCount) {
-        if (stackEndPage > _pageCount) {
-          stackEndPage = _pageCount;
-        }
-
-        for (UInt32 p = stackStartPage; p < stackEndPage; ++p) {
-          SetPageUsed(p);
-        }
-      }
-
-      // if nothing was free (bogus map), fall back to freeing everything except
-      // reserved
-      if (freePages == 0) {
-        Logger::Write(
-          LogLevel::Warning,
-          "BootInfo memory map unusable; falling back to default map"
-        );
-
-        for (UInt32 i = 0; i < _pageCount; ++i) {
-          ClearPageUsed(i);
-        }
-
-        for (UInt32 i = 0; i < usedPages && i < _pageCount; ++i) {
-          SetPageUsed(i);
-        }
-
-        SetPageUsed(
-          KernelVirtualToPhysical(reinterpret_cast<UInt32>(_pageDirectory))
-          / _pageSize
-        );
-        SetPageUsed(
-          KernelVirtualToPhysical(reinterpret_cast<UInt32>(_firstPageTable))
-          / _pageSize
-        );
-
-        if (bootInfoPage < _pageCount) {
-          for (
-            UInt32 p = bootInfoPage;
-            p < bootInfoEndPage && p < _pageCount;
-            ++p
-          ) {
-            SetPageUsed(p);
-          }
-        }
-
-        SetPageUsed(0);
-
-        freePages = 0;
-
-        for (UInt32 i = 0; i < _pageCount; ++i) {
-          if (PageFree(i)) {
-            ++freePages;
-          }
-        }
-      }
 
       freePages = 0;
 
@@ -577,51 +391,52 @@ namespace Quantum::System::Kernel::Arch::IA32 {
           ++freePages;
         }
       }
-
-      usedPages = _pageCount - freePages;
-
-      // retain BootInfo for potential future diagnostics (not logged here)
     }
 
-    /**
-     * Allocates a single physical 4 KB page.
-     * @param zero
-     *   Whether to zero the page before returning it.
-     * @return
-     *   Physical address of the allocated page.
-     */
-    UInt32 AllocatePhysicalPage(bool zero) {
-      UInt32 words = _bitmapLengthWords;
+    freePages = 0;
 
-      for (UInt32 wordIndex = 0; wordIndex < words; ++wordIndex) {
-        UInt32 word = _pageBitmap[wordIndex];
-        int bit = FindFirstZeroBit(word);
-
-        if (bit >= 0) {
-          UInt32 pageIndex = wordIndex * 32u + static_cast<UInt32>(bit);
-
-          if (pageIndex >= _pageCount) break;
-
-          SetPageUsed(pageIndex);
-
-          ++_usedPages;
-
-          if (zero) {
-            UInt8* memory = reinterpret_cast<UInt8*>(pageIndex * _pageSize);
-
-            for (UInt32 b = 0; b < _pageSize; ++b) {
-              memory[b] = 0;
-            }
-          }
-
-          return pageIndex * _pageSize;
-        }
+    for (UInt32 i = 0; i < _pageCount; ++i) {
+      if (PageFree(i)) {
+        ++freePages;
       }
-
-      PANIC("Out of physical memory");
-
-      return 0;
     }
+
+    usedPages = _pageCount - freePages;
+
+    // retain BootInfo for potential future diagnostics (not logged here)
+  }
+
+  UInt32 Memory::AllocatePhysicalPage(bool zero) {
+    UInt32 words = _bitmapLengthWords;
+
+    for (UInt32 wordIndex = 0; wordIndex < words; ++wordIndex) {
+      UInt32 word = _pageBitmap[wordIndex];
+      int bit = FindFirstZeroBit(word);
+
+      if (bit >= 0) {
+        UInt32 pageIndex = wordIndex * 32u + static_cast<UInt32>(bit);
+
+        if (pageIndex >= _pageCount) break;
+
+        SetPageUsed(pageIndex);
+
+        ++_usedPages;
+
+        if (zero) {
+          UInt8* memory = reinterpret_cast<UInt8*>(pageIndex * _pageSize);
+
+          for (UInt32 b = 0; b < _pageSize; ++b) {
+            memory[b] = 0;
+          }
+        }
+
+        return pageIndex * _pageSize;
+      }
+    }
+
+    PANIC("Out of physical memory");
+
+    return 0;
   }
 
   void Memory::InitializePaging(UInt32 bootInfoPhysicalAddress) {
@@ -1037,9 +852,10 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     UInt32 pde = GetPageDirectoryEntry(faultAddress);
     UInt32 pte = GetPageTableEntry(faultAddress);
 
+    Logger::Write(LogLevel::Error, "PAGE FAULT");
     Logger::WriteFormatted(
       LogLevel::Error,
-      "Page fault: addr=%p (%s %s) err=%p present=%s reserved=%s instr=%s",
+      "  addr=%p (%s %s) err=%p present=%s reserved=%s instr=%s",
       faultAddress,
       accessType,
       mode,
@@ -1050,7 +866,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     );
     Logger::WriteFormatted(
       LogLevel::Error,
-      "PF context: EIP=%p ESP=%p CR2=%p PDE=%p PTE=%p",
+      "  EIP=%p ESP=%p CR2=%p PDE=%p PTE=%p",
       context.eip,
       context.esp,
       faultAddress,

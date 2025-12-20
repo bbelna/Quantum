@@ -80,6 +80,47 @@ namespace Quantum::System::Kernel {
        * Registers built-in test suites.
        */
       static void RegisterBuiltins();
+
+    private:
+      /**
+       * Maximum number of registered tests.
+       */
+      static constexpr UInt32 _maxTests = 32;
+
+      /**
+       * Registered test cases.
+       */
+      static TestCase _tests[_maxTests];
+
+      /**
+       * Number of registered tests.
+       */
+      static UInt32 _testCount;
+
+      /**
+       * Number of passed tests.
+       */
+      static UInt32 _testsPassed;
+
+      /**
+       * Number of failed tests.
+       */
+      static UInt32 _testsFailed;
+
+      /**
+       * Number of assertion failures recorded.
+       */
+      static UInt32 _assertFailures;
+
+      /**
+       * Logs the header before running tests.
+       */
+      static void LogHeader();
+
+      /**
+       * Logs the footer after running tests.
+       */
+      static void LogFooter();
   };
 }
 

@@ -6,9 +6,11 @@
  * Driver entry trampoline.
  */
 
-#include "Floppy.hpp"
+#include "Driver.hpp"
 
-int main() {
-  Quantum::System::Drivers::Storage::Floppy::Main();
+using namespace Quantum::System::Drivers::Storage::Floppy;
+
+int Main() {
+  Driver::Main();
   return 0;
 }

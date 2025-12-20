@@ -11,44 +11,25 @@
 #include <Types.hpp>
 
 namespace Quantum::System::Kernel {
-  namespace {
-    struct Message {
-      UInt32 SenderId;
-      UInt32 Length;
-      UInt8 Data[IPC::maxPayloadBytes];
-    };
+  IPC::Port IPC::_ports[IPC::_maxPorts] = {};
+  UInt32 IPC::_nextPortId = 1;
 
-    struct Port {
-      bool Used;
-      UInt32 Id;
-      UInt32 OwnerTaskId;
-      UInt32 Head;
-      UInt32 Tail;
-      UInt32 Count;
-      Message Queue[IPC::maxQueueDepth];
-    };
-
-    constexpr UInt32 _maxPorts = 16;
-    Port _ports[_maxPorts] = {};
-    UInt32 _nextPortId = 1;
-
-    Port* FindPort(UInt32 id) {
-      for (UInt32 i = 0; i < _maxPorts; ++i) {
-        if (_ports[i].Used && _ports[i].Id == id) {
-          return &_ports[i];
-        }
+  IPC::Port* IPC::FindPort(UInt32 id) {
+    for (UInt32 i = 0; i < _maxPorts; ++i) {
+      if (_ports[i].Used && _ports[i].Id == id) {
+        return &_ports[i];
       }
-
-      return nullptr;
     }
 
-    void CopyPayload(void* dest, const void* src, UInt32 length) {
-      auto* d = reinterpret_cast<UInt8*>(dest);
-      auto* s = reinterpret_cast<const UInt8*>(src);
+    return nullptr;
+  }
 
-      for (UInt32 i = 0; i < length; ++i) {
-        d[i] = s[i];
-      }
+  void IPC::CopyPayload(void* dest, const void* src, UInt32 length) {
+    auto* d = reinterpret_cast<UInt8*>(dest);
+    auto* s = reinterpret_cast<const UInt8*>(src);
+
+    for (UInt32 i = 0; i < length; ++i) {
+      d[i] = s[i];
     }
   }
 

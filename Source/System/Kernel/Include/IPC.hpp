@@ -75,5 +75,53 @@ namespace Quantum::System::Kernel {
         UInt32 bufferCapacity,
         UInt32& outLength
       );
+
+    private:
+      /**
+       * IPC message descriptor stored in each port queue.
+       */
+      struct Message {
+        UInt32 SenderId;
+        UInt32 Length;
+        UInt8 Data[maxPayloadBytes];
+      };
+
+      /**
+       * IPC port state tracked by the kernel.
+       */
+      struct Port {
+        bool Used;
+        UInt32 Id;
+        UInt32 OwnerTaskId;
+        UInt32 Head;
+        UInt32 Tail;
+        UInt32 Count;
+        Message Queue[maxQueueDepth];
+      };
+
+      /**
+       * Maximum number of ports supported by the kernel.
+       */
+      static constexpr UInt32 _maxPorts = 16;
+
+      /**
+       * Global IPC port table.
+       */
+      static Port _ports[_maxPorts];
+
+      /**
+       * Next port id to hand out.
+       */
+      static UInt32 _nextPortId;
+
+      /**
+       * Finds a port by id.
+       */
+      static Port* FindPort(UInt32 id);
+
+      /**
+       * Copies a message payload into a destination buffer.
+       */
+      static void CopyPayload(void* dest, const void* src, UInt32 length);
   };
 }

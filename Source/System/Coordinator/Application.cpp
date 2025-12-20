@@ -14,73 +14,68 @@
 #include "Application.hpp"
 
 namespace Quantum::System::Coordinator {
-  namespace {
-    using BundleHeader = Quantum::ABI::InitBundle::Header;
-    using BundleEntry = Quantum::ABI::InitBundle::Entry;
+  bool Application::HasMagic(const BundleHeader& header) {
+    const char expected[8] = { 'I','N','I','T','B','N','D','\0' };
 
-    bool HasMagic(const BundleHeader& header) {
-      const char expected[8] = { 'I','N','I','T','B','N','D','\0' };
-
-      for (UInt32 i = 0; i < 8; ++i) {
-        if (header.magic[i] != expected[i]) {
-          return false;
-        }
-      }
-
-      return true;
-    }
-
-    UInt32 EntryNameLength(const BundleEntry& entry) {
-      UInt32 len = 0;
-
-      while (len < 32 && entry.name[len] != '\0') {
-        ++len;
-      }
-
-      return len;
-    }
-
-    bool EntryNameEquals(const BundleEntry& entry, CString name) {
-      if (!name) {
+    for (UInt32 i = 0; i < 8; ++i) {
+      if (header.magic[i] != expected[i]) {
         return false;
       }
+    }
 
-      for (UInt32 i = 0; i < 32; ++i) {
-        char entryChar = entry.name[i];
-        char nameChar = name[i];
+    return true;
+  }
 
-        if (entryChar != nameChar) {
-          return false;
-        }
+  UInt32 Application::EntryNameLength(const BundleEntry& entry) {
+    UInt32 len = 0;
 
-        if (entryChar == '\0') {
-          return true;
-        }
-      }
+    while (len < 32 && entry.name[len] != '\0') {
+      ++len;
+    }
 
+    return len;
+  }
+
+  bool Application::EntryNameEquals(const BundleEntry& entry, CString name) {
+    if (!name) {
       return false;
     }
 
-    void SpawnEntry(const BundleEntry& entry) {
-      if (entry.type == 1) {
-        return;
+    for (UInt32 i = 0; i < 32; ++i) {
+      char entryChar = entry.name[i];
+      char nameChar = name[i];
+
+      if (entryChar != nameChar) {
+        return false;
       }
 
-      UInt32 taskId = Quantum::ABI::InitBundle::Spawn(entry.name);
-
-      if (taskId == 0) {
-        Console::WriteLine("Failed to spawn INIT.BND entry");
-        return;
+      if (entryChar == '\0') {
+        return true;
       }
+    }
 
-      if (EntryNameEquals(entry, "floppy")) {
-        UInt32 grant = Quantum::ABI::IO::GrantIOAccess(taskId);
+    return false;
+  }
 
-        if (grant == 0) {
-          Console::WriteLine("Floppy driver granted I/O access");
-        } else {
-          Console::WriteLine("Failed to grant I/O access to floppy driver");
-        }
+  void Application::SpawnEntry(const BundleEntry& entry) {
+    if (entry.type == 1) {
+      return;
+    }
+
+    UInt32 taskId = Quantum::ABI::InitBundle::Spawn(entry.name);
+
+    if (taskId == 0) {
+      Console::WriteLine("Failed to spawn INIT.BND entry");
+      return;
+    }
+
+    if (EntryNameEquals(entry, "floppy")) {
+      UInt32 grant = Quantum::ABI::IO::GrantIOAccess(taskId);
+
+      if (grant == 0) {
+        Console::WriteLine("Floppy driver granted I/O access");
+      } else {
+        Console::WriteLine("Failed to grant I/O access to floppy driver");
       }
     }
   }

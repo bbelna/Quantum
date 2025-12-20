@@ -13,7 +13,7 @@ using namespace Quantum::System::Coordinator;
 /**
  * Coordinator main entry point.
  */
-int main() {
+int Main() {
   Application::Main();
   return 0;
 }

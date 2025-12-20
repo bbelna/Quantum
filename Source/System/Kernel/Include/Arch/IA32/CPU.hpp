@@ -354,5 +354,34 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * @return `Info` structure with CPU details.
        */
       static Info GetInfo();
+
+    private:
+      /**
+       * Checks if the CPUID instruction is supported.
+       * @return
+       *   True if CPUID is supported, false otherwise.
+       */
+      static bool IsCPUIDSupported();
+
+      /**
+       * Executes the CPUID instruction with the given function ID.
+       * @param function
+       *   The CPUID function ID.
+       * @param eax
+       *   Reference to store EAX result.
+       * @param ebx
+       *   Reference to store EBX result.
+       * @param ecx
+       *   Reference to store ECX result.
+       * @param edx
+       *   Reference to store EDX result.
+       */
+      static void ExecuteCPUID(
+        UInt32 function,
+        UInt32& eax,
+        UInt32& ebx,
+        UInt32& ecx,
+        UInt32& edx
+      );
   };
 }

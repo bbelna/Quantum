@@ -20,123 +20,110 @@ using ConsoleDriver = Arch::VGAConsole;
 namespace Quantum::System::Kernel {
   using Helpers::CStringHelper;
 
-  namespace {
-    /**
-     * Converts an unsigned integer to a string in the given base.
-     * @param value Number to convert.
-     * @param base Conversion base (10 or 16).
-     * @param prefixHex Whether to prefix 0x for hex.
-     */
-    void WriteUnsigned(UInt32 value, UInt32 base, bool prefixHex = false) {
-      if (base < 2 || base > 16) {
-        return;
-      }
-
-      char buffer[16] = {};
-      Size idx = 0;
-      CString digits = "0123456789ABCDEF";
-
-      do {
-        buffer[idx++] = digits[value % base];
-        value /= base;
-      } while (value > 0 && idx < sizeof(buffer));
-
-      if (prefixHex) {
-        ConsoleDriver::Write("0x");
-      }
-
-      while (idx > 0) {
-        ConsoleDriver::WriteCharacter(buffer[--idx]);
-      }
+  void Console::WriteUnsigned(UInt32 value, UInt32 base, bool prefixHex) {
+    if (base < 2 || base > 16) {
+      return;
     }
 
-    /**
-     * Writes a formatted string to the console using a variable argument list.
-     * @param format Format string.
-     * @param args Variable argument list.
-     */
-    void WriteFormattedVariableArguments(
-      CString format,
-      VariableArgumentsList args
-    ) {
-      if (!format) {
-        return;
+    char buffer[16] = {};
+    Size idx = 0;
+    CString digits = "0123456789ABCDEF";
+
+    do {
+      buffer[idx++] = digits[value % base];
+      value /= base;
+    } while (value > 0 && idx < sizeof(buffer));
+
+    if (prefixHex) {
+      ConsoleDriver::Write("0x");
+    }
+
+    while (idx > 0) {
+      ConsoleDriver::WriteCharacter(buffer[--idx]);
+    }
+  }
+
+  void Console::WriteFormattedVariableArguments(
+    CString format,
+    VariableArgumentsList args
+  ) {
+    if (!format) {
+      return;
+    }
+
+    for (CString p = format; *p != '\0'; ++p) {
+      if (*p != '%') {
+        ConsoleDriver::WriteCharacter(*p);
+
+        continue;
       }
 
-      for (CString p = format; *p != '\0'; ++p) {
-        if (*p != '%') {
-          ConsoleDriver::WriteCharacter(*p);
+      ++p;
 
-          continue;
-        }
+      if (*p == '\0') {
+        break;
+      }
 
-        ++p;
+      switch (*p) {
+        case 's': {
+          CString str = VARIABLE_ARGUMENTS(args, CString);
 
-        if (*p == '\0') {
+          ConsoleDriver::Write(str ? str : "(null)");
+
           break;
         }
 
-        switch (*p) {
-          case 's': {
-            CString str = VARIABLE_ARGUMENTS(args, CString);
+        case 'c': {
+          char c = static_cast<char>(VARIABLE_ARGUMENTS(args, int));
 
-            ConsoleDriver::Write(str ? str : "(null)");
+          ConsoleDriver::WriteCharacter(c);
 
-            break;
-          }
+          break;
+        }
 
-          case 'c': {
-            char c = static_cast<char>(VARIABLE_ARGUMENTS(args, int));
+        case 'd': {
+          Int32 v = VARIABLE_ARGUMENTS(args, Int32);
 
-            ConsoleDriver::WriteCharacter(c);
+          ConsoleDriver::Write(CStringHelper::ToCString(v));
 
-            break;
-          }
+          break;
+        }
 
-          case 'd': {
-            Int32 v = VARIABLE_ARGUMENTS(args, Int32);
+        case 'u': {
+          UInt32 v = VARIABLE_ARGUMENTS(args, UInt32);
 
-            ConsoleDriver::Write(CStringHelper::ToCString(v));
+          WriteUnsigned(v, 10);
 
-            break;
-          }
+          break;
+        }
 
-          case 'u': {
-            UInt32 v = VARIABLE_ARGUMENTS(args, UInt32);
+        case 'x': {
+          UInt32 v = VARIABLE_ARGUMENTS(args, UInt32);
 
-            WriteUnsigned(v, 10);
+          WriteUnsigned(v, 16, false);
 
-            break;
-          }
+          break;
+        }
 
-          case 'x': {
-            UInt32 v = VARIABLE_ARGUMENTS(args, UInt32);
+        case 'p': {
+          UInt32 v = VARIABLE_ARGUMENTS(args, UInt32);
 
-            WriteUnsigned(v, 16, false);
+          WriteUnsigned(v, 16, true);
 
-            break;
-          }
+          break;
+        }
 
-          case 'p': {
-            UInt32 v = VARIABLE_ARGUMENTS(args, UInt32);
+        case '%': {
+          ConsoleDriver::WriteCharacter('%');
 
-            WriteUnsigned(v, 16, true);
+          break;
+        }
 
-            break;
-          }
+        default: {
+          ConsoleDriver::WriteCharacter('%');
+          ConsoleDriver::WriteCharacter(*p);
 
-          case '%': {
-            ConsoleDriver::WriteCharacter('%');
-
-            break;
-          }
-
-          default: {
-            ConsoleDriver::WriteCharacter('%');
-            ConsoleDriver::WriteCharacter(*p);
-
-            break;
-          }
+          break;
         }
       }
     }

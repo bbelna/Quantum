@@ -1,11 +1,11 @@
 /* Quantum Floppy driver linker script (user-mode) */
-ENTRY(_start)
+ENTRY(Start)
 
 SECTIONS {
   . = 0x00400000;
 
   .entry : {
-    LONG(_start - 0x00400000)
+    LONG(Start - 0x00400000)
   }
 
   .text.start : {

@@ -149,5 +149,11 @@ namespace Quantum::System::Kernel {
        *   Pointer to the context to resume after scheduling.
        */
       static Interrupts::Context* Tick(Interrupts::Context& context);
+
+    private:
+      /**
+       * Task id of the coordinator task (for privileged operations).
+       */
+      static UInt32 _coordinatorTaskId;
   };
 }

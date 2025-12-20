@@ -22,12 +22,7 @@ namespace Quantum::System::Kernel {
 
   using LogLevel = Logger::Level;
 
-  namespace {
-    /**
-     * Task id of the coordinator task (for privileged operations).
-     */
-    UInt32 _coordinatorTaskId = 0;
-  }
+  UInt32 Task::_coordinatorTaskId = 0;
 
   void Task::Initialize() {
     ArchTask::Initialize();

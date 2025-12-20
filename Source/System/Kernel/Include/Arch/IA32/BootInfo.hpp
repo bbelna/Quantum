@@ -35,8 +35,15 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         Region entries[32];
       };
 
-      static constexpr UInt32 MaxEntries = 32;
-      static constexpr UInt32 RawSize = sizeof(Raw);
+      /**
+       * Maximum number of boot info entries.
+       */
+      static constexpr UInt32 maxEntries = 32;
+
+      /**
+       * Size of the raw boot info structure.
+       */
+      static constexpr UInt32 rawSize = sizeof(Raw);
 
       /**
        * Cached view of the boot info data.
@@ -46,7 +53,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         UInt32 reserved;
         UInt32 initBundlePhysical;
         UInt32 initBundleSize;
-        Region entries[MaxEntries];
+        Region entries[maxEntries];
       };
 
       /**
@@ -63,5 +70,21 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * Returns the physical address supplied by the bootloader.
        */
       static UInt32 GetPhysicalAddress();
+
+    private:
+      /**
+       * Cached boot info view for IA32.
+       */
+      static View _bootInfoView;
+
+      /**
+       * Physical address of the boot info structure.
+       */
+      static UInt32 _bootInfoPhysicalAddress;
+
+      /**
+       * Whether the cached boot info view is valid.
+       */
+      static UInt32 _bootInfoValid;
   };
 }

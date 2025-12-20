@@ -9,10 +9,10 @@
 #include <ABI/SystemCall.hpp>
 #include <Types.hpp>
 
-extern "C" int main();
+int Main();
 
-extern "C" [[gnu::section(".text.start")]] [[noreturn]] void _start() {
-  int code = main();
+extern "C" [[gnu::section(".text.start")]] [[noreturn]] void Start() {
+  int code = Main();
 
   Quantum::ABI::InvokeSystemCall(
     Quantum::ABI::SystemCall::Exit,

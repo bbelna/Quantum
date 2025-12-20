@@ -15,10 +15,8 @@
 namespace Quantum::System::Kernel::Arch::IA32 {
   extern "C" void SYSCALL80();
 
-  namespace {
-    Interrupts::Context* OnSystemCall(Interrupts::Context& context) {
-      return Kernel::HandleSystemCall(context);
-    }
+  Interrupts::Context* SystemCall::OnSystemCall(Interrupts::Context& context) {
+    return Kernel::HandleSystemCall(context);
   }
 
   void SystemCall::Initialize() {

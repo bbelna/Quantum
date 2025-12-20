@@ -15,10 +15,6 @@
 namespace Quantum::System::Kernel::Arch::IA32 {
   using AlignHelper = Helpers::AlignHelper;
 
-  namespace {
-    constexpr UInt32 _pageSize = 4096;
-  }
-
   void UserMode::Enter(UInt32 entryPoint, UInt32 userStackTop) {
     const UInt32 userData = TSS::userDataSelector;
     const UInt32 userCode = TSS::userCodeSelector;

@@ -38,5 +38,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        *   True if the stack was mapped; false on invalid input.
        */
       static bool MapUserStack(UInt32 userStackTop, UInt32 sizeBytes);
+
+    private:
+      /**
+       * IA32 page size in bytes.
+       */
+      static constexpr UInt32 _pageSize = 4096;
   };
 }

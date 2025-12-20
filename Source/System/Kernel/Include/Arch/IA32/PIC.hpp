@@ -51,5 +51,46 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * Masks all IRQ lines on both PICs.
        */
       static void MaskAll();
+
+    private:
+      /**
+       * PIC EOI command value.
+       */
+      static constexpr UInt8 _picEoi = 0x20;
+
+      /**
+       * PIC 1 command port.
+       */
+      static constexpr UInt16 _pic1Command = 0x20;
+
+      /**
+       * PIC 1 data port.
+       */
+      static constexpr UInt16 _pic1Data = 0x21;
+
+      /**
+       * PIC 2 command port.
+       */
+      static constexpr UInt16 _pic2Command = 0xA0;
+
+      /**
+       * PIC 2 data port.
+       */
+      static constexpr UInt16 _pic2Data = 0xA1;
+
+      /**
+       * ICW1 initialization command.
+       */
+      static constexpr UInt8 _icw1Init = 0x10;
+
+      /**
+       * ICW1 expects ICW4.
+       */
+      static constexpr UInt8 _icw1Icw4 = 0x01;
+
+      /**
+       * ICW4 mode 8086/88.
+       */
+      static constexpr UInt8 _icw48086 = 0x01;
   };
 }

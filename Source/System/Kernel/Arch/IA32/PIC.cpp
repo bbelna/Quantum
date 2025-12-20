@@ -10,48 +10,6 @@
 #include <Arch/IA32/PIC.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  namespace {
-    /**
-     * PIC EOI command value.
-     */
-    constexpr UInt8 _picEoi = 0x20;
-
-    /**
-     * PIC 1 command port.
-     */
-    constexpr UInt16 _pic1Command = 0x20;
-
-    /**
-     * PIC 1 data port.
-     */
-    constexpr UInt16 _pic1Data = 0x21;
-
-    /**
-     * PIC 2 command port.
-     */
-    constexpr UInt16 _pic2Command = 0xA0;
-
-    /**
-     * PIC 2 data port.
-     */
-    constexpr UInt16 _pic2Data = 0xA1;
-
-    /**
-     * ICW1 initialization command.
-     */
-    constexpr UInt8 _icw1Init = 0x10;
-
-    /**
-     * ICW1 expects ICW4.
-     */
-    constexpr UInt8 _icw1Icw4 = 0x01;
-
-    /**
-     * ICW4 mode 8086/88.
-     */
-    constexpr UInt8 _icw48086 = 0x01;
-  }
-
   void PIC::Initialize(UInt8 offset1, UInt8 offset2) {
     // preserve current masks so we restore them after the remap
     UInt8 masterMask = IO::In8(_pic1Data);

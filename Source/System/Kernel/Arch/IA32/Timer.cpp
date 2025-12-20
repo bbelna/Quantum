@@ -19,55 +19,18 @@
 namespace Quantum::System::Kernel::Arch::IA32 {
   using LogLevel = Logger::Level;
 
-  namespace {
-    /**
-     * PIT channel 0 data port.
-     */
-    constexpr UInt16 _pitChannel0 = 0x40;
+  volatile UInt64 Timer::_tickCount = 0;
+  volatile bool Timer::_tickLoggingEnabled = false;
 
-    /**
-     * PIT command port.
-     */
-    constexpr UInt16 _pitCommand = 0x43;
+  Interrupts::Context* Timer::TimerHandler(Interrupts::Context& context) {
+    ++_tickCount;
 
-    /**
-     * PIT input clock frequency in Hz.
-     */
-    constexpr UInt32 _pitInputHz = 1193180;
-
-    /**
-     * PIT operating mode configuration.
-     */
-    constexpr UInt16 _pitMode = 0x36;
-
-    /**
-     * Desired PIT frequency in Hz.
-     */
-    constexpr UInt32 _pitFreqHz  = 100;
-
-    /**
-     * Tick count since timer initialization.
-     */
-    volatile UInt64 _tickCount = 0;
-
-    /**
-     * Whether periodic tick logging is enabled.
-     */
-    volatile bool _tickLoggingEnabled = false;
-
-    /**
-     * PIT timer interrupt handler.
-     */
-    Interrupts::Context* TimerHandler(Interrupts::Context& context) {
-      ++_tickCount;
-
-      // heartbeat every second (at 100 Hz)
-      if (_tickLoggingEnabled && (_tickCount % _pitFreqHz) == 0) {
-        Logger::Write(LogLevel::Trace, "Tick");
-      }
-
-      return Task::Tick(context);
+    // heartbeat every second (at 100 Hz)
+    if (_tickLoggingEnabled && (_tickCount % _pitFreqHz) == 0) {
+      Logger::Write(LogLevel::Trace, "Tick");
     }
+
+    return Task::Tick(context);
   }
 
   void Timer::Initialize() {
