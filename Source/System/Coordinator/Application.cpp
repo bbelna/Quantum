@@ -2,15 +2,16 @@
  * Quantum
  * (c) 2025 Brandon Belna - MIT License
  *
- * System/Coordinator/Coordinator.cpp
+ * System/Coordinator/Application.cpp
  * System coordinator implementation.
  */
 
 #include <ABI/InitBundle.hpp>
+#include <ABI/IO.hpp>
 #include <Console.hpp>
 #include <Task.hpp>
 
-#include "Coordinator.hpp"
+#include "Application.hpp"
 
 namespace Quantum::System::Coordinator {
   namespace {
@@ -53,12 +54,57 @@ namespace Quantum::System::Coordinator {
 
       return len;
     }
+
+    bool EntryNameEquals(const BundleEntry& entry, CString name) {
+      if (!name) {
+        return false;
+      }
+
+      for (UInt32 i = 0; i < 32; ++i) {
+        char entryChar = entry.name[i];
+        char nameChar = name[i];
+
+        if (entryChar != nameChar) {
+          return false;
+        }
+
+        if (entryChar == '\0') {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    void SpawnEntry(const BundleEntry& entry) {
+      if (entry.type == 1) {
+        return;
+      }
+
+      UInt32 taskId = Quantum::ABI::InitBundle::Spawn(entry.name);
+
+      if (taskId == 0) {
+        Console::WriteLine("Failed to spawn INIT.BND entry");
+        return;
+      }
+
+      if (EntryNameEquals(entry, "floppy")) {
+        UInt32 grant = Quantum::ABI::IO::GrantIOAccess(taskId);
+
+        if (grant == 0) {
+          Console::WriteLine("Floppy driver granted I/O access");
+        } else {
+          Console::WriteLine("Failed to grant I/O access to floppy driver");
+        }
+      }
+    }
   }
 
-  void Main() {
+  void Application::Main() {
     Console::WriteLine("Coordinator");
 
     Quantum::ABI::InitBundle::Info info{};
+
     bool ok = Quantum::ABI::InitBundle::GetInfo(info);
 
     if (!ok || info.base == 0 || info.size == 0) {
@@ -104,6 +150,8 @@ namespace Quantum::System::Coordinator {
       } else {
         Console::WriteLine("(unnamed)");
       }
+
+      SpawnEntry(entry);
     }
 
     Console::WriteLine("INIT.BND parsed");

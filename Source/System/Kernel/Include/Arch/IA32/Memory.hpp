@@ -50,6 +50,16 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       static constexpr UInt32 recursiveSlot = 1023;
 
       /**
+       * Base virtual address for the kernel heap region.
+       */
+      static constexpr UInt32 kernelHeapBase = 0xC2000000;
+
+      /**
+       * Total virtual bytes reserved for the kernel heap region.
+       */
+      static constexpr UInt32 kernelHeapBytes = 512 * 1024 * 1024;
+
+      /**
        * Initializes paging with identity mappings based on the boot memory map.
        * @param bootInfoPhysicalAddress
        *   Physical address of boot info provided by bootloader.
@@ -93,6 +103,58 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         bool user = false,
         bool global = false
       );
+
+      /**
+       * Returns the physical address of the kernel page directory.
+       * @return
+       *   Physical address of the kernel page directory.
+       */
+      static UInt32 GetKernelPageDirectoryPhysical();
+
+      /**
+       * Creates a new address space and returns its page directory physical.
+       * @return
+       *   Physical address of the new page directory.
+       */
+      static UInt32 CreateAddressSpace();
+
+      /**
+       * Destroys an address space created by CreateAddressSpace.
+       * @param pageDirectoryPhysical
+       *   Physical address of the page directory to destroy.
+       */
+      static void DestroyAddressSpace(UInt32 pageDirectoryPhysical);
+
+      /**
+       * Maps a virtual page in the specified address space.
+       * @param pageDirectoryPhysical
+       *   Physical address of the target page directory.
+       * @param virtualAddress
+       *   Virtual address of the page to map.
+       * @param physicalAddress
+       *   Physical address of the page to map.
+       * @param writable
+       *   Whether the page should be writable.
+       * @param user
+       *   Whether the page should be user accessible.
+       * @param global
+       *   Whether the mapping should be marked global.
+       */
+      static void MapPageInAddressSpace(
+        UInt32 pageDirectoryPhysical,
+        UInt32 virtualAddress,
+        UInt32 physicalAddress,
+        bool writable = true,
+        bool user = false,
+        bool global = false
+      );
+
+      /**
+       * Activates the specified address space.
+       * @param pageDirectoryPhysical
+       *   Physical address of the page directory to activate.
+       */
+      static void ActivateAddressSpace(UInt32 pageDirectoryPhysical);
 
       /**
        * Maps a contiguous virtual range to a contiguous physical range.

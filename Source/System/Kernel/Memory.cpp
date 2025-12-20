@@ -34,7 +34,13 @@ namespace Quantum::System::Kernel {
     /**
      * Heap start virtual address.
      */
+    #if defined(QUANTUM_ARCH_IA32)
+    constexpr UInt32 _heapStartVirtualAddress = ArchMemory::kernelHeapBase;
+    constexpr UInt32 _heapRegionBytes = ArchMemory::kernelHeapBytes;
+    #else
     constexpr UInt32 _heapStartVirtualAddress = 0x00400000;
+    constexpr UInt32 _heapRegionBytes = 0;
+    #endif
 
     /**
      * Number of guard pages before the heap.
@@ -169,6 +175,17 @@ namespace Quantum::System::Kernel {
      *   Pointer to the start of the mapped page.
      */
     UInt8* MapNextHeapPage() {
+      #if defined(QUANTUM_ARCH_IA32)
+      UInt32 heapLimit = _heapStartVirtualAddress + _heapRegionBytes;
+      UInt32 nextEnd = reinterpret_cast<UInt32>(_heapMappedEnd)
+        + _heapPageSize
+        + _heapGuardPagesAfter * _heapPageSize;
+
+      if (nextEnd > heapLimit) {
+        PANIC("Kernel heap region exhausted");
+      }
+      #endif
+
       UInt8* pageStart = _heapMappedEnd;
       void* physicalPageAddress = ArchMemory::AllocatePage(true);
 
@@ -601,6 +618,14 @@ namespace Quantum::System::Kernel {
     return ArchMemory::AllocatePage(zero);
   }
 
+  UInt32 Memory::GetKernelPageDirectoryPhysical() {
+    #if defined(QUANTUM_ARCH_IA32)
+    return ArchMemory::GetKernelPageDirectoryPhysical();
+    #else
+    return 0;
+    #endif
+  }
+
   void Memory::MapPage(
     UInt32 virtualAddress,
     UInt32 physicalAddress,
@@ -615,6 +640,57 @@ namespace Quantum::System::Kernel {
       user,
       global
     );
+  }
+
+  UInt32 Memory::CreateAddressSpace() {
+    #if defined(QUANTUM_ARCH_IA32)
+    return ArchMemory::CreateAddressSpace();
+    #else
+    return 0;
+    #endif
+  }
+
+  void Memory::DestroyAddressSpace(UInt32 pageDirectoryPhysical) {
+    #if defined(QUANTUM_ARCH_IA32)
+    ArchMemory::DestroyAddressSpace(pageDirectoryPhysical);
+    #else
+    (void)pageDirectoryPhysical;
+    #endif
+  }
+
+  void Memory::MapPageInAddressSpace(
+    UInt32 pageDirectoryPhysical,
+    UInt32 virtualAddress,
+    UInt32 physicalAddress,
+    bool writable,
+    bool user,
+    bool global
+  ) {
+    #if defined(QUANTUM_ARCH_IA32)
+    ArchMemory::MapPageInAddressSpace(
+      pageDirectoryPhysical,
+      virtualAddress,
+      physicalAddress,
+      writable,
+      user,
+      global
+    );
+    #else
+    (void)pageDirectoryPhysical;
+    (void)virtualAddress;
+    (void)physicalAddress;
+    (void)writable;
+    (void)user;
+    (void)global;
+    #endif
+  }
+
+  void Memory::ActivateAddressSpace(UInt32 pageDirectoryPhysical) {
+    #if defined(QUANTUM_ARCH_IA32)
+    ArchMemory::ActivateAddressSpace(pageDirectoryPhysical);
+    #else
+    (void)pageDirectoryPhysical;
+    #endif
   }
 
   void* Memory::Allocate(Size size) {

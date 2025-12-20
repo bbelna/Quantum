@@ -46,6 +46,15 @@ namespace Quantum::System::Kernel {
   bool GetInitBundleInfo(UInt32& base, UInt32& size);
 
   /**
+   * Spawns a user task from INIT.BND by entry name.
+   * @param name
+   *   Null-terminated entry name.
+   * @return
+   *   Task id on success; 0 on failure.
+   */
+  UInt32 SpawnInitBundleTask(CString name);
+
+  /**
    * Panic the kernel with a message.
    * Do not invoke directly. Use the macro `PANIC(msg)` as it captures
    * file, line, and function information automatically.

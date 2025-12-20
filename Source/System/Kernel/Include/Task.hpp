@@ -47,6 +47,23 @@ namespace Quantum::System::Kernel {
       );
 
       /**
+       * Creates a new user task in the specified address space.
+       * @param entryPoint
+       *   User-mode entry point address.
+       * @param userStackTop
+       *   Top of the user-mode stack.
+       * @param pageDirectoryPhysical
+       *   Physical address of the user address space page directory.
+       * @return
+       *   Pointer to the task control block, or nullptr on failure.
+       */
+      static ControlBlock* CreateUser(
+        UInt32 entryPoint,
+        UInt32 userStackTop,
+        UInt32 pageDirectoryPhysical
+      );
+
+      /**
        * Terminates the current task.
        */
       [[noreturn]] static void Exit();
@@ -65,8 +82,54 @@ namespace Quantum::System::Kernel {
 
       /**
        * Gets the task id of the currently executing task (0 if none).
+       * @return
+       *   Task identifier.
        */
       static UInt32 GetCurrentId();
+
+      /**
+       * Sets the address space for the current task.
+       * @param pageDirectoryPhysical
+       *   Physical address of the page directory to use.
+       */
+      static void SetCurrentAddressSpace(UInt32 pageDirectoryPhysical);
+
+      /**
+       * Gets the address space for the current task.
+       * @return
+       *   Physical address of the current task page directory.
+       */
+      static UInt32 GetCurrentAddressSpace();
+
+      /**
+       * Records the coordinator task id for privileged operations.
+       * @param taskId
+       *   Task identifier.
+       */
+      static void SetCoordinatorId(UInt32 taskId);
+
+      /**
+       * Returns true if the current task is the coordinator.
+       * @return
+       *   True if the current task is the coordinator; false otherwise.
+       */
+      static bool IsCurrentTaskCoordinator();
+
+      /**
+       * Grants I/O access to the specified task.
+       * @param taskId
+       *   Task identifier.
+       * @return
+       *   True on success; false otherwise.
+       */
+      static bool GrantIOAccess(UInt32 taskId);
+
+      /**
+       * Returns true if the current task has I/O access.
+       * @return
+       *   True if the current task has I/O access; false otherwise.
+       */
+      static bool HasIOAccess();
 
       /**
        * Enables preemptive multitasking via timer interrupts.
@@ -80,6 +143,10 @@ namespace Quantum::System::Kernel {
 
       /**
        * Scheduler tick handler (called from timer interrupt).
+       * @param context
+       *   Reference to the current interrupt context.
+       * @return
+       *   Pointer to the context to resume after scheduling.
        */
       static Interrupts::Context* Tick(Interrupts::Context& context);
   };

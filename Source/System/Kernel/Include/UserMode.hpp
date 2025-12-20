@@ -15,6 +15,10 @@ namespace Quantum::System::Kernel {
     public:
       /**
        * Maps a user-mode stack at the specified top address.
+       * @param userStackTop
+       *   Top virtual address of the user stack.
+       * @param sizeBytes
+       *   Size of the stack in bytes.
        * @return
        *   True on success; false otherwise.
        */
@@ -22,6 +26,10 @@ namespace Quantum::System::Kernel {
 
       /**
        * Enters user mode at the specified entry point.
+       * @param entryPoint
+       *   Function pointer to the user-mode entry point.
+       * @param userStackTop
+       *   Top virtual address of the user stack.
        */
       [[noreturn]] static void Enter(UInt32 entryPoint, UInt32 userStackTop);
   };

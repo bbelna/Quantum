@@ -6,12 +6,14 @@
  * Coordinator main entry point.
  */
 
-#include "Coordinator.hpp"
+#include "Application.hpp"
+
+using namespace Quantum::System::Coordinator;
 
 /**
  * Coordinator main entry point.
  */
 int main() {
-  Quantum::System::Coordinator::Main();
+  Application::Main();
   return 0;
 }

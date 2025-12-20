@@ -21,7 +21,15 @@ namespace Quantum::ABI {
     GetInitBundleInfo = 3,
     IPC_CreatePort = 4,
     IPC_Send = 5,
-    IPC_Receive = 6
+    IPC_Receive = 6,
+    IO_In8 = 7,
+    IO_In16 = 8,
+    IO_In32 = 9,
+    IO_Out8 = 10,
+    IO_Out16 = 11,
+    IO_Out32 = 12,
+    GrantIOAccess = 13,
+    SpawnInitBundle = 14
   };
 
   /**

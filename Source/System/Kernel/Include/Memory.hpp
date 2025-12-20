@@ -83,6 +83,11 @@ namespace Quantum::System::Kernel {
       static void* AllocatePage(bool zero = false);
 
       /**
+       * Returns the physical address of the kernel page directory.
+       */
+      static UInt32 GetKernelPageDirectoryPhysical();
+
+      /**
        * Maps a virtual page to a physical page.
        * @param virtualAddress
        *   Virtual address of the page to map.
@@ -102,6 +107,33 @@ namespace Quantum::System::Kernel {
         bool user = false,
         bool global = false
       );
+
+      /**
+       * Creates a new address space and returns its page directory physical.
+       */
+      static UInt32 CreateAddressSpace();
+
+      /**
+       * Destroys an address space created with CreateAddressSpace.
+       */
+      static void DestroyAddressSpace(UInt32 pageDirectoryPhysical);
+
+      /**
+       * Maps a virtual page in the specified address space.
+       */
+      static void MapPageInAddressSpace(
+        UInt32 pageDirectoryPhysical,
+        UInt32 virtualAddress,
+        UInt32 physicalAddress,
+        bool writable = true,
+        bool user = false,
+        bool global = false
+      );
+
+      /**
+       * Activates the given address space for the current CPU.
+       */
+      static void ActivateAddressSpace(UInt32 pageDirectoryPhysical);
 
       /**
        * Allocates a block of kernel heap memory.

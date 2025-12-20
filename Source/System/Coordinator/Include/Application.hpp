@@ -9,8 +9,11 @@
 #pragma once
 
 namespace Quantum::System::Coordinator {
-  /**
-   * Coordinator entry point.
-   */
-  void Main();
+  class Application {
+    public:
+      /**
+       * Coordinator entry point.
+       */
+      static void Main();
+  };
 }

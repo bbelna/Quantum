@@ -54,38 +54,38 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
   void PIC::Initialize(UInt8 offset1, UInt8 offset2) {
     // preserve current masks so we restore them after the remap
-    UInt8 masterMask = IO::InByte(_pic1Data);
-    UInt8 slaveMask = IO::InByte(_pic2Data);
+    UInt8 masterMask = IO::In8(_pic1Data);
+    UInt8 slaveMask = IO::In8(_pic2Data);
 
     // start the initialization sequence (cascade mode, expect ICW4)
-    IO::OutByte(_pic1Command, _icw1Init | _icw1Icw4);
-    IO::OutByte(_pic2Command, _icw1Init | _icw1Icw4);
+    IO::Out8(_pic1Command, _icw1Init | _icw1Icw4);
+    IO::Out8(_pic2Command, _icw1Init | _icw1Icw4);
 
     // set interrupt vector offsets
-    IO::OutByte(_pic1Data, offset1);
-    IO::OutByte(_pic2Data, offset2);
+    IO::Out8(_pic1Data, offset1);
+    IO::Out8(_pic2Data, offset2);
 
     // tell Master PIC there is a slave PIC at IRQ2 (0000 0100)
-    IO::OutByte(_pic1Data, 0x04);
+    IO::Out8(_pic1Data, 0x04);
 
     // tell Slave PIC its cascade identity (0000 0010)
-    IO::OutByte(_pic2Data, 0x02);
+    IO::Out8(_pic2Data, 0x02);
 
     // set 8086/88 mode
-    IO::OutByte(_pic1Data, _icw48086);
-    IO::OutByte(_pic2Data, _icw48086);
+    IO::Out8(_pic1Data, _icw48086);
+    IO::Out8(_pic2Data, _icw48086);
 
     // restore saved masks
-    IO::OutByte(_pic1Data, masterMask);
-    IO::OutByte(_pic2Data, slaveMask);
+    IO::Out8(_pic1Data, masterMask);
+    IO::Out8(_pic2Data, slaveMask);
   }
 
   void PIC::SendEOI(UInt8 irq) {
     if (irq >= 8) {
-      IO::OutByte(_pic2Command, _picEoi);
+      IO::Out8(_pic2Command, _picEoi);
     }
 
-    IO::OutByte(_pic1Command, _picEoi);
+    IO::Out8(_pic1Command, _picEoi);
   }
 
   void PIC::Mask(UInt8 irq) {
@@ -94,9 +94,9 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       irq -= 8;
     }
 
-    UInt8 mask = IO::InByte(port);
+    UInt8 mask = IO::In8(port);
     mask |= static_cast<UInt8>(1 << irq);
-    IO::OutByte(port, mask);
+    IO::Out8(port, mask);
   }
 
   void PIC::Unmask(UInt8 irq) {
@@ -105,13 +105,13 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       irq -= 8;
     }
 
-    UInt8 mask = IO::InByte(port);
+    UInt8 mask = IO::In8(port);
     mask &= static_cast<UInt8>(~(1 << irq));
-    IO::OutByte(port, mask);
+    IO::Out8(port, mask);
   }
 
   void PIC::MaskAll() {
-    IO::OutByte(_pic1Data, 0xFF);
-    IO::OutByte(_pic2Data, 0xFF);
+    IO::Out8(_pic1Data, 0xFF);
+    IO::Out8(_pic2Data, 0xFF);
   }
 }

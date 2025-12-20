@@ -19,6 +19,7 @@ namespace Quantum::System::Kernel {
     #else
     (void)userStackTop;
     (void)sizeBytes;
+
     return false;
     #endif
   }
@@ -29,8 +30,8 @@ namespace Quantum::System::Kernel {
     #else
     (void)entryPoint;
     (void)userStackTop;
-    for (;;) {
-    }
+
+    for (;;) {}
     #endif
   }
 }

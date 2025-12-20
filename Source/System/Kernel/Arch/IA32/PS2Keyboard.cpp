@@ -148,7 +148,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
      * Keyboard interrupt handler (IRQ1).
      */
     Interrupts::Context* KeyboardHandler(Interrupts::Context& context) {
-      UInt8 scancode = IO::InByte(0x60);
+      UInt8 scancode = IO::In8(0x60);
 
       if (scancode == 0xE0) {
         // handle E0 prefix (extended scancode); mark and skip this byte

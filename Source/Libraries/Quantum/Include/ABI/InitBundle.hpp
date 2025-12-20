@@ -46,5 +46,19 @@ namespace Quantum::ABI {
 
         return result == 0;
       }
+
+      /**
+       * Spawns a task from an INIT.BND entry by name.
+       * @param name
+       *   Null-terminated entry name.
+       * @return
+       *   Task id on success; 0 on failure.
+       */
+      static UInt32 Spawn(CString name) {
+        return InvokeSystemCall(
+          SystemCall::SpawnInitBundle,
+          reinterpret_cast<UInt32>(name)
+        );
+      }
   };
 }

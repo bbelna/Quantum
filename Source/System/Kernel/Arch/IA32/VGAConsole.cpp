@@ -120,8 +120,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     _cursorColumn = 0;
 
     // hide the hardware cursor
-    IO::OutByte(0x3D4, 0x0A);
-    IO::OutByte(0x3D5, 0x20);
+    IO::Out8(0x3D4, 0x0A);
+    IO::Out8(0x3D5, 0x20);
 
     DrawCursor();
   }

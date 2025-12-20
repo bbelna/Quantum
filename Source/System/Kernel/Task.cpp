@@ -22,6 +22,13 @@ namespace Quantum::System::Kernel {
 
   using LogLevel = Logger::Level;
 
+  namespace {
+    /**
+     * Task id of the coordinator task (for privileged operations).
+     */
+    UInt32 _coordinatorTaskId = 0;
+  }
+
   void Task::Initialize() {
     ArchTask::Initialize();
   }
@@ -30,6 +37,23 @@ namespace Quantum::System::Kernel {
     return reinterpret_cast<Task::ControlBlock*>(
       ArchTask::Create(entryPoint, stackSize)
     );
+  }
+
+  Task::ControlBlock* Task::CreateUser(
+    UInt32 entryPoint,
+    UInt32 userStackTop,
+    UInt32 pageDirectoryPhysical
+  ) {
+    #if defined(QUANTUM_ARCH_IA32)
+    return reinterpret_cast<Task::ControlBlock*>(
+      ArchTask::CreateUser(entryPoint, userStackTop, pageDirectoryPhysical)
+    );
+    #else
+    (void)entryPoint;
+    (void)userStackTop;
+    (void)pageDirectoryPhysical;
+    return nullptr;
+    #endif
   }
 
   void Task::Exit() {
@@ -48,6 +72,59 @@ namespace Quantum::System::Kernel {
     auto* tcb = GetCurrent();
 
     return tcb ? tcb->id : 0;
+  }
+
+  void Task::SetCurrentAddressSpace(UInt32 pageDirectoryPhysical) {
+    #if defined(QUANTUM_ARCH_IA32)
+    ArchTask::SetCurrentAddressSpace(pageDirectoryPhysical);
+    #else
+    (void)pageDirectoryPhysical;
+    #endif
+  }
+
+  UInt32 Task::GetCurrentAddressSpace() {
+    #if defined(QUANTUM_ARCH_IA32)
+    return ArchTask::GetCurrentAddressSpace();
+    #else
+    return 0;
+    #endif
+  }
+
+  void Task::SetCoordinatorId(UInt32 taskId) {
+    _coordinatorTaskId = taskId;
+  }
+
+  bool Task::IsCurrentTaskCoordinator() {
+    UInt32 current = GetCurrentId();
+
+    return current != 0 && current == _coordinatorTaskId;
+  }
+
+  bool Task::GrantIOAccess(UInt32 taskId) {
+    #if defined(QUANTUM_ARCH_IA32)
+    auto* tcb = ArchTask::Find(taskId);
+
+    if (!tcb) {
+      return false;
+    }
+
+    tcb->caps |= ArchTask::CapabilityIo;
+
+    return true;
+    #else
+    (void)taskId;
+    return false;
+    #endif
+  }
+
+  bool Task::HasIOAccess() {
+    #if defined(QUANTUM_ARCH_IA32)
+    auto* tcb = ArchTask::GetCurrent();
+
+    return tcb && (tcb->caps & ArchTask::CapabilityIo) != 0;
+    #else
+    return false;
+    #endif
   }
 
   void Task::EnablePreemption() {

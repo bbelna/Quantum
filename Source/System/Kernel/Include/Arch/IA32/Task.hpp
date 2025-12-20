@@ -58,6 +58,16 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         UInt32 id;
 
         /**
+         * Capability flags granted to the task.
+         */
+        UInt32 caps;
+
+        /**
+         * Physical address of the task page directory.
+         */
+        UInt32 pageDirectoryPhysical;
+
+        /**
          * Current task state.
          */
         State state;
@@ -78,10 +88,35 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         UInt32 stackSize;
 
         /**
+         * Top of the task's kernel stack (stack grows downward).
+         */
+        UInt32 kernelStackTop;
+
+        /**
+         * User-mode entry point for user tasks.
+         */
+        UInt32 userEntryPoint;
+
+        /**
+         * User-mode stack top for user tasks.
+         */
+        UInt32 userStackTop;
+
+        /**
          * Pointer to the next task in the scheduler queue.
          */
         ControlBlock* next;
+
+        /**
+         * Pointer to the next task in the global task list.
+         */
+        ControlBlock* allNext;
       };
+
+      /**
+       * Capability flags.
+       */
+      static constexpr UInt32 CapabilityIo = 1u << 0;
 
       /**
        * Initializes the IA32 task subsystem.
@@ -100,6 +135,26 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       static ControlBlock* Create(void (*entryPoint)(), UInt32 stackSize);
 
       /**
+       * Creates a new user task with the given entry point and stack.
+       * @param entryPoint
+       *   User-mode entry point address.
+       * @param userStackTop
+       *   Top of the user-mode stack.
+       * @param pageDirectoryPhysical
+       *   Physical address of the user address space page directory.
+       * @param stackSize
+       *   Size of the task's kernel stack in bytes.
+       * @return
+       *   Pointer to the task control block, or nullptr on failure.
+       */
+      static ControlBlock* CreateUser(
+        UInt32 entryPoint,
+        UInt32 userStackTop,
+        UInt32 pageDirectoryPhysical,
+        UInt32 stackSize = 4096
+      );
+
+      /**
        * Terminates the current task.
        */
       [[noreturn]] static void Exit();
@@ -115,6 +170,29 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        *   Pointer to the current task control block.
        */
       static ControlBlock* GetCurrent();
+
+      /**
+       * Finds a task by id.
+       * @param id
+       *   Task identifier to locate.
+       * @return
+       *   Pointer to the task control block, or nullptr if not found.
+       */
+      static ControlBlock* Find(UInt32 id);
+
+      /**
+       * Sets the address space for the current task.
+       * @param pageDirectoryPhysical
+       *   Physical address of the page directory to use.
+       */
+      static void SetCurrentAddressSpace(UInt32 pageDirectoryPhysical);
+
+      /**
+       * Gets the address space for the current task.
+       * @return
+       *   Physical address of the current task page directory.
+       */
+      static UInt32 GetCurrentAddressSpace();
 
       /**
        * Enables preemptive multitasking.

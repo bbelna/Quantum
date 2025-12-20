@@ -68,7 +68,7 @@ namespace Quantum::System::Kernel {
           phys,
           false,
           true,
-          false
+          true
         );
       }
 
@@ -103,28 +103,28 @@ namespace Quantum::System::Kernel {
     }
 
     struct BundleHeader {
-      char Magic[8];
-      UInt16 Version;
-      UInt16 EntryCount;
-      UInt32 TableOffset;
-      UInt8 Reserved[8];
+      char magic[8];
+      UInt16 version;
+      UInt16 entryCount;
+      UInt32 tableOffset;
+      UInt8 reserved[8];
     };
 
     struct BundleEntry {
-      char Name[32];
-      UInt8 Type;
-      UInt8 Flags;
-      UInt8 Reserved[2];
-      UInt32 Offset;
-      UInt32 Size;
-      UInt32 Checksum;
+      char name[32];
+      UInt8 type;
+      UInt8 flags;
+      UInt8 reserved[2];
+      UInt32 offset;
+      UInt32 size;
+      UInt32 checksum;
     };
 
     bool HasMagic(const BundleHeader& header) {
       const char expected[8] = { 'I','N','I','T','B','N','D','\0' };
 
       for (UInt32 i = 0; i < 8; ++i) {
-        if (header.Magic[i] != expected[i]) {
+        if (header.magic[i] != expected[i]) {
           return false;
         }
       }
@@ -132,7 +132,9 @@ namespace Quantum::System::Kernel {
       return true;
     }
 
-    const BundleEntry* FindCoordinatorEntry() {
+    const BundleEntry* GetBundleEntries(UInt32& entryCount) {
+      entryCount = 0;
+
       if (_initBundleMappedSize < sizeof(BundleHeader)) {
         return nullptr;
       }
@@ -142,21 +144,26 @@ namespace Quantum::System::Kernel {
         = reinterpret_cast<const BundleHeader*>(base);
 
       if (!HasMagic(*header)) {
-        UInt32 magic0 = *reinterpret_cast<const UInt32*>(header->Magic);
-        UInt32 magic1 = *reinterpret_cast<const UInt32*>(header->Magic + 4);
+        UInt32 magic0 = *reinterpret_cast<const UInt32*>(header->magic);
+        UInt32 magic1 = *reinterpret_cast<const UInt32*>(header->magic + 4);
+
         Logger::WriteFormatted(
           LogLevel::Debug,
-          "INIT.BND bad magic: magic0=0x%x magic1=0x%x ver=%u entries=%u table=0x%x",
+          "INIT.BND bad magic: magic0=0x%x magic1=0x%x ver=%u entries=%u "
+            "table=0x%x",
           magic0,
           magic1,
-          static_cast<UInt32>(header->Version),
-          static_cast<UInt32>(header->EntryCount),
-          header->TableOffset
+          static_cast<UInt32>(header->version),
+          static_cast<UInt32>(header->entryCount),
+          header->tableOffset
         );
+
         char magic[9];
+
         for (UInt32 i = 0; i < 8; ++i) {
-          magic[i] = header->Magic[i];
+          magic[i] = header->magic[i];
         }
+
         magic[8] = '\0';
 
         Logger::WriteFormatted(
@@ -164,11 +171,12 @@ namespace Quantum::System::Kernel {
           "INIT.BND magic mismatch (%s)",
           magic
         );
+
         return nullptr;
       }
 
-      UInt32 tableOffset = header->TableOffset;
-      UInt32 entryCount = header->EntryCount;
+      UInt32 tableOffset = header->tableOffset;
+      entryCount = header->entryCount;
       UInt32 tableBytes = entryCount * static_cast<UInt32>(sizeof(BundleEntry));
 
       if (tableOffset + tableBytes > _initBundleMappedSize) {
@@ -180,14 +188,23 @@ namespace Quantum::System::Kernel {
           tableBytes,
           _initBundleMappedSize
         );
+
         return nullptr;
       }
 
-      const BundleEntry* entries
-        = reinterpret_cast<const BundleEntry*>(base + tableOffset);
+      return reinterpret_cast<const BundleEntry*>(base + tableOffset);
+    }
+
+    const BundleEntry* FindCoordinatorEntry() {
+      UInt32 entryCount = 0;
+      const BundleEntry* entries = GetBundleEntries(entryCount);
+
+      if (!entries) {
+        return nullptr;
+      }
 
       for (UInt32 i = 0; i < entryCount; ++i) {
-        if (entries[i].Type == 1) {
+        if (entries[i].type == 1) {
           return &entries[i];
         }
       }
@@ -197,6 +214,45 @@ namespace Quantum::System::Kernel {
         "INIT.BND has %u entries but no init type",
         entryCount
       );
+
+      return nullptr;
+    }
+
+    bool EntryNameMatches(const BundleEntry& entry, CString name) {
+      if (!name) {
+        return false;
+      }
+
+      for (UInt32 i = 0; i < 32; ++i) {
+        char entryChar = entry.name[i];
+        char nameChar = name[i];
+
+        if (entryChar != nameChar) {
+          return false;
+        }
+
+        if (entryChar == '\0') {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    const BundleEntry* FindEntryByName(CString name) {
+      UInt32 entryCount = 0;
+      const BundleEntry* entries = GetBundleEntries(entryCount);
+
+      if (!entries) {
+        return nullptr;
+      }
+
+      for (UInt32 i = 0; i < entryCount; ++i) {
+        if (EntryNameMatches(entries[i], name)) {
+          return &entries[i];
+        }
+      }
+
       return nullptr;
     }
 
@@ -213,22 +269,72 @@ namespace Quantum::System::Kernel {
         Task::Exit();
       }
 
-      if (entry->Offset + entry->Size > _initBundleMappedSize) {
+      if (entry->offset + entry->size > _initBundleMappedSize) {
         Logger::Write(LogLevel::Warning, "Coordinator entry out of range");
         Task::Exit();
       }
 
       const UInt8* bundleBase
         = reinterpret_cast<const UInt8*>(_initBundleMappedBase);
-      const UInt8* payload = bundleBase + entry->Offset;
-      UInt32 size = entry->Size;
-      UInt32 pages = AlignUp(size, 4096) / 4096;
+      const UInt8* payload = bundleBase + entry->offset;
+      UInt32 size = entry->size;
+      constexpr UInt32 pageSize = 4096;
+
+      if (size < sizeof(UInt32)) {
+        Logger::Write(LogLevel::Warning, "Coordinator payload too small");
+        Task::Exit();
+      }
+
+      UInt32 entryOffset = *reinterpret_cast<const UInt32*>(payload);
+      UInt32 addressSpace = Memory::CreateAddressSpace();
+
+      if (addressSpace == 0) {
+        Logger::Write(LogLevel::Warning, "Failed to create address space");
+        Task::Exit();
+      }
+
+      UInt32 pages = AlignUp(size, pageSize) / pageSize;
 
       for (UInt32 i = 0; i < pages; ++i) {
         void* phys = Memory::AllocatePage(true);
-        UInt32 vaddr = _userProgramBase + i * 4096;
+        UInt32 vaddr = _userProgramBase + i * pageSize;
 
-        Memory::MapPage(
+        Memory::MapPageInAddressSpace(
+          addressSpace,
+          vaddr,
+          reinterpret_cast<UInt32>(phys),
+          true,
+          true,
+          false
+        );
+
+        UInt32 offset = i * pageSize;
+
+        if (offset < size) {
+          UInt32 toCopy = size - offset;
+
+          if (toCopy > pageSize) {
+            toCopy = pageSize;
+          }
+
+          UInt8* dest = reinterpret_cast<UInt8*>(phys);
+
+          for (UInt32 j = 0; j < toCopy; ++j) {
+            dest[j] = payload[offset + j];
+          }
+        }
+      }
+
+      UInt32 stackBytes = AlignUp(_userStackSize, pageSize);
+      UInt32 stackBase = _userStackTop - stackBytes;
+      UInt32 stackPages = stackBytes / pageSize;
+
+      for (UInt32 i = 0; i < stackPages; ++i) {
+        void* phys = Memory::AllocatePage(true);
+        UInt32 vaddr = stackBase + i * pageSize;
+
+        Memory::MapPageInAddressSpace(
+          addressSpace,
           vaddr,
           reinterpret_cast<UInt32>(phys),
           true,
@@ -237,15 +343,9 @@ namespace Quantum::System::Kernel {
         );
       }
 
-      UInt8* dest = reinterpret_cast<UInt8*>(_userProgramBase);
-
-      for (UInt32 i = 0; i < size; ++i) {
-        dest[i] = payload[i];
-      }
-
-      UInt32 entryOffset = *reinterpret_cast<UInt32*>(dest);
-
-      UserMode::MapUserStack(_userStackTop, _userStackSize);
+      Task::SetCoordinatorId(Task::GetCurrentId());
+      Task::SetCurrentAddressSpace(addressSpace);
+      Memory::ActivateAddressSpace(addressSpace);
       UserMode::Enter(
         _userProgramBase + entryOffset,
         _userStackTop
@@ -300,6 +400,108 @@ namespace Quantum::System::Kernel {
     size = _initBundleMappedSize;
 
     return true;
+  }
+
+  UInt32 SpawnInitBundleTask(CString name) {
+    if (_initBundleMappedSize == 0 || _initBundleMappedBase == 0) {
+      return 0;
+    }
+
+    const BundleEntry* entry = FindEntryByName(name);
+
+    if (!entry) {
+      return 0;
+    }
+
+    if (entry->offset + entry->size > _initBundleMappedSize) {
+      return 0;
+    }
+
+    constexpr UInt32 pageSize = 4096;
+    const UInt8* bundleBase
+      = reinterpret_cast<const UInt8*>(_initBundleMappedBase);
+    const UInt8* payload = bundleBase + entry->offset;
+    UInt32 size = entry->size;
+
+    if (size < sizeof(UInt32)) {
+      return 0;
+    }
+
+    UInt32 entryOffset = *reinterpret_cast<const UInt32*>(payload);
+
+    if (entryOffset >= size) {
+      return 0;
+    }
+
+    UInt32 addressSpace = Memory::CreateAddressSpace();
+
+    if (addressSpace == 0) {
+      return 0;
+    }
+
+    UInt32 pages = AlignUp(size, pageSize) / pageSize;
+
+    for (UInt32 i = 0; i < pages; ++i) {
+      void* phys = Memory::AllocatePage(true);
+      UInt32 vaddr = _userProgramBase + i * pageSize;
+
+      Memory::MapPageInAddressSpace(
+        addressSpace,
+        vaddr,
+        reinterpret_cast<UInt32>(phys),
+        true,
+        true,
+        false
+      );
+
+      UInt32 offset = i * pageSize;
+
+      if (offset < size) {
+        UInt32 toCopy = size - offset;
+
+        if (toCopy > pageSize) {
+          toCopy = pageSize;
+        }
+
+        UInt8* dest = reinterpret_cast<UInt8*>(phys);
+
+        for (UInt32 j = 0; j < toCopy; ++j) {
+          dest[j] = payload[offset + j];
+        }
+      }
+    }
+
+    UInt32 stackBytes = AlignUp(_userStackSize, pageSize);
+    UInt32 stackBase = _userStackTop - stackBytes;
+    UInt32 stackPages = stackBytes / pageSize;
+
+    for (UInt32 i = 0; i < stackPages; ++i) {
+      void* phys = Memory::AllocatePage(true);
+      UInt32 vaddr = stackBase + i * pageSize;
+
+      Memory::MapPageInAddressSpace(
+        addressSpace,
+        vaddr,
+        reinterpret_cast<UInt32>(phys),
+        true,
+        true,
+        false
+      );
+    }
+
+    Task::ControlBlock* task = Task::CreateUser(
+      _userProgramBase + entryOffset,
+      _userStackTop,
+      addressSpace
+    );
+
+    if (!task) {
+      Memory::DestroyAddressSpace(addressSpace);
+
+      return 0;
+    }
+
+    return task->id;
   }
 
   void Panic(

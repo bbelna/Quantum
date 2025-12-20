@@ -320,6 +320,21 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     }
 
     /**
+     * Ensures page tables exist for the kernel heap region so all address
+     * spaces can share them.
+     */
+    void EnsureKernelHeapTables() {
+      constexpr UInt32 heapBase = Memory::kernelHeapBase;
+      constexpr UInt32 heapBytes = Memory::kernelHeapBytes;
+      UInt32 startIndex = heapBase >> 22;
+      UInt32 endIndex = (heapBase + heapBytes - 1) >> 22;
+
+      for (UInt32 index = startIndex; index <= endIndex; ++index) {
+        EnsurePageTable(index);
+      }
+    }
+
+    /**
      * Initializes the physical page allocator using the provided boot info map.
      * @param bootInfoPhysicalAddress
      *   Physical address of the boot info block.
@@ -680,6 +695,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       MapPage(virtualAddress, physicalAddress, true, false, true);
     }
 
+    EnsureKernelHeapTables();
+
     // install recursive mapping in the last PDE
     UInt32 pageDirectoryPhysical = KernelVirtualToPhysical(
       reinterpret_cast<UInt32>(_pageDirectory)
@@ -751,6 +768,159 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     }
 
     CPU::InvalidatePage(virtualAddress);
+  }
+
+  UInt32 Memory::GetKernelPageDirectoryPhysical() {
+    return KernelVirtualToPhysical(reinterpret_cast<UInt32>(_pageDirectory));
+  }
+
+  UInt32 Memory::CreateAddressSpace() {
+    UInt32 directoryPhysical = AllocatePhysicalPage(true);
+
+    if (directoryPhysical == 0) {
+      return 0;
+    }
+
+    UInt32* directory = reinterpret_cast<UInt32*>(directoryPhysical);
+    UInt32 kernelStartIndex = kernelVirtualBase >> 22;
+
+    for (UInt32 i = 0; i < _pageDirectoryEntries; ++i) {
+      directory[i] = 0;
+    }
+
+    for (UInt32 i = kernelStartIndex; i < recursiveSlot; ++i) {
+      directory[i] = _pageDirectory[i];
+    }
+
+    for (UInt32 i = 0; i < kernelStartIndex; ++i) {
+      UInt32 entry = _pageDirectory[i];
+
+      if ((entry & _pagePresent) == 0) {
+        continue;
+      }
+
+      UInt32 sourceTablePhysical = entry & ~0xFFFu;
+      UInt32* sourceTable
+        = reinterpret_cast<UInt32*>(sourceTablePhysical);
+      UInt32 destTablePhysical = AllocatePhysicalPage(true);
+
+      if (destTablePhysical == 0) {
+        PANIC("Failed to allocate page table");
+      }
+
+      UInt32* destTable = reinterpret_cast<UInt32*>(destTablePhysical);
+
+      for (UInt32 j = 0; j < _pageTableEntries; ++j) {
+        destTable[j] = sourceTable[j];
+      }
+
+      directory[i] = (destTablePhysical & ~0xFFFu) | (entry & 0xFFFu);
+    }
+
+    directory[recursiveSlot]
+      = directoryPhysical | _pagePresent | _pageWrite;
+
+    return directoryPhysical;
+  }
+
+  void Memory::DestroyAddressSpace(UInt32 pageDirectoryPhysical) {
+    UInt32 kernelDirectory = GetKernelPageDirectoryPhysical();
+
+    if (pageDirectoryPhysical == 0 || pageDirectoryPhysical == kernelDirectory) {
+      return;
+    }
+
+    UInt32* directory = reinterpret_cast<UInt32*>(pageDirectoryPhysical);
+    UInt32 kernelStartIndex = kernelVirtualBase >> 22;
+
+    for (UInt32 i = 0; i < kernelStartIndex; ++i) {
+      UInt32 entry = directory[i];
+
+      if ((entry & _pagePresent) == 0) {
+        continue;
+      }
+
+      UInt32 tablePhysical = entry & ~0xFFFu;
+      UInt32* table = reinterpret_cast<UInt32*>(tablePhysical);
+
+      for (UInt32 j = 0; j < _pageTableEntries; ++j) {
+        UInt32 page = table[j];
+
+        if ((page & _pagePresent) == 0) {
+          continue;
+        }
+
+        if ((page & _pageGlobal) != 0) {
+          continue;
+        }
+
+        UInt32 physical = page & ~0xFFFu;
+
+        if (physical != 0) {
+          FreePage(reinterpret_cast<void*>(physical));
+        }
+      }
+
+      FreePage(reinterpret_cast<void*>(tablePhysical));
+    }
+
+    FreePage(reinterpret_cast<void*>(pageDirectoryPhysical));
+  }
+
+  void Memory::MapPageInAddressSpace(
+    UInt32 pageDirectoryPhysical,
+    UInt32 virtualAddress,
+    UInt32 physicalAddress,
+    bool writable,
+    bool user,
+    bool global
+  ) {
+    if (pageDirectoryPhysical == 0) {
+      return;
+    }
+
+    UInt32* directory = reinterpret_cast<UInt32*>(pageDirectoryPhysical);
+    UInt32 pageDirectoryIndex = (virtualAddress >> 22) & 0x3FF;
+    UInt32 pageTableIndex = (virtualAddress >> 12) & 0x3FF;
+    UInt32 entry = directory[pageDirectoryIndex];
+    UInt32* table = nullptr;
+
+    if ((entry & _pagePresent) != 0) {
+      table = reinterpret_cast<UInt32*>(entry & ~0xFFFu);
+    } else {
+      UInt32 tablePhysical = AllocatePhysicalPage(true);
+
+      if (tablePhysical == 0) {
+        PANIC("Failed to allocate page table");
+      }
+
+      table = reinterpret_cast<UInt32*>(tablePhysical);
+      directory[pageDirectoryIndex]
+        = (tablePhysical & ~0xFFFu) | _pagePresent | _pageWrite;
+    }
+
+    UInt32 flags = _pagePresent
+      | (writable ? _pageWrite : 0)
+      | (user ? _pageUser : 0)
+      | (global ? _pageGlobal : 0);
+
+    table[pageTableIndex] = (physicalAddress & ~0xFFFu) | flags;
+
+    if (user) {
+      directory[pageDirectoryIndex] |= _pageUser;
+    }
+
+    if (pageDirectoryPhysical == GetKernelPageDirectoryPhysical()) {
+      CPU::InvalidatePage(virtualAddress);
+    }
+  }
+
+  void Memory::ActivateAddressSpace(UInt32 pageDirectoryPhysical) {
+    if (pageDirectoryPhysical == 0) {
+      return;
+    }
+
+    CPU::LoadPageDirectory(pageDirectoryPhysical);
   }
 
   void Memory::UnmapPage(UInt32 virtualAddress) {

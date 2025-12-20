@@ -13,6 +13,13 @@
 
 namespace Quantum {
   namespace {
+    /**
+     * Calculates the length of a null-terminated string.
+     * @param str
+     *   Null-terminated string.
+     * @return
+     *   Length of the string in bytes, excluding the null terminator.
+     */
     inline UInt32 StringLength(const char* str) {
       if (!str) {
         return 0;

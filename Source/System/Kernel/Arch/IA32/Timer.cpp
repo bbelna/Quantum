@@ -73,9 +73,9 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   void Timer::Initialize() {
     // program PIT for desired frequency
     UInt16 divisor = static_cast<UInt16>(_pitInputHz / _pitFreqHz);
-    IO::OutByte(_pitCommand, _pitMode);
-    IO::OutByte(_pitChannel0, divisor & 0xFF);
-    IO::OutByte(_pitChannel0, (divisor >> 8) & 0xFF);
+    IO::Out8(_pitCommand, _pitMode);
+    IO::Out8(_pitChannel0, divisor & 0xFF);
+    IO::Out8(_pitChannel0, (divisor >> 8) & 0xFF);
 
     // register IRQ0 handler and unmask
     Interrupts::RegisterHandler(32, TimerHandler); // IRQ0 vector
