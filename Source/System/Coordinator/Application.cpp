@@ -90,20 +90,20 @@ namespace Quantum::System::Coordinator {
   }
 
   bool Application::HasFloppyDevice() {
-    using Block = Quantum::ABI::Devices::Block;
+    using BlockDevices = Quantum::ABI::Devices::Block;
 
-    UInt32 count = Block::GetCount();
+    UInt32 count = BlockDevices::GetCount();
     bool found = false;
     _floppyDeviceId = 0;
 
     for (UInt32 i = 1; i <= count; ++i) {
-      Block::Info info{};
+      BlockDevices::Info info{};
 
-      if (Block::GetInfo(i, info) != 0) {
+      if (BlockDevices::GetInfo(i, info) != 0) {
         continue;
       }
 
-      if (info.type == Block::Type::Floppy) {
+      if (info.type == BlockDevices::Type::Floppy) {
         found = true;
         _floppyDeviceId = info.id;
         break;
@@ -120,18 +120,18 @@ namespace Quantum::System::Coordinator {
   }
 
   void Application::TestFloppyBlockRead() {
-    using Block = Quantum::ABI::Devices::Block;
+    using BlockDevices = Quantum::ABI::Devices::Block;
 
     if (_floppyDeviceId == 0) {
       return;
     }
 
-    Block::Info info{};
+    BlockDevices::Info info{};
     bool ready = false;
 
     for (UInt32 i = 0; i < 64; ++i) {
-      if (Block::GetInfo(_floppyDeviceId, info) == 0) {
-        if ((info.flags & Block::flagReady) != 0) {
+      if (BlockDevices::GetInfo(_floppyDeviceId, info) == 0) {
+        if ((info.flags & BlockDevices::flagReady) != 0) {
           ready = true;
           break;
         }
@@ -146,13 +146,13 @@ namespace Quantum::System::Coordinator {
     }
 
     UInt8 buffer[512] = {};
-    Block::Request request{};
+    BlockDevices::Request request{};
     request.deviceId = _floppyDeviceId;
     request.lba = 0;
     request.count = 1;
     request.buffer = buffer;
 
-    UInt32 result = Block::Read(request);
+    UInt32 result = BlockDevices::Read(request);
 
     if (result == 0) {
       Console::WriteLine("Floppy block read test succeeded");
