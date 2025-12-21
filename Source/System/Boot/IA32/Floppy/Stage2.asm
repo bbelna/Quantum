@@ -121,6 +121,7 @@ Start:
   sti
 
   mov [BootDrive], dl          ; preserve BIOS drive
+  call ResetDisk
 
   call SetupFromBPB
   PRINT_STR DotMsg
@@ -615,17 +616,17 @@ GetNextCluster:
   pop bx
   ret
 
+ResetDisk:
+  mov dl, [BootDrive]
+  mov ah, 0x00
+  int 0x13
+  ret
+
 ReadSectorLBA:
   push ax
   push bx
   push cx
   push dx
-
-  ; Reset disk controller before issuing the read. Do this *before* we derive
-  ; CHS, because many BIOSes clobber CH/CL/DH on reset.
-  mov dl, [BootDrive]
-  mov ah, 0x00
-  int 0x13
 
   ; Convert LBA to CHS
 
@@ -723,7 +724,7 @@ StoreInitBundleInfo:
   mov dword [BootInfoPhysical + 8], eax
   mov eax, [InitBundleSizeBytes]
   mov dword [BootInfoPhysical + 12], eax
-  ; stash INIT.BND payload word + LBA for diagnostics
+  ; stash INIT.BND payload word (normal vs fixed-geometry) for diagnostics
   push ax
   push bx
   push dx
@@ -738,7 +739,7 @@ StoreInitBundleInfo:
   mov bx, ax
   loop .InitBundlePayloadCluster
 
-  ; read raw payload word from disk
+  ; read raw payload word from disk (normal BPB geometry)
   mov ax, bx
   call ClusterToLBA
   mov dx, ax
@@ -750,10 +751,40 @@ StoreInitBundleInfo:
   call ReadSectorLBA
   mov bx, [RootDirBuffer]
   pop es
+  mov si, bx
 
-  ; store payload in low 16, LBA in high 16
-  mov [BootInfoPhysical + 4], bx
-  mov [BootInfoPhysical + 6], dx
+  ; read raw payload word using fixed 18/2 geometry into FATBuffer
+  push ax
+  push cx
+  push dx
+  xor ax, ax
+  mov es, ax
+  mov bx, FATBuffer
+  mov ax, dx
+  xor dx, dx
+  mov cx, 18
+  div cx                   ; AX = temp, DX = sector-1
+  inc dx                   ; sector
+  mov cl, dl               ; CL = sector
+  xor dx, dx
+  mov cx, 2
+  div cx                   ; AX = cylinder, DX = head
+  mov dh, dl               ; DH = head
+  mov ch, al               ; CH = cylinder low
+  shl ah, 6
+  or  cl, ah               ; CL |= cylinder high bits
+  mov dl, [BootDrive]
+  mov ah, 0x02
+  mov al, 1
+  int 0x13
+  pop dx
+  pop cx
+  pop ax
+
+  ; store normal in low 16, fixed-geometry in high 16
+  mov [BootInfoPhysical + 4], si
+  mov ax, [FATBuffer]
+  mov [BootInfoPhysical + 6], ax
   pop cx
   pop dx
   pop bx

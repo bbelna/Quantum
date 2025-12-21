@@ -26,7 +26,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       /**
        * Task state enumeration.
        */
-      enum State : UInt32 {
+      enum class State : UInt32 {
         /**
          * Task is ready to run.
          */

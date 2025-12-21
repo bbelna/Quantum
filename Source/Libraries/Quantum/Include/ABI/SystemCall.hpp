@@ -14,7 +14,7 @@ namespace Quantum::ABI {
   /**
    * System call identifiers.
    */
-  enum SystemCall : UInt32 {
+  enum class SystemCall : UInt32 {
     Write = 0,
     Exit = 1,
     Yield = 2,

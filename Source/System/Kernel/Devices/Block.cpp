@@ -40,7 +40,7 @@ namespace Quantum::System::Kernel::Devices {
   static Block::Device _floppyStubDevice = {
     Block::Info{
       0,
-      Block::TypeFloppy,
+      Block::Type::Floppy,
       512,
       2880,
       Block::flagRemovable
@@ -247,7 +247,7 @@ namespace Quantum::System::Kernel::Devices {
 
     Message msg{};
 
-    msg.op = write ? OpWrite : OpRead;
+    msg.op = write ? Operation::Write : Operation::Read;
     msg.deviceId = request.deviceId;
     msg.lba = request.lba;
     msg.count = request.count;
@@ -294,7 +294,7 @@ namespace Quantum::System::Kernel::Devices {
       return false;
     }
 
-    if (response.op != OpResponse || response.status != 0) {
+    if (response.op != Operation::Response || response.status != 0) {
       return false;
     }
 

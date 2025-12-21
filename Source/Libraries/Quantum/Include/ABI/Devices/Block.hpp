@@ -2,7 +2,7 @@
  * Quantum
  * (c) 2025 Brandon Belna - MIT License
  *
- * Libraries/Quantum/Include/ABI/Block.hpp
+ * Libraries/Quantum/Include/ABI/Devices/Block.hpp
  * Block device syscall wrappers.
  */
 
@@ -19,6 +19,41 @@ namespace Quantum::ABI::Devices {
   class Block {
     public:
       /**
+       * Block I/O operation identifiers.
+       */
+      enum class Operation : UInt32 {
+        /**
+         * Read request.
+         */
+        Read = 1,
+
+        /**
+         * Write request.
+         */
+        Write = 2,
+
+        /**
+         * Response payload.
+         */
+        Response = 3
+      };
+
+      /**
+       * Block device type identifiers.
+       */
+      enum  class Type : UInt32 {
+        /**
+         * Unknown or unspecified device type.
+         */
+        Unknown = 0,
+
+        /**
+         * Floppy disk device.
+         */
+        Floppy = 1
+      };
+
+      /**
        * Block device info descriptor.
        */
       struct Info {
@@ -30,7 +65,7 @@ namespace Quantum::ABI::Devices {
         /**
          * Device type identifier.
          */
-        UInt32 type;
+        Type type;
 
         /**
          * Size of a hardware sector in bytes.
@@ -83,21 +118,6 @@ namespace Quantum::ABI::Devices {
       }
 
       /**
-       * Block device type identifiers.
-       */
-      enum Type : UInt32 {
-        /**
-         * Unknown or unspecified device type.
-         */
-        TypeUnknown = 0,
-
-        /**
-         * Floppy disk device.
-         */
-        TypeFloppy = 1
-      };
-
-      /**
        * Block device read only flag.
        */
       static constexpr UInt32 flagReadOnly = 1u << 0;
@@ -111,26 +131,6 @@ namespace Quantum::ABI::Devices {
        * Block device ready flag.
        */
       static constexpr UInt32 flagReady = 1u << 2;
-
-      /**
-       * Block I/O operation identifiers.
-       */
-      enum Operation : UInt32 {
-        /**
-         * Read request.
-         */
-        OpRead = 1,
-
-        /**
-         * Write request.
-         */
-        OpWrite = 2,
-
-        /**
-         * Response payload.
-         */
-        OpResponse = 3
-      };
 
       /**
        * IPC message header size in bytes.
@@ -150,7 +150,7 @@ namespace Quantum::ABI::Devices {
         /**
          * Operation identifier.
          */
-        UInt32 op;
+        Operation op;
 
         /**
          * Target device id.

@@ -20,7 +20,7 @@ namespace Quantum::System::Kernel {
       /**
        * Log levels.
        */
-      enum Level : UInt32 {
+      enum class Level : UInt32 {
         Verbose = 0,
         Debug = 100,
         Trace = 200,

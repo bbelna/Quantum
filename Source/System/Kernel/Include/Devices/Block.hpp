@@ -18,6 +18,41 @@ namespace Quantum::System::Kernel::Devices {
   class Block {
     public:
       /**
+       * Block I/O operation identifiers.
+       */
+      enum class Operation : UInt32 {
+        /**
+         * Read request.
+         */
+        Read = 1,
+
+        /**
+         * Write request.
+         */
+        Write = 2,
+
+        /**
+         * Response payload.
+         */
+        Response = 3
+      };
+
+      /**
+       * Block device type identifiers.
+       */
+      enum class Type : UInt32 {
+        /**
+         * Unknown or unspecified device type.
+         */
+        Unknown = 0,
+
+        /**
+         * Floppy disk device.
+         */
+        Floppy = 1
+      };
+
+      /**
        * Block device info descriptor.
        */
       struct Info {
@@ -29,7 +64,7 @@ namespace Quantum::System::Kernel::Devices {
         /**
          * Device type identifier.
          */
-        UInt32 type;
+        Type type;
 
         /**
          * Size of a hardware sector in bytes.
@@ -143,26 +178,6 @@ namespace Quantum::System::Kernel::Devices {
       static constexpr UInt32 flagReady = 1u << 2;
 
       /**
-       * Block I/O operation identifiers.
-       */
-      enum Operation : UInt32 {
-        /**
-         * Read request.
-         */
-        OpRead = 1,
-
-        /**
-         * Write request.
-         */
-        OpWrite = 2,
-
-        /**
-         * Response payload.
-         */
-        OpResponse = 3
-      };
-
-      /**
        * IPC message header size in bytes.
        */
       static constexpr UInt32 messageHeaderBytes = 7 * sizeof(UInt32);
@@ -180,7 +195,7 @@ namespace Quantum::System::Kernel::Devices {
         /**
          * Operation identifier.
          */
-        UInt32 op;
+        Operation op;
 
         /**
          * Target device id.
@@ -216,21 +231,6 @@ namespace Quantum::System::Kernel::Devices {
          * Payload buffer (read/write data).
          */
         UInt8 data[messageDataBytes];
-      };
-
-      /**
-       * Block device type identifiers.
-       */
-      enum Type : UInt32 {
-        /**
-         * Unknown or unspecified device type.
-         */
-        TypeUnknown = 0,
-
-        /**
-         * Floppy disk device.
-         */
-        TypeFloppy = 1
       };
 
       /**

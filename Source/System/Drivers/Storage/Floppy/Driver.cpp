@@ -6,7 +6,7 @@
  * User-mode floppy driver entry.
  */
 
-#include <ABI/Block.hpp>
+#include <ABI/Devices/Block.hpp>
 #include <ABI/IPC.hpp>
 #include <ABI/IO.hpp>
 #include <Console.hpp>
@@ -19,28 +19,23 @@ namespace Quantum::System::Drivers::Storage::Floppy {
   using IPC = ABI::IPC;
   using IO = ABI::IO;
 
-  static constexpr UInt16 kPortDOR = 0x3F2;
-  static constexpr UInt16 kPortMSR = 0x3F4;
-  static constexpr UInt16 kPortFIFO = 0x3F5;
+  bool Driver::_initialized = false;
+  UInt32 Driver::_deviceId = 0;
+  UInt32 Driver::_sectorSize = 512;
+  IPC::Message Driver::_receiveMessage{};
+  IPC::Message Driver::_sendMessage{};
+  Block::Message Driver::_blockRequest{};
+  Block::Message Driver::_blockResponse{};
 
-  static constexpr UInt8 kMSR_RQM = 0x80;
-  static constexpr UInt8 kMSR_DIO = 0x40;
-
-  static bool g_initialized = false;
-  static IPC::Message g_inbox{};
-  static IPC::Message g_outbox{};
-  static Block::Message g_request{};
-  static Block::Message g_response{};
-
-  static bool WaitForReady(bool readPhase) {
+  bool Driver::WaitForFifoReady(bool readPhase) {
     const UInt32 maxSpins = 100000;
 
     for (UInt32 i = 0; i < maxSpins; ++i) {
-      UInt8 status = IO::In8(kPortMSR);
-      bool rqm = (status & kMSR_RQM) != 0;
-      bool dio = (status & kMSR_DIO) != 0;
+      UInt8 status = IO::In8(_mainStatusRegisterPort);
+      bool ready = (status & _mainStatusRequestMask) != 0;
+      bool direction = (status & _mainStatusDirectionMask) != 0;
 
-      if (rqm && dio == readPhase) {
+      if (ready && direction == readPhase) {
         return true;
       }
 
@@ -52,43 +47,43 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     return false;
   }
 
-  static bool WriteData(UInt8 value) {
-    if (!WaitForReady(false)) {
+  bool Driver::WriteFifoByte(UInt8 value) {
+    if (!WaitForFifoReady(false)) {
       return false;
     }
 
-    IO::Out8(kPortFIFO, value);
+    IO::Out8(_dataFifoPort, value);
     return true;
   }
 
-  static bool ReadData(UInt8& value) {
-    if (!WaitForReady(true)) {
+  bool Driver::ReadFifoByte(UInt8& value) {
+    if (!WaitForFifoReady(true)) {
       return false;
     }
 
-    value = IO::In8(kPortFIFO);
+    value = IO::In8(_dataFifoPort);
     return true;
   }
 
-  static bool SenseInterruptStatus(UInt8& st0, UInt8& cyl) {
-    if (!WriteData(0x08)) {
+  bool Driver::SenseInterruptStatus(UInt8& st0, UInt8& cyl) {
+    if (!WriteFifoByte(0x08)) {
       return false;
     }
 
-    if (!ReadData(st0)) {
+    if (!ReadFifoByte(st0)) {
       return false;
     }
 
-    if (!ReadData(cyl)) {
+    if (!ReadFifoByte(cyl)) {
       return false;
     }
 
     return true;
   }
 
-  static bool ResetController() {
-    IO::Out8(kPortDOR, 0x00);
-    IO::Out8(kPortDOR, 0x0C);
+  bool Driver::ResetController() {
+    IO::Out8(_digitalOutputRegisterPort, 0x00);
+    IO::Out8(_digitalOutputRegisterPort, 0x0C);
 
     UInt8 st0 = 0;
     UInt8 cyl = 0;
@@ -102,22 +97,23 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     return true;
   }
 
-  static bool Specify() {
-    if (!WriteData(0x03)) {
+  bool Driver::SendSpecifyCommand() {
+    if (!WriteFifoByte(0x03)) {
       return false;
     }
 
-    if (!WriteData(0xDF)) {
+    if (!WriteFifoByte(0xDF)) {
       return false;
     }
 
-    if (!WriteData(0x02)) {
+    if (!WriteFifoByte(0x02)) {
       return false;
     }
 
     return true;
   }
-  static void CopyBytes(void* dest, const void* src, UInt32 length) {
+
+  void Driver::CopyBytes(void* dest, const void* src, UInt32 length) {
     auto* d = reinterpret_cast<UInt8*>(dest);
     auto* s = reinterpret_cast<const UInt8*>(src);
 
@@ -126,11 +122,20 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     }
   }
 
+  void Driver::FillBytes(void* dest, UInt8 value, UInt32 length) {
+    auto* d = reinterpret_cast<UInt8*>(dest);
+
+    for (UInt32 i = 0; i < length; ++i) {
+      d[i] = value;
+    }
+  }
+
   void Driver::Main() {
     Console::WriteLine("Floppy driver starting (stub)");
 
     UInt32 deviceId = 0;
     UInt32 count = Block::GetCount();
+    Block::Info deviceInfo{};
 
     for (UInt32 i = 1; i <= count; ++i) {
       Block::Info info{};
@@ -139,8 +144,9 @@ namespace Quantum::System::Drivers::Storage::Floppy {
         continue;
       }
 
-      if (info.type == Block::TypeFloppy) {
+      if (info.type == Block::Type::Floppy) {
         deviceId = info.id;
+        deviceInfo = info;
 
         break;
       }
@@ -163,21 +169,24 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       Task::Exit(1);
     }
 
+    _deviceId = deviceId;
+    _sectorSize = deviceInfo.sectorSize != 0 ? deviceInfo.sectorSize : 512;
+
     if (!ResetController()) {
       Console::WriteLine("Floppy controller reset failed");
-      g_initialized = false;
-    } else if (!Specify()) {
+      _initialized = false;
+    } else if (!SendSpecifyCommand()) {
       Console::WriteLine("Floppy controller specify failed");
-      g_initialized = false;
+      _initialized = false;
     } else {
       Console::WriteLine("Floppy controller initialized");
-      g_initialized = true;
+      _initialized = true;
     }
 
     Console::WriteLine("Floppy driver bound to block device");
 
     for (;;) {
-      IPC::Message& msg = g_inbox;
+      IPC::Message& msg = _receiveMessage;
 
       if (IPC::Receive(portId, msg) != 0) {
         Task::Yield();
@@ -189,7 +198,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
         continue;
       }
 
-      Block::Message& request = g_request;
+      Block::Message& request = _blockRequest;
       UInt32 copyBytes = msg.length;
 
       if (copyBytes > sizeof(Block::Message)) {
@@ -202,17 +211,34 @@ namespace Quantum::System::Drivers::Storage::Floppy {
         continue;
       }
 
-      Block::Message& response = g_response;
+      Block::Message& response = _blockResponse;
 
-      response.op = Block::OpResponse;
+      response.op = Block::Operation::Response;
       response.deviceId = request.deviceId;
       response.lba = request.lba;
       response.count = request.count;
       response.replyPortId = request.replyPortId;
-      response.status = g_initialized ? 2 : 1;
+      response.status = _initialized ? 0 : 1;
       response.dataLength = 0;
 
-      IPC::Message& reply = g_outbox;
+      if (request.deviceId != _deviceId) {
+        response.status = 2;
+      }
+
+      if (response.status == 0) {
+        UInt32 bytes = request.count * _sectorSize;
+
+        if (bytes > Block::messageDataBytes) {
+          response.status = 3;
+        } else if (request.op == Block::Operation::Read) {
+          response.dataLength = bytes;
+          FillBytes(response.data, 0, bytes);
+        } else if (request.op != Block::Operation::Write) {
+          response.status = 4;
+        }
+      }
+
+      IPC::Message& reply = _sendMessage;
 
       reply.length = Block::messageHeaderBytes + response.dataLength;
 

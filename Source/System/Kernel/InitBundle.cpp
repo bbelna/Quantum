@@ -259,6 +259,18 @@ namespace Quantum::System::Kernel {
     }
 
     UInt32 entryOffset = *reinterpret_cast<const UInt32*>(payload);
+    UInt32 imageBytes = size;
+    UInt32 maxImageBytes = _userStackTop - _userProgramBase;
+
+    if (size >= sizeof(UInt32) * 2) {
+      UInt32 reportedBytes
+        = *reinterpret_cast<const UInt32*>(payload + sizeof(UInt32));
+
+      if (reportedBytes >= size && reportedBytes <= maxImageBytes) {
+        imageBytes = reportedBytes;
+      }
+    }
+
     UInt32 addressSpace = Memory::CreateAddressSpace();
 
     if (addressSpace == 0) {
@@ -266,7 +278,7 @@ namespace Quantum::System::Kernel {
       Task::Exit();
     }
 
-    UInt32 pages = AlignHelper::Up(size, pageSize) / pageSize;
+    UInt32 pages = AlignHelper::Up(imageBytes, pageSize) / pageSize;
 
     for (UInt32 i = 0; i < pages; ++i) {
       void* phys = Memory::AllocatePage(true);
@@ -376,6 +388,17 @@ namespace Quantum::System::Kernel {
     }
 
     UInt32 entryOffset = *reinterpret_cast<const UInt32*>(payload);
+    UInt32 imageBytes = size;
+    UInt32 maxImageBytes = _userStackTop - _userProgramBase;
+
+    if (size >= sizeof(UInt32) * 2) {
+      UInt32 reportedBytes
+        = *reinterpret_cast<const UInt32*>(payload + sizeof(UInt32));
+
+      if (reportedBytes >= size && reportedBytes <= maxImageBytes) {
+        imageBytes = reportedBytes;
+      }
+    }
 
     if (entryOffset >= size) {
       Logger::WriteFormatted(
@@ -431,7 +454,7 @@ namespace Quantum::System::Kernel {
       return 0;
     }
 
-    UInt32 pages = AlignHelper::Up(size, pageSize) / pageSize;
+    UInt32 pages = AlignHelper::Up(imageBytes, pageSize) / pageSize;
 
     for (UInt32 i = 0; i < pages; ++i) {
       void* phys = Memory::AllocatePage(true);

@@ -6,7 +6,7 @@
  * System coordinator implementation.
  */
 
-#include <ABI/Block.hpp>
+#include <ABI/Devices/Block.hpp>
 #include <ABI/InitBundle.hpp>
 #include <ABI/IO.hpp>
 #include <Console.hpp>
@@ -103,7 +103,7 @@ namespace Quantum::System::Coordinator {
         continue;
       }
 
-      if (info.type == Block::TypeFloppy) {
+      if (info.type == Block::Type::Floppy) {
         found = true;
         _floppyDeviceId = info.id;
         break;

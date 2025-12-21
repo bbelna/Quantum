@@ -6,6 +6,7 @@ SECTIONS {
 
   .entry : {
     LONG(Start - 0x00400000)
+    LONG(__image_end - 0x00400000)
   }
 
   .text.start : {
@@ -28,6 +29,8 @@ SECTIONS {
     *(.bss*)
     *(COMMON)
   }
+
+  __image_end = .;
 
   /DISCARD/ : {
     *(.comment)
