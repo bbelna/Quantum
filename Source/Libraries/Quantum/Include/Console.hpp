@@ -22,7 +22,7 @@ namespace Quantum {
        * @param str
        *   Null-terminated string to write.
        */
-      static inline void Write(const char* str) {
+      static inline void Write(CString str) {
         if (!str) {
           return;
         }
@@ -45,7 +45,7 @@ namespace Quantum {
        * @param str
        *   Null-terminated string to write.
        */
-      static inline void WriteLine(const char* str) {
+      static inline void WriteLine(CString str) {
         Write(str);
         ABI::InvokeSystemCall(
           ABI::SystemCall::Write,
@@ -62,7 +62,7 @@ namespace Quantum {
        * @return
        *   Length of the string in bytes, excluding the null terminator.
        */
-      static inline UInt32 StringLength(const char* str) {
+      static inline UInt32 StringLength(CString str) {
         if (!str) {
           return 0;
         }

@@ -75,6 +75,7 @@ namespace Quantum::System::Kernel {
 
     msg.SenderId = senderId;
     msg.Length = length;
+
     CopyPayload(msg.Data, buffer, length);
 
     port->Tail = (port->Tail + 1) % maxQueueDepth;
@@ -110,10 +111,40 @@ namespace Quantum::System::Kernel {
     outLength = msg.Length;
 
     UInt32 toCopy = msg.Length < bufferCapacity ? msg.Length : bufferCapacity;
+
     CopyPayload(outBuffer, msg.Data, toCopy);
 
     port->Head = (port->Head + 1) % maxQueueDepth;
     --port->Count;
+
+    return true;
+  }
+
+  bool IPC::DestroyPort(UInt32 portId) {
+    Port* port = FindPort(portId);
+
+    if (!port) {
+      return false;
+    }
+
+    port->Used = false;
+    port->Id = 0;
+    port->OwnerTaskId = 0;
+    port->Head = 0;
+    port->Tail = 0;
+    port->Count = 0;
+
+    return true;
+  }
+
+  bool IPC::GetPortOwner(UInt32 portId, UInt32& outOwnerId) {
+    Port* port = FindPort(portId);
+
+    if (!port) {
+      return false;
+    }
+
+    outOwnerId = port->OwnerTaskId;
 
     return true;
   }

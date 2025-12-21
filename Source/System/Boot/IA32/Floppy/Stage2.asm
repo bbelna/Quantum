@@ -99,6 +99,7 @@ NoKernelMsg        db "KERNEL.QX not found!", 0
 DiskErrorMsg       db "Disk read error!", 0
 FATErrorMsg        db "FAT error!", 0
 DotMsg             db '.', 0
+BundleHighMsg      db "INIT.BND load address overlaps kernel!", 0
 
 %include "Console.inc"
 
@@ -394,7 +395,8 @@ FindInitBundle:
 ClusterToLBA:
   sub ax, 2                      ; (cluster - 2)
   xor dx, dx
-  mov cx, [SectorsPerCluster]
+  xor cx, cx
+  mov cl, [SectorsPerCluster]
   mul cx                         ; AX = (cluster-2) * SPC
   add ax, [FirstDataSector]      ; + first data sector
   ret
@@ -434,7 +436,9 @@ LoadKernel:
   pop cx                         ; restore sectorsRemaining
 
   ; sectors_this_cluster = min(SectorsPerCluster, sectorsRemaining)
-  mov di, [SectorsPerCluster]    ; DI = SPC
+  xor ax, ax
+  mov al, [SectorsPerCluster]
+  mov di, ax                     ; DI = SPC
   cmp di, cx
   jbe .SectorsOk
   mov di, cx                     ; file ends in this cluster
@@ -485,6 +489,9 @@ LoadInitBundle:
   ; Destination linear address for INIT.BND (load below 1 MB so real-mode
   ; segment:offset can address it; keep it page-aligned and above the
   ; kernel image + .bss to avoid overlap).
+  mov eax, [KernelDestLinear]
+  cmp eax, 0x00070000
+  jae .TooHigh
   mov eax, 0x00070000
   mov [InitBundleBaseLinear], eax
   mov [InitBundleDestLinear], eax
@@ -502,7 +509,7 @@ LoadInitBundle:
 
   mov ax, si
   cmp ax, 0x0FF8
-  jae .Done
+  jae .Truncated
 
   cmp ax, 2
   jb .FATError
@@ -512,7 +519,9 @@ LoadInitBundle:
   mov dx, ax
   pop cx
 
-  mov di, [SectorsPerCluster]
+  xor ax, ax
+  mov al, [SectorsPerCluster]
+  mov di, ax
   cmp di, cx
   jbe .SectorsOk
   mov di, cx
@@ -552,8 +561,18 @@ LoadInitBundle:
 .Done:
   ret
 
+.Truncated:
+  mov si, BundleTruncatedMsg
+  call Print
+  jmp Start.Hang
+
 .FATError:
   mov si, FATErrorMsg
+  call Print
+  jmp Start.Hang
+
+.TooHigh:
+  mov si, BundleHighMsg
   call Print
   jmp Start.Hang
 
@@ -587,6 +606,7 @@ GetNextCluster:
 .Odd:
   ; odd cluster N: high 12 bits
   shr ax, 4
+  and ax, 0x0FFF
 
 .Done:
   pop si
@@ -703,6 +723,41 @@ StoreInitBundleInfo:
   mov dword [BootInfoPhysical + 8], eax
   mov eax, [InitBundleSizeBytes]
   mov dword [BootInfoPhysical + 12], eax
+  ; stash INIT.BND payload word + LBA for diagnostics
+  push ax
+  push bx
+  push dx
+  push cx
+  ; compute payload cluster (first + 16)
+  mov ax, [SavedFirstCluster]
+  mov bx, ax
+  mov cx, 16
+.InitBundlePayloadCluster:
+  mov ax, bx
+  call GetNextCluster
+  mov bx, ax
+  loop .InitBundlePayloadCluster
+
+  ; read raw payload word from disk
+  mov ax, bx
+  call ClusterToLBA
+  mov dx, ax
+  push es
+  xor ax, ax
+  mov es, ax
+  mov bx, RootDirBuffer
+  mov ax, dx
+  call ReadSectorLBA
+  mov bx, [RootDirBuffer]
+  pop es
+
+  ; store payload in low 16, LBA in high 16
+  mov [BootInfoPhysical + 4], bx
+  mov [BootInfoPhysical + 6], dx
+  pop cx
+  pop dx
+  pop bx
+  pop ax
   ret
 
 EnableA20:
@@ -772,3 +827,4 @@ GDTDescriptor:
 
 times Stage2Sectors*512 - ($-$$) db 0
 NoBundleMsg        db "INIT.BND not found!", 0
+BundleTruncatedMsg db "INIT.BND truncated!", 0

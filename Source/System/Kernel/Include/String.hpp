@@ -39,7 +39,7 @@ namespace Quantum::System::Kernel {
        * @return
        *   The C-style string.
        */
-      constexpr const char* Data() const { return _data; }
+      constexpr CString Data() const { return _data; }
 
       /**
        * Gets the length of the string.

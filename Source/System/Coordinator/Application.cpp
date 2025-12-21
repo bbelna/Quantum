@@ -6,6 +6,7 @@
  * System coordinator implementation.
  */
 
+#include <ABI/Block.hpp>
 #include <ABI/InitBundle.hpp>
 #include <ABI/IO.hpp>
 #include <Console.hpp>
@@ -14,6 +15,9 @@
 #include "Application.hpp"
 
 namespace Quantum::System::Coordinator {
+  bool Application::_floppyPresent = false;
+  UInt32 Application::_floppyDeviceId = 0;
+
   bool Application::HasMagic(const BundleHeader& header) {
     const char expected[8] = { 'I','N','I','T','B','N','D','\0' };
 
@@ -70,6 +74,11 @@ namespace Quantum::System::Coordinator {
     }
 
     if (EntryNameEquals(entry, "floppy")) {
+      if (!_floppyPresent) {
+        Console::WriteLine("Floppy device not detected; skipping driver");
+        return;
+      }
+
       UInt32 grant = Quantum::ABI::IO::GrantIOAccess(taskId);
 
       if (grant == 0) {
@@ -80,8 +89,82 @@ namespace Quantum::System::Coordinator {
     }
   }
 
+  bool Application::HasFloppyDevice() {
+    using Block = Quantum::ABI::Devices::Block;
+
+    UInt32 count = Block::GetCount();
+    bool found = false;
+    _floppyDeviceId = 0;
+
+    for (UInt32 i = 1; i <= count; ++i) {
+      Block::Info info{};
+
+      if (Block::GetInfo(i, info) != 0) {
+        continue;
+      }
+
+      if (info.type == Block::TypeFloppy) {
+        found = true;
+        _floppyDeviceId = info.id;
+        break;
+      }
+    }
+
+    if (found) {
+      Console::WriteLine("Floppy device detected");
+    } else {
+      Console::WriteLine("Floppy device not detected");
+    }
+
+    return found;
+  }
+
+  void Application::TestFloppyBlockRead() {
+    using Block = Quantum::ABI::Devices::Block;
+
+    if (_floppyDeviceId == 0) {
+      return;
+    }
+
+    Block::Info info{};
+    bool ready = false;
+
+    for (UInt32 i = 0; i < 64; ++i) {
+      if (Block::GetInfo(_floppyDeviceId, info) == 0) {
+        if ((info.flags & Block::flagReady) != 0) {
+          ready = true;
+          break;
+        }
+      }
+
+      Task::Yield();
+    }
+
+    if (!ready) {
+      Console::WriteLine("Floppy block device not ready; skipping test");
+      return;
+    }
+
+    UInt8 buffer[512] = {};
+    Block::Request request{};
+    request.deviceId = _floppyDeviceId;
+    request.lba = 0;
+    request.count = 1;
+    request.buffer = buffer;
+
+    UInt32 result = Block::Read(request);
+
+    if (result == 0) {
+      Console::WriteLine("Floppy block read test succeeded");
+    } else {
+      Console::WriteLine("Floppy block read test returned error");
+    }
+  }
+
   void Application::Main() {
-    Console::WriteLine("Coordinator");
+    Console::WriteLine("Coordinator initialized");
+
+    _floppyPresent = HasFloppyDevice();
 
     Quantum::ABI::InitBundle::Info info{};
 
@@ -115,6 +198,8 @@ namespace Quantum::System::Coordinator {
       Task::Exit(1);
     }
 
+    Console::WriteLine("INIT entries:");
+
     const BundleEntry* entries
       = reinterpret_cast<const BundleEntry*>(base + tableOffset);
 
@@ -122,16 +207,19 @@ namespace Quantum::System::Coordinator {
       const BundleEntry& entry = entries[i];
       UInt32 nameLen = EntryNameLength(entry);
 
-      Console::WriteLine("INIT entry:");
-
       if (nameLen > 0) {
+        Console::Write("  ");
         Console::Write(entry.name);
         Console::WriteLine("");
       } else {
-        Console::WriteLine("(unnamed)");
+        Console::WriteLine("  (unnamed)");
       }
 
       SpawnEntry(entry);
+    }
+
+    if (_floppyPresent) {
+      TestFloppyBlockRead();
     }
 
     Console::WriteLine("INIT.BND parsed");

@@ -55,5 +55,10 @@ namespace Quantum::System::Kernel {
        * Halts the CPU forever.
        */
       [[noreturn]] static void HaltForever();
+
+      /**
+       * Pauses the CPU to improve spin-wait loops.
+       */
+      static void Pause();
   };
 }

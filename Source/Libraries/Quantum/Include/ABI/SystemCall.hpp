@@ -14,7 +14,7 @@ namespace Quantum::ABI {
   /**
    * System call identifiers.
    */
-  enum SystemCall {
+  enum SystemCall : UInt32 {
     Write = 0,
     Exit = 1,
     Yield = 2,
@@ -29,7 +29,12 @@ namespace Quantum::ABI {
     IO_Out16 = 11,
     IO_Out32 = 12,
     GrantIOAccess = 13,
-    SpawnInitBundle = 14
+    SpawnInitBundle = 14,
+    Block_GetCount = 15,
+    Block_GetInfo = 16,
+    Block_Read = 17,
+    Block_Write = 18,
+    Block_Bind = 19
   };
 
   /**

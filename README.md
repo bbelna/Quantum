@@ -54,7 +54,7 @@ You can do `.\Build -r -t` to build and debug a version that runs tests.
 ### v0.01
 
 **Code cleanliness**
-- [ ] Ensure consistent use of kernel types (e.g., `const char*` should be `CString` or `String`).
+- [x] Ensure consistent use of kernel types (e.g., `const char*` should be `CString` or `String`).
 - [x] Refactor all private namespace variables to use _ prefix.
 - [x] Replace anonymous namespace blocks with class-private members.
 - [x] Ensure all functions and properties are documented.

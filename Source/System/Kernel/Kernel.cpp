@@ -8,6 +8,7 @@
 
 #include <BootInfo.hpp>
 #include <CPU.hpp>
+#include <Devices/Manager.hpp>
 #include <Handlers/PanicHandler.hpp>
 #include <Handlers/SystemCallHandler.hpp>
 #include <InitBundle.hpp>
@@ -37,6 +38,7 @@ namespace Quantum::System::Kernel {
   void Initialize(UInt32 bootInfoPhysicalAddress) {
     BootInfo::Initialize(bootInfoPhysicalAddress);
     Memory::Initialize(bootInfoPhysicalAddress);
+    Devices::Manager::Initialize();
     Interrupts::Initialize();
     Task::Initialize();
     Task::EnablePreemption();

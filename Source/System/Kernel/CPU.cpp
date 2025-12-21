@@ -16,10 +16,11 @@ using ArchCPU = Arch::CPU;
 #endif
 
 namespace Quantum::System::Kernel {
-  /**
-   * Halts the CPU forever.
-   */
   void CPU::HaltForever() {
     ArchCPU::HaltForever();
+  }
+
+  void CPU::Pause() {
+    ArchCPU::Pause();
   }
 }

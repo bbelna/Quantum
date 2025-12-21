@@ -11,6 +11,7 @@
 #include <ABI/IPC.hpp>
 #include <ABI/SystemCall.hpp>
 #include <Console.hpp>
+#include <Devices/Block.hpp>
 #include <IPC.hpp>
 #include <Interrupts.hpp>
 #include <Handlers/SystemCallHandler.hpp>
@@ -28,6 +29,7 @@ namespace Quantum::System::Kernel::Handlers {
   using ABI::IPC;
   using ABI::SystemCall;
   using Kernel::Console;
+  using Devices::Block;
   using Kernel::Logger;
   using Kernel::Task;
   using LogLevel = Logger::Level;
@@ -270,6 +272,71 @@ namespace Quantum::System::Kernel::Handlers {
         UInt32 taskId = Kernel::SpawnInitBundleTask(name);
 
         context.eax = taskId;
+
+        break;
+      }
+
+      case SystemCall::Block_GetCount: {
+        context.eax = Block::GetCount();
+
+        break;
+      }
+
+      case SystemCall::Block_GetInfo: {
+        UInt32 deviceId = context.ebx;
+        Block::Info* info
+          = reinterpret_cast<Block::Info*>(context.ecx);
+
+        if (!info) {
+          context.eax = 1;
+
+          break;
+        }
+
+        bool ok = Block::GetInfo(deviceId, *info);
+
+        context.eax = ok ? 0 : 1;
+
+        break;
+      }
+
+      case SystemCall::Block_Read: {
+        Block::Request* request
+          = reinterpret_cast<Block::Request*>(context.ebx);
+
+        if (!request) {
+          context.eax = 1;
+
+          break;
+        }
+
+        context.eax = Block::Read(*request) ? 0 : 1;
+
+        break;
+      }
+
+      case SystemCall::Block_Write: {
+        Block::Request* request
+          = reinterpret_cast<Block::Request*>(context.ebx);
+
+        if (!request) {
+          context.eax = 1;
+
+          break;
+        }
+
+        context.eax = Block::Write(*request) ? 0 : 1;
+
+        break;
+      }
+
+      case SystemCall::Block_Bind: {
+        UInt32 deviceId = context.ebx;
+        UInt32 portId = context.ecx;
+
+        bool ok = Block::Bind(deviceId, portId);
+
+        context.eax = ok ? 0 : 1;
 
         break;
       }

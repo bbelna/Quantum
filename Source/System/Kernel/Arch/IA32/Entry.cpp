@@ -6,6 +6,7 @@
  * IA32 kernel entry routines.
  */
 
+#include <Arch/IA32/BootInfo.hpp>
 #include <Arch/IA32/Bootstrap.hpp>
 #include <Arch/IA32/CPU.hpp>
 #include <Arch/IA32/Entry.hpp>
@@ -25,11 +26,16 @@ using LogLevel = Logger::Level;
 using TSS = Kernel::Arch::IA32::TSS;
 using VGAConsole = Kernel::Arch::IA32::VGAConsole;
 using Writer = Kernel::Logger::Writer;
+using BootInfoRaw = Kernel::Arch::IA32::BootInfo::Raw;
 
 /**
  * The GDT descriptor defined in the assembly GDT file.
  */
 extern "C" void* gdtDescriptor32;
+
+void ClearBSS();
+void InitializeLogging();
+void RelocateInitBundle(UInt32 bootInfoPhysicalAddress);
 
 /**
  * Enables paging using the bootstrap page tables, then jumps to the higher-half
@@ -107,10 +113,10 @@ void Entry() {
 }
 
 extern "C" void Start(UInt32 bootInfoPhysicalAddress) {
+  RelocateInitBundle(bootInfoPhysicalAddress);
   ClearBSS();
   InitializeLogging();
 
-  CPU::GetInfo();
   TSS::Initialize(0);
 
   Kernel::Initialize(bootInfoPhysicalAddress);
@@ -124,6 +130,28 @@ void ClearBSS() {
 
   while (bss < bss_end) {
     *bss++ = 0;
+  }
+}
+
+void RelocateInitBundle(UInt32 bootInfoPhysicalAddress) {
+  if (bootInfoPhysicalAddress != 0) {
+    BootInfoRaw* bootInfo
+      = reinterpret_cast<BootInfoRaw*>(bootInfoPhysicalAddress);
+
+    if (bootInfo->initBundlePhysical != 0 && bootInfo->initBundleSize != 0) {
+      constexpr UInt32 newBase = 0x00200000;
+      UInt32 size = bootInfo->initBundleSize;
+      UInt8* src = reinterpret_cast<UInt8*>(bootInfo->initBundlePhysical);
+      UInt8* dst = reinterpret_cast<UInt8*>(newBase);
+
+      if (bootInfo->initBundlePhysical != newBase) {
+        for (UInt32 i = 0; i < size; ++i) {
+          dst[i] = src[i];
+        }
+
+        bootInfo->initBundlePhysical = newBase;
+      }
+    }
   }
 }
 

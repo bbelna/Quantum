@@ -7,6 +7,7 @@
  */
 
 #include <Arch/IA32/CPU.hpp>
+#include <Arch/IA32/Memory.hpp>
 #include <Arch/IA32/Task.hpp>
 #include <Arch/IA32/TSS.hpp>
 #include <CPU.hpp>
@@ -19,6 +20,7 @@
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   using LogLevel = Logger::Level;
+  using UserMode = Kernel::UserMode;
 
   volatile bool Task::_forceReschedule = false;
   bool Task::_preemptionEnabled = false;
@@ -100,10 +102,13 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   Task::Context* Task::Schedule(Task::Context* currentContext) {
     if (_pendingCleanup && _pendingCleanup != _currentTask) {
       UInt32 cleanupSpace = _pendingCleanup->pageDirectoryPhysical;
+
       RemoveFromAllTasks(_pendingCleanup);
-      Memory::Free(_pendingCleanup->stackBase);
-      Memory::Free(_pendingCleanup);
+
+      Kernel::Memory::Free(_pendingCleanup->stackBase);
+      Kernel::Memory::Free(_pendingCleanup);
       Memory::DestroyAddressSpace(cleanupSpace);
+
       _pendingCleanup = nullptr;
     }
 
@@ -178,7 +183,28 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       PANIC("User task missing entry or stack");
     }
 
-    ::Quantum::System::Kernel::UserMode::Enter(
+    Logger::WriteFormatted(
+      LogLevel::Debug,
+      "User task %u entry=%p stackTop=%p pageDir=%p",
+      tcb->id,
+      tcb->userEntryPoint,
+      tcb->userStackTop,
+      tcb->pageDirectoryPhysical
+    );
+    Logger::WriteFormatted(
+      LogLevel::Debug,
+      "User map entry: PDE=%p PTE=%p",
+      Memory::GetPageDirectoryEntry(tcb->userEntryPoint),
+      Memory::GetPageTableEntry(tcb->userEntryPoint)
+    );
+    Logger::WriteFormatted(
+      LogLevel::Debug,
+      "User map stack: PDE=%p PTE=%p",
+      Memory::GetPageDirectoryEntry(tcb->userStackTop - 4),
+      Memory::GetPageTableEntry(tcb->userStackTop - 4)
+    );
+
+    UserMode::Enter(
       tcb->userEntryPoint,
       tcb->userStackTop
     );
@@ -192,7 +218,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   ) {
     // allocate the task control block
     Task::ControlBlock* tcb = static_cast<Task::ControlBlock*>(
-      Memory::Allocate(sizeof(Task::ControlBlock))
+      Kernel::Memory::Allocate(sizeof(Task::ControlBlock))
     );
 
     if (tcb == nullptr) {
@@ -202,11 +228,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     }
 
     // allocate the kernel stack
-    void* stack = Memory::Allocate(stackSize);
+    void* stack = Kernel::Memory::Allocate(stackSize);
 
     if (stack == nullptr) {
       Logger::Write(LogLevel::Error, "Failed to allocate task stack");
-      Memory::Free(tcb);
+      Kernel::Memory::Free(tcb);
 
       return nullptr;
     }
@@ -311,9 +337,10 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     AddToReadyQueue(tcb);
     AddToAllTasks(tcb);
 
+    Logger::Write(LogLevel::Debug, "Task created successfully");
     Logger::WriteFormatted(
       LogLevel::Debug,
-      "Created task ID=%u, entry=%p, stack=%p-%p size=%p",
+      "  id=%u entry=%p stack=%p-%p size=%p",
       tcb->id,
       entryPoint,
       tcb->stackBase,
@@ -425,6 +452,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     // called from timer interrupt
     bool shouldSchedule
       = (_preemptionEnabled && _schedulerActive) || _forceReschedule;
+
     _forceReschedule = false;
 
     if (!shouldSchedule) {

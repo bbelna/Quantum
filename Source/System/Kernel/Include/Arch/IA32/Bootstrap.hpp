@@ -103,6 +103,16 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       static UInt32 _bootInitBundleMagic1;
 
       /**
+       * First 32-bit word from the init bundle payload (debug).
+       */
+      static UInt32 _bootInitBundlePayload0;
+
+      /**
+       * Second 32-bit word from the init bundle payload (debug).
+       */
+      static UInt32 _bootInitBundlePayload1;
+
+      /**
        * Physical address of the boot info structure.
        */
       static UInt32 _bootInfoPhysical;

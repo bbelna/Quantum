@@ -95,5 +95,10 @@ namespace Quantum::System::Kernel {
         CString format,
         VariableArgumentsList args
       );
+
+      /**
+       * Flag indicating whether a write operation is in progress.
+       */
+      static bool _writing;
   };
 }

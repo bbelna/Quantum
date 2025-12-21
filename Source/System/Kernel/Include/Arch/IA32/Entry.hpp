@@ -33,3 +33,10 @@ void ClearBSS();
  * Initializes logging.
  */
 void InitializeLogging();
+
+/**
+ * Relocates the init bundle to a safe memory location.
+ * @param bootInfoPhysicalAddress
+ *   Physical address of the boot info block.
+ */
+void RelocateInitBundle(UInt32 bootInfoPhysicalAddress);

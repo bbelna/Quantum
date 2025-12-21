@@ -35,6 +35,12 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   UInt32 Bootstrap::_bootInitBundleMagic1 = 0;
 
   [[gnu::section(".text.start.data")]]
+  UInt32 Bootstrap::_bootInitBundlePayload0 = 0;
+
+  [[gnu::section(".text.start.data")]]
+  UInt32 Bootstrap::_bootInitBundlePayload1 = 0;
+
+  [[gnu::section(".text.start.data")]]
   UInt32 Bootstrap::_bootInfoPhysical = 0;
 
   [[gnu::section(".text.start.data")]]
@@ -45,6 +51,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
   [[gnu::section(".text.start")]]
   void Bootstrap::CaptureBootInfo(UInt32 bootInfoPhysicalAddress) {
+    constexpr UInt32 payloadOffset = 0x2000;
+
     _bootInfoPhysical = bootInfoPhysicalAddress;
 
     if (bootInfoPhysicalAddress != 0) {
@@ -65,6 +73,22 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         _bootInitBundleMagic0 = *reinterpret_cast<const UInt32*>(magicBase);
         _bootInitBundleMagic1 = *reinterpret_cast<const UInt32*>(magicBase + 4);
       }
+
+      if (
+        _bootInitBundlePhys != 0 &&
+        _bootInitBundleSize >= payloadOffset + 8
+      ) {
+        const UInt8* payloadBase
+          = reinterpret_cast<const UInt8*>(_bootInitBundlePhys + payloadOffset);
+
+        _bootInitBundlePayload0
+          = *reinterpret_cast<const UInt32*>(payloadBase);
+        _bootInitBundlePayload1
+          = *reinterpret_cast<const UInt32*>(payloadBase + 4);
+      } else {
+        _bootInitBundlePayload0 = 0;
+        _bootInitBundlePayload1 = 0;
+      }
     } else {
       _bootInfoEntryCount = 0;
       _bootInfoReserved = 0;
@@ -72,6 +96,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       _bootInitBundleSize = 0;
       _bootInitBundleMagic0 = 0;
       _bootInitBundleMagic1 = 0;
+      _bootInitBundlePayload0 = 0;
+      _bootInitBundlePayload1 = 0;
     }
   }
 
@@ -154,35 +180,41 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
   void Bootstrap::TraceBootInfo() {
     Logger::WriteFormatted(
-      Logger::Level::Debug,
+      Logger::Level::Info,
       "BootInfo pre-paging: addr=%p entries=%u reserved=%p",
       _bootInfoPhysical,
       _bootInfoEntryCount,
       _bootInfoReserved
     );
     Logger::WriteFormatted(
-      Logger::Level::Debug,
+      Logger::Level::Info,
       "INIT.BND pre-paging: phys=%p size=0x%x magic0=0x%x magic1=0x%x",
       _bootInitBundlePhys,
       _bootInitBundleSize,
       _bootInitBundleMagic0,
       _bootInitBundleMagic1
     );
+    // Logger::WriteFormatted(
+    //   Logger::Level::Info,
+    //   "INIT.BND pre-payload: off=0x2000 head0=0x%x head1=0x%x",
+    //   _bootInitBundlePayload0,
+    //   _bootInitBundlePayload1
+    // );
 
-    if (_bootInitBundlePhys != 0 && _bootInitBundleSize >= 8) {
-      const UInt8* magicBase
-        = reinterpret_cast<const UInt8*>(_bootInitBundlePhys);
+    // if (_bootInitBundlePhys != 0 && _bootInitBundleSize >= 8) {
+    //   const UInt8* magicBase
+    //     = reinterpret_cast<const UInt8*>(_bootInitBundlePhys);
 
-      UInt32 liveMagic0 = *reinterpret_cast<const UInt32*>(magicBase);
-      UInt32 liveMagic1 = *reinterpret_cast<const UInt32*>(magicBase + 4);
+    //   UInt32 liveMagic0 = *reinterpret_cast<const UInt32*>(magicBase);
+    //   UInt32 liveMagic1 = *reinterpret_cast<const UInt32*>(magicBase + 4);
 
-      Logger::WriteFormatted(
-        Logger::Level::Debug,
-        "INIT.BND live pre-mm: phys=%p magic0=0x%x magic1=0x%x",
-        _bootInitBundlePhys,
-        liveMagic0,
-        liveMagic1
-      );
-    }
+    //   Logger::WriteFormatted(
+    //     Logger::Level::Info,
+    //     "INIT.BND live pre-mm: phys=%p magic0=0x%x magic1=0x%x",
+    //     _bootInitBundlePhys,
+    //     liveMagic0,
+    //     liveMagic1
+    //   );
+    // }
   }
 }

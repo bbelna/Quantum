@@ -169,7 +169,7 @@ namespace Quantum::System::Kernel::Helpers {
     buffer[0] = '\0';
 
     Size out = 0;
-    auto append = [&](const char* src) -> bool {
+    auto append = [&](CString src) -> bool {
       if (!src) {
         return true;
       }
@@ -238,7 +238,7 @@ namespace Quantum::System::Kernel::Helpers {
     Size out = 0;
     bool ok = true;
 
-    for (const char* p = format; *p != '\0'; ++p) {
+    for (CString p = format; *p != '\0'; ++p) {
       if (*p != '%') {
         if (!AppendChar(buffer, length, out, *p)) {
           ok = false;
@@ -258,7 +258,7 @@ namespace Quantum::System::Kernel::Helpers {
 
       switch (*p) {
         case 's': {
-          const char* str = VARIABLE_ARGUMENTS(args, const char*);
+          CString str = VARIABLE_ARGUMENTS(args, CString);
 
           if (!AppendString(buffer, length, out, str)) {
             ok = false;

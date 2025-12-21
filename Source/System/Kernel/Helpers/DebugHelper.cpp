@@ -84,6 +84,7 @@ namespace Quantum::System::Kernel::Helpers {
 
     CString trimmedFile = TrimSourceFile(fileStr);
 
+    append("  ");
     append(trimmedFile);
     append(":");
     append(lineStr);

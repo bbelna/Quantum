@@ -536,12 +536,17 @@ namespace Quantum::System::Kernel {
       _requiredTailPages = pagesNeeded;
     }
 
+    Logger::Write(LogLevel::Debug, "Allocate request");
     Logger::WriteFormatted(
       LogLevel::Debug,
-      "Allocate: requested=%p binIndex=%d binSize=%p payloadSize=%p needed=%p",
+      "  requested=%p binIndex=%d binSize=%p",
       requested,
       binIndex,
-      binSize,
+      binSize
+    );
+    Logger::WriteFormatted(
+      LogLevel::Debug,
+      "  payloadSize=%p needed=%p",
       payloadSize,
       needed
     );
@@ -605,12 +610,17 @@ namespace Quantum::System::Kernel {
 
       *canary = _canaryValue;
 
+      Logger::Write(LogLevel::Debug, "Allocation successful");
       Logger::WriteFormatted(
         LogLevel::Debug,
-        "Heap alloc ptr=%p block=%p usable=%p size=%p canary=%p mapped=%p",
+        "  ptr=%p block=%p usable=%p",
         payload,
         reinterpret_cast<UInt8*>(payload) - sizeof(Memory::FreeBlock),
-        usable,
+        usable
+      );
+      Logger::WriteFormatted(
+        LogLevel::Debug,
+        "  size=%p canary=%p mapped=%p",
         payloadSize,
         *canary,
         _heapMappedBytes

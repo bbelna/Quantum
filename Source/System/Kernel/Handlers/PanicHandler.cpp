@@ -32,11 +32,16 @@ namespace Quantum::System::Kernel::Handlers {
     );
     char panicMessage[256] = {};
 
-    CStringHelper::Concat(":( PANIC: ", message.Data(), panicMessage);
+    CStringHelper::Concat(
+      "  ",
+      message ? message : "unknown",
+      panicMessage,
+      sizeof(panicMessage)
+    );
 
+    Logger::Write(LogLevel::Panic, ":( PANIC");
     Logger::Write(LogLevel::Panic, panicMessage);
     Logger::Write(LogLevel::Panic, info);
-    Logger::Write(LogLevel::Panic, message ? message : "unknown");
 
     CPU::HaltForever();
 

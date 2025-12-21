@@ -7,13 +7,13 @@
  */
 
 #include <BootInfo.hpp>
-#include <InitBundle.hpp>
 #include <Helpers/AlignHelper.hpp>
+#include <InitBundle.hpp>
 #include <Logger.hpp>
 #include <Memory.hpp>
 #include <Task.hpp>
-#include <UserMode.hpp>
 #include <Types.hpp>
+#include <UserMode.hpp>
 
 namespace Quantum::System::Kernel {
   using LogLevel = Logger::Level;
@@ -341,16 +341,26 @@ namespace Quantum::System::Kernel {
 
   UInt32 InitBundle::SpawnTask(CString name) {
     if (_initBundleMappedSize == 0 || _initBundleMappedBase == 0) {
+      Logger::Write(LogLevel::Warning, "SpawnTask: INIT.BND not mapped");
       return 0;
     }
 
     const BundleEntry* entry = FindEntryByName(name);
 
     if (!entry) {
+      Logger::Write(LogLevel::Warning, "SpawnTask: entry not found");
       return 0;
     }
 
     if (entry->offset + entry->size > _initBundleMappedSize) {
+      Logger::WriteFormatted(
+        LogLevel::Warning,
+        "SpawnTask: entry out of range (off=%p size=%p total=%p)",
+        entry->offset,
+        entry->size,
+        _initBundleMappedSize
+      );
+      Logger::Write(LogLevel::Warning, "SpawnTask: entry out of range");
       return 0;
     }
 
@@ -361,18 +371,63 @@ namespace Quantum::System::Kernel {
     constexpr UInt32 pageSize = 4096;
 
     if (size < sizeof(UInt32)) {
+      Logger::Write(LogLevel::Warning, "SpawnTask: payload too small");
       return 0;
     }
 
     UInt32 entryOffset = *reinterpret_cast<const UInt32*>(payload);
 
     if (entryOffset >= size) {
+      Logger::WriteFormatted(
+        LogLevel::Warning,
+        "SpawnTask: entry offset out of range (entry=%p size=%p)",
+        entryOffset,
+        size
+      );
+      if (size >= sizeof(UInt32)) {
+        UInt32 raw0 = *reinterpret_cast<const UInt32*>(payload);
+        UInt32 raw1 = 0;
+        if (size >= sizeof(UInt32) * 2) {
+          raw1 = *reinterpret_cast<const UInt32*>(payload + sizeof(UInt32));
+        }
+        Logger::WriteFormatted(
+          LogLevel::Warning,
+          "SpawnTask: payload head=%p %p",
+          raw0,
+          raw1
+        );
+        BootInfo::InitBundleInfo initInfo{};
+
+        if (BootInfo::GetInitBundleInfo(initInfo)) {
+          const UInt8* physBase
+            = reinterpret_cast<const UInt8*>(initInfo.physical);
+          const UInt8* physPayload = physBase + entry->offset;
+          UInt32 phys0 = *reinterpret_cast<const UInt32*>(physPayload);
+          UInt32 phys1 = *reinterpret_cast<const UInt32*>(physPayload + 4);
+
+          Logger::WriteFormatted(
+            LogLevel::Warning,
+            "SpawnTask: phys payload head=%p %p",
+            phys0,
+            phys1
+          );
+          Logger::WriteFormatted(
+            LogLevel::Warning,
+            "SpawnTask: bundle phys=%p virt=%p off=%p",
+            initInfo.physical,
+            _initBundleMappedBase,
+            entry->offset
+          );
+        }
+      }
+      Logger::Write(LogLevel::Warning, "SpawnTask: entry offset out of range");
       return 0;
     }
 
     UInt32 addressSpace = Memory::CreateAddressSpace();
 
     if (addressSpace == 0) {
+      Logger::Write(LogLevel::Warning, "SpawnTask: failed to create address space");
       return 0;
     }
 
@@ -433,6 +488,7 @@ namespace Quantum::System::Kernel {
     );
 
     if (!task) {
+      Logger::Write(LogLevel::Warning, "SpawnTask: failed to create task");
       Memory::DestroyAddressSpace(addressSpace);
 
       return 0;

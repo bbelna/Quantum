@@ -7,6 +7,7 @@
  */
 
 #include <Console.hpp>
+#include <CPU.hpp>
 #include <Helpers/CStringHelper.hpp>
 #include <Types.hpp>
 
@@ -19,6 +20,8 @@ using ConsoleDriver = Arch::VGAConsole;
 
 namespace Quantum::System::Kernel {
   using Helpers::CStringHelper;
+
+  bool Console::_writing = false;
 
   void Console::WriteUnsigned(UInt32 value, UInt32 base, bool prefixHex) {
     if (base < 2 || base > 16) {
@@ -152,9 +155,18 @@ namespace Quantum::System::Kernel {
       return;
     }
 
+    if (_writing) {
+      Console::Write(buffer, length);
+      return;
+    }
+
+    _writing = true;
+
     for (UInt32 i = 0; i < length; ++i) {
       ConsoleDriver::WriteCharacter(buffer[i]);
     }
+
+    _writing = false;
   }
 
   void Console::WriteLine(CString str) {
@@ -165,9 +177,17 @@ namespace Quantum::System::Kernel {
   void Console::WriteFormatted(CString format, ...) {
     VariableArgumentsList args;
 
+    while (_writing) {
+      CPU::Pause();
+    }
+
+    _writing = true;
+
     VARIABLE_ARGUMENTS_START(args, format);
     WriteFormattedVariableArguments(format, args);
     VARIABLE_ARGUMENTS_END(args);
+
+    _writing = false;
   }
 
   void Console::WriteHex32(UInt32 value) {

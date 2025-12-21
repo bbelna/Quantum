@@ -350,6 +350,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       static void InvalidatePage(UInt32 address);
 
       /**
+       * Executes a pause instruction to improve spin-wait loops.
+       */
+      static void Pause();
+
+      /**
        * Retrieves IA32 CPU information.
        * @return `Info` structure with CPU details.
        */

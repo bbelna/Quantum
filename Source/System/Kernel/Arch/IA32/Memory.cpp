@@ -15,11 +15,16 @@
 #include <Kernel.hpp>
 #include <Logger.hpp>
 #include <Prelude.hpp>
+#include <Task.hpp>
 #include <Types.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   using LogLevel = Logger::Level;
   using AlignHelper = Helpers::AlignHelper;
+
+  static UInt32 _initBundleStartPage = 0;
+  static UInt32 _initBundleEndPage = 0;
+  static bool _loggedBundleSkip = false;
 
   UInt32 Memory::_managedBytes = Memory::_defaultManagedBytes;
   UInt32 Memory::_pageCount = Memory::_defaultManagedBytes / Memory::_pageSize;
@@ -309,6 +314,29 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         bootInfo->initBundlePhysical,
         bootInfo->initBundleSize
       );
+
+      UInt32 bundleStart = AlignHelper::Down(
+        bootInfo->initBundlePhysical,
+        _pageSize
+      );
+      UInt32 bundleEnd = AlignHelper::Up(
+        bootInfo->initBundlePhysical + bootInfo->initBundleSize,
+        _pageSize
+      );
+      _initBundleStartPage = bundleStart / _pageSize;
+      _initBundleEndPage = bundleEnd / _pageSize;
+
+      Logger::WriteFormatted(
+        LogLevel::Debug,
+        "INIT.BND reserve pages %u-%u (phys=%p size=%p)",
+        _initBundleStartPage,
+        _initBundleEndPage,
+        bootInfo->initBundlePhysical,
+        bootInfo->initBundleSize
+      );
+    } else {
+      _initBundleStartPage = 0;
+      _initBundleEndPage = 0;
     }
 
     // never hand out the null page
@@ -411,15 +439,42 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
     for (UInt32 wordIndex = 0; wordIndex < words; ++wordIndex) {
       UInt32 word = _pageBitmap[wordIndex];
-      int bit = FindFirstZeroBit(word);
 
-      if (bit >= 0) {
+      while (true) {
+        int bit = FindFirstZeroBit(word);
+
+        if (bit < 0) {
+          break;
+        }
+
         UInt32 pageIndex = wordIndex * 32u + static_cast<UInt32>(bit);
 
-        if (pageIndex >= _pageCount) break;
+        if (pageIndex >= _pageCount) {
+          break;
+        }
+
+        if (
+          _initBundleEndPage > _initBundleStartPage &&
+          pageIndex >= _initBundleStartPage &&
+          pageIndex < _initBundleEndPage
+        ) {
+          SetPageUsed(pageIndex);
+          ++_usedPages;
+
+          if (!_loggedBundleSkip) {
+            Logger::WriteFormatted(
+              LogLevel::Warning,
+              "AllocatePhysicalPage: skipping INIT.BND page %u",
+              pageIndex
+            );
+            _loggedBundleSkip = true;
+          }
+
+          word = _pageBitmap[wordIndex];
+          continue;
+        }
 
         SetPageUsed(pageIndex);
-
         ++_usedPages;
 
         if (zero) {
@@ -852,7 +907,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     UInt32 pde = GetPageDirectoryEntry(faultAddress);
     UInt32 pte = GetPageTableEntry(faultAddress);
 
-    Logger::Write(LogLevel::Error, "PAGE FAULT");
+    Logger::Write(LogLevel::Error, ":( PAGE FAULT");
     Logger::WriteFormatted(
       LogLevel::Error,
       "  addr=%p (%s %s) err=%p present=%s reserved=%s instr=%s",
@@ -873,6 +928,39 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       pde,
       pte
     );
+    Logger::WriteFormatted(
+      LogLevel::Error,
+      "  EAX=%p EBX=%p ECX=%p EDX=%p",
+      context.eax,
+      context.ebx,
+      context.ecx,
+      context.edx
+    );
+    Logger::WriteFormatted(
+      LogLevel::Error,
+      "  ESI=%p EDI=%p EBP=%p",
+      context.esi,
+      context.edi,
+      context.ebp
+    );
+    Logger::WriteFormatted(
+      LogLevel::Error,
+      "  Task=%u coordinator=%s",
+      Kernel::Task::GetCurrentId(),
+      Kernel::Task::IsCurrentTaskCoordinator() ? "yes" : "no"
+    );
+    if ((errorCode & 0x4) != 0) {
+      const UInt32* frame = reinterpret_cast<const UInt32*>(&context);
+      UInt32 userEsp = frame[13];
+      UInt32 userSs = frame[14];
+
+      Logger::WriteFormatted(
+        LogLevel::Error,
+        "  User ESP=%p SS=%p",
+        userEsp,
+        userSs
+      );
+    }
 
     // stub: escalate for now; future VM/pager can service demand faults
     return false;

@@ -90,6 +90,10 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     asm volatile("invlpg (%0)" :: "r"(address) : "memory");
   }
 
+  void CPU::Pause() {
+    asm volatile("pause");
+  }
+
   CPU::Info CPU::GetInfo() {
     Info info = {};
 

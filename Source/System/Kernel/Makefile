@@ -27,6 +27,7 @@ OBJCOPY32 ?= x86_64-linux-gnu-objcopy
 
 KER_COMMON_SRCS := \
 	$(wildcard $(KERNEL_SRC_DIR)/*.cpp) \
+	$(wildcard $(KERNEL_SRC_DIR)/Devices/*.cpp) \
 	$(wildcard $(KERNEL_SRC_DIR)/Handlers/*.cpp) \
 	$(wildcard $(KERNEL_SRC_DIR)/Helpers/*.cpp) \
 	$(wildcard $(KERNEL_SRC_DIR)/Runtime/*.cpp) \

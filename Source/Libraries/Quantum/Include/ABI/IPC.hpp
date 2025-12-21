@@ -20,7 +20,7 @@ namespace Quantum::ABI {
       /**
        * Maximum payload size for an IPC message.
        */
-      static constexpr UInt32 maxPayloadBytes = 256;
+      static constexpr UInt32 maxPayloadBytes = 1024;
 
       /**
        * IPC message layout.

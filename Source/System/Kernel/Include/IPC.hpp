@@ -19,7 +19,7 @@ namespace Quantum::System::Kernel {
       /**
        * Maximum payload size in bytes for an IPC message.
        */
-      static constexpr UInt32 maxPayloadBytes = 256;
+      static constexpr UInt32 maxPayloadBytes = 1024;
 
       /**
        * Maximum number of queued messages per port.
@@ -75,6 +75,26 @@ namespace Quantum::System::Kernel {
         UInt32 bufferCapacity,
         UInt32& outLength
       );
+
+      /**
+       * Destroys an IPC port and frees its slot.
+       * @param portId
+       *   Port to destroy.
+       * @return
+       *   True on success; false if not found.
+       */
+      static bool DestroyPort(UInt32 portId);
+
+      /**
+       * Retrieves the owner task id for a port.
+       * @param portId
+       *   Port identifier to query.
+       * @param outOwnerId
+       *   Receives the owner task id.
+       * @return
+       *   True if the port exists; false otherwise.
+       */
+      static bool GetPortOwner(UInt32 portId, UInt32& outOwnerId);
 
     private:
       /**
