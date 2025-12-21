@@ -81,6 +81,11 @@ namespace Quantum::ABI::Devices {
          * Capability flags for this device.
          */
         UInt32 flags;
+
+        /**
+         * Controller-specific device index (e.g., floppy A=0, B=1).
+         */
+        UInt32 deviceIndex;
       };
 
       /**

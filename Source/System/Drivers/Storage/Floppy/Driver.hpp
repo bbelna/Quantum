@@ -37,7 +37,12 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       /**
        * Floppy data FIFO port.
        */
-      static constexpr UInt16 _dataFifoPort = 0x3F5;
+      static constexpr UInt16 _dataFIFOPort = 0x3F5;
+
+      /**
+       * I/O access probe port (POST delay register).
+       */
+      static constexpr UInt16 _ioAccessProbePort = 0x80;
 
       /**
        * Main status request/ready bit mask.
@@ -55,14 +60,29 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       static bool _initialized;
 
       /**
-       * Bound block device identifier.
+       * Maximum number of floppy devices to track.
        */
-      static UInt32 _deviceId;
+      static constexpr UInt32 _maxDevices = 2;
 
       /**
-       * Device sector size in bytes.
+       * Bound block device identifiers.
        */
-      static UInt32 _sectorSize;
+      static UInt32 _deviceIds[_maxDevices];
+
+      /**
+       * Device sector sizes in bytes.
+       */
+      static UInt32 _deviceSectorSizes[_maxDevices];
+
+      /**
+       * Device indices (A=0, B=1).
+       */
+      static UInt8 _deviceIndices[_maxDevices];
+
+      /**
+       * Number of bound devices.
+       */
+      static UInt32 _deviceCount;
 
       /**
        * IPC receive buffer.
@@ -91,7 +111,14 @@ namespace Quantum::System::Drivers::Storage::Floppy {
        * @return
        *   True if the controller is ready; false on timeout.
        */
-      static bool WaitForFifoReady(bool readPhase);
+      static bool WaitForFIFOReady(bool readPhase);
+
+      /**
+       * Waits for the kernel to grant port I/O access.
+       * @return
+       *   True once I/O access is available; false on timeout.
+       */
+      static bool WaitForIOAccess();
 
       /**
        * Writes a byte into the controller FIFO.
@@ -100,7 +127,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
        * @return
        *   True on success; false on timeout.
        */
-      static bool WriteFifoByte(UInt8 value);
+      static bool WriteFIFOByte(UInt8 value);
 
       /**
        * Reads a byte from the controller FIFO.
@@ -109,7 +136,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
        * @return
        *   True on success; false on timeout.
        */
-      static bool ReadFifoByte(UInt8& value);
+      static bool ReadFIFOByte(UInt8& value);
 
       /**
        * Issues the sense interrupt status command.
@@ -157,5 +184,31 @@ namespace Quantum::System::Drivers::Storage::Floppy {
        *   Number of bytes to fill.
        */
       static void FillBytes(void* dest, UInt8 value, UInt32 length);
+
+      /**
+       * Registers a floppy device mapping.
+       * @param info
+       *   Block device info for the floppy.
+       * @return
+       *   True if the device was recorded; false otherwise.
+       */
+      static bool RegisterDevice(const ABI::Devices::Block::Info& info);
+
+      /**
+       * Resolves a device id to its drive index and sector size.
+       * @param deviceId
+       *   Block device identifier.
+       * @param driveIndex
+       *   Receives the drive index (A=0, B=1).
+       * @param sectorSize
+       *   Receives the sector size in bytes.
+       * @return
+       *   True if the device was found; false otherwise.
+       */
+      static bool FindDevice(
+        UInt32 deviceId,
+        UInt8& driveIndex,
+        UInt32& sectorSize
+      );
   };
 }

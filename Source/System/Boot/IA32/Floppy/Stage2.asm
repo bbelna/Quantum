@@ -724,71 +724,10 @@ StoreInitBundleInfo:
   mov dword [BootInfoPhysical + 8], eax
   mov eax, [InitBundleSizeBytes]
   mov dword [BootInfoPhysical + 12], eax
-  ; stash INIT.BND payload word (normal vs fixed-geometry) for diagnostics
-  push ax
-  push bx
-  push dx
-  push cx
-  ; compute payload cluster (first + 16)
-  mov ax, [SavedFirstCluster]
-  mov bx, ax
-  mov cx, 16
-.InitBundlePayloadCluster:
-  mov ax, bx
-  call GetNextCluster
-  mov bx, ax
-  loop .InitBundlePayloadCluster
-
-  ; read raw payload word from disk (normal BPB geometry)
-  mov ax, bx
-  call ClusterToLBA
-  mov dx, ax
-  push es
-  xor ax, ax
-  mov es, ax
-  mov bx, RootDirBuffer
-  mov ax, dx
-  call ReadSectorLBA
-  mov bx, [RootDirBuffer]
-  pop es
-  mov si, bx
-
-  ; read raw payload word using fixed 18/2 geometry into FATBuffer
-  push ax
-  push cx
-  push dx
-  xor ax, ax
-  mov es, ax
-  mov bx, FATBuffer
-  mov ax, dx
-  xor dx, dx
-  mov cx, 18
-  div cx                   ; AX = temp, DX = sector-1
-  inc dx                   ; sector
-  mov cl, dl               ; CL = sector
-  xor dx, dx
-  mov cx, 2
-  div cx                   ; AX = cylinder, DX = head
-  mov dh, dl               ; DH = head
-  mov ch, al               ; CH = cylinder low
-  shl ah, 6
-  or  cl, ah               ; CL |= cylinder high bits
-  mov dl, [BootDrive]
-  mov ah, 0x02
-  mov al, 1
-  int 0x13
-  pop dx
-  pop cx
-  pop ax
-
-  ; store normal in low 16, fixed-geometry in high 16
-  mov [BootInfoPhysical + 4], si
-  mov ax, [FATBuffer]
-  mov [BootInfoPhysical + 6], ax
-  pop cx
-  pop dx
-  pop bx
-  pop ax
+  ; store BIOS boot drive in the reserved field
+  mov eax, 0x424F0000
+  mov al, [BootDrive]
+  mov dword [BootInfoPhysical + 4], eax
   ret
 
 EnableA20:

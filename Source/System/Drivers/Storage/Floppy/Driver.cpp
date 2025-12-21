@@ -20,14 +20,16 @@ namespace Quantum::System::Drivers::Storage::Floppy {
   using IO = ABI::IO;
 
   bool Driver::_initialized = false;
-  UInt32 Driver::_deviceId = 0;
-  UInt32 Driver::_sectorSize = 512;
+  UInt32 Driver::_deviceIds[Driver::_maxDevices] = {};
+  UInt32 Driver::_deviceSectorSizes[Driver::_maxDevices] = {};
+  UInt8 Driver::_deviceIndices[Driver::_maxDevices] = {};
+  UInt32 Driver::_deviceCount = 0;
   IPC::Message Driver::_receiveMessage{};
   IPC::Message Driver::_sendMessage{};
   Block::Message Driver::_blockRequest{};
   Block::Message Driver::_blockResponse{};
 
-  bool Driver::WaitForFifoReady(bool readPhase) {
+  bool Driver::WaitForFIFOReady(bool readPhase) {
     const UInt32 maxSpins = 100000;
 
     for (UInt32 i = 0; i < maxSpins; ++i) {
@@ -47,34 +49,50 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     return false;
   }
 
-  bool Driver::WriteFifoByte(UInt8 value) {
-    if (!WaitForFifoReady(false)) {
+  bool Driver::WaitForIOAccess() {
+    const UInt32 maxSpins = 100000;
+
+    for (UInt32 i = 0; i < maxSpins; ++i) {
+      if (IO::Out8(_ioAccessProbePort, 0) == 0) {
+        return true;
+      }
+
+      if ((i & 0x3FF) == 0) {
+        Task::Yield();
+      }
+    }
+
+    return false;
+  }
+
+  bool Driver::WriteFIFOByte(UInt8 value) {
+    if (!WaitForFIFOReady(false)) {
       return false;
     }
 
-    IO::Out8(_dataFifoPort, value);
+    IO::Out8(_dataFIFOPort, value);
     return true;
   }
 
-  bool Driver::ReadFifoByte(UInt8& value) {
-    if (!WaitForFifoReady(true)) {
+  bool Driver::ReadFIFOByte(UInt8& value) {
+    if (!WaitForFIFOReady(true)) {
       return false;
     }
 
-    value = IO::In8(_dataFifoPort);
+    value = IO::In8(_dataFIFOPort);
     return true;
   }
 
   bool Driver::SenseInterruptStatus(UInt8& st0, UInt8& cyl) {
-    if (!WriteFifoByte(0x08)) {
+    if (!WriteFIFOByte(0x08)) {
       return false;
     }
 
-    if (!ReadFifoByte(st0)) {
+    if (!ReadFIFOByte(st0)) {
       return false;
     }
 
-    if (!ReadFifoByte(cyl)) {
+    if (!ReadFIFOByte(cyl)) {
       return false;
     }
 
@@ -98,15 +116,15 @@ namespace Quantum::System::Drivers::Storage::Floppy {
   }
 
   bool Driver::SendSpecifyCommand() {
-    if (!WriteFifoByte(0x03)) {
+    if (!WriteFIFOByte(0x03)) {
       return false;
     }
 
-    if (!WriteFifoByte(0xDF)) {
+    if (!WriteFIFOByte(0xDF)) {
       return false;
     }
 
-    if (!WriteFifoByte(0x02)) {
+    if (!WriteFIFOByte(0x02)) {
       return false;
     }
 
@@ -130,12 +148,54 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     }
   }
 
+  bool Driver::RegisterDevice(const Block::Info& info) {
+    if (_deviceCount >= _maxDevices) {
+      return false;
+    }
+
+    UInt32 deviceId = info.id;
+    UInt32 sectorSize = info.sectorSize != 0 ? info.sectorSize : 512;
+    UInt8 driveIndex = static_cast<UInt8>(info.deviceIndex);
+
+    if (driveIndex >= _maxDevices || deviceId == 0) {
+      return false;
+    }
+
+    for (UInt32 i = 0; i < _deviceCount; ++i) {
+      if (_deviceIds[i] == deviceId || _deviceIndices[i] == driveIndex) {
+        return false;
+      }
+    }
+
+    _deviceIds[_deviceCount] = deviceId;
+    _deviceSectorSizes[_deviceCount] = sectorSize;
+    _deviceIndices[_deviceCount] = driveIndex;
+    _deviceCount++;
+
+    return true;
+  }
+
+  bool Driver::FindDevice(
+    UInt32 deviceId,
+    UInt8& driveIndex,
+    UInt32& sectorSize
+  ) {
+    for (UInt32 i = 0; i < _deviceCount; ++i) {
+      if (_deviceIds[i] == deviceId) {
+        driveIndex = _deviceIndices[i];
+        sectorSize = _deviceSectorSizes[i];
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   void Driver::Main() {
     Console::WriteLine("Floppy driver starting (stub)");
 
-    UInt32 deviceId = 0;
     UInt32 count = Block::GetCount();
-    Block::Info deviceInfo{};
+    _deviceCount = 0;
 
     for (UInt32 i = 1; i <= count; ++i) {
       Block::Info info{};
@@ -145,14 +205,13 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       }
 
       if (info.type == Block::Type::Floppy) {
-        deviceId = info.id;
-        deviceInfo = info;
-
-        break;
+        if (!RegisterDevice(info)) {
+          Console::WriteLine("Floppy driver skipping device");
+        }
       }
     }
 
-    if (deviceId == 0) {
+    if (_deviceCount == 0) {
       Console::WriteLine("Floppy device not found");
       Task::Exit(1);
     }
@@ -164,13 +223,17 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       Task::Exit(1);
     }
 
-    if (Block::Bind(deviceId, portId) != 0) {
-      Console::WriteLine("Floppy driver failed to bind block device");
-      Task::Exit(1);
+    for (UInt32 i = 0; i < _deviceCount; ++i) {
+      if (Block::Bind(_deviceIds[i], portId) != 0) {
+        Console::WriteLine("Floppy driver failed to bind block device");
+        Task::Exit(1);
+      }
     }
 
-    _deviceId = deviceId;
-    _sectorSize = deviceInfo.sectorSize != 0 ? deviceInfo.sectorSize : 512;
+    if (!WaitForIOAccess()) {
+      Console::WriteLine("Floppy driver I/O access timeout");
+      Task::Exit(1);
+    }
 
     if (!ResetController()) {
       Console::WriteLine("Floppy controller reset failed");
@@ -221,12 +284,17 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       response.status = _initialized ? 0 : 1;
       response.dataLength = 0;
 
-      if (request.deviceId != _deviceId) {
+      UInt8 driveIndex = 0;
+      UInt32 sectorSize = 0;
+
+      if (!FindDevice(request.deviceId, driveIndex, sectorSize)) {
         response.status = 2;
       }
 
+      (void)driveIndex;
+
       if (response.status == 0) {
-        UInt32 bytes = request.count * _sectorSize;
+        UInt32 bytes = request.count * sectorSize;
 
         if (bytes > Block::messageDataBytes) {
           response.status = 3;

@@ -80,6 +80,11 @@ namespace Quantum::System::Kernel::Devices {
          * Capability flags for this device.
          */
         UInt32 flags;
+
+        /**
+         * Controller-specific device index (e.g., floppy A=0, B=1).
+         */
+        UInt32 deviceIndex;
       };
 
       /**
@@ -325,6 +330,51 @@ namespace Quantum::System::Kernel::Devices {
       static UInt32 _nextDeviceId;
 
       /**
+       * Maximum number of floppy devices to register.
+       */
+      static constexpr UInt32 _maxFloppyDevices = 2;
+
+      /**
+       * Floppy drive index for drive A.
+       */
+      static constexpr UInt8 _floppyDriveAIndex = 0;
+
+      /**
+       * Floppy drive index for drive B.
+       */
+      static constexpr UInt8 _floppyDriveBIndex = 1;
+
+      /**
+       * Registered floppy device descriptors.
+       */
+      static Device _floppyDevices[_maxFloppyDevices];
+
+      /**
+       * Magic tag for boot drive stored in boot info reserved field.
+       */
+      static constexpr UInt32 _bootDriveMagic = 0x424F0000;
+
+      /**
+       * Default sector count for a 1.44MB floppy.
+       */
+      static constexpr UInt32 _defaultFloppySectorCount = 80 * 2 * 18;
+
+      /**
+       * CMOS address port.
+       */
+      static constexpr UInt16 _cmosAddressPort = 0x70;
+
+      /**
+       * CMOS data port.
+       */
+      static constexpr UInt16 _cmosDataPort = 0x71;
+
+      /**
+       * CMOS register index for floppy drive types.
+       */
+      static constexpr UInt8 _cmosDriveTypeRegister = 0x10;
+
+      /**
        * Finds a device by id.
        * @param deviceId
        *   Identifier to search for.
@@ -332,6 +382,69 @@ namespace Quantum::System::Kernel::Devices {
        *   Pointer to the device, or `nullptr` if not found.
        */
       static Device* Find(UInt32 deviceId);
+
+      /**
+       * Reads a CMOS register value.
+       * @param index
+       *   Register index to read.
+       * @return
+       *   Value of the register.
+       */
+      static UInt8 ReadCMOSRegister(UInt8 index);
+
+      /**
+       * Maps a floppy drive type to a sector count.
+       * @param driveType
+       *   Drive type identifier.
+       * @param sectorCount
+       *   Receives the sector count.
+       * @return
+       *   True on success; false if unknown type.
+       */
+      static bool TryGetFloppySectorCount(
+        UInt8 driveType,
+        UInt32& sectorCount
+      );
+
+      /**
+       * Extracts a drive type from the CMOS drive type register.
+       * @param driveTypes
+       *   CMOS drive types byte.
+       * @param driveIndex
+       *   Drive index (0 = A, 1 = B).
+       * @return
+       *   Drive type identifier.
+       */
+      static UInt8 GetFloppyDriveType(UInt8 driveTypes, UInt8 driveIndex);
+
+      /**
+       * Detects a floppy drive from CMOS for the given drive index.
+       * @param driveTypes
+       *   CMOS drive types byte.
+       * @param driveIndex
+       *   Drive index (0 = A, 1 = B).
+       * @param driveType
+       *   Receives the detected drive type.
+       * @param sectorCount
+       *   Receives the detected sector count.
+       * @return
+       *   True if a drive is present; false otherwise.
+       */
+      static bool DetectFloppyDrive(
+        UInt8 driveTypes,
+        UInt8 driveIndex,
+        UInt8& driveType,
+        UInt32& sectorCount
+      );
+
+      /**
+       * Retrieves the BIOS boot drive from boot info.
+       * @param bootDrive
+       *   Receives the boot drive identifier.
+       * @return
+       *   True on success; false on failure.
+       */
+      static bool GetBootDrive(UInt8& bootDrive);
 
       /**
        * Validates a block request against the device info.
@@ -346,6 +459,12 @@ namespace Quantum::System::Kernel::Devices {
 
       /**
        * Sends a block request to a bound driver via IPC.
+       * @param device
+       *   Target device.
+       * @param request
+       *   Block I/O request.
+       * @param write
+       *   True for write requests; false for read.
        */
       static bool SendRequest(
         Device& device,
@@ -355,6 +474,12 @@ namespace Quantum::System::Kernel::Devices {
 
       /**
        * Copies bytes between buffers.
+       * @param dest
+       *   Destination buffer.
+       * @param src
+       *   Source buffer.
+       * @param length
+       *   Number of bytes to copy.
        */
       static void CopyBytes(void* dest, const void* src, UInt32 length);
 

@@ -6,6 +6,8 @@
  * Kernel block device registry and interface.
  */
 
+#include <Arch/IA32/BootInfo.hpp>
+#include <Arch/IA32/IO.hpp>
 #include <Devices/Block.hpp>
 #include <IPC.hpp>
 #include <Logger.hpp>
@@ -15,6 +17,84 @@ namespace Quantum::System::Kernel::Devices {
   using LogLevel = Logger::Level;
   using IPC = ::Quantum::System::Kernel::IPC;
   using Task = ::Quantum::System::Kernel::Task;
+  using BootInfo = ::Quantum::System::Kernel::Arch::IA32::BootInfo;
+  using IO = ::Quantum::System::Kernel::Arch::IA32::IO;
+
+  UInt8 Block::ReadCMOSRegister(UInt8 index) {
+    IO::Out8(
+      _cmosAddressPort,
+      static_cast<UInt8>(0x80 | (index & 0x7F))
+    );
+    return IO::In8(_cmosDataPort);
+  }
+
+  bool Block::TryGetFloppySectorCount(UInt8 driveType, UInt32& sectorCount) {
+    switch (driveType) {
+      case 0x1:
+        sectorCount = 40 * 2 * 9;
+        return true;
+      case 0x2:
+        sectorCount = 80 * 2 * 15;
+        return true;
+      case 0x3:
+        sectorCount = 80 * 2 * 9;
+        return true;
+      case 0x4:
+        sectorCount = 80 * 2 * 18;
+        return true;
+      case 0x5:
+        sectorCount = 80 * 2 * 36;
+        return true;
+      default:
+        break;
+    }
+
+    return false;
+  }
+
+  UInt8 Block::GetFloppyDriveType(UInt8 driveTypes, UInt8 driveIndex) {
+    if (driveIndex == _floppyDriveAIndex) {
+      return static_cast<UInt8>((driveTypes >> 4) & 0x0F);
+    }
+
+    if (driveIndex == _floppyDriveBIndex) {
+      return static_cast<UInt8>(driveTypes & 0x0F);
+    }
+
+    return 0;
+  }
+
+  bool Block::DetectFloppyDrive(
+    UInt8 driveTypes,
+    UInt8 driveIndex,
+    UInt8& driveType,
+    UInt32& sectorCount
+  ) {
+    driveType = GetFloppyDriveType(driveTypes, driveIndex);
+
+    if (driveType == 0) {
+      return false;
+    }
+
+    return TryGetFloppySectorCount(driveType, sectorCount);
+  }
+
+  bool Block::GetBootDrive(UInt8& bootDrive) {
+    const BootInfo::View* bootInfo = BootInfo::Get();
+
+    if (!bootInfo) {
+      return false;
+    }
+
+    UInt32 reserved = bootInfo->reserved;
+
+    if ((reserved & 0xFFFF0000u) != _bootDriveMagic) {
+      return false;
+    }
+
+    bootDrive = static_cast<UInt8>(reserved & 0xFF);
+    return true;
+  }
 
   static bool FloppyStubRead(UInt32 lba, UInt32 count, void* buffer) {
     (void)lba;
@@ -37,33 +117,112 @@ namespace Quantum::System::Kernel::Devices {
   UInt32 Block::_deviceCount = 0;
   UInt32 Block::_nextDeviceId = 1;
 
-  static Block::Device _floppyStubDevice = {
-    Block::Info{
+  Block::Device Block::_floppyDevices[Block::_maxFloppyDevices] = {
+    Block::Device{
+      Block::Info{
+        0,
+        Block::Type::Floppy,
+        512,
+        2880,
+        Block::flagRemovable,
+        _floppyDriveAIndex
+      },
       0,
-      Block::Type::Floppy,
-      512,
-      2880,
-      Block::flagRemovable
+      &FloppyStubRead,
+      &FloppyStubWrite
     },
-    0,
-    &FloppyStubRead,
-    &FloppyStubWrite
+    Block::Device{
+      Block::Info{
+        0,
+        Block::Type::Floppy,
+        512,
+        2880,
+        Block::flagRemovable,
+        _floppyDriveBIndex
+      },
+      0,
+      &FloppyStubRead,
+      &FloppyStubWrite
+    }
   };
 
   void Block::Initialize() {
     _deviceCount = 0;
     _nextDeviceId = 1;
 
-    UInt32 id = Register(&_floppyStubDevice);
+    UInt8 driveTypes = ReadCMOSRegister(_cmosDriveTypeRegister);
+    bool registered = false;
 
-    if (id == 0) {
-      Logger::Write(LogLevel::Warning, "Block: failed to register stub");
+    for (UInt8 driveIndex = 0; driveIndex < _maxFloppyDevices; ++driveIndex) {
+      UInt8 driveType = 0;
+      UInt32 sectorCount = 0;
+
+      if (!DetectFloppyDrive(driveTypes, driveIndex, driveType, sectorCount)) {
+        continue;
+      }
+
+      Block::Device& device = _floppyDevices[driveIndex];
+
+      device.info.type = Block::Type::Floppy;
+      device.info.sectorSize = 512;
+      device.info.sectorCount = sectorCount;
+      device.info.flags = Block::flagRemovable;
+      device.info.deviceIndex = driveIndex;
+      device.portId = 0;
+
+      UInt32 id = Register(&device);
+      char driveLetter = driveIndex == _floppyDriveAIndex ? 'A' : 'B';
+
+      if (id == 0) {
+        Logger::WriteFormatted(
+          LogLevel::Warning,
+          "Block: failed to register floppy %c",
+          driveLetter
+        );
+      } else {
+        Logger::WriteFormatted(
+          LogLevel::Info,
+          "Block: registered floppy %c id=%u type=0x%x",
+          driveLetter,
+          id,
+          driveType
+        );
+        registered = true;
+      }
+    }
+
+    if (registered) {
+      return;
+    }
+
+    UInt8 bootDrive = 0xFF;
+
+    if (GetBootDrive(bootDrive) && bootDrive < 0x80) {
+      UInt8 driveIndex
+        = bootDrive == 0x01 ? _floppyDriveBIndex : _floppyDriveAIndex;
+      Block::Device& device = _floppyDevices[driveIndex];
+
+      device.info.type = Block::Type::Floppy;
+      device.info.sectorSize = 512;
+      device.info.sectorCount = _defaultFloppySectorCount;
+      device.info.flags = Block::flagRemovable;
+      device.info.deviceIndex = driveIndex;
+      device.portId = 0;
+
+      UInt32 id = Register(&device);
+      char driveLetter = driveIndex == _floppyDriveAIndex ? 'A' : 'B';
+
+      if (id == 0) {
+        Logger::Write(LogLevel::Warning, "Block: failed to register fallback");
+      } else {
+        Logger::WriteFormatted(
+          LogLevel::Debug,
+          "Block: CMOS empty; using boot drive %c",
+          driveLetter
+        );
+      }
     } else {
-      Logger::WriteFormatted(
-        LogLevel::Debug,
-        "Block: registered floppy stub id=%u",
-        id
-      );
+      Logger::Write(LogLevel::Debug, "Block: no floppy detected");
     }
   }
 
