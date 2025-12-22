@@ -21,7 +21,7 @@ namespace Quantum {
        * Yields the current task.
        */
       static inline void Yield() {
-        ABI::InvokeSystemCall(ABI::SystemCall::Yield);
+        ABI::InvokeSystemCall(ABI::SystemCall::Task_Yield);
       }
 
       /**
@@ -30,7 +30,7 @@ namespace Quantum {
        *   Optional exit code (currently ignored by the kernel).
        */
       static inline void Exit(UInt32 code = 0) {
-        ABI::InvokeSystemCall(ABI::SystemCall::Exit, code);
+        ABI::InvokeSystemCall(ABI::SystemCall::Task_Exit, code);
       }
   };
 }

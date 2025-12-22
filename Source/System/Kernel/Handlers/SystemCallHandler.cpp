@@ -40,7 +40,7 @@ namespace Quantum::System::Kernel::Handlers {
     SystemCall id = static_cast<SystemCall>(context.eax);
 
     switch (id) {
-      case SystemCall::Write: {
+      case SystemCall::Console_Write: {
         CString string = reinterpret_cast<CString>(context.ebx);
         UInt32 length = context.ecx;
 
@@ -49,7 +49,7 @@ namespace Quantum::System::Kernel::Handlers {
         break;
       }
 
-      case SystemCall::WriteLine: {
+      case SystemCall::Console_WriteLine: {
         CString string = reinterpret_cast<CString>(context.ebx);
         UInt32 length = context.ecx;
 
@@ -58,19 +58,19 @@ namespace Quantum::System::Kernel::Handlers {
         break;
       }
 
-      case SystemCall::Exit: {
+      case SystemCall::Task_Exit: {
         Task::Exit();
 
         break;
       }
 
-      case SystemCall::Yield: {
+      case SystemCall::Task_Yield: {
         Task::Yield();
 
         break;
       }
 
-      case SystemCall::GetInitBundleInfo: {
+      case SystemCall::InitBundle_GetInfo: {
         InitBundle::Info* info
           = reinterpret_cast<InitBundle::Info*>(context.ebx);
         UInt32 base = 0;
@@ -257,7 +257,7 @@ namespace Quantum::System::Kernel::Handlers {
         break;
       }
 
-      case SystemCall::GrantIOAccess: {
+      case SystemCall::Task_GrantIOAccess: {
         if (!Task::IsCurrentTaskCoordinator()) {
           context.eax = 1;
 
@@ -272,7 +272,7 @@ namespace Quantum::System::Kernel::Handlers {
         break;
       }
 
-      case SystemCall::SpawnInitBundle: {
+      case SystemCall::InitBundle_SpawnTask: {
         if (!Task::IsCurrentTaskCoordinator()) {
           context.eax = 0;
 

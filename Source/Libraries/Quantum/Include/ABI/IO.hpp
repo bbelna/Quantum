@@ -119,7 +119,7 @@ namespace Quantum::ABI {
        */
       static UInt32 GrantIOAccess(UInt32 taskId) {
         return InvokeSystemCall(
-          SystemCall::GrantIOAccess,
+          SystemCall::Task_GrantIOAccess,
           taskId
         );
       }
