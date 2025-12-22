@@ -33,39 +33,6 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        */
       static void WriteCharacter(char character);
 
-      /**
-       * Writes a message to the console.
-       * @param message
-       *   The message.
-       */
-      static void Write(CString message);
-
-      /**
-       * Writes a message followed by a newline to the console.
-       * @param message
-       *   The message.
-       */
-      static void WriteLine(CString message = "");
-
-      /**
-       * Gets the `Writer` adapter for the `VGAConsole`.
-       * @return
-       *   The `Writer` adapter.
-       */
-      static Writer& GetWriter();
-
-      /**
-       * `Writer` adapter for `VGAConsole`.
-       */
-      class WriterAdapter : public Writer {
-        public:
-          /**
-           * Writes a message.
-           * @param message The message.
-           */
-          void Write(String message) override;
-      };
-
     private:
       /**
        * The number of text-mode columns.
@@ -96,6 +63,16 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * The current cursor column.
        */
       static UInt8 _cursorColumn;
+
+      /**
+       * Saved cursor row for restore.
+       */
+      static UInt8 _cursorSavedRow;
+
+      /**
+       * Saved cursor column for restore.
+       */
+      static UInt8 _cursorSavedColumn;
 
       /**
        * The saved cell value under the cursor.

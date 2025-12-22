@@ -21,7 +21,7 @@ using ConsoleDriver = Arch::VGAConsole;
 namespace Quantum::System::Kernel {
   using Helpers::CStringHelper;
 
-  bool Console::_writing = false;
+  volatile UInt32 Console::_writing = 0;
 
   Logger::Writer& Console::GetWriter() {
     static WriterAdapter writerAdapter;
@@ -51,7 +51,7 @@ namespace Quantum::System::Kernel {
     } while (value > 0 && idx < sizeof(buffer));
 
     if (prefixHex) {
-      ConsoleDriver::Write("0x");
+      WriteUnlocked("0x", 2);
     }
 
     while (idx > 0) {
@@ -84,7 +84,7 @@ namespace Quantum::System::Kernel {
         case 's': {
           CString str = VARIABLE_ARGUMENTS(args, CString);
 
-          ConsoleDriver::Write(str ? str : "(null)");
+          WriteUnlocked(str ? str : "(null)");
 
           break;
         }
@@ -100,7 +100,7 @@ namespace Quantum::System::Kernel {
         case 'd': {
           Int32 v = VARIABLE_ARGUMENTS(args, Int32);
 
-          ConsoleDriver::Write(CStringHelper::ToCString(v));
+          WriteUnlocked(CStringHelper::ToCString(v));
 
           break;
         }
@@ -149,90 +149,82 @@ namespace Quantum::System::Kernel {
     ConsoleDriver::Initialize();
   }
 
-  void Console::WriteCharacter(char c) {
-    ConsoleDriver::WriteCharacter(c);
-  }
-
-  void Console::Write(CString str) {
-    if (!str) {
+  void Console::Write(CString string) {
+    if (!string) {
       return;
     }
 
-    UInt32 length = static_cast<UInt32>(CStringHelper::Length(str));
+    UInt32 length = static_cast<UInt32>(CStringHelper::Length(string));
 
-    Write(str, length);
+    Write(string, length);
   }
 
-  void Console::Write(CString buffer, UInt32 length) {
-    if (!buffer || length == 0) {
+  void Console::Write(CString string, UInt32 length) {
+    if (!string || length == 0) {
       return;
     }
 
-    while (_writing) {
+    while (__sync_lock_test_and_set(&_writing, 1) != 0) {
       CPU::Pause();
     }
 
-    _writing = true;
+    WriteUnlocked(string, length);
 
-    for (UInt32 i = 0; i < length; ++i) {
-      ConsoleDriver::WriteCharacter(buffer[i]);
-    }
-
-    _writing = false;
+    __sync_lock_release(&_writing);
   }
 
-  void Console::WriteLine(CString str) {
-    if (!str) {
+  void Console::WriteLine(CString string) {
+    if (!string) {
       return;
     }
 
-    Size strLength = CStringHelper::Length(str) + 2;
-    char formattedStr[strLength];
-
-    CStringHelper::Concat(
-      str,
-      "\n",
-      formattedStr,
-      strLength
-    );
-
-    Write(formattedStr);
+    UInt32 length = static_cast<UInt32>(CStringHelper::Length(string));
+    WriteLine(string, length);
   }
 
-  void Console::WriteLine(CString buffer, UInt32 length) {
-    if (!buffer || length == 0) {
+  void Console::WriteLine(CString string, UInt32 length) {
+    if (!string) {
       return;
     }
 
-    char formattedStr[length + 2];
+    while (__sync_lock_test_and_set(&_writing, 1) != 0) {
+      CPU::Pause();
+    }
 
-    CStringHelper::Concat(
-      buffer,
-      "\n",
-      formattedStr,
-      length + 2
-    );
+    WriteUnlocked(string, length);
+    ConsoleDriver::WriteCharacter('\n');
 
-    Write(formattedStr, length + 2);
+    __sync_lock_release(&_writing);
   }
 
   void Console::WriteFormatted(CString format, ...) {
     VariableArgumentsList args;
 
-    while (_writing) {
+    while (__sync_lock_test_and_set(&_writing, 1) != 0) {
       CPU::Pause();
     }
-
-    _writing = true;
 
     VARIABLE_ARGUMENTS_START(args, format);
     WriteFormattedVariableArguments(format, args);
     VARIABLE_ARGUMENTS_END(args);
 
-    _writing = false;
+    __sync_lock_release(&_writing);
   }
 
-  void Console::WriteHex32(UInt32 value) {
-    WriteUnsigned(value, 16, true);
+  void Console::WriteUnlocked(CString string, UInt32 length) {
+    if (!string || length == 0) {
+      return;
+    }
+
+    for (UInt32 i = 0; i < length; ++i) {
+      ConsoleDriver::WriteCharacter(string[i]);
+    }
+  }
+
+  void Console::WriteUnlocked(CString string) {
+    WriteUnlocked(
+      string,
+      static_cast<UInt32>(CStringHelper::Length(string))
+    );
   }
 }

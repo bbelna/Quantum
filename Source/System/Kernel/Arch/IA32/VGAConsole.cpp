@@ -113,32 +113,10 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
       _cursorRow = _rows - 1;
       _cursorColumn = 0;
+      _cursorDrawn = false;
+      _cursorSavedCell = MakeEntry(' ', _defaultColor);
     }
 
     DrawCursor();
-  }
-
-  void VGAConsole::Write(CString message) {
-    for (
-      CString messageIterator = message;
-      *messageIterator != '\0';
-      ++messageIterator
-    ) {
-      WriteCharacter(*messageIterator);
-    }
-  }
-
-  void VGAConsole::WriteLine(CString message) {
-    Write(message);
-    WriteCharacter('\n');
-  }
-
-  Writer& VGAConsole::GetWriter() {
-    static WriterAdapter writerAdapter;
-    return writerAdapter;
-  }
-
-  void VGAConsole::WriterAdapter::Write(String message) {
-    VGAConsole::WriteLine(message);
   }
 }

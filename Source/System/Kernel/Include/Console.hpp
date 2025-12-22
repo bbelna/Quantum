@@ -23,13 +23,6 @@ namespace Quantum::System::Kernel {
       static void Initialize();
 
       /**
-       * Writes a single character to the console.
-       * @param c
-       *   The character to write.
-       */
-      static void WriteCharacter(char c);
-
-      /**
        * Writes a null-terminated string to the console.
        * @param str
        *   The string to write.
@@ -38,28 +31,29 @@ namespace Quantum::System::Kernel {
 
       /**
        * Writes a buffer with the given length to the console.
-       * @param buffer
-       *   Pointer to bytes to write.
+       * @param string
+       *   The string to write.
        * @param length
-       *   Number of bytes to write.
+       *   The length of the string.
        */
-      static void Write(CString buffer, UInt32 length);
+      static void Write(CString string, UInt32 length);
 
       /**
-       * Writes a line (string followed by newline) to the console.
-       * @param str
+       * Writes a string followed by a newline.
+       * @param string
+       *   The string to write.
+       * @param length
+       *   The length of the string.
+       */
+      static void WriteLine(CString string, UInt32 length);
+
+      /**
+       * Writes a line (null-terminated string followed by newline) to the
+       * console.
+       * @param string
        *   The string to write.
        */
-      static void WriteLine(CString str);
-
-      /**
-       * Writes a buffer followed by a newline.
-       * @param buffer
-       *   Pointer to bytes to write.
-       * @param length
-       *   Number of bytes to write.
-       */
-      static void WriteLine(CString buffer, UInt32 length);
+      static void WriteLine(CString string);
 
       /**
        * Writes a formatted string to the console.
@@ -69,13 +63,6 @@ namespace Quantum::System::Kernel {
        *   Format arguments.
        */
       static void WriteFormatted(CString format, ...);
-
-      /**
-       * Writes a 32-bit value in hexadecimal format to the console.
-       * @param value
-       *   The value to write.
-       */
-      static void WriteHex32(UInt32 value);
 
       /**
        * Gets a logger writer that routes messages through the console.
@@ -97,6 +84,11 @@ namespace Quantum::System::Kernel {
            */
           void Write(String message) override;
       };
+
+      /**
+       * Flag indicating whether a write operation is in progress.
+       */
+      static volatile UInt32 _writing;
 
       /**
        * Converts an unsigned integer to a string in the given base.
@@ -127,8 +119,21 @@ namespace Quantum::System::Kernel {
       );
 
       /**
-       * Flag indicating whether a write operation is in progress.
+       * Writes a buffer with the given length to the console without locking.
+       * @param buffer
+       *   The string to write.
+       * @param length
+       *   The length of the string.
        */
-      static bool _writing;
+      static void WriteUnlocked(CString string, UInt32 length);
+
+      /**
+       * Writes a buffer with the given length to the console without locking.
+       * @param buffer
+       *   The string to write.
+       * @param length
+       *   The length of the string.
+       */
+      static void WriteUnlocked(CString string);
   };
 }

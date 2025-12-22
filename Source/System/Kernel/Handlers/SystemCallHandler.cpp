@@ -41,19 +41,19 @@ namespace Quantum::System::Kernel::Handlers {
 
     switch (id) {
       case SystemCall::Write: {
-        CString buffer = reinterpret_cast<CString>(context.ebx);
+        CString string = reinterpret_cast<CString>(context.ebx);
         UInt32 length = context.ecx;
 
-        Console::Write(buffer, length);
+        Console::Write(string, length);
 
         break;
       }
 
       case SystemCall::WriteLine: {
-        CString buffer = reinterpret_cast<CString>(context.ebx);
+        CString string = reinterpret_cast<CString>(context.ebx);
         UInt32 length = context.ecx;
 
-        Console::WriteLine(buffer, length);
+        Console::WriteLine(string, length);
 
         break;
       }
