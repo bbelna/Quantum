@@ -244,10 +244,15 @@ namespace Quantum::System::Kernel::Devices {
       static void Initialize();
 
       /**
+       * Handles a floppy controller interrupt notification.
+       */
+      static void HandleFloppyIRQ();
+
+      /**
        * Registers a new block device.
        * @param device
        *   Device descriptor to register.
-       * @return
+        * @return
        *   Assigned device id, or 0 on failure.
        */
       static UInt32 Register(Device* device);

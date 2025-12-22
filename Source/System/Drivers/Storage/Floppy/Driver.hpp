@@ -85,6 +85,11 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       static UInt32 _deviceCount;
 
       /**
+       * Pending floppy interrupt count.
+       */
+      static volatile UInt32 _irqPendingCount;
+
+      /**
        * IPC receive buffer.
        */
       static ABI::IPC::Message _receiveMessage;
@@ -187,7 +192,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
 
       /**
        * Registers a floppy device mapping.
-       * @param info
+        * @param info
        *   Block device info for the floppy.
        * @return
        *   True if the device was recorded; false otherwise.

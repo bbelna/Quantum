@@ -24,6 +24,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
   UInt32 Driver::_deviceSectorSizes[Driver::_maxDevices] = {};
   UInt8 Driver::_deviceIndices[Driver::_maxDevices] = {};
   UInt32 Driver::_deviceCount = 0;
+  volatile UInt32 Driver::_irqPendingCount = 0;
   IPC::Message Driver::_receiveMessage{};
   IPC::Message Driver::_sendMessage{};
   Block::Message Driver::_blockRequest{};
@@ -269,6 +270,14 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       }
 
       CopyBytes(&request, msg.payload, copyBytes);
+
+      if (
+        request.op == Block::Operation::Response &&
+        request.replyPortId == 0
+      ) {
+        ++_irqPendingCount;
+        continue;
+      }
 
       if (request.replyPortId == 0) {
         continue;

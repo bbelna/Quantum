@@ -226,6 +226,35 @@ namespace Quantum::System::Kernel::Devices {
     }
   }
 
+  void Block::HandleFloppyIRQ() {
+    Message msg{};
+
+    msg.op = Operation::Response;
+    msg.lba = 0;
+    msg.count = 0;
+    msg.replyPortId = 0;
+    msg.status = 0;
+    msg.dataLength = 0;
+
+    UInt32 senderId = Task::GetCurrentId();
+
+    for (UInt32 i = 0; i < _deviceCount; ++i) {
+      Device* device = _devices[i];
+
+      if (!device || device->portId == 0) {
+        continue;
+      }
+
+      if (device->info.type != Type::Floppy) {
+        continue;
+      }
+
+      msg.deviceId = device->info.id;
+
+      IPC::Send(device->portId, senderId, &msg, messageHeaderBytes);
+    }
+  }
+
   UInt32 Block::Register(Block::Device* device) {
     if (!device || _deviceCount >= _maxDevices) {
       return 0;
