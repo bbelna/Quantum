@@ -249,6 +249,26 @@ namespace Quantum::System::Kernel::Devices {
       static void HandleFloppyIRQ();
 
       /**
+       * Allocates a DMA buffer for block device drivers.
+       * @param sizeBytes
+       *   Requested buffer size in bytes.
+       * @param outPhysical
+       *   Receives the physical address.
+       * @param outVirtual
+       *   Receives the user-space virtual address.
+       * @param outSize
+       *   Receives the allocated buffer size in bytes.
+       * @return
+       *   True on success; false otherwise.
+       */
+      static bool AllocateDMABuffer(
+        UInt32 sizeBytes,
+        UInt32& outPhysical,
+        UInt32& outVirtual,
+        UInt32& outSize
+      );
+
+      /**
        * Registers a new block device.
        * @param device
        *   Device descriptor to register.
@@ -363,6 +383,26 @@ namespace Quantum::System::Kernel::Devices {
        * Default sector count for a 1.44MB floppy.
        */
       static constexpr UInt32 _defaultFloppySectorCount = 80 * 2 * 18;
+
+      /**
+       * DMA buffer virtual base for driver mappings.
+       */
+      static constexpr UInt32 _dmaBufferVirtualBase = 0x00600000;
+
+      /**
+       * Maximum physical address for DMA buffers.
+       */
+      static constexpr UInt32 _dmaMaxPhysicalAddress = 0x01000000;
+
+      /**
+       * Physical address of the DMA buffer (0 if unallocated).
+       */
+      static UInt32 _dmaBufferPhysical;
+
+      /**
+       * Size of the DMA buffer in bytes.
+       */
+      static UInt32 _dmaBufferBytes;
 
       /**
        * CMOS address port.

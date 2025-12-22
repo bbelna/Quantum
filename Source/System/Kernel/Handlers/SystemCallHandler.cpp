@@ -6,6 +6,7 @@
  * System call handler.
  */
 
+#include <ABI/Devices/Block.hpp>
 #include <ABI/Prelude.hpp>
 #include <ABI/InitBundle.hpp>
 #include <ABI/IPC.hpp>
@@ -28,6 +29,7 @@ namespace Quantum::System::Kernel::Handlers {
   using ABI::InitBundle;
   using ABI::IPC;
   using ABI::SystemCall;
+  using DMABuffer = ABI::Devices::Block::DMABuffer;
   using Kernel::Console;
   using Devices::Block;
   using Kernel::Logger;
@@ -335,6 +337,35 @@ namespace Quantum::System::Kernel::Handlers {
         UInt32 portId = context.ecx;
 
         bool ok = Block::Bind(deviceId, portId);
+
+        context.eax = ok ? 0 : 1;
+
+        break;
+      }
+
+      case SystemCall::Block_AllocateDMABuffer: {
+        UInt32 sizeBytes = context.ebx;
+        DMABuffer* buffer = reinterpret_cast<DMABuffer*>(context.ecx);
+
+        if (!buffer) {
+          context.eax = 1;
+          break;
+        }
+
+        UInt32 physical = 0;
+        UInt32 virtualAddress = 0;
+        UInt32 outSize = 0;
+        bool ok = Block::AllocateDMABuffer(
+          sizeBytes,
+          physical,
+          virtualAddress,
+          outSize
+        );
+
+        buffer->physical = physical;
+        buffer->virtualAddress
+          = reinterpret_cast<void*>(virtualAddress);
+        buffer->size = outSize;
 
         context.eax = ok ? 0 : 1;
 

@@ -565,6 +565,39 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     return reinterpret_cast<void*>(physicalPageAddress);
   }
 
+  void* Memory::AllocatePageBelow(UInt32 maxPhysicalAddress, bool zero) {
+    if (maxPhysicalAddress == 0) {
+      return nullptr;
+    }
+
+    UInt32 maxPage = maxPhysicalAddress / _pageSize;
+
+    if (maxPage > _pageCount) {
+      maxPage = _pageCount;
+    }
+
+    for (UInt32 pageIndex = 0; pageIndex < maxPage; ++pageIndex) {
+      if (!PageFree(pageIndex)) {
+        continue;
+      }
+
+      SetPageUsed(pageIndex);
+      ++_usedPages;
+
+      if (zero) {
+        UInt8* memory = reinterpret_cast<UInt8*>(pageIndex * _pageSize);
+
+        for (UInt32 b = 0; b < _pageSize; ++b) {
+          memory[b] = 0;
+        }
+      }
+
+      return reinterpret_cast<void*>(pageIndex * _pageSize);
+    }
+
+    return nullptr;
+  }
+
   void Memory::FreePage(void* physicalAddress) {
     UInt32 address = reinterpret_cast<UInt32>(physicalAddress);
 

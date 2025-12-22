@@ -50,6 +50,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       static constexpr UInt32 recursiveSlot = 1023;
 
       /**
+       * Size of a single page in bytes.
+       */
+      static constexpr UInt32 pageSize = 4096;
+
+      /**
        * Base virtual address for the kernel heap region.
        */
       static constexpr UInt32 kernelHeapBase = 0xC2000000;
@@ -74,6 +79,20 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        *   Pointer to the allocated page.
        */
       static void* AllocatePage(bool zero = false);
+
+      /**
+       * Allocates a 4 KB physical page below a maximum address.
+       * @param maxPhysicalAddress
+       *   Maximum physical address (exclusive).
+       * @param zero
+       *   Whether to zero the page before returning it.
+       * @return
+       *   Pointer to the allocated page, or nullptr on failure.
+       */
+      static void* AllocatePageBelow(
+        UInt32 maxPhysicalAddress,
+        bool zero = false
+      );
 
       /**
        * Frees a 4 KB physical page previously allocated.
@@ -271,7 +290,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       /**
        * Size of a single page in bytes.
        */
-      static constexpr UInt32 _pageSize = 4096;
+      static constexpr UInt32 _pageSize = pageSize;
 
       /**
        * Number of entries per IA32 page directory.

@@ -8,14 +8,18 @@
 
 #include <Arch/IA32/BootInfo.hpp>
 #include <Arch/IA32/IO.hpp>
+#include <Arch/IA32/Memory.hpp>
 #include <Devices/Block.hpp>
 #include <IPC.hpp>
 #include <Logger.hpp>
+#include <Memory.hpp>
 #include <Task.hpp>
 
 namespace Quantum::System::Kernel::Devices {
   using LogLevel = Logger::Level;
+  using ArchMemory = ::Quantum::System::Kernel::Arch::IA32::Memory;
   using IPC = ::Quantum::System::Kernel::IPC;
+  using Memory = ::Quantum::System::Kernel::Memory;
   using Task = ::Quantum::System::Kernel::Task;
   using BootInfo = ::Quantum::System::Kernel::Arch::IA32::BootInfo;
   using IO = ::Quantum::System::Kernel::Arch::IA32::IO;
@@ -146,6 +150,9 @@ namespace Quantum::System::Kernel::Devices {
     }
   };
 
+  UInt32 Block::_dmaBufferPhysical = 0;
+  UInt32 Block::_dmaBufferBytes = 0;
+
   void Block::Initialize() {
     _deviceCount = 0;
     _nextDeviceId = 1;
@@ -176,13 +183,13 @@ namespace Quantum::System::Kernel::Devices {
       if (id == 0) {
         Logger::WriteFormatted(
           LogLevel::Warning,
-          "Block: failed to register floppy %c",
+          "BlockDevices: failed to register floppy %c",
           driveLetter
         );
       } else {
         Logger::WriteFormatted(
           LogLevel::Info,
-          "Block: registered floppy %c id=%u type=0x%x",
+          "BlockDevices: registered floppy %c id=%u type=0x%x",
           driveLetter,
           id,
           driveType
@@ -213,16 +220,19 @@ namespace Quantum::System::Kernel::Devices {
       char driveLetter = driveIndex == _floppyDriveAIndex ? 'A' : 'B';
 
       if (id == 0) {
-        Logger::Write(LogLevel::Warning, "Block: failed to register fallback");
+        Logger::Write(
+          LogLevel::Warning,
+          "BlockDevices: failed to register fallback"
+        );
       } else {
         Logger::WriteFormatted(
           LogLevel::Debug,
-          "Block: CMOS empty; using boot drive %c",
+          "BlockDevices: CMOS empty; using boot drive %c",
           driveLetter
         );
       }
     } else {
-      Logger::Write(LogLevel::Debug, "Block: no floppy detected");
+      Logger::Write(LogLevel::Debug, "BlockDevices: no floppy detected");
     }
   }
 
@@ -253,6 +263,56 @@ namespace Quantum::System::Kernel::Devices {
 
       IPC::Send(device->portId, senderId, &msg, messageHeaderBytes);
     }
+  }
+
+  bool Block::AllocateDMABuffer(
+    UInt32 sizeBytes,
+    UInt32& outPhysical,
+    UInt32& outVirtual,
+    UInt32& outSize
+  ) {
+    if (sizeBytes == 0) {
+      return false;
+    }
+
+    if (sizeBytes > ArchMemory::pageSize) {
+      return false;
+    }
+
+    if (_dmaBufferPhysical == 0) {
+      void* page = ArchMemory::AllocatePageBelow(
+        _dmaMaxPhysicalAddress,
+        true
+      );
+
+      if (!page) {
+        return false;
+      }
+
+      _dmaBufferPhysical = reinterpret_cast<UInt32>(page);
+      _dmaBufferBytes = ArchMemory::pageSize;
+    }
+
+    UInt32 directory = Task::GetCurrentAddressSpace();
+
+    if (directory == 0) {
+      return false;
+    }
+
+    Memory::MapPageInAddressSpace(
+      directory,
+      _dmaBufferVirtualBase,
+      _dmaBufferPhysical,
+      true,
+      true,
+      false
+    );
+
+    outPhysical = _dmaBufferPhysical;
+    outVirtual = _dmaBufferVirtualBase;
+    outSize = _dmaBufferBytes;
+
+    return true;
   }
 
   UInt32 Block::Register(Block::Device* device) {

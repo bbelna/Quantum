@@ -24,6 +24,9 @@ namespace Quantum::System::Drivers::Storage::Floppy {
   UInt32 Driver::_deviceSectorSizes[Driver::_maxDevices] = {};
   UInt8 Driver::_deviceIndices[Driver::_maxDevices] = {};
   UInt32 Driver::_deviceCount = 0;
+  UInt32 Driver::_dmaBufferPhysical = 0;
+  UInt8* Driver::_dmaBufferVirtual = nullptr;
+  UInt32 Driver::_dmaBufferBytes = 0;
   volatile UInt32 Driver::_irqPendingCount = 0;
   IPC::Message Driver::_receiveMessage{};
   IPC::Message Driver::_sendMessage{};
@@ -223,6 +226,17 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       Console::WriteLine("Floppy driver failed to create IPC port");
       Task::Exit(1);
     }
+
+    Block::DMABuffer dmaBuffer{};
+
+    if (Block::AllocateDMABuffer(_dmaBufferDefaultBytes, dmaBuffer) != 0) {
+      Console::WriteLine("Floppy driver failed to allocate DMA buffer");
+      Task::Exit(1);
+    }
+
+    _dmaBufferPhysical = dmaBuffer.physical;
+    _dmaBufferVirtual = reinterpret_cast<UInt8*>(dmaBuffer.virtualAddress);
+    _dmaBufferBytes = dmaBuffer.size;
 
     for (UInt32 i = 0; i < _deviceCount; ++i) {
       if (Block::Bind(_deviceIds[i], portId) != 0) {

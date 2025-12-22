@@ -194,6 +194,26 @@ namespace Quantum::ABI::Devices {
       };
 
       /**
+       * DMA buffer descriptor.
+       */
+      struct DMABuffer {
+        /**
+         * Physical address of the DMA buffer.
+         */
+        UInt32 physical;
+
+        /**
+         * Virtual address of the DMA buffer.
+         */
+        void* virtualAddress;
+
+        /**
+         * Size of the DMA buffer in bytes.
+         */
+        UInt32 size;
+      };
+
+      /**
        * Retrieves device info.
        * @param deviceId
        *   Identifier of the device to query.
@@ -257,6 +277,27 @@ namespace Quantum::ABI::Devices {
           SystemCall::Block_Bind,
           deviceId,
           portId,
+          0
+        );
+      }
+
+      /**
+       * Allocates a DMA buffer and maps it into the caller's address space.
+       * @param sizeBytes
+       *   Requested buffer size in bytes.
+       * @param outBuffer
+       *   Receives the DMA buffer descriptor.
+       * @return
+       *   0 on success, non-zero on failure.
+       */
+      static UInt32 AllocateDMABuffer(
+        UInt32 sizeBytes,
+        DMABuffer& outBuffer
+      ) {
+        return InvokeSystemCall(
+          SystemCall::Block_AllocateDMABuffer,
+          sizeBytes,
+          reinterpret_cast<UInt32>(&outBuffer),
           0
         );
       }

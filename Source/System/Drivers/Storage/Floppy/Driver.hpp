@@ -85,6 +85,26 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       static UInt32 _deviceCount;
 
       /**
+       * Default DMA buffer size in bytes.
+       */
+      static constexpr UInt32 _dmaBufferDefaultBytes = 4096;
+
+      /**
+       * DMA buffer physical address.
+       */
+      static UInt32 _dmaBufferPhysical;
+
+      /**
+       * DMA buffer virtual address.
+       */
+      static UInt8* _dmaBufferVirtual;
+
+      /**
+       * DMA buffer size in bytes.
+       */
+      static UInt32 _dmaBufferBytes;
+
+      /**
        * Pending floppy interrupt count.
        */
       static volatile UInt32 _irqPendingCount;
