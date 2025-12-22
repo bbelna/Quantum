@@ -64,7 +64,7 @@ namespace Quantum::ABI {
        */
       static bool GetInfo(Info& out) {
         UInt32 result = InvokeSystemCall(
-          SystemCall::GetInitBundleInfo,
+          SystemCall::InitBundle_GetInfo,
           reinterpret_cast<UInt32>(&out)
         );
 
@@ -80,7 +80,7 @@ namespace Quantum::ABI {
        */
       static UInt32 Spawn(CString name) {
         return InvokeSystemCall(
-          SystemCall::SpawnInitBundle,
+          SystemCall::InitBundle_SpawnTask,
           reinterpret_cast<UInt32>(name)
         );
       }

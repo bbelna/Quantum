@@ -34,7 +34,7 @@ namespace Quantum {
         }
 
         ABI::InvokeSystemCall(
-          ABI::SystemCall::Write,
+          ABI::SystemCall::Console_Write,
           reinterpret_cast<UInt32>(str),
           length
         );
@@ -53,7 +53,7 @@ namespace Quantum {
         UInt32 length = StringLength(str);
 
         ABI::InvokeSystemCall(
-          ABI::SystemCall::WriteLine,
+          ABI::SystemCall::Console_WriteLine,
           reinterpret_cast<UInt32>(str),
           length
         );

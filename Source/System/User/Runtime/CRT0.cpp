@@ -15,7 +15,7 @@ extern "C" [[gnu::section(".text.start")]] [[noreturn]] void Start() {
   int code = Main();
 
   Quantum::ABI::InvokeSystemCall(
-    Quantum::ABI::SystemCall::Exit,
+    Quantum::ABI::SystemCall::Task_Exit,
     static_cast<UInt32>(code)
   );
 
