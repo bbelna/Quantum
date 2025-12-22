@@ -257,7 +257,7 @@ namespace Quantum::System::Kernel::Handlers {
         break;
       }
 
-      case SystemCall::GrantIOAccess: {
+      case SystemCall::Task_GrantIOAccess: {
         if (!Task::IsCurrentTaskCoordinator()) {
           context.eax = 1;
 

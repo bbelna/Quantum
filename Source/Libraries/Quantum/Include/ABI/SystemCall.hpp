@@ -15,9 +15,9 @@ namespace Quantum::ABI {
    * System call identifiers.
    */
   enum class SystemCall : UInt32 {
-    GrantIOAccess = 1,
     Task_Exit = 100,
     Task_Yield = 101,
+    Task_GrantIOAccess = 102,
     Console_Write = 200,
     Console_WriteLine = 201,
     InitBundle_GetInfo = 300,
