@@ -3,7 +3,7 @@
  * (c) 2025 Brandon Belna - MIT License
  *
  * System/Drivers/Storage/Floppy/Driver.cpp
- * User-mode floppy driver entry.
+ * User-mode floppy driver.
  */
 
 #include <ABI/Devices/Block.hpp>
@@ -27,6 +27,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
   UInt32 Driver::_dmaBufferPhysical = 0;
   UInt8* Driver::_dmaBufferVirtual = nullptr;
   UInt32 Driver::_dmaBufferBytes = 0;
+  UInt8 Driver::_currentCylinder[Driver::_maxDevices] = {};
   volatile UInt32 Driver::_irqPendingCount = 0;
   IPC::Message Driver::_receiveMessage{};
   IPC::Message Driver::_sendMessage{};
@@ -152,6 +153,259 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     }
   }
 
+  bool Driver::WaitForIRQ() {
+    const UInt32 maxSpins = 200000;
+
+    for (UInt32 i = 0; i < maxSpins; ++i) {
+      if (_irqPendingCount > 0) {
+        --_irqPendingCount;
+        return true;
+      }
+
+      if ((i & 0x3FF) == 0) {
+        Task::Yield();
+      }
+    }
+
+    return false;
+  }
+
+  bool Driver::ProgramDMARead(UInt32 physicalAddress, UInt32 lengthBytes) {
+    if (lengthBytes == 0 || lengthBytes > 0x10000) {
+      return false;
+    }
+
+    UInt32 endAddress = physicalAddress + lengthBytes - 1;
+
+    if ((physicalAddress & 0xFFFF0000) != (endAddress & 0xFFFF0000)) {
+      return false;
+    }
+
+    IO::Out8(_dmaMaskPort, 0x06);
+    IO::Out8(_dmaClearPort, 0x00);
+    IO::Out8(_dmaModePort, _dmaModeRead);
+
+    IO::Out8(_dmaChannel2AddressPort, static_cast<UInt8>(physicalAddress & 0xFF));
+    IO::Out8(
+      _dmaChannel2AddressPort,
+      static_cast<UInt8>((physicalAddress >> 8) & 0xFF)
+    );
+
+    IO::Out8(
+      _dmaChannel2PagePort,
+      static_cast<UInt8>((physicalAddress >> 16) & 0xFF)
+    );
+
+    UInt32 count = lengthBytes - 1;
+
+    IO::Out8(_dmaChannel2CountPort, static_cast<UInt8>(count & 0xFF));
+    IO::Out8(_dmaChannel2CountPort, static_cast<UInt8>((count >> 8) & 0xFF));
+
+    IO::Out8(_dmaMaskPort, 0x02);
+    return true;
+  }
+
+  void Driver::SetDrive(UInt8 driveIndex, bool motorOn) {
+    UInt8 motorMask = driveIndex == 0 ? _dorMotorA : _dorMotorB;
+    UInt8 value = _dorEnableMask | (driveIndex & 0x03);
+
+    if (motorOn) {
+      value |= motorMask;
+    }
+
+    IO::Out8(_digitalOutputRegisterPort, value);
+  }
+
+  void Driver::WaitForMotorSpinUp() {
+    const UInt32 maxSpins = 20000;
+
+    for (UInt32 i = 0; i < maxSpins; ++i) {
+      IO::Out8(_ioAccessProbePort, 0);
+
+      if ((i & 0x3FF) == 0) {
+        Task::Yield();
+      }
+    }
+  }
+
+  bool Driver::Calibrate(UInt8 driveIndex) {
+    for (UInt32 attempt = 0; attempt < 5; ++attempt) {
+      _irqPendingCount = 0;
+
+      if (!WriteFIFOByte(_commandRecalibrate)) {
+        return false;
+      }
+
+      if (!WriteFIFOByte(driveIndex & 0x03)) {
+        return false;
+      }
+
+      if (!WaitForIRQ()) {
+        continue;
+      }
+
+      UInt8 st0 = 0;
+      UInt8 cyl = 0;
+
+      if (!SenseInterruptStatus(st0, cyl)) {
+        continue;
+      }
+
+      if ((st0 & 0xC0) == 0 && cyl == 0) {
+        _currentCylinder[driveIndex] = 0;
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  bool Driver::Seek(UInt8 driveIndex, UInt8 cylinder, UInt8 head) {
+    _irqPendingCount = 0;
+
+    if (!WriteFIFOByte(_commandSeek)) {
+      return false;
+    }
+
+    UInt8 driveHead = static_cast<UInt8>(((head & 0x01) << 2) | (driveIndex & 0x03));
+
+    if (!WriteFIFOByte(driveHead)) {
+      return false;
+    }
+
+    if (!WriteFIFOByte(cylinder)) {
+      return false;
+    }
+
+    if (!WaitForIRQ()) {
+      return false;
+    }
+
+    UInt8 st0 = 0;
+    UInt8 cyl = 0;
+
+    if (!SenseInterruptStatus(st0, cyl)) {
+      return false;
+    }
+
+    if ((st0 & 0xC0) != 0 || cyl != cylinder) {
+      return false;
+    }
+
+    _currentCylinder[driveIndex] = cylinder;
+    return true;
+  }
+
+  void Driver::LbaToCHS(
+    UInt32 lba,
+    UInt8& cylinder,
+    UInt8& head,
+    UInt8& sector
+  ) {
+    UInt32 track = lba / _sectorsPerTrack;
+
+    sector = static_cast<UInt8>((lba % _sectorsPerTrack) + 1);
+    head = static_cast<UInt8>(track % _headCount);
+    cylinder = static_cast<UInt8>(track / _headCount);
+  }
+
+  bool Driver::ReadSectors(
+    UInt8 driveIndex,
+    UInt32 lba,
+    UInt32 count,
+    UInt32 sectorSize
+  ) {
+    if (count != 1 || sectorSize == 0) {
+      return false;
+    }
+
+    if (_dmaBufferVirtual == nullptr || _dmaBufferBytes < sectorSize) {
+      return false;
+    }
+
+    UInt8 cylinder = 0;
+    UInt8 head = 0;
+    UInt8 sector = 0;
+
+    LbaToCHS(lba, cylinder, head, sector);
+    SetDrive(driveIndex, true);
+    WaitForMotorSpinUp();
+
+    if (_currentCylinder[driveIndex] == 0xFF) {
+      if (!Calibrate(driveIndex)) {
+        return false;
+      }
+    }
+
+    if (_currentCylinder[driveIndex] != cylinder) {
+      if (!Seek(driveIndex, cylinder, head)) {
+        return false;
+      }
+    }
+
+    if (!ProgramDMARead(_dmaBufferPhysical, sectorSize)) {
+      return false;
+    }
+
+    _irqPendingCount = 0;
+
+    if (!WriteFIFOByte(_commandReadData)) {
+      return false;
+    }
+
+    UInt8 driveHead = static_cast<UInt8>(((head & 0x01) << 2) | (driveIndex & 0x03));
+
+    if (!WriteFIFOByte(driveHead)) {
+      return false;
+    }
+
+    if (!WriteFIFOByte(cylinder)) {
+      return false;
+    }
+
+    if (!WriteFIFOByte(head)) {
+      return false;
+    }
+
+    if (!WriteFIFOByte(sector)) {
+      return false;
+    }
+
+    if (!WriteFIFOByte(0x02)) {
+      return false;
+    }
+
+    if (!WriteFIFOByte(_sectorsPerTrack)) {
+      return false;
+    }
+
+    if (!WriteFIFOByte(0x1B)) {
+      return false;
+    }
+
+    if (!WriteFIFOByte(0xFF)) {
+      return false;
+    }
+
+    if (!WaitForIRQ()) {
+      return false;
+    }
+
+    UInt8 result[7] = {};
+
+    for (UInt32 i = 0; i < 7; ++i) {
+      if (!ReadFIFOByte(result[i])) {
+        return false;
+      }
+    }
+
+    if ((result[0] & 0xC0) != 0) {
+      return false;
+    }
+
+    return true;
+  }
+
   bool Driver::RegisterDevice(const Block::Info& info) {
     if (_deviceCount >= _maxDevices) {
       return false;
@@ -238,6 +492,10 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     _dmaBufferVirtual = reinterpret_cast<UInt8*>(dmaBuffer.virtualAddress);
     _dmaBufferBytes = dmaBuffer.size;
 
+    for (UInt32 i = 0; i < _maxDevices; ++i) {
+      _currentCylinder[i] = 0xFF;
+    }
+
     for (UInt32 i = 0; i < _deviceCount; ++i) {
       if (Block::Bind(_deviceIds[i], portId) != 0) {
         Console::WriteLine("Floppy driver failed to bind block device");
@@ -322,8 +580,25 @@ namespace Quantum::System::Drivers::Storage::Floppy {
         if (bytes > Block::messageDataBytes) {
           response.status = 3;
         } else if (request.op == Block::Operation::Read) {
-          response.dataLength = bytes;
-          FillBytes(response.data, 0, bytes);
+          if (_dmaBufferBytes < sectorSize) {
+            response.status = 5;
+          } else {
+            response.dataLength = bytes;
+
+            for (UInt32 i = 0; i < request.count; ++i) {
+              if (!ReadSectors(driveIndex, request.lba + i, 1, sectorSize)) {
+                response.status = 6;
+                response.dataLength = 0;
+                break;
+              }
+
+              CopyBytes(
+                response.data + (i * sectorSize),
+                _dmaBufferVirtual,
+                sectorSize
+              );
+            }
+          }
         } else if (request.op != Block::Operation::Write) {
           response.status = 4;
         }

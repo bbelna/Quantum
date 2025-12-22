@@ -3,7 +3,7 @@
  * (c) 2025 Brandon Belna - MIT License
  *
  * System/Drivers/Storage/Floppy/Driver.hpp
- * User-mode floppy driver entry.
+ * User-mode floppy driver.
  */
 
 #pragma once
@@ -40,6 +40,36 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       static constexpr UInt16 _dataFIFOPort = 0x3F5;
 
       /**
+       * DMA mask register port.
+       */
+      static constexpr UInt16 _dmaMaskPort = 0x0A;
+
+      /**
+       * DMA mode register port.
+       */
+      static constexpr UInt16 _dmaModePort = 0x0B;
+
+      /**
+       * DMA flip-flop reset port.
+       */
+      static constexpr UInt16 _dmaClearPort = 0x0C;
+
+      /**
+       * DMA channel 2 address port.
+       */
+      static constexpr UInt16 _dmaChannel2AddressPort = 0x04;
+
+      /**
+       * DMA channel 2 count port.
+       */
+      static constexpr UInt16 _dmaChannel2CountPort = 0x05;
+
+      /**
+       * DMA channel 2 page port.
+       */
+      static constexpr UInt16 _dmaChannel2PagePort = 0x81;
+
+      /**
        * I/O access probe port (POST delay register).
        */
       static constexpr UInt16 _ioAccessProbePort = 0x80;
@@ -53,6 +83,51 @@ namespace Quantum::System::Drivers::Storage::Floppy {
        * Main status data direction bit mask.
        */
       static constexpr UInt8 _mainStatusDirectionMask = 0x40;
+
+      /**
+       * DOR reset and DMA/IRQ enable bits.
+       */
+      static constexpr UInt8 _dorEnableMask = 0x0C;
+
+      /**
+       * Floppy motor enable mask for drive A.
+       */
+      static constexpr UInt8 _dorMotorA = 0x10;
+
+      /**
+       * Floppy motor enable mask for drive B.
+       */
+      static constexpr UInt8 _dorMotorB = 0x20;
+
+      /**
+       * DMA mode for channel 2 read (device -> memory).
+       */
+      static constexpr UInt8 _dmaModeRead = 0x46;
+
+      /**
+       * Read data command (MFM, multi-track off).
+       */
+      static constexpr UInt8 _commandReadData = 0xE6;
+
+      /**
+       * Recalibrate command.
+       */
+      static constexpr UInt8 _commandRecalibrate = 0x07;
+
+      /**
+       * Seek command.
+       */
+      static constexpr UInt8 _commandSeek = 0x0F;
+
+      /**
+       * Default sectors per track for 1.44MB floppies.
+       */
+      static constexpr UInt8 _sectorsPerTrack = 18;
+
+      /**
+       * Default head count for 1.44MB floppies.
+       */
+      static constexpr UInt8 _headCount = 2;
 
       /**
        * True after the controller is initialized.
@@ -103,6 +178,11 @@ namespace Quantum::System::Drivers::Storage::Floppy {
        * DMA buffer size in bytes.
        */
       static UInt32 _dmaBufferBytes;
+
+      /**
+       * Cached cylinder per drive index.
+       */
+      static UInt8 _currentCylinder[_maxDevices];
 
       /**
        * Pending floppy interrupt count.
@@ -209,6 +289,56 @@ namespace Quantum::System::Drivers::Storage::Floppy {
        *   Number of bytes to fill.
        */
       static void FillBytes(void* dest, UInt8 value, UInt32 length);
+
+      /**
+       * Waits for a floppy IRQ to be delivered.
+       */
+      static bool WaitForIRQ();
+
+      /**
+       * Programs the DMA controller for a floppy read.
+       */
+      static bool ProgramDMARead(UInt32 physicalAddress, UInt32 lengthBytes);
+
+      /**
+       * Selects the target drive and toggles the motor.
+       */
+      static void SetDrive(UInt8 driveIndex, bool motorOn);
+
+      /**
+       * Waits for the motor to spin up.
+       */
+      static void WaitForMotorSpinUp();
+
+      /**
+       * Recalibrates a drive to cylinder 0.
+       */
+      static bool Calibrate(UInt8 driveIndex);
+
+      /**
+       * Seeks to a cylinder/head.
+       */
+      static bool Seek(UInt8 driveIndex, UInt8 cylinder, UInt8 head);
+
+      /**
+       * Converts LBA to CHS for 1.44MB geometry.
+       */
+      static void LbaToCHS(
+        UInt32 lba,
+        UInt8& cylinder,
+        UInt8& head,
+        UInt8& sector
+      );
+
+      /**
+       * Reads one or more sectors into the DMA buffer.
+       */
+      static bool ReadSectors(
+        UInt8 driveIndex,
+        UInt32 lba,
+        UInt32 count,
+        UInt32 sectorSize
+      );
 
       /**
        * Registers a floppy device mapping.

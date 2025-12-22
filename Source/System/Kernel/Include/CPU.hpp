@@ -60,5 +60,15 @@ namespace Quantum::System::Kernel {
        * Pauses the CPU to improve spin-wait loops.
        */
       static void Pause();
+
+      /**
+       * Disables CPU interrupts.
+       */
+      static void DisableInterrupts();
+
+      /**
+       * Enables CPU interrupts.
+       */
+      static void EnableInterrupts();
   };
 }

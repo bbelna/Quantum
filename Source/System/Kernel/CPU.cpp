@@ -23,4 +23,12 @@ namespace Quantum::System::Kernel {
   void CPU::Pause() {
     ArchCPU::Pause();
   }
+
+  void CPU::DisableInterrupts() {
+    ArchCPU::DisableInterrupts();
+  }
+
+  void CPU::EnableInterrupts() {
+    ArchCPU::EnableInterrupts();
+  }
 }

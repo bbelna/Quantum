@@ -565,7 +565,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     return reinterpret_cast<void*>(physicalPageAddress);
   }
 
-  void* Memory::AllocatePageBelow(UInt32 maxPhysicalAddress, bool zero) {
+  void* Memory::AllocatePageBelow(
+    UInt32 maxPhysicalAddress,
+    bool zero,
+    UInt32 boundaryBytes
+  ) {
     if (maxPhysicalAddress == 0) {
       return nullptr;
     }
@@ -581,6 +585,16 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         continue;
       }
 
+      UInt32 physical = pageIndex * _pageSize;
+
+      if (boundaryBytes != 0) {
+        UInt32 offset = physical % boundaryBytes;
+
+        if (offset + _pageSize > boundaryBytes) {
+          continue;
+        }
+      }
+
       SetPageUsed(pageIndex);
       ++_usedPages;
 
@@ -592,7 +606,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         }
       }
 
-      return reinterpret_cast<void*>(pageIndex * _pageSize);
+      return reinterpret_cast<void*>(physical);
     }
 
     return nullptr;

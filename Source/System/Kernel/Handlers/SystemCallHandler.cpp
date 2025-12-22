@@ -49,6 +49,15 @@ namespace Quantum::System::Kernel::Handlers {
         break;
       }
 
+      case SystemCall::WriteLine: {
+        CString buffer = reinterpret_cast<CString>(context.ebx);
+        UInt32 length = context.ecx;
+
+        Console::WriteLine(buffer, length);
+
+        break;
+      }
+
       case SystemCall::Exit: {
         Task::Exit();
 

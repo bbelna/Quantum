@@ -91,7 +91,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        */
       static void* AllocatePageBelow(
         UInt32 maxPhysicalAddress,
-        bool zero = false
+        bool zero = false,
+        UInt32 boundaryBytes = 0
       );
 
       /**

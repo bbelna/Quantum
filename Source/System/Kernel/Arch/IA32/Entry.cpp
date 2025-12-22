@@ -12,7 +12,7 @@
 #include <Arch/IA32/Entry.hpp>
 #include <Arch/IA32/LinkerSymbols.hpp>
 #include <Arch/IA32/TSS.hpp>
-#include <Arch/IA32/VGAConsole.hpp>
+#include <Console.hpp>
 #include <Kernel.hpp>
 #include <Logger.hpp>
 #include <Memory.hpp>
@@ -24,7 +24,7 @@ using CPU = Kernel::Arch::IA32::CPU;
 using Logger = Kernel::Logger;
 using LogLevel = Logger::Level;
 using TSS = Kernel::Arch::IA32::TSS;
-using VGAConsole = Kernel::Arch::IA32::VGAConsole;
+using Console = Kernel::Console;
 using Writer = Kernel::Logger::Writer;
 using BootInfoRaw = Kernel::Arch::IA32::BootInfo::Raw;
 
@@ -156,13 +156,13 @@ void RelocateInitBundle(UInt32 bootInfoPhysicalAddress) {
 }
 
 void InitializeLogging() {
-  VGAConsole::Initialize();
+  Console::Initialize();
 
   static Writer* writerArray[1];
 
-  writerArray[0] = &VGAConsole::GetWriter();
+  writerArray[0] = &Console::GetWriter();
 
-  Logger::Initialize(LogLevel::Info, writerArray, 1);
+  Logger::Initialize(LogLevel::Debug, writerArray, 1);
 
   Bootstrap::TraceBootInfo();
 }

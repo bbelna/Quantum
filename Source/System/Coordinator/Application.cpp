@@ -208,9 +208,22 @@ namespace Quantum::System::Coordinator {
       UInt32 nameLen = EntryNameLength(entry);
 
       if (nameLen > 0) {
-        Console::Write("  ");
-        Console::Write(entry.name);
-        Console::WriteLine("");
+        char line[40] = {};
+        UInt32 writeIndex = 0;
+
+        line[writeIndex++] = ' ';
+        line[writeIndex++] = ' ';
+
+        for (UInt32 j = 0; j < 32 && entry.name[j] != '\0'; ++j) {
+          if (writeIndex + 1 >= sizeof(line)) {
+            break;
+          }
+
+          line[writeIndex++] = entry.name[j];
+        }
+
+        line[writeIndex] = '\0';
+        Console::WriteLine(line);
       } else {
         Console::WriteLine("  (unnamed)");
       }

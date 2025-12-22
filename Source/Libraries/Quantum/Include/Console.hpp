@@ -46,11 +46,16 @@ namespace Quantum {
        *   Null-terminated string to write.
        */
       static inline void WriteLine(CString str) {
-        Write(str);
+        if (!str) {
+          str = "";
+        }
+
+        UInt32 length = StringLength(str);
+
         ABI::InvokeSystemCall(
-          ABI::SystemCall::Write,
-          reinterpret_cast<UInt32>("\n"),
-          1
+          ABI::SystemCall::WriteLine,
+          reinterpret_cast<UInt32>(str),
+          length
         );
       }
 

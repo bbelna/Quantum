@@ -282,7 +282,8 @@ namespace Quantum::System::Kernel::Devices {
     if (_dmaBufferPhysical == 0) {
       void* page = ArchMemory::AllocatePageBelow(
         _dmaMaxPhysicalAddress,
-        true
+        true,
+        0x10000
       );
 
       if (!page) {

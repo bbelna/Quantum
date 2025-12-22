@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <Logger.hpp>
 #include <Types.hpp>
 
 namespace Quantum::System::Kernel {
@@ -52,6 +53,15 @@ namespace Quantum::System::Kernel {
       static void WriteLine(CString str);
 
       /**
+       * Writes a buffer followed by a newline.
+       * @param buffer
+       *   Pointer to bytes to write.
+       * @param length
+       *   Number of bytes to write.
+       */
+      static void WriteLine(CString buffer, UInt32 length);
+
+      /**
        * Writes a formatted string to the console.
        * @param format
        *   Formatted string.
@@ -67,7 +77,27 @@ namespace Quantum::System::Kernel {
        */
       static void WriteHex32(UInt32 value);
 
+      /**
+       * Gets a logger writer that routes messages through the console.
+       * @return
+       *   The logger writer instance.
+       */
+      static Logger::Writer& GetWriter();
+
     private:
+      /**
+       * Logger writer adapter for console output.
+       */
+      class WriterAdapter : public Logger::Writer {
+        public:
+          /**
+           * Writes a message.
+           * @param message
+           *   The message to write.
+           */
+          void Write(String message) override;
+      };
+
       /**
        * Converts an unsigned integer to a string in the given base.
        * @param value

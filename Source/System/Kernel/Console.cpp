@@ -23,6 +23,19 @@ namespace Quantum::System::Kernel {
 
   bool Console::_writing = false;
 
+  Logger::Writer& Console::GetWriter() {
+    static WriterAdapter writerAdapter;
+    return writerAdapter;
+  }
+
+  void Console::WriterAdapter::Write(String message) {
+    if (!message) {
+      return;
+    }
+
+    WriteLine(message);
+  }
+
   void Console::WriteUnsigned(UInt32 value, UInt32 base, bool prefixHex) {
     if (base < 2 || base > 16) {
       return;
@@ -155,9 +168,8 @@ namespace Quantum::System::Kernel {
       return;
     }
 
-    if (_writing) {
-      Console::Write(buffer, length);
-      return;
+    while (_writing) {
+      CPU::Pause();
     }
 
     _writing = true;
@@ -170,8 +182,38 @@ namespace Quantum::System::Kernel {
   }
 
   void Console::WriteLine(CString str) {
-    Write(str);
-    WriteCharacter('\n');
+    if (!str) {
+      return;
+    }
+
+    Size strLength = CStringHelper::Length(str) + 2;
+    char formattedStr[strLength];
+
+    CStringHelper::Concat(
+      str,
+      "\n",
+      formattedStr,
+      strLength
+    );
+
+    Write(formattedStr);
+  }
+
+  void Console::WriteLine(CString buffer, UInt32 length) {
+    if (!buffer || length == 0) {
+      return;
+    }
+
+    char formattedStr[length + 2];
+
+    CStringHelper::Concat(
+      buffer,
+      "\n",
+      formattedStr,
+      length + 2
+    );
+
+    Write(formattedStr, length + 2);
   }
 
   void Console::WriteFormatted(CString format, ...) {
