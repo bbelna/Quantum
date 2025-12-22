@@ -2,7 +2,7 @@
  * Quantum
  * (c) 2025 Brandon Belna - MIT License
  *
- * Libraries/Quantum/Include/ABI/InvokeSystemCall.hpp
+ * Libraries/Quantum/Include/ABI/SystemCall.hpp
  * System call invocation interface.
  */
 
@@ -25,12 +25,12 @@ namespace Quantum::ABI {
     IPC_CreatePort = 400,
     IPC_Send = 401,
     IPC_Receive = 402,
-    IO_In8 = 501,
-    IO_In16 = 502,
-    IO_In32 = 503,
-    IO_Out8 = 504,
-    IO_Out16 = 505,
-    IO_Out32 = 506,
+    IO_In8 = 500,
+    IO_In16 = 501,
+    IO_In32 = 502,
+    IO_Out8 = 503,
+    IO_Out16 = 504,
+    IO_Out32 = 505,
     Block_GetCount = 600,
     Block_GetInfo = 601,
     Block_Read = 602,

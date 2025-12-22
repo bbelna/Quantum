@@ -190,6 +190,26 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       static volatile UInt32 _irqPendingCount;
 
       /**
+       * IPC port id for this driver.
+       */
+      static UInt32 _portId;
+
+      /**
+       * Maximum number of queued non-IRQ messages while waiting.
+       */
+      static constexpr UInt32 _maxPendingMessages = 4;
+
+      /**
+       * Pending IPC messages received during IRQ waits.
+       */
+      static ABI::IPC::Message _pendingMessages[_maxPendingMessages];
+
+      /**
+       * Number of pending IPC messages.
+       */
+      static UInt32 _pendingCount;
+
+      /**
        * IPC receive buffer.
        */
       static ABI::IPC::Message _receiveMessage;
@@ -278,6 +298,33 @@ namespace Quantum::System::Drivers::Storage::Floppy {
        *   Number of bytes to copy.
        */
       static void CopyBytes(void* dest, const void* src, UInt32 length);
+
+      /**
+       * Copies bytes for IPC message parsing.
+       * @param dest
+       *   Destination buffer.
+       * @param src
+       *   Source buffer.
+       * @param length
+       *   Number of bytes to copy.
+       */
+      static void CopyMessageBytes(void* dest, const void* src, UInt32 length);
+
+      /**
+       * Checks whether an IPC message is a floppy IRQ notification.
+       * @param msg
+       *   IPC message to inspect.
+       * @return
+       *   True if the message is an IRQ notification; false otherwise.
+       */
+      static bool IsIRQMessage(const ABI::IPC::Message& msg);
+
+      /**
+       * Queues a non-IRQ message while waiting for an IRQ.
+       * @param msg
+       *   IPC message to queue.
+       */
+      static void QueuePendingMessage(const ABI::IPC::Message& msg);
 
       /**
        * Fills a buffer with a byte value.
