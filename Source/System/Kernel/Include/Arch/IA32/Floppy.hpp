@@ -29,7 +29,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * @return
        *   Updated interrupt context.
        */
-      static Interrupts::Context* FloppyIRQHandler(
+      static Interrupts::Context* IRQHandler(
         Interrupts::Context& context
       );
   };

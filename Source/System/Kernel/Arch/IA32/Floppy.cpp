@@ -15,7 +15,7 @@
 namespace Quantum::System::Kernel::Arch::IA32 {
   using BlockDevice = Kernel::Devices::BlockDevice;
 
-  Interrupts::Context* Floppy::FloppyIRQHandler(
+  Interrupts::Context* Floppy::IRQHandler(
     Interrupts::Context& context
   ) {
     BlockDevice::HandleFloppyIRQ();
@@ -24,7 +24,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   }
 
   void Floppy::Initialize() {
-    Interrupts::RegisterHandler(38, FloppyIRQHandler); // IRQ6 vector
+    Interrupts::RegisterHandler(38, IRQHandler); // IRQ6 vector
     PIC::Unmask(6);
   }
 }
