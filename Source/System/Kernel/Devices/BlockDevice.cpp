@@ -6,232 +6,34 @@
  * Kernel block device registry and interface.
  */
 
-#include "Arch/IA32/BootInfo.hpp"
-#include "Arch/IA32/IO.hpp"
-#include "Arch/IA32/Memory.hpp"
-#include "Arch/IA32/Prelude.hpp"
 #include "Devices/BlockDevice.hpp"
 #include "IPC.hpp"
 #include "Logger.hpp"
 #include "Memory.hpp"
 #include "Task.hpp"
 
+#if defined(QUANTUM_ARCH_IA32)
+#include "Arch/IA32/Memory.hpp"
+#include "Arch/IA32/Prelude.hpp"
+#endif
+
 namespace Quantum::System::Kernel::Devices {
-  using ArchMemory = KernelIA32::Memory;
-  using BootInfo = KernelIA32::BootInfo;
-  using IO = KernelIA32::IO;
   using IPC = Kernel::IPC;
   using LogLevel = Logger::Level;
   using Memory = Kernel::Memory;
   using Task = Kernel::Task;
 
-  UInt8 BlockDevice::ReadCMOSRegister(UInt8 index) {
-    IO::Out8(
-      _cmosAddressPort,
-      static_cast<UInt8>(0x80 | (index & 0x7F))
-    );
-    return IO::In8(_cmosDataPort);
-  }
-
-  bool BlockDevice::TryGetFloppySectorCount(
-    UInt8 driveType,
-    UInt32& sectorCount
-  ) {
-    switch (driveType) {
-      case 0x1: {
-        sectorCount = 40 * 2 * 9;
-
-        return true;
-      }
-
-      case 0x2: {
-        sectorCount = 80 * 2 * 15;
-
-        return true;
-      }
-
-      case 0x3: {
-        sectorCount = 80 * 2 * 9;
-
-        return true;
-      }
-
-      case 0x4: {
-        sectorCount = 80 * 2 * 18;
-
-        return true;
-      }
-
-      case 0x5: {
-        sectorCount = 80 * 2 * 36;
-
-        return true;
-      }
-
-      default: {
-        break;
-      }
-    }
-
-    return false;
-  }
-
-  UInt8 BlockDevice::GetFloppyDriveType(UInt8 driveTypes, UInt8 driveIndex) {
-    if (driveIndex == _floppyDriveAIndex) {
-      return static_cast<UInt8>((driveTypes >> 4) & 0x0F);
-    }
-
-    if (driveIndex == _floppyDriveBIndex) {
-      return static_cast<UInt8>(driveTypes & 0x0F);
-    }
-
-    return 0;
-  }
-
-  bool BlockDevice::DetectFloppyDrive(
-    UInt8 driveTypes,
-    UInt8 driveIndex,
-    UInt8& driveType,
-    UInt32& sectorCount
-  ) {
-    driveType = GetFloppyDriveType(driveTypes, driveIndex);
-
-    if (driveType == 0) {
-      return false;
-    }
-
-    return TryGetFloppySectorCount(driveType, sectorCount);
-  }
-
-  bool BlockDevice::GetBootDrive(UInt8& bootDrive) {
-    const BootInfo::View* bootInfo = BootInfo::Get();
-
-    if (!bootInfo) {
-      return false;
-    }
-
-    UInt32 reserved = bootInfo->reserved;
-
-    if ((reserved & 0xFFFF0000u) != _bootDriveMagic) {
-      return false;
-    }
-
-    bootDrive = static_cast<UInt8>(reserved & 0xFF);
-
-    return true;
-  }
-
-  bool BlockDevice::FloppyStubRead(
-    UInt32 lba,
-    UInt32 count,
-    void* buffer
-  ) {
-    (void)lba;
-    (void)count;
-    (void)buffer;
-
-    return false;
-  }
-
-  bool BlockDevice::FloppyStubWrite(
-    UInt32 lba,
-    UInt32 count,
-    const void* buffer
-  ) {
-    (void)lba;
-    (void)count;
-    (void)buffer;
-
-    return false;
-  }
+  #if defined(QUANTUM_ARCH_IA32)
+  using ArchMemory = KernelIA32::Memory;
+  #endif
 
   void BlockDevice::Initialize() {
     _deviceCount = 0;
     _nextDeviceId = 1;
-
-    UInt8 driveTypes = ReadCMOSRegister(_cmosDriveTypeRegister);
-    bool registered = false;
-
-    for (UInt8 driveIndex = 0; driveIndex < _maxFloppyDevices; ++driveIndex) {
-      UInt8 driveType = 0;
-      UInt32 sectorCount = 0;
-
-      if (!DetectFloppyDrive(driveTypes, driveIndex, driveType, sectorCount)) {
-        continue;
-      }
-
-      BlockDevice::Device& device = _floppyDevices[driveIndex];
-
-      device.info.type = BlockDevice::Type::Floppy;
-      device.info.sectorSize = 512;
-      device.info.sectorCount = sectorCount;
-      device.info.flags = BlockDevice::flagRemovable;
-      device.info.deviceIndex = driveIndex;
-      device.portId = 0;
-
-      UInt32 id = Register(&device);
-      char driveLetter = driveIndex == _floppyDriveAIndex ? 'A' : 'B';
-
-      if (id == 0) {
-        Logger::WriteFormatted(
-          LogLevel::Warning,
-          "BlockDevices: failed to register floppy %c",
-          driveLetter
-        );
-      } else {
-        Logger::WriteFormatted(
-          LogLevel::Info,
-          "BlockDevices: registered floppy %c id=%u type=0x%x",
-          driveLetter,
-          id,
-          driveType
-        );
-
-        registered = true;
-      }
-    }
-
-    if (registered) {
-      return;
-    }
-
-    UInt8 bootDrive = 0xFF;
-
-    if (GetBootDrive(bootDrive) && bootDrive < 0x80) {
-      UInt8 driveIndex = bootDrive == 0x01
-        ? _floppyDriveBIndex
-        : _floppyDriveAIndex;
-      BlockDevice::Device& device = _floppyDevices[driveIndex];
-
-      device.info.type = BlockDevice::Type::Floppy;
-      device.info.sectorSize = 512;
-      device.info.sectorCount = _defaultFloppySectorCount;
-      device.info.flags = BlockDevice::flagRemovable;
-      device.info.deviceIndex = driveIndex;
-      device.portId = 0;
-
-      UInt32 id = Register(&device);
-      char driveLetter = driveIndex == _floppyDriveAIndex ? 'A' : 'B';
-
-      if (id == 0) {
-        Logger::Write(
-          LogLevel::Warning,
-          "BlockDevices: failed to register fallback"
-        );
-      } else {
-        Logger::WriteFormatted(
-          LogLevel::Debug,
-          "BlockDevices: CMOS empty; using boot drive %c",
-          driveLetter
-        );
-      }
-    } else {
-      Logger::Write(LogLevel::Debug, "BlockDevices: no floppy detected");
-    }
   }
 
-  void BlockDevice::HandleFloppyIRQ() {
-    Message msg{};
+  void BlockDevice::NotifyIRQ(Type type) {
+    Message msg {};
 
     msg.op = Operation::Response;
     msg.lba = 0;
@@ -245,11 +47,11 @@ namespace Quantum::System::Kernel::Devices {
     for (UInt32 i = 0; i < _deviceCount; ++i) {
       Device* device = _devices[i];
 
-      if (!device || device->portId == 0) {
-        continue;
-      }
-
-      if (device->info.type != Type::Floppy) {
+      if (
+        !device ||
+        device->portId == 0 ||
+        device->info.type != type
+      ) {
         continue;
       }
 
@@ -265,6 +67,14 @@ namespace Quantum::System::Kernel::Devices {
     UInt32& outVirtual,
     UInt32& outSize
   ) {
+    #if !defined(QUANTUM_ARCH_IA32)
+    (void)sizeBytes;
+    (void)outPhysical;
+    (void)outVirtual;
+    (void)outSize;
+
+    return false;
+    #else
     if (sizeBytes == 0) {
       return false;
     }
@@ -308,6 +118,7 @@ namespace Quantum::System::Kernel::Devices {
     outSize = _dmaBufferBytes;
 
     return true;
+    #endif
   }
 
   UInt32 BlockDevice::Register(BlockDevice::Device* device) {
@@ -354,6 +165,41 @@ namespace Quantum::System::Kernel::Devices {
     return true;
   }
 
+  bool BlockDevice::UpdateInfo(UInt32 deviceId, const BlockDevice::Info& info) {
+    BlockDevice::Device* device = Find(deviceId);
+
+    if (!device) {
+      return false;
+    }
+
+    if (info.id != deviceId || info.type != device->info.type) {
+      return false;
+    }
+
+    if (device->portId == 0) {
+      return false;
+    }
+
+    UInt32 ownerId = 0;
+
+    if (!IPC::GetPortOwner(device->portId, ownerId)) {
+      return false;
+    }
+
+    if (ownerId != Task::GetCurrentId()) {
+      return false;
+    }
+
+    if (info.sectorSize == 0 || info.sectorCount == 0) {
+      return false;
+    }
+
+    device->info.sectorSize = info.sectorSize;
+    device->info.sectorCount = info.sectorCount;
+
+    return true;
+  }
+
   bool BlockDevice::Read(const BlockDevice::Request& request) {
     BlockDevice::Device* device = Find(request.deviceId);
 
@@ -370,14 +216,45 @@ namespace Quantum::System::Kernel::Devices {
     }
 
     if (device->portId != 0) {
-      return SendRequest(*device, request, false);
+      UInt32 sectorSize = device->info.sectorSize;
+      UInt32 maxPerChunk = 0;
+
+      if (sectorSize != 0) {
+        maxPerChunk = messageDataBytes / sectorSize;
+      }
+
+      if (maxPerChunk == 0) {
+        return false;
+      }
+
+      UInt32 remaining = request.count;
+      UInt32 lba = request.lba;
+      UInt8* buffer = reinterpret_cast<UInt8*>(request.buffer);
+
+      while (remaining > 0) {
+        UInt32 toRead = remaining < maxPerChunk ? remaining : maxPerChunk;
+        Request chunk {};
+
+        chunk.deviceId = request.deviceId;
+        chunk.lba = lba;
+        chunk.count = toRead;
+        chunk.buffer = buffer;
+
+        if (!SendRequest(*device, chunk, false)) {
+          return false;
+        }
+
+        UInt32 bytes = toRead * sectorSize;
+
+        remaining -= toRead;
+        lba += toRead;
+        buffer += bytes;
+      }
+
+      return true;
     }
 
-    if (!device->read) {
-      return false;
-    }
-
-    return device->read(request.lba, request.count, request.buffer);
+    return false;
   }
 
   bool BlockDevice::Write(const BlockDevice::Request& request) {
@@ -400,14 +277,46 @@ namespace Quantum::System::Kernel::Devices {
     }
 
     if (device->portId != 0) {
-      return SendRequest(*device, request, true);
+      UInt32 sectorSize = device->info.sectorSize;
+      UInt32 maxPerChunk = 0;
+
+      if (sectorSize != 0) {
+        maxPerChunk = messageDataBytes / sectorSize;
+      }
+
+      if (maxPerChunk == 0) {
+        return false;
+      }
+
+      UInt32 remaining = request.count;
+      UInt32 lba = request.lba;
+      const UInt8* buffer
+        = reinterpret_cast<const UInt8*>(request.buffer);
+
+      while (remaining > 0) {
+        UInt32 toWrite = remaining < maxPerChunk ? remaining : maxPerChunk;
+        Request chunk {};
+
+        chunk.deviceId = request.deviceId;
+        chunk.lba = lba;
+        chunk.count = toWrite;
+        chunk.buffer = const_cast<UInt8*>(buffer);
+
+        if (!SendRequest(*device, chunk, true)) {
+          return false;
+        }
+
+        UInt32 bytes = toWrite * sectorSize;
+
+        remaining -= toWrite;
+        lba += toWrite;
+        buffer += bytes;
+      }
+
+      return true;
     }
 
-    if (!device->write) {
-      return false;
-    }
-
-    return device->write(request.lba, request.count, request.buffer);
+    return false;
   }
 
   BlockDevice::Device* BlockDevice::Find(UInt32 deviceId) {
@@ -488,7 +397,7 @@ namespace Quantum::System::Kernel::Devices {
       return false;
     }
 
-    Message msg{};
+    Message msg {};
 
     msg.op = write ? Operation::Write : Operation::Read;
     msg.deviceId = request.deviceId;
@@ -516,7 +425,7 @@ namespace Quantum::System::Kernel::Devices {
       return false;
     }
 
-    Message response{};
+    Message response {};
 
     UInt32 senderId = 0;
     UInt32 responseLength = 0;

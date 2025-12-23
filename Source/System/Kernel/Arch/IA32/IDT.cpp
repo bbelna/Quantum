@@ -97,7 +97,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   void IDT::Initialize() {
     // zero entire table and handler table
     for (int i = 0; i < 256; ++i) {
-      _idtEntries[i] = IDT::Entry{};
+      _idtEntries[i] = IDT::Entry {};
       _handlerTable[i] = nullptr;
     }
 

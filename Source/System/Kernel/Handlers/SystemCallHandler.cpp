@@ -313,6 +313,24 @@ namespace Quantum::System::Kernel::Handlers {
         break;
       }
 
+      case SystemCall::Block_UpdateInfo: {
+        UInt32 deviceId = context.ebx;
+        BlockDevice::Info* info
+          = reinterpret_cast<BlockDevice::Info*>(context.ecx);
+
+        if (!info) {
+          context.eax = 1;
+
+          break;
+        }
+
+        bool ok = BlockDevice::UpdateInfo(deviceId, *info);
+
+        context.eax = ok ? 0 : 1;
+
+        break;
+      }
+
       case SystemCall::Block_Read: {
         BlockDevice::Request* request
           = reinterpret_cast<BlockDevice::Request*>(context.ebx);
@@ -360,6 +378,7 @@ namespace Quantum::System::Kernel::Handlers {
 
         if (!buffer) {
           context.eax = 1;
+
           break;
         }
 

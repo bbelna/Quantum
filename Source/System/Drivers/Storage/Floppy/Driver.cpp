@@ -211,7 +211,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       return false;
     }
 
-    BlockDevice::Message header{};
+    BlockDevice::Message header {};
     UInt32 copyBytes = msg.length;
 
     if (copyBytes > sizeof(BlockDevice::Message)) {
@@ -220,7 +220,8 @@ namespace Quantum::System::Drivers::Storage::Floppy {
 
     CopyMessageBytes(&header, msg.payload, copyBytes);
 
-    return header.op == BlockDevice::Operation::Response &&
+    return
+      header.op == BlockDevice::Operation::Response &&
       header.replyPortId == 0;
   }
 
@@ -243,7 +244,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       }
 
       if (_portId != 0) {
-        IPC::Message msg{};
+        IPC::Message msg {};
 
         if (IPC::Receive(_portId, msg) == 0) {
           if (IsIRQMessage(msg)) {
@@ -298,6 +299,42 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     return true;
   }
 
+  bool Driver::ProgramDMAWrite(UInt32 physicalAddress, UInt32 lengthBytes) {
+    if (lengthBytes == 0 || lengthBytes > 0x10000) {
+      return false;
+    }
+
+    UInt32 endAddress = physicalAddress + lengthBytes - 1;
+
+    if ((physicalAddress & 0xFFFF0000) != (endAddress & 0xFFFF0000)) {
+      return false;
+    }
+
+    IO::Out8(_dmaMaskPort, 0x06);
+    IO::Out8(_dmaClearPort, 0x00);
+    IO::Out8(_dmaModePort, _dmaModeWrite);
+    IO::Out8(
+      _dmaChannel2AddressPort,
+      static_cast<UInt8>(physicalAddress & 0xFF)
+    );
+    IO::Out8(
+      _dmaChannel2AddressPort,
+      static_cast<UInt8>((physicalAddress >> 8) & 0xFF)
+    );
+    IO::Out8(
+      _dmaChannel2PagePort,
+      static_cast<UInt8>((physicalAddress >> 16) & 0xFF)
+    );
+
+    UInt32 count = lengthBytes - 1;
+
+    IO::Out8(_dmaChannel2CountPort, static_cast<UInt8>(count & 0xFF));
+    IO::Out8(_dmaChannel2CountPort, static_cast<UInt8>((count >> 8) & 0xFF));
+    IO::Out8(_dmaMaskPort, 0x02);
+
+    return true;
+  }
+
   void Driver::SetDrive(UInt8 driveIndex, bool motorOn) {
     UInt8 motorMask = driveIndex == 0 ? _dorMotorA : _dorMotorB;
     UInt8 value = _dorEnableMask | (driveIndex & 0x03);
@@ -307,6 +344,11 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     }
 
     IO::Out8(_digitalOutputRegisterPort, value);
+
+    if (driveIndex < _maxDevices) {
+      _motorOn[driveIndex] = motorOn;
+      _motorIdleCount[driveIndex] = 0;
+    }
   }
 
   void Driver::WaitForMotorSpinUp() {
@@ -318,6 +360,20 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       if ((i & 0x3FF) == 0) {
         Task::Yield();
       }
+    }
+  }
+
+  void Driver::UpdateMotorIdle() {
+    for (UInt32 i = 0; i < _maxDevices; ++i) {
+      if (!_motorOn[i]) {
+        continue;
+      }
+
+      if (++_motorIdleCount[i] < _motorIdleThreshold) {
+        continue;
+      }
+
+      SetDrive(static_cast<UInt8>(i), false);
     }
   }
 
@@ -400,24 +456,36 @@ namespace Quantum::System::Drivers::Storage::Floppy {
 
   void Driver::LBAToCHS(
     UInt32 lba,
+    UInt8 sectorsPerTrack,
+    UInt8 headCount,
     UInt8& cylinder,
     UInt8& head,
     UInt8& sector
   ) {
-    UInt32 track = lba / _sectorsPerTrack;
+    if (sectorsPerTrack == 0 || headCount == 0) {
+      cylinder = 0;
+      head = 0;
+      sector = 1;
 
-    sector = static_cast<UInt8>((lba % _sectorsPerTrack) + 1);
-    head = static_cast<UInt8>(track % _headCount);
-    cylinder = static_cast<UInt8>(track / _headCount);
+      return;
+    }
+
+    UInt32 track = lba / sectorsPerTrack;
+
+    sector = static_cast<UInt8>((lba % sectorsPerTrack) + 1);
+    head = static_cast<UInt8>(track % headCount);
+    cylinder = static_cast<UInt8>(track / headCount);
   }
 
   bool Driver::ReadSectors(
     UInt8 driveIndex,
     UInt32 lba,
     UInt32 count,
-    UInt32 sectorSize
+    UInt32 sectorSize,
+    UInt8 sectorsPerTrack,
+    UInt8 headCount
   ) {
-    if (count != 1 || sectorSize == 0) {
+    if (count == 0 || sectorSize == 0) {
       LogReadFailure("bad request");
 
       return false;
@@ -429,11 +497,15 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       return false;
     }
 
-    UInt8 cylinder = 0;
-    UInt8 head = 0;
-    UInt8 sector = 0;
+    if (sectorsPerTrack == 0 || headCount == 0) {
+      LogReadFailure("bad geometry");
 
-    LBAToCHS(lba, cylinder, head, sector);
+      return false;
+    }
+
+    UInt32 remaining = count;
+    UInt32 currentLba = lba;
+
     SetDrive(driveIndex, true);
     WaitForMotorSpinUp();
 
@@ -445,101 +517,391 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       }
     }
 
-    if (_currentCylinder[driveIndex] != cylinder) {
-      if (!Seek(driveIndex, cylinder, head)) {
-        LogReadFailure("seek");
+    UInt32 size = sectorSize;
+
+    if (size < 128 || (size & (size - 1)) != 0) {
+      LogReadFailure("sector size");
+
+      return false;
+    }
+
+    UInt8 sizeCode = 0;
+
+    while (size > 128) {
+      size >>= 1;
+      ++sizeCode;
+    }
+
+    while (remaining > 0) {
+      UInt8 cylinder = 0;
+      UInt8 head = 0;
+      UInt8 sector = 0;
+
+      LBAToCHS(currentLba, sectorsPerTrack, headCount, cylinder, head, sector);
+
+      UInt32 totalLeft
+        = static_cast<UInt32>((sectorsPerTrack * headCount)
+        - (head * sectorsPerTrack)
+        - (sector - 1));
+      UInt32 toRead = remaining < totalLeft ? remaining : totalLeft;
+      UInt32 bytes = toRead * sectorSize;
+
+      if (bytes > _dmaBufferBytes) {
+        LogReadFailure("DMA buffer too small");
+
+        return false;
+      }
+
+      bool success = false;
+      CString failure = nullptr;
+
+      for (UInt32 attempt = 0; attempt < _maxRetries; ++attempt) {
+        failure = nullptr;
+        if (attempt > 0) {
+          Calibrate(driveIndex);
+        }
+
+        if (_currentCylinder[driveIndex] != cylinder) {
+          if (!Seek(driveIndex, cylinder, head)) {
+            failure = "seek";
+
+            continue;
+          }
+        }
+
+        if (!ProgramDMARead(_dmaBufferPhysical, bytes)) {
+          failure = "DMA program";
+
+          continue;
+        }
+
+        _irqPendingCount = 0;
+
+        bool multiTrack = headCount > 1 && (sector + toRead - 1) > sectorsPerTrack;
+        UInt8 command = multiTrack
+          ? _commandReadDataMultiTrack
+          : _commandReadData;
+
+        if (!WriteFIFOByte(command)) {
+          failure = "write command";
+
+          continue;
+        }
+
+        UInt8 driveHead
+          = static_cast<UInt8>(((head & 0x01) << 2)
+          | (driveIndex & 0x03));
+
+        if (!WriteFIFOByte(driveHead)) {
+          failure = "write drive/head";
+
+          continue;
+        }
+
+        if (!WriteFIFOByte(cylinder)) {
+          failure = "write cylinder";
+
+          continue;
+        }
+
+        if (!WriteFIFOByte(head)) {
+          failure = "write head";
+
+          continue;
+        }
+
+        if (!WriteFIFOByte(sector)) {
+          failure = "write sector";
+
+          continue;
+        }
+
+        if (!WriteFIFOByte(sizeCode)) {
+          failure = "write sector size";
+
+          continue;
+        }
+
+        UInt8 endOfTrack = multiTrack
+          ? sectorsPerTrack
+          : static_cast<UInt8>(sector + toRead - 1);
+
+        if (!WriteFIFOByte(endOfTrack)) {
+          failure = "write EOT";
+
+          continue;
+        }
+
+        if (!WriteFIFOByte(0x1B)) {
+          failure = "write GAP";
+
+          continue;
+        }
+
+        if (!WriteFIFOByte(0xFF)) {
+          failure = "write DTL";
+
+          continue;
+        }
+
+        if (!WaitForIRQ()) {
+          failure = "IRQ timeout";
+
+          continue;
+        }
+
+        UInt8 result[7] = {};
+
+        for (UInt32 i = 0; i < 7; ++i) {
+          if (!ReadFIFOByte(result[i])) {
+            failure = "read result";
+
+            break;
+          }
+        }
+
+        if (failure != nullptr) {
+          continue;
+        }
+
+        if ((result[0] & 0xC0) != 0) {
+          LogResultBytes(result);
+
+          failure = "status error";
+
+          continue;
+        }
+
+        success = true;
+
+        break;
+      }
+
+      if (!success) {
+        if (failure != nullptr) {
+          LogReadFailure(failure);
+        }
+
+        return false;
+      }
+
+      remaining -= toRead;
+      currentLba += toRead;
+    }
+
+    return true;
+  }
+
+  bool Driver::WriteSectors(
+    UInt8 driveIndex,
+    UInt32 lba,
+    UInt32 count,
+    UInt32 sectorSize,
+    UInt8 sectorsPerTrack,
+    UInt8 headCount
+  ) {
+    if (count == 0 || sectorSize == 0) {
+      LogReadFailure("bad request");
+
+      return false;
+    }
+
+    if (sectorsPerTrack == 0 || headCount == 0) {
+      LogReadFailure("bad geometry");
+
+      return false;
+    }
+
+    if (_dmaBufferVirtual == nullptr || _dmaBufferBytes < sectorSize) {
+      LogReadFailure("DMA buffer too small");
+
+      return false;
+    }
+
+    SetDrive(driveIndex, true);
+    WaitForMotorSpinUp();
+
+    if (_currentCylinder[driveIndex] == 0xFF) {
+      if (!Calibrate(driveIndex)) {
+        LogReadFailure("calibrate");
 
         return false;
       }
     }
 
-    if (!ProgramDMARead(_dmaBufferPhysical, sectorSize)) {
-      LogReadFailure("DMA program");
+    UInt32 size = sectorSize;
+
+    if (size < 128 || (size & (size - 1)) != 0) {
+      LogReadFailure("sector size");
 
       return false;
     }
 
-    _irqPendingCount = 0;
+    UInt8 sizeCode = 0;
 
-    if (!WriteFIFOByte(_commandReadData)) {
-      LogReadFailure("write command");
-
-      return false;
+    while (size > 128) {
+      size >>= 1;
+      ++sizeCode;
     }
 
-    UInt8 driveHead
-      = static_cast<UInt8>(((head & 0x01) << 2)
-      | (driveIndex & 0x03));
+    UInt32 remaining = count;
+    UInt32 currentLba = lba;
 
-    if (!WriteFIFOByte(driveHead)) {
-      LogReadFailure("write drive/head");
+    while (remaining > 0) {
+      UInt8 cylinder = 0;
+      UInt8 head = 0;
+      UInt8 sector = 0;
 
-      return false;
-    }
+      LBAToCHS(currentLba, sectorsPerTrack, headCount, cylinder, head, sector);
 
-    if (!WriteFIFOByte(cylinder)) {
-      LogReadFailure("write cylinder");
+      UInt32 totalLeft
+        = static_cast<UInt32>((sectorsPerTrack * headCount)
+        - (head * sectorsPerTrack)
+        - (sector - 1));
+      UInt32 toWrite = remaining < totalLeft ? remaining : totalLeft;
+      UInt32 bytes = toWrite * sectorSize;
 
-      return false;
-    }
-
-    if (!WriteFIFOByte(head)) {
-      LogReadFailure("write head");
-
-      return false;
-    }
-
-    if (!WriteFIFOByte(sector)) {
-      LogReadFailure("write sector");
-
-      return false;
-    }
-
-    if (!WriteFIFOByte(0x02)) {
-      LogReadFailure("write sector size");
-
-      return false;
-    }
-
-    if (!WriteFIFOByte(_sectorsPerTrack)) {
-      LogReadFailure("write EOT");
-
-      return false;
-    }
-
-    if (!WriteFIFOByte(0x1B)) {
-      LogReadFailure("write GAP");
-
-      return false;
-    }
-
-    if (!WriteFIFOByte(0xFF)) {
-      LogReadFailure("write DTL");
-
-      return false;
-    }
-
-    if (!WaitForIRQ()) {
-      LogReadFailure("IRQ timeout");
-
-      return false;
-    }
-
-    UInt8 result[7] = {};
-
-    for (UInt32 i = 0; i < 7; ++i) {
-      if (!ReadFIFOByte(result[i])) {
-        LogReadFailure("read result");
+      if (bytes > _dmaBufferBytes) {
+        LogReadFailure("DMA buffer too small");
 
         return false;
       }
-    }
 
-    if ((result[0] & 0xC0) != 0) {
-      LogResultBytes(result);
-      LogReadFailure("status error");
+      bool success = false;
+      CString failure = nullptr;
 
-      return false;
+      for (UInt32 attempt = 0; attempt < _maxRetries; ++attempt) {
+        failure = nullptr;
+        if (attempt > 0) {
+          Calibrate(driveIndex);
+        }
+
+        if (_currentCylinder[driveIndex] != cylinder) {
+          if (!Seek(driveIndex, cylinder, head)) {
+            failure = "seek";
+
+            continue;
+          }
+        }
+
+        if (!ProgramDMAWrite(_dmaBufferPhysical, bytes)) {
+          failure = "DMA program";
+
+          continue;
+        }
+
+        _irqPendingCount = 0;
+
+        bool multiTrack = headCount > 1 && (sector + toWrite - 1) > sectorsPerTrack;
+        UInt8 command = multiTrack
+          ? _commandWriteDataMultiTrack
+          : _commandWriteData;
+
+        if (!WriteFIFOByte(command)) {
+          failure = "write command";
+
+          continue;
+        }
+
+        UInt8 driveHead
+          = static_cast<UInt8>(((head & 0x01) << 2)
+          | (driveIndex & 0x03));
+
+        if (!WriteFIFOByte(driveHead)) {
+          failure = "write drive/head";
+
+          continue;
+        }
+
+        if (!WriteFIFOByte(cylinder)) {
+          failure = "write cylinder";
+
+          continue;
+        }
+
+        if (!WriteFIFOByte(head)) {
+          failure = "write head";
+
+          continue;
+        }
+
+        if (!WriteFIFOByte(sector)) {
+          failure = "write sector";
+
+          continue;
+        }
+
+        if (!WriteFIFOByte(sizeCode)) {
+          failure = "write sector size";
+
+          continue;
+        }
+
+        UInt8 endOfTrack = multiTrack
+          ? sectorsPerTrack
+          : static_cast<UInt8>(sector + toWrite - 1);
+
+        if (!WriteFIFOByte(endOfTrack)) {
+          failure = "write EOT";
+
+          continue;
+        }
+
+        if (!WriteFIFOByte(0x1B)) {
+          failure = "write GAP";
+
+          continue;
+        }
+
+        if (!WriteFIFOByte(0xFF)) {
+          failure = "write DTL";
+
+          continue;
+        }
+
+        if (!WaitForIRQ()) {
+          failure = "IRQ timeout";
+
+          continue;
+        }
+
+        UInt8 result[7] = {};
+
+        for (UInt32 i = 0; i < 7; ++i) {
+          if (!ReadFIFOByte(result[i])) {
+            failure = "read result";
+
+            break;
+          }
+        }
+
+        if (failure != nullptr) {
+          continue;
+        }
+
+        if ((result[0] & 0xC0) != 0) {
+          LogResultBytes(result);
+
+          failure = "status error";
+
+          continue;
+        }
+
+        success = true;
+
+        break;
+      }
+
+      if (!success) {
+        if (failure != nullptr) {
+          LogReadFailure(failure);
+        }
+
+        return false;
+      }
+
+      remaining -= toWrite;
+      currentLba += toWrite;
     }
 
     return true;
@@ -566,6 +928,9 @@ namespace Quantum::System::Drivers::Storage::Floppy {
 
     _deviceIds[_deviceCount] = deviceId;
     _deviceSectorSizes[_deviceCount] = sectorSize;
+    _deviceSectorCounts[_deviceCount] = info.sectorCount;
+    _deviceSectorsPerTrack[_deviceCount] = _defaultSectorsPerTrack;
+    _deviceHeadCounts[_deviceCount] = _defaultHeadCount;
     _deviceIndices[_deviceCount] = driveIndex;
     _deviceCount++;
 
@@ -575,18 +940,87 @@ namespace Quantum::System::Drivers::Storage::Floppy {
   bool Driver::FindDevice(
     UInt32 deviceId,
     UInt8& driveIndex,
-    UInt32& sectorSize
+    UInt32& sectorSize,
+    UInt32& sectorCount,
+    UInt8& sectorsPerTrack,
+    UInt8& headCount
   ) {
     for (UInt32 i = 0; i < _deviceCount; ++i) {
       if (_deviceIds[i] == deviceId) {
         driveIndex = _deviceIndices[i];
         sectorSize = _deviceSectorSizes[i];
+        sectorCount = _deviceSectorCounts[i];
+        sectorsPerTrack = _deviceSectorsPerTrack[i];
+        headCount = _deviceHeadCounts[i];
 
         return true;
       }
     }
 
     return false;
+  }
+
+  UInt16 Driver::ReadUInt16(const UInt8* base, UInt32 offset) {
+    return static_cast<UInt16>(
+      base[offset] | (static_cast<UInt16>(base[offset + 1]) << 8)
+    );
+  }
+
+  UInt32 Driver::ReadUInt32(const UInt8* base, UInt32 offset) {
+    return static_cast<UInt32>(base[offset])
+      | (static_cast<UInt32>(base[offset + 1]) << 8)
+      | (static_cast<UInt32>(base[offset + 2]) << 16)
+      | (static_cast<UInt32>(base[offset + 3]) << 24);
+  }
+
+  bool Driver::DetectGeometry(
+    UInt8 driveIndex,
+    UInt32& outSectorSize,
+    UInt8& outSectorsPerTrack,
+    UInt8& outHeadCount,
+    UInt32& outSectorCount
+  ) {
+    if (_dmaBufferVirtual == nullptr || _dmaBufferBytes < 512) {
+      return false;
+    }
+
+    if (!ReadSectors(driveIndex, 0, 1, 512, 1, 1)) {
+      return false;
+    }
+
+    const UInt8* bpb = _dmaBufferVirtual;
+    UInt16 bytesPerSector = ReadUInt16(bpb, 11);
+    UInt16 sectorsPerTrack = ReadUInt16(bpb, 24);
+    UInt16 headCount = ReadUInt16(bpb, 26);
+    UInt16 totalSectors16 = ReadUInt16(bpb, 19);
+    UInt32 totalSectors32 = ReadUInt32(bpb, 32);
+    UInt32 totalSectors = totalSectors16 != 0 ? totalSectors16 : totalSectors32;
+
+    if (bytesPerSector == 0 || sectorsPerTrack == 0 || headCount == 0) {
+      return false;
+    }
+
+    if (totalSectors == 0) {
+      return false;
+    }
+
+    if (
+      bytesPerSector < 128 ||
+      (bytesPerSector & (bytesPerSector - 1)) != 0
+    ) {
+      return false;
+    }
+
+    if (sectorsPerTrack > 0xFF || headCount > 0xFF) {
+      return false;
+    }
+
+    outSectorSize = bytesPerSector;
+    outSectorsPerTrack = static_cast<UInt8>(sectorsPerTrack & 0xFF);
+    outHeadCount = static_cast<UInt8>(headCount & 0xFF);
+    outSectorCount = totalSectors;
+
+    return true;
   }
 
   void Driver::Main() {
@@ -597,7 +1031,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     _deviceCount = 0;
 
     for (UInt32 i = 1; i <= count; ++i) {
-      BlockDevice::Info info{};
+      BlockDevice::Info info {};
 
       if (BlockDevice::GetInfo(i, info) != 0) {
         continue;
@@ -624,7 +1058,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
 
     _portId = portId;
 
-    BlockDevice::DMABuffer dmaBuffer{};
+    BlockDevice::DMABuffer dmaBuffer {};
 
     if (BlockDevice::AllocateDMABuffer(_dmaBufferDefaultBytes, dmaBuffer) != 0) {
       Console::WriteLine("Floppy driver failed to allocate DMA buffer");
@@ -667,6 +1101,42 @@ namespace Quantum::System::Drivers::Storage::Floppy {
 
     Console::WriteLine("Floppy driver bound to block device");
 
+    if (_initialized) {
+      for (UInt32 i = 0; i < _deviceCount; ++i) {
+        UInt32 sectorSize = _deviceSectorSizes[i];
+        UInt8 sectorsPerTrack = _deviceSectorsPerTrack[i];
+        UInt8 headCount = _deviceHeadCounts[i];
+        UInt32 sectorCount = _deviceSectorCounts[i];
+        UInt8 driveIndex = _deviceIndices[i];
+
+        if (
+          DetectGeometry(
+            driveIndex,
+            sectorSize,
+            sectorsPerTrack,
+            headCount,
+            sectorCount
+          )
+        ) {
+          _deviceSectorSizes[i] = sectorSize;
+          _deviceSectorsPerTrack[i] = sectorsPerTrack;
+          _deviceHeadCounts[i] = headCount;
+          _deviceSectorCounts[i] = sectorCount;
+
+          BlockDevice::Info updated {};
+
+          updated.id = _deviceIds[i];
+          updated.type = BlockDevice::Type::Floppy;
+          updated.sectorSize = sectorSize;
+          updated.sectorCount = sectorCount;
+          updated.flags = 0;
+          updated.deviceIndex = driveIndex;
+
+          BlockDevice::UpdateInfo(updated.id, updated);
+        }
+      }
+    }
+
     for (;;) {
       IPC::Message& msg = _receiveMessage;
 
@@ -681,6 +1151,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       } else {
         if (IPC::Receive(portId, msg) != 0) {
           Task::Yield();
+          UpdateMotorIdle();
 
           continue;
         }
@@ -724,8 +1195,20 @@ namespace Quantum::System::Drivers::Storage::Floppy {
 
       UInt8 driveIndex = 0;
       UInt32 sectorSize = 0;
+      UInt32 sectorCount = 0;
+      UInt8 sectorsPerTrack = 0;
+      UInt8 headCount = 0;
 
-      if (!FindDevice(request.deviceId, driveIndex, sectorSize)) {
+      if (
+        !FindDevice(
+          request.deviceId,
+          driveIndex,
+          sectorSize,
+          sectorCount,
+          sectorsPerTrack,
+          headCount
+        )
+      ) {
         response.status = 2;
       }
 
@@ -739,25 +1222,102 @@ namespace Quantum::System::Drivers::Storage::Floppy {
         } else if (request.op == BlockDevice::Operation::Read) {
           if (_dmaBufferBytes < sectorSize) {
             response.status = 5;
+          } else if (request.lba + request.count > sectorCount) {
+            response.status = 7;
           } else {
             response.dataLength = bytes;
 
-            for (UInt32 i = 0; i < request.count; ++i) {
-              if (!ReadSectors(driveIndex, request.lba + i, 1, sectorSize)) {
-                response.status = 6;
-                response.dataLength = 0;
+            UInt32 remaining = request.count;
+            UInt32 lba = request.lba;
+            UInt32 offset = 0;
+            UInt32 maxPerChunk = _dmaBufferBytes / sectorSize;
 
-                break;
+            if (maxPerChunk == 0) {
+              response.status = 5;
+              response.dataLength = 0;
+            } else {
+              while (remaining > 0 && response.status == 0) {
+                UInt32 toRead
+                  = remaining < maxPerChunk ? remaining : maxPerChunk;
+
+                if (
+                  !ReadSectors(
+                    driveIndex,
+                    lba,
+                    toRead,
+                    sectorSize,
+                    sectorsPerTrack,
+                    headCount
+                  )
+                ) {
+                  response.status = 6;
+                  response.dataLength = 0;
+
+                  break;
+                }
+
+                UInt32 bytesRead = toRead * sectorSize;
+
+                CopyBytes(
+                  response.data + offset,
+                  _dmaBufferVirtual,
+                  bytesRead
+                );
+
+                remaining -= toRead;
+                lba += toRead;
+                offset += bytesRead;
               }
-
-              CopyBytes(
-                response.data + (i * sectorSize),
-                _dmaBufferVirtual,
-                sectorSize
-              );
             }
           }
-        } else if (request.op != BlockDevice::Operation::Write) {
+        } else if (request.op == BlockDevice::Operation::Write) {
+          if (_dmaBufferBytes < sectorSize) {
+            response.status = 5;
+          } else if (request.lba + request.count > sectorCount) {
+            response.status = 7;
+          } else {
+            UInt32 remaining = request.count;
+            UInt32 lba = request.lba;
+            UInt32 offset = 0;
+            UInt32 maxPerChunk = _dmaBufferBytes / sectorSize;
+
+            if (maxPerChunk == 0) {
+              response.status = 5;
+            } else {
+              while (remaining > 0 && response.status == 0) {
+                UInt32 toWrite
+                  = remaining < maxPerChunk ? remaining : maxPerChunk;
+                UInt32 bytesToWrite = toWrite * sectorSize;
+
+                CopyBytes(
+                  _dmaBufferVirtual,
+                  request.data + offset,
+                  bytesToWrite
+                );
+
+                if (
+                  !WriteSectors(
+                    driveIndex,
+                    lba,
+                    toWrite,
+                    sectorSize,
+                    sectorsPerTrack,
+                    headCount
+                  )
+                ) {
+                  response.status = 6;
+                  response.dataLength = 0;
+
+                  break;
+                }
+
+                remaining -= toWrite;
+                lba += toWrite;
+                offset += bytesToWrite;
+              }
+            }
+          }
+        } else {
           response.status = 4;
         }
       }

@@ -923,7 +923,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   }
 
   Memory::PhysicalAllocatorState Memory::GetPhysicalAllocatorState() {
-    Memory::PhysicalAllocatorState state{};
+    Memory::PhysicalAllocatorState state {};
 
     state.totalPages = _pageCount;
     state.usedPages = _usedPages;

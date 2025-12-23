@@ -10,6 +10,7 @@
 #include <ABI/Devices/BlockDevice.hpp>
 #include <ABI/InitBundle.hpp>
 #include <ABI/IO.hpp>
+#include <ABI/Prelude.hpp>
 #include <ABI/Task.hpp>
 
 #include "Application.hpp"
@@ -100,7 +101,7 @@ namespace Quantum::System::Coordinator {
     _floppyDeviceId = 0;
 
     for (UInt32 i = 1; i <= count; ++i) {
-      BlockDevice::Info info{};
+      BlockDevice::Info info {};
 
       if (BlockDevice::GetInfo(i, info) != 0) {
         continue;
@@ -128,7 +129,7 @@ namespace Quantum::System::Coordinator {
       return;
     }
 
-    BlockDevice::Info info{};
+    BlockDevice::Info info {};
     bool ready = false;
 
     for (UInt32 i = 0; i < 64; ++i) {
@@ -150,7 +151,7 @@ namespace Quantum::System::Coordinator {
     }
 
     UInt8 buffer[512] = {};
-    BlockDevice::Request request{};
+    BlockDevice::Request request {};
 
     request.deviceId = _floppyDeviceId;
     request.lba = 0;
@@ -178,12 +179,341 @@ namespace Quantum::System::Coordinator {
     }
   }
 
+  void Application::TestFloppyMultiSectorRead() {
+    if (_floppyDeviceId == 0) {
+      return;
+    }
+
+    UInt8 buffer[1024] = {};
+    BlockDevice::Request request {};
+
+    request.deviceId = _floppyDeviceId;
+    request.lba = 0;
+    request.count = 2;
+    request.buffer = buffer;
+
+    UInt32 result = BlockDevice::Read(request);
+
+    if (result == 0) {
+      UInt32 nonZeroCount = 0;
+
+      for (UInt32 i = 0; i < sizeof(buffer); ++i) {
+        if (buffer[i] != 0) {
+          nonZeroCount++;
+        }
+      }
+
+      if (nonZeroCount == 0) {
+        Console::WriteLine("Floppy multi-sector read returned empty data");
+      } else {
+        Console::WriteLine("Floppy multi-sector read succeeded");
+      }
+    } else {
+      Console::WriteLine("Floppy multi-sector read returned error");
+    }
+  }
+
+  void Application::TestFloppyWriteReadback() {
+    if (_floppyDeviceId == 0) {
+      return;
+    }
+
+    BlockDevice::Info info {};
+
+    if (BlockDevice::GetInfo(_floppyDeviceId, info) != 0) {
+      return;
+    }
+
+    if ((info.flags & BlockDevice::flagReadOnly) != 0) {
+      Console::WriteLine("Floppy write/read test skipped (read-only)");
+
+      return;
+    }
+
+    UInt32 sectorSize = info.sectorSize != 0 ? info.sectorSize : 512;
+
+    if (sectorSize > 512) {
+      Console::WriteLine("Floppy write/read test skipped (sector size)");
+
+      return;
+    }
+
+    UInt32 totalSectors = info.sectorCount;
+
+    if (totalSectors == 0) {
+      Console::WriteLine("Floppy write/read test skipped (sector count)");
+
+      return;
+    }
+
+    UInt32 scratchLba = totalSectors > 1 ? totalSectors - 1 : 0;
+
+    UInt8 original[512] = {};
+    UInt8 writeData[512] = {};
+    UInt8 verify[512] = {};
+    BlockDevice::Request request {};
+
+    request.deviceId = _floppyDeviceId;
+    request.count = 1;
+    request.lba = scratchLba;
+    request.buffer = original;
+
+    if (BlockDevice::Read(request) != 0) {
+      Console::WriteLine("Floppy write/read test failed (read original)");
+
+      return;
+    }
+
+    for (UInt32 i = 0; i < sectorSize; ++i) {
+      writeData[i] = static_cast<UInt8>(0xA5 ^ i);
+    }
+
+    request.buffer = writeData;
+
+    if (BlockDevice::Write(request) != 0) {
+      Console::WriteLine("Floppy write/read test failed (write)");
+
+      return;
+    }
+
+    request.buffer = verify;
+
+    if (BlockDevice::Read(request) != 0) {
+      Console::WriteLine("Floppy write/read test failed (read verify)");
+
+      return;
+    }
+
+    bool match = true;
+
+    for (UInt32 i = 0; i < sectorSize; ++i) {
+      if (verify[i] != writeData[i]) {
+        match = false;
+
+        break;
+      }
+    }
+
+    if (match) {
+      Console::WriteLine("Floppy write/read test succeeded");
+    } else {
+      Console::WriteLine("Floppy write/read test mismatch");
+    }
+
+    request.buffer = original;
+
+    if (BlockDevice::Write(request) != 0) {
+      Console::WriteLine("Floppy write/read test failed (restore)");
+    }
+  }
+
+  void Application::TestFloppyMultiSectorWriteReadback() {
+    if (_floppyDeviceId == 0) {
+      return;
+    }
+
+    BlockDevice::Info info {};
+
+    if (BlockDevice::GetInfo(_floppyDeviceId, info) != 0) {
+      return;
+    }
+
+    if ((info.flags & BlockDevice::flagReadOnly) != 0) {
+      Console::WriteLine("Floppy multi-sector write skipped (read-only)");
+
+      return;
+    }
+
+    UInt32 sectorSize = info.sectorSize != 0 ? info.sectorSize : 512;
+    constexpr UInt32 sectorCount = 2;
+    constexpr UInt32 maxBytes = 2048;
+    UInt32 totalBytes = sectorSize * sectorCount;
+
+    if (sectorSize == 0 || totalBytes > maxBytes) {
+      Console::WriteLine("Floppy multi-sector write skipped (sector size)");
+
+      return;
+    }
+
+    UInt32 totalSectors = info.sectorCount;
+
+    if (totalSectors < sectorCount) {
+      Console::WriteLine("Floppy multi-sector write skipped (sector count)");
+
+      return;
+    }
+
+    UInt32 scratchLba = totalSectors - sectorCount;
+    UInt8 original[maxBytes] = {};
+    UInt8 writeData[maxBytes] = {};
+    UInt8 verify[maxBytes] = {};
+    BlockDevice::Request request {};
+
+    request.deviceId = _floppyDeviceId;
+    request.count = sectorCount;
+    request.lba = scratchLba;
+    request.buffer = original;
+
+    if (BlockDevice::Read(request) != 0) {
+      Console::WriteLine("Floppy multi-sector write failed (read original)");
+
+      return;
+    }
+
+    for (UInt32 i = 0; i < totalBytes; ++i) {
+      writeData[i] = static_cast<UInt8>(0x5A ^ i);
+    }
+
+    request.buffer = writeData;
+
+    if (BlockDevice::Write(request) != 0) {
+      Console::WriteLine("Floppy multi-sector write failed (write)");
+
+      return;
+    }
+
+    request.buffer = verify;
+
+    if (BlockDevice::Read(request) != 0) {
+      Console::WriteLine("Floppy multi-sector write failed (read verify)");
+
+      return;
+    }
+
+    bool match = true;
+
+    for (UInt32 i = 0; i < totalBytes; ++i) {
+      if (verify[i] != writeData[i]) {
+        match = false;
+
+        break;
+      }
+    }
+
+    if (match) {
+      Console::WriteLine("Floppy multi-sector write succeeded");
+    } else {
+      Console::WriteLine("Floppy multi-sector write mismatch");
+    }
+
+    request.buffer = original;
+
+    if (BlockDevice::Write(request) != 0) {
+      Console::WriteLine("Floppy multi-sector write failed (restore)");
+    }
+  }
+
+  void Application::TestFloppyCrossTrackWriteReadback() {
+    if (_floppyDeviceId == 0) {
+      return;
+    }
+
+    BlockDevice::Info info{};
+
+    if (BlockDevice::GetInfo(_floppyDeviceId, info) != 0) {
+      return;
+    }
+
+    if ((info.flags & BlockDevice::flagReadOnly) != 0) {
+      Console::WriteLine("Floppy cross-track write skipped (read-only)");
+
+      return;
+    }
+
+    UInt32 sectorSize = info.sectorSize != 0 ? info.sectorSize : 512;
+    constexpr UInt32 sectorCount = 4;
+    constexpr UInt32 maxBytes = 2048;
+    constexpr UInt32 assumedSectorsPerTrack = 18;
+    UInt32 totalBytes = sectorSize * sectorCount;
+
+    if (sectorSize == 0 || totalBytes > maxBytes) {
+      Console::WriteLine("Floppy cross-track write skipped (sector size)");
+
+      return;
+    }
+
+    UInt32 totalSectors = info.sectorCount;
+
+    if (totalSectors < sectorCount) {
+      Console::WriteLine("Floppy cross-track write skipped (sector count)");
+
+      return;
+    }
+
+    UInt32 scratchLba = totalSectors - sectorCount;
+    UInt32 trackBase = (scratchLba / assumedSectorsPerTrack)
+      * assumedSectorsPerTrack;
+    UInt32 desiredLba = trackBase + (assumedSectorsPerTrack - 2);
+
+    if (desiredLba + sectorCount > totalSectors) {
+      desiredLba = scratchLba;
+    }
+
+    UInt8 original[maxBytes] = {};
+    UInt8 writeData[maxBytes] = {};
+    UInt8 verify[maxBytes] = {};
+
+    BlockDevice::Request request{};
+    request.deviceId = _floppyDeviceId;
+    request.count = sectorCount;
+    request.lba = desiredLba;
+    request.buffer = original;
+
+    if (BlockDevice::Read(request) != 0) {
+      Console::WriteLine("Floppy cross-track write failed (read original)");
+
+      return;
+    }
+
+    for (UInt32 i = 0; i < totalBytes; ++i) {
+      writeData[i] = static_cast<UInt8>(0x3C ^ i);
+    }
+
+    request.buffer = writeData;
+
+    if (BlockDevice::Write(request) != 0) {
+      Console::WriteLine("Floppy cross-track write failed (write)");
+
+      return;
+    }
+
+    request.buffer = verify;
+
+    if (BlockDevice::Read(request) != 0) {
+      Console::WriteLine("Floppy cross-track write failed (read verify)");
+
+      return;
+    }
+
+    bool match = true;
+
+    for (UInt32 i = 0; i < totalBytes; ++i) {
+      if (verify[i] != writeData[i]) {
+        match = false;
+
+        break;
+      }
+    }
+
+    if (match) {
+      Console::WriteLine("Floppy cross-track write succeeded");
+    } else {
+      Console::WriteLine("Floppy cross-track write mismatch");
+    }
+
+    request.buffer = original;
+
+    if (BlockDevice::Write(request) != 0) {
+      Console::WriteLine("Floppy cross-track write failed (restore)");
+    }
+  }
+
   void Application::Main() {
     Console::WriteLine("Coordinator initialized");
 
     _floppyPresent = HasFloppyDevice();
 
-    InitBundle::Info info{};
+    InitBundle::Info info {};
 
     bool ok = InitBundle::GetInfo(info);
 
@@ -251,6 +581,10 @@ namespace Quantum::System::Coordinator {
 
     if (_floppyPresent) {
       TestFloppyBlockRead();
+      TestFloppyMultiSectorRead();
+      TestFloppyWriteReadback();
+      TestFloppyMultiSectorWriteReadback();
+      TestFloppyCrossTrackWriteReadback();
     }
 
     Console::WriteLine("INIT.BND parsed");

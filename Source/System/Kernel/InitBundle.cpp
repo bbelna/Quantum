@@ -22,7 +22,7 @@ namespace Quantum::System::Kernel {
   using LogLevel = Logger::Level;
 
   void InitBundle::MapInitBundle() {
-    BootInfo::InitBundleInfo initBundle{};
+    BootInfo::InitBundleInfo initBundle {};
 
     if (!BootInfo::GetInitBundleInfo(initBundle)) {
       return;
@@ -426,7 +426,7 @@ namespace Quantum::System::Kernel {
           raw1
         );
 
-        BootInfo::InitBundleInfo initInfo{};
+        BootInfo::InitBundleInfo initInfo {};
 
         if (BootInfo::GetInitBundleInfo(initInfo)) {
           const UInt8* physBase

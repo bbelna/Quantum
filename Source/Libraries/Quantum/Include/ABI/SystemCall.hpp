@@ -36,7 +36,8 @@ namespace Quantum::ABI {
     Block_Read = 602,
     Block_Write = 603,
     Block_Bind = 604,
-    Block_AllocateDMABuffer = 605
+    Block_AllocateDMABuffer = 605,
+    Block_UpdateInfo = 606
   };
 
   /**

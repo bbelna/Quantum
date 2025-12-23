@@ -811,7 +811,7 @@ namespace Quantum::System::Kernel {
   }
 
   Memory::HeapState Memory::GetHeapState() {
-    Memory::HeapState state{};
+    Memory::HeapState state {};
 
     UInt32 freeBytes = 0;
     UInt32 blocks = 0;

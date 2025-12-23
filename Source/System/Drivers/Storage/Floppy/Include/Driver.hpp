@@ -109,9 +109,29 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       static constexpr UInt8 _dmaModeRead = 0x46;
 
       /**
+       * DMA mode for channel 2 write (memory -> device).
+       */
+      static constexpr UInt8 _dmaModeWrite = 0x4A;
+
+      /**
        * Read data command (MFM, multi-track off).
        */
       static constexpr UInt8 _commandReadData = 0xE6;
+
+      /**
+       * Write data command (MFM, multi-track off).
+       */
+      static constexpr UInt8 _commandWriteData = 0xC5;
+
+      /**
+       * Read data command with multi-track enabled.
+       */
+      static constexpr UInt8 _commandReadDataMultiTrack = 0xE6 | 0x80;
+
+      /**
+       * Write data command with multi-track enabled.
+       */
+      static constexpr UInt8 _commandWriteDataMultiTrack = 0xC5 | 0x80;
 
       /**
        * Recalibrate command.
@@ -126,12 +146,12 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       /**
        * Default sectors per track for 1.44MB floppies.
        */
-      static constexpr UInt8 _sectorsPerTrack = 18;
+      static constexpr UInt8 _defaultSectorsPerTrack = 18;
 
       /**
        * Default head count for 1.44MB floppies.
        */
-      static constexpr UInt8 _headCount = 2;
+      static constexpr UInt8 _defaultHeadCount = 2;
 
       /**
        * True after the controller is initialized.
@@ -144,6 +164,11 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       static constexpr UInt32 _maxDevices = 2;
 
       /**
+       * Maximum read/write retry attempts.
+       */
+      static constexpr UInt32 _maxRetries = 3;
+
+      /**
        * Bound block device identifiers.
        */
       inline static UInt32 _deviceIds[_maxDevices] = {};
@@ -152,6 +177,21 @@ namespace Quantum::System::Drivers::Storage::Floppy {
        * Device sector sizes in bytes.
        */
       inline static UInt32 _deviceSectorSizes[_maxDevices] = {};
+
+      /**
+       * Device sector counts.
+       */
+      inline static UInt32 _deviceSectorCounts[_maxDevices] = {};
+
+      /**
+       * Device sectors per track.
+       */
+      inline static UInt8 _deviceSectorsPerTrack[_maxDevices] = {};
+
+      /**
+       * Device head counts.
+       */
+      inline static UInt8 _deviceHeadCounts[_maxDevices] = {};
 
       /**
        * Device indices (A=0, B=1).
@@ -192,6 +232,21 @@ namespace Quantum::System::Drivers::Storage::Floppy {
        * Pending floppy interrupt count.
        */
       inline static volatile UInt32 _irqPendingCount = 0;
+
+      /**
+       * Motor idle threshold (yield ticks before shutoff).
+       */
+      static constexpr UInt32 _motorIdleThreshold = 4000;
+
+      /**
+       * Motor state per drive index.
+       */
+      inline static bool _motorOn[_maxDevices] = {};
+
+      /**
+       * Motor idle counters per drive index.
+       */
+      inline static UInt32 _motorIdleCount[_maxDevices] = {};
 
       /**
        * IPC port id for this driver.
@@ -352,9 +407,19 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       static bool ProgramDMARead(UInt32 physicalAddress, UInt32 lengthBytes);
 
       /**
+       * Programs the DMA controller for a floppy write.
+       */
+      static bool ProgramDMAWrite(UInt32 physicalAddress, UInt32 lengthBytes);
+
+      /**
        * Selects the target drive and toggles the motor.
        */
       static void SetDrive(UInt8 driveIndex, bool motorOn);
+
+      /**
+       * Updates motor idle tracking and powers down as needed.
+       */
+      static void UpdateMotorIdle();
 
       /**
        * Waits for the motor to spin up.
@@ -372,10 +437,24 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       static bool Seek(UInt8 driveIndex, UInt8 cylinder, UInt8 head);
 
       /**
-       * Converts LBA to CHS for 1.44MB geometry.
+       * Converts LBA to CHS using the provided geometry.
+       * @param lba
+       *   Logical block address.
+       * @param sectorsPerTrack
+       *   Sectors per track for the drive.
+       * @param headCount
+       *   Number of heads for the drive.
+       * @param cylinder
+       *   Receives the cylinder.
+       * @param head
+       *   Receives the head.
+       * @param sector
+       *   Receives the sector (1-based).
        */
       static void LBAToCHS(
         UInt32 lba,
+        UInt8 sectorsPerTrack,
+        UInt8 headCount,
         UInt8& cylinder,
         UInt8& head,
         UInt8& sector
@@ -383,12 +462,94 @@ namespace Quantum::System::Drivers::Storage::Floppy {
 
       /**
        * Reads one or more sectors into the DMA buffer.
+       * @param driveIndex
+       *   Target drive index.
+       * @param lba
+       *   Starting logical block address.
+       * @param count
+       *   Number of sectors to read.
+       * @param sectorSize
+       *   Sector size in bytes.
+       * @param sectorsPerTrack
+       *   Sectors per track for the drive.
+       * @param headCount
+       *   Head count for the drive.
        */
       static bool ReadSectors(
         UInt8 driveIndex,
         UInt32 lba,
         UInt32 count,
-        UInt32 sectorSize
+        UInt32 sectorSize,
+        UInt8 sectorsPerTrack,
+        UInt8 headCount
+      );
+
+      /**
+       * Writes one or more sectors from the DMA buffer.
+       * @param driveIndex
+       *   Target drive index.
+       * @param lba
+       *   Starting logical block address.
+       * @param count
+       *   Number of sectors to write.
+       * @param sectorSize
+       *   Sector size in bytes.
+       * @param sectorsPerTrack
+       *   Sectors per track for the drive.
+       * @param headCount
+       *   Head count for the drive.
+       */
+      static bool WriteSectors(
+        UInt8 driveIndex,
+        UInt32 lba,
+        UInt32 count,
+        UInt32 sectorSize,
+        UInt8 sectorsPerTrack,
+        UInt8 headCount
+      );
+      /**
+       * Reads a little-endian 16-bit value from a buffer.
+       * @param base
+       *   Base pointer.
+       * @param offset
+       *   Offset in bytes.
+       * @return
+       *   16-bit value.
+       */
+      static UInt16 ReadUInt16(const UInt8* base, UInt32 offset);
+
+      /**
+       * Reads a little-endian 32-bit value from a buffer.
+       * @param base
+       *   Base pointer.
+       * @param offset
+       *   Offset in bytes.
+       * @return
+       *   32-bit value.
+       */
+      static UInt32 ReadUInt32(const UInt8* base, UInt32 offset);
+
+      /**
+       * Detects drive geometry from the boot sector.
+       * @param driveIndex
+       *   Drive index to probe.
+       * @param outSectorSize
+       *   Receives the detected sector size.
+       * @param outSectorsPerTrack
+       *   Receives the sectors per track.
+       * @param outHeadCount
+       *   Receives the head count.
+       * @param outSectorCount
+       *   Receives the total sector count.
+       * @return
+       *   True if geometry was detected; false otherwise.
+       */
+      static bool DetectGeometry(
+        UInt8 driveIndex,
+        UInt32& outSectorSize,
+        UInt8& outSectorsPerTrack,
+        UInt8& outHeadCount,
+        UInt32& outSectorCount
       );
 
       /**
@@ -414,7 +575,10 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       static bool FindDevice(
         UInt32 deviceId,
         UInt8& driveIndex,
-        UInt32& sectorSize
+        UInt32& sectorSize,
+        UInt32& sectorCount,
+        UInt8& sectorsPerTrack,
+        UInt8& headCount
       );
   };
 }

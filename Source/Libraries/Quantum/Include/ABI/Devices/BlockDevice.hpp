@@ -114,30 +114,6 @@ namespace Quantum::ABI::Devices {
       };
 
       /**
-       * Returns the number of block devices.
-       * @return
-       *   Number of registered devices.
-       */
-      static UInt32 GetCount() {
-        return InvokeSystemCall(SystemCall::Block_GetCount);
-      }
-
-      /**
-       * Block device read only flag.
-       */
-      static constexpr UInt32 flagReadOnly = 1u << 0;
-
-      /**
-       * Block device removable media flag.
-       */
-      static constexpr UInt32 flagRemovable = 1u << 1;
-
-      /**
-       * Block device ready flag.
-       */
-      static constexpr UInt32 flagReady = 1u << 2;
-
-      /**
        * IPC message header size in bytes.
        */
       static constexpr UInt32 messageHeaderBytes = 7 * sizeof(UInt32);
@@ -214,6 +190,35 @@ namespace Quantum::ABI::Devices {
       };
 
       /**
+       * Block device read only flag.
+       */
+      static constexpr UInt32 flagReadOnly = 1u << 0;
+
+      /**
+       * Block device removable media flag.
+       */
+      static constexpr UInt32 flagRemovable = 1u << 1;
+
+      /**
+       * Block device ready flag.
+       */
+      static constexpr UInt32 flagReady = 1u << 2;
+
+      /**
+       * Maximum sector size supported by WritePartial.
+       */
+      static constexpr UInt32 helperMaxBytes = 4096;
+
+      /**
+       * Returns the number of block devices.
+       * @return
+       *   Number of registered devices.
+       */
+      static UInt32 GetCount() {
+        return InvokeSystemCall(SystemCall::Block_GetCount);
+      }
+
+      /**
        * Retrieves device info.
        * @param deviceId
        *   Identifier of the device to query.
@@ -232,6 +237,24 @@ namespace Quantum::ABI::Devices {
       }
 
       /**
+       * Updates device info for a bound device.
+       * @param deviceId
+       *   Device identifier to update.
+       * @param info
+       *   Updated info payload (id and type must match).
+       * @return
+       *   0 on success, non-zero on failure.
+       */
+      static UInt32 UpdateInfo(UInt32 deviceId, const Info& info) {
+        return InvokeSystemCall(
+          SystemCall::Block_UpdateInfo,
+          deviceId,
+          reinterpret_cast<UInt32>(&info),
+          0
+        );
+      }
+
+      /**
        * Reads blocks from a device.
        * @param request
        *   Block I/O request descriptor.
@@ -245,6 +268,69 @@ namespace Quantum::ABI::Devices {
           0,
           0
         );
+      }
+
+      /**
+       * Writes a byte range within a single sector.
+       * @param deviceId
+       *   Device identifier.
+       * @param lba
+       *   Target logical block address.
+       * @param offsetBytes
+       *   Byte offset within the sector.
+       * @param data
+       *   Source data to write.
+       * @param lengthBytes
+       *   Number of bytes to write.
+       * @return
+       *   0 on success, non-zero on failure.
+       */
+      static UInt32 WritePartial(
+        UInt32 deviceId,
+        UInt32 lba,
+        UInt32 offsetBytes,
+        const void* data,
+        UInt32 lengthBytes
+      ) {
+        if (!data || lengthBytes == 0) {
+          return 1;
+        }
+
+        Info info {};
+
+        if (GetInfo(deviceId, info) != 0) {
+          return 2;
+        }
+
+        UInt32 sectorSize = info.sectorSize;
+
+        if (sectorSize == 0 || sectorSize > helperMaxBytes) {
+          return 3;
+        }
+
+        if (offsetBytes + lengthBytes > sectorSize) {
+          return 4;
+        }
+
+        UInt8 buffer[helperMaxBytes] = {};
+        Request request {};
+
+        request.deviceId = deviceId;
+        request.lba = lba;
+        request.count = 1;
+        request.buffer = buffer;
+
+        if (Read(request) != 0) {
+          return 5;
+        }
+
+        const UInt8* src = reinterpret_cast<const UInt8*>(data);
+
+        for (UInt32 i = 0; i < lengthBytes; ++i) {
+          buffer[offsetBytes + i] = src[i];
+        }
+
+        return Write(request);
       }
 
       /**

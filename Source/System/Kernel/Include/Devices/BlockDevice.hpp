@@ -113,36 +113,6 @@ namespace Quantum::System::Kernel::Devices {
       };
 
       /**
-       * Device I/O callback.
-       * @param lba
-       *   Starting logical block address.
-       * @param count
-       *   Number of sectors to read.
-       * @param buffer
-       *   Pointer to the data buffer.
-       * @return
-       *   True on success; false on failure.
-       */
-      typedef bool (*ReadCallback)(UInt32 lba, UInt32 count, void* buffer);
-
-      /**
-       * Device write callback.
-       * @param lba
-       *   Starting logical block address.
-       * @param count
-       *   Number of sectors to write.
-       * @param buffer
-       *   Pointer to the data buffer.
-       * @return
-       *   True on success; false on failure.
-       */
-      typedef bool (*WriteCallback)(
-        UInt32 lba,
-        UInt32 count,
-        const void* buffer
-      );
-
-      /**
        * Registered device descriptor.
        */
       struct Device {
@@ -155,32 +125,7 @@ namespace Quantum::System::Kernel::Devices {
          * IPC port bound to the device (0 if unbound).
          */
         UInt32 portId;
-
-        /**
-         * Read callback for the device.
-         */
-        ReadCallback read;
-
-        /**
-         * Write callback for the device.
-         */
-        WriteCallback write;
       };
-
-      /**
-       * Device is read-only.
-       */
-      static constexpr UInt32 flagReadOnly = 1u << 0;
-
-      /**
-       * Device is removable media.
-       */
-      static constexpr UInt32 flagRemovable = 1u << 1;
-
-      /**
-       * Device is initialized and ready for I/O.
-       */
-      static constexpr UInt32 flagReady = 1u << 2;
 
       /**
        * IPC message header size in bytes.
@@ -239,14 +184,31 @@ namespace Quantum::System::Kernel::Devices {
       };
 
       /**
+       * Device is read-only.
+       */
+      static constexpr UInt32 flagReadOnly = 1u << 0;
+
+      /**
+       * Device is removable media.
+       */
+      static constexpr UInt32 flagRemovable = 1u << 1;
+
+      /**
+       * Device is initialized and ready for I/O.
+       */
+      static constexpr UInt32 flagReady = 1u << 2;
+
+      /**
        * Initializes the block device registry.
        */
       static void Initialize();
 
       /**
-       * Handles a floppy controller interrupt notification.
+       * Notifies bound drivers of an interrupt for a device type.
+       * @param type
+       *   Device type that generated the interrupt.
        */
-      static void HandleFloppyIRQ();
+      static void NotifyIRQ(Type type);
 
       /**
        * Allocates a DMA buffer for block device drivers.
@@ -316,6 +278,17 @@ namespace Quantum::System::Kernel::Devices {
       static bool GetInfo(UInt32 deviceId, Info& outInfo);
 
       /**
+       * Updates device info for a bound device.
+       * @param deviceId
+       *   Identifier of the device to update.
+       * @param info
+       *   Updated info payload (id and type must match).
+       * @return
+       *   True on success; false otherwise.
+       */
+      static bool UpdateInfo(UInt32 deviceId, const Info& info);
+
+      /**
        * Reads blocks from a device.
        * @param request
        *   Block I/O request.
@@ -338,46 +311,6 @@ namespace Quantum::System::Kernel::Devices {
        * Maximum number of registered devices.
        */
       static constexpr UInt32 _maxDevices = 8;
-
-      /**
-       * Maximum number of floppy devices to register.
-       */
-      static constexpr UInt32 _maxFloppyDevices = 2;
-
-      /**
-       * Floppy drive index for drive A.
-       */
-      static constexpr UInt8 _floppyDriveAIndex = 0;
-
-      /**
-       * Floppy drive index for drive B.
-       */
-      static constexpr UInt8 _floppyDriveBIndex = 1;
-
-      /**
-       * CMOS address port.
-       */
-      static constexpr UInt16 _cmosAddressPort = 0x70;
-
-      /**
-       * CMOS data port.
-       */
-      static constexpr UInt16 _cmosDataPort = 0x71;
-
-      /**
-       * CMOS register index for floppy drive types.
-       */
-      static constexpr UInt8 _cmosDriveTypeRegister = 0x10;
-
-      /**
-       * Magic tag for boot drive stored in boot info reserved field.
-       */
-      static constexpr UInt32 _bootDriveMagic = 0x424F0000;
-
-      /**
-       * Default sector count for a 1.44MB floppy.
-       */
-      static constexpr UInt32 _defaultFloppySectorCount = 80 * 2 * 18;
 
       /**
        * DMA buffer virtual base for driver mappings.
@@ -424,69 +357,6 @@ namespace Quantum::System::Kernel::Devices {
       static Device* Find(UInt32 deviceId);
 
       /**
-       * Reads a CMOS register value.
-       * @param index
-       *   Register index to read.
-       * @return
-       *   Value of the register.
-       */
-      static UInt8 ReadCMOSRegister(UInt8 index);
-
-      /**
-       * Maps a floppy drive type to a sector count.
-       * @param driveType
-       *   Drive type identifier.
-       * @param sectorCount
-       *   Receives the sector count.
-       * @return
-       *   True on success; false if unknown type.
-       */
-      static bool TryGetFloppySectorCount(
-        UInt8 driveType,
-        UInt32& sectorCount
-      );
-
-      /**
-       * Extracts a drive type from the CMOS drive type register.
-       * @param driveTypes
-       *   CMOS drive types byte.
-       * @param driveIndex
-       *   Drive index (0 = A, 1 = B).
-       * @return
-       *   Drive type identifier.
-       */
-      static UInt8 GetFloppyDriveType(UInt8 driveTypes, UInt8 driveIndex);
-
-      /**
-       * Detects a floppy drive from CMOS for the given drive index.
-       * @param driveTypes
-       *   CMOS drive types byte.
-       * @param driveIndex
-       *   Drive index (0 = A, 1 = B).
-       * @param driveType
-       *   Receives the detected drive type.
-       * @param sectorCount
-       *   Receives the detected sector count.
-       * @return
-       *   True if a drive is present; false otherwise.
-       */
-      static bool DetectFloppyDrive(
-        UInt8 driveTypes,
-        UInt8 driveIndex,
-        UInt8& driveType,
-        UInt32& sectorCount
-      );
-
-      /**
-       * Retrieves the BIOS boot drive from boot info.
-       * @param bootDrive
-       *   Receives the boot drive identifier.
-       * @return
-       *   True on success; false on failure.
-       */
-      static bool GetBootDrive(UInt8& bootDrive);
-
-      /**
        * Validates a block request against the device info.
        * @param device
        *   Target device.
@@ -522,47 +392,5 @@ namespace Quantum::System::Kernel::Devices {
        *   Number of bytes to copy.
        */
       static void CopyBytes(void* dest, const void* src, UInt32 length);
-
-      /**
-       * Temporary stub read callback for uninitialized floppy devices.
-       */
-      static bool FloppyStubRead(UInt32 lba, UInt32 count, void* buffer);
-
-      /**
-       * Temporary stub write callback for uninitialized floppy devices.
-       */
-      static bool FloppyStubWrite(UInt32 lba, UInt32 count, const void* buffer);
-
-      /**
-       * Registered floppy device descriptors.
-       */
-      inline static Device _floppyDevices[_maxFloppyDevices]  = {
-        Device{
-          Info{
-            0,
-            Type::Floppy,
-            512,
-            2880,
-            flagRemovable,
-            _floppyDriveAIndex
-          },
-          0,
-          &FloppyStubRead,
-          &FloppyStubWrite
-        },
-        Device{
-          Info{
-            0,
-            Type::Floppy,
-            512,
-            2880,
-            flagRemovable,
-            _floppyDriveBIndex
-          },
-          0,
-          &FloppyStubRead,
-          &FloppyStubWrite
-        }
-      };
   };
 }
