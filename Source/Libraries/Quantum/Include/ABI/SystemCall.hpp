@@ -37,7 +37,22 @@ namespace Quantum::ABI {
     Block_Write = 603,
     Block_Bind = 604,
     Block_AllocateDMABuffer = 605,
-    Block_UpdateInfo = 606
+    Block_UpdateInfo = 606,
+    FileSystem_ListVolumes = 700,
+    FileSystem_GetVolumeInfo = 701,
+    FileSystem_SetVolumeLabel = 702,
+    FileSystem_OpenVolume = 703,
+    FileSystem_Open = 704,
+    FileSystem_Close = 705,
+    FileSystem_Read = 706,
+    FileSystem_Write = 707,
+    FileSystem_Seek = 708,
+    FileSystem_Stat = 709,
+    FileSystem_ReadDirectory = 710,
+    FileSystem_CreateDirectory = 711,
+    FileSystem_CreateFile = 712,
+    FileSystem_Remove = 713,
+    FileSystem_Rename = 714
   };
 
   /**
