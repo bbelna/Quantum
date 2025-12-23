@@ -30,7 +30,6 @@ void Main(UInt32 bootInfoPhysicalAddress) {
   DeviceManager::Initialize();
   Interrupts::Initialize();
   Task::Initialize();
-  Task::EnablePreemption();
   InitBundle::Initialize();
 
   #ifdef KERNEL_TESTS

@@ -24,6 +24,7 @@ namespace Quantum::System::Kernel {
 
   void Task::Initialize() {
     ArchTask::Initialize();
+    EnablePreemption();
   }
 
   Task::ControlBlock* Task::Create(void (*entryPoint)(), UInt32 stackSize) {
