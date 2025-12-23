@@ -85,29 +85,5 @@ namespace Quantum::System::Coordinator {
        */
       static bool HasFloppyDevice();
 
-      /**
-       * Runs a small block read test against the floppy device.
-       */
-      static void TestFloppyBlockRead();
-
-      /**
-       * Runs a multi-sector block read test against the floppy device.
-       */
-      static void TestFloppyMultiSectorRead();
-
-      /**
-       * Runs a single-sector write and read-back test.
-       */
-      static void TestFloppyWriteReadback();
-
-      /**
-       * Runs a multi-sector write and read-back test.
-       */
-      static void TestFloppyMultiSectorWriteReadback();
-
-      /**
-       * Runs a cross-track multi-sector write and read-back test.
-       */
-      static void TestFloppyCrossTrackWriteReadback();
   };
 }

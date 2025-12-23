@@ -62,10 +62,10 @@ namespace Quantum::System::Kernel {
       LogHeader();
 
       for (UInt32 i = 0; i < _testCount; ++i) {
-        Logger::WriteFormatted(LogLevel::Info, "[TEST] %s", _tests[i].Name);
+        Logger::WriteFormatted(LogLevel::Info, "[TEST] %s", _tests[i].name);
 
         UInt32 failedBefore = _assertFailures;
-        bool ok = _tests[i].Func ? _tests[i].Func() : false;
+        bool ok = _tests[i].func ? _tests[i].func() : false;
         bool caseFailed = _assertFailures != failedBefore || !ok;
 
         if (!caseFailed) {
@@ -73,7 +73,7 @@ namespace Quantum::System::Kernel {
         } else {
           _testsFailed++;
 
-          Logger::WriteFormatted(LogLevel::Error, "[FAIL] %s", _tests[i].Name);
+          Logger::WriteFormatted(LogLevel::Error, "[FAIL] %s", _tests[i].name);
         }
       }
 

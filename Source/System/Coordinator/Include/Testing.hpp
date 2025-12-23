@@ -2,23 +2,22 @@
  * Quantum
  * (c) 2025 Brandon Belna - MIT License
  *
- * System/Kernel/Include/Tests.hpp
- * Kernel test harness for subsystem verification.
+ * System/Coordinator/Include/Testing.hpp
+ * Coordinator test harness.
  */
 
 #pragma once
 
-#include "String.hpp"
-#include "Types.hpp"
+#include <Types.hpp>
 
-namespace Quantum::System::Kernel {
+namespace Quantum::System::Coordinator {
   /**
-   * Kernel test harness.
+   * Coordinator test harness.
    */
   class Testing {
     public:
       /**
-       * Signature for kernel test functions.
+       * Signature for coordinator test functions.
        */
       typedef bool (*TestFunction)();
 
@@ -26,8 +25,8 @@ namespace Quantum::System::Kernel {
        * Test case descriptor.
        */
       struct TestCase {
-        CString name;
-        TestFunction func;
+        CString Name;
+        TestFunction Func;
       };
 
       /**
@@ -121,5 +120,12 @@ namespace Quantum::System::Kernel {
        * Logs the footer after running tests.
        */
       static void LogFooter();
+
+      /**
+       * Writes an unsigned integer as decimal.
+       * @param value
+       *   Value to write.
+       */
+      static void WriteDec(UInt32 value);
   };
 }
