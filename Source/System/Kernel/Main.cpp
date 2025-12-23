@@ -8,7 +8,7 @@
 
 #include "BootInfo.hpp"
 #include "CPU.hpp"
-#include "Devices/DeviceManager.hpp"
+#include "DeviceManager.hpp"
 #include "Handlers/PanicHandler.hpp"
 #include "Handlers/SystemCallHandler.hpp"
 #include "InitBundle.hpp"
@@ -23,12 +23,7 @@
 #include "Types.hpp"
 
 void Main(UInt32 bootInfoPhysicalAddress) {
-  using BootInfo = Kernel::BootInfo;
-  using DeviceManager = Kernel::Devices::DeviceManager;
-  using InitBundle = Kernel::InitBundle;
-  using Interrupts = Kernel::Interrupts;
-  using Memory = Kernel::Memory;
-  using Task = Kernel::Task;
+  using namespace Kernel;
 
   BootInfo::Initialize(bootInfoPhysicalAddress);
   Memory::Initialize(bootInfoPhysicalAddress);

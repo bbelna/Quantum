@@ -11,6 +11,7 @@
 #include "Arch/IA32/CPU.hpp"
 #include "Arch/IA32/Entry.hpp"
 #include "Arch/IA32/LinkerSymbols.hpp"
+#include "Arch/IA32/Prelude.hpp"
 #include "Arch/IA32/TSS.hpp"
 #include "Console.hpp"
 #include "Logger.hpp"
@@ -20,14 +21,14 @@
 #include "Prelude.hpp"
 #include "Types.hpp"
 
-using Bootstrap = Kernel::Arch::IA32::Bootstrap;
-using CPU = Kernel::Arch::IA32::CPU;
-using Logger = Kernel::Logger;
-using LogLevel = Logger::Level;
-using TSS = Kernel::Arch::IA32::TSS;
+using BootInfoRaw = KernelIA32::BootInfo::Raw;
+using Bootstrap = KernelIA32::Bootstrap;
 using Console = Kernel::Console;
+using CPU = KernelIA32::CPU;
+using Logger = Kernel::Logger;
+using LogLevel = Kernel::Logger::Level;
+using TSS = KernelIA32::TSS;
 using Writer = Kernel::Logger::Writer;
-using BootInfoRaw = Kernel::Arch::IA32::BootInfo::Raw;
 
 /**
  * The GDT descriptor defined in the assembly GDT file.
