@@ -3,20 +3,17 @@
  * (c) 2025 Brandon Belna - MIT License
  *
  * System/Kernel/IPC.cpp
- * Simple kernel IPC primitives (ports + message queues).
+ * Kernel IPC subsystem.
  */
 
-#include <IPC.hpp>
-#include <Task.hpp>
-#include <Types.hpp>
+#include "IPC.hpp"
+#include "Task.hpp"
+#include "Types.hpp"
 
 namespace Quantum::System::Kernel {
-  IPC::Port IPC::_ports[IPC::_maxPorts] = {};
-  UInt32 IPC::_nextPortId = 1;
-
   IPC::Port* IPC::FindPort(UInt32 id) {
     for (UInt32 i = 0; i < _maxPorts; ++i) {
-      if (_ports[i].Used && _ports[i].Id == id) {
+      if (_ports[i].used && _ports[i].id == id) {
         return &_ports[i];
       }
     }
@@ -35,15 +32,15 @@ namespace Quantum::System::Kernel {
 
   UInt32 IPC::CreatePort() {
     for (UInt32 i = 0; i < _maxPorts; ++i) {
-      if (!_ports[i].Used) {
-        _ports[i].Used = true;
-        _ports[i].Id = _nextPortId++;
-        _ports[i].OwnerTaskId = Task::GetCurrentId();
-        _ports[i].Head = 0;
-        _ports[i].Tail = 0;
-        _ports[i].Count = 0;
+      if (!_ports[i].used) {
+        _ports[i].used = true;
+        _ports[i].id = _nextPortId++;
+        _ports[i].ownerTaskId = Task::GetCurrentId();
+        _ports[i].head = 0;
+        _ports[i].tail = 0;
+        _ports[i].count = 0;
 
-        return _ports[i].Id;
+        return _ports[i].id;
       }
     }
 
@@ -67,19 +64,19 @@ namespace Quantum::System::Kernel {
     }
 
     // block (cooperatively) if queue full
-    while (port->Count >= maxQueueDepth) {
+    while (port->count >= maxQueueDepth) {
       Task::Yield();
     }
 
-    Message& msg = port->Queue[port->Tail];
+    Message& msg = port->queue[port->tail];
 
-    msg.SenderId = senderId;
-    msg.Length = length;
+    msg.senderId = senderId;
+    msg.length = length;
 
-    CopyPayload(msg.Data, buffer, length);
+    CopyPayload(msg.data, buffer, length);
 
-    port->Tail = (port->Tail + 1) % maxQueueDepth;
-    ++port->Count;
+    port->tail = (port->tail + 1) % maxQueueDepth;
+    ++port->count;
 
     return true;
   }
@@ -101,21 +98,21 @@ namespace Quantum::System::Kernel {
       return false;
     }
 
-    while (port->Count == 0) {
+    while (port->count == 0) {
       Task::Yield();
     }
 
-    Message& msg = port->Queue[port->Head];
+    Message& msg = port->queue[port->head];
 
-    outSenderId = msg.SenderId;
-    outLength = msg.Length;
+    outSenderId = msg.senderId;
+    outLength = msg.length;
 
-    UInt32 toCopy = msg.Length < bufferCapacity ? msg.Length : bufferCapacity;
+    UInt32 toCopy = msg.length < bufferCapacity ? msg.length : bufferCapacity;
 
-    CopyPayload(outBuffer, msg.Data, toCopy);
+    CopyPayload(outBuffer, msg.data, toCopy);
 
-    port->Head = (port->Head + 1) % maxQueueDepth;
-    --port->Count;
+    port->head = (port->head + 1) % maxQueueDepth;
+    --port->count;
 
     return true;
   }
@@ -127,12 +124,12 @@ namespace Quantum::System::Kernel {
       return false;
     }
 
-    port->Used = false;
-    port->Id = 0;
-    port->OwnerTaskId = 0;
-    port->Head = 0;
-    port->Tail = 0;
-    port->Count = 0;
+    port->used = false;
+    port->id = 0;
+    port->ownerTaskId = 0;
+    port->head = 0;
+    port->tail = 0;
+    port->count = 0;
 
     return true;
   }
@@ -144,7 +141,7 @@ namespace Quantum::System::Kernel {
       return false;
     }
 
-    outOwnerId = port->OwnerTaskId;
+    outOwnerId = port->ownerTaskId;
 
     return true;
   }

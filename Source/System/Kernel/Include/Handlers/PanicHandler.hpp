@@ -8,8 +8,8 @@
 
 #pragma once
 
-#include <Types.hpp>
-#include <String.hpp>
+#include "String.hpp"
+#include "Types.hpp"
 
 namespace Quantum::System::Kernel::Handlers {
   /**

@@ -6,10 +6,10 @@
  * Architecture-agnostic CPU driver.
  */
 
-#include <CPU.hpp>
+#include "CPU.hpp"
 
 #if defined(QUANTUM_ARCH_IA32)
-#include <Arch/IA32/CPU.hpp>
+#include "Arch/IA32/CPU.hpp"
 
 namespace Arch = Quantum::System::Kernel::Arch::IA32;
 using ArchCPU = Arch::CPU;

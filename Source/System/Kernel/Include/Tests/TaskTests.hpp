@@ -23,22 +23,22 @@ namespace Quantum::System::Kernel::Tests {
       /**
        * Flag to stop long-running spinner tasks used for preemption testing.
        */
-      static volatile bool _stopSpinTasks;
+      inline static volatile bool _stopSpinTasks = false;
 
       /**
        * Shared counter incremented by cooperating tasks.
        */
-      static volatile UInt32 _taskCounter;
+      inline static volatile UInt32 _taskCounter = 0;
 
       /**
        * Counter for first preemptive spinner task.
        */
-      static volatile UInt32 _preemptCounterA;
+      inline static volatile UInt32 _preemptCounterA = 0;
 
       /**
        * Counter for second preemptive spinner task.
        */
-      static volatile UInt32 _preemptCounterB;
+      inline static volatile UInt32 _preemptCounterB = 0;
 
       /**
        * First cooperating task increments shared counter and yields.

@@ -6,40 +6,69 @@
  * System call handler.
  */
 
-#include <ABI/Devices/Block.hpp>
-#include <ABI/Prelude.hpp>
+#include <ABI/Devices/BlockDevice.hpp>
 #include <ABI/InitBundle.hpp>
 #include <ABI/IPC.hpp>
+#include <ABI/Prelude.hpp>
 #include <ABI/SystemCall.hpp>
-#include <Console.hpp>
-#include <Devices/Block.hpp>
-#include <IPC.hpp>
-#include <Interrupts.hpp>
-#include <Handlers/SystemCallHandler.hpp>
-#include <Kernel.hpp>
-#include <Logger.hpp>
-#include <Task.hpp>
-#include <Prelude.hpp>
+
+#include "Console.hpp"
+#include "Devices/BlockDevice.hpp"
+#include "Handlers/SystemCallHandler.hpp"
+#include "InitBundle.hpp"
+#include "Interrupts.hpp"
+#include "IPC.hpp"
+#include "Logger.hpp"
+#include "Prelude.hpp"
+#include "Task.hpp"
+
 #if defined(QUANTUM_ARCH_IA32)
-#include <Arch/IA32/IO.hpp>
+#include "Arch/IA32/IO.hpp"
 #endif
 
 // TODO: refactor into arch code
 namespace Quantum::System::Kernel::Handlers {
-  using ABI::InitBundle;
-  using ABI::IPC;
-  using ABI::SystemCall;
-  using DMABuffer = ABI::Devices::Block::DMABuffer;
-  using Kernel::Console;
-  using Devices::Block;
-  using Kernel::Logger;
-  using Kernel::Task;
+  using BlockDevice = Devices::BlockDevice;
+  using Console = Kernel::Console;
+  using DMABuffer = ABI::Devices::BlockDevice::DMABuffer;
+  using InitBundle = ABI::InitBundle;
+  using IPC = ABI::IPC;
+  using Logger = Kernel::Logger;
   using LogLevel = Logger::Level;
+  using SystemCall = ABI::SystemCall;
+  using Task = Kernel::Task;
 
   Interrupts::Context* SystemCallHandler::Handle(Interrupts::Context& context) {
     SystemCall id = static_cast<SystemCall>(context.eax);
 
     switch (id) {
+      case SystemCall::Task_Exit: {
+        Task::Exit();
+
+        break;
+      }
+
+      case SystemCall::Task_Yield: {
+        Task::Yield();
+
+        break;
+      }
+
+      case SystemCall::Task_GrantIOAccess: {
+        if (!Task::IsCurrentTaskCoordinator()) {
+          context.eax = 1;
+
+          break;
+        }
+
+        UInt32 targetId = context.ebx;
+        bool ok = Task::GrantIOAccess(targetId);
+
+        context.eax = ok ? 0 : 1;
+
+        break;
+      }
+
       case SystemCall::Console_Write: {
         CString string = reinterpret_cast<CString>(context.ebx);
         UInt32 length = context.ecx;
@@ -58,24 +87,12 @@ namespace Quantum::System::Kernel::Handlers {
         break;
       }
 
-      case SystemCall::Task_Exit: {
-        Task::Exit();
-
-        break;
-      }
-
-      case SystemCall::Task_Yield: {
-        Task::Yield();
-
-        break;
-      }
-
       case SystemCall::InitBundle_GetInfo: {
         InitBundle::Info* info
           = reinterpret_cast<InitBundle::Info*>(context.ebx);
         UInt32 base = 0;
         UInt32 size = 0;
-        bool ok = Kernel::GetInitBundleInfo(base, size);
+        bool ok = Kernel::InitBundle::GetInfo(base, size);
 
         if (info) {
           info->base = base;
@@ -83,6 +100,21 @@ namespace Quantum::System::Kernel::Handlers {
         }
 
         context.eax = ok ? 0 : 1;
+
+        break;
+      }
+
+      case SystemCall::InitBundle_SpawnTask: {
+        if (!Task::IsCurrentTaskCoordinator()) {
+          context.eax = 0;
+
+          break;
+        }
+
+        CString name = reinterpret_cast<CString>(context.ebx);
+        UInt32 taskId = Kernel::InitBundle::SpawnTask(name);
+
+        context.eax = taskId;
 
         break;
       }
@@ -257,46 +289,16 @@ namespace Quantum::System::Kernel::Handlers {
         break;
       }
 
-      case SystemCall::Task_GrantIOAccess: {
-        if (!Task::IsCurrentTaskCoordinator()) {
-          context.eax = 1;
-
-          break;
-        }
-
-        UInt32 targetId = context.ebx;
-        bool ok = Task::GrantIOAccess(targetId);
-
-        context.eax = ok ? 0 : 1;
-
-        break;
-      }
-
-      case SystemCall::InitBundle_SpawnTask: {
-        if (!Task::IsCurrentTaskCoordinator()) {
-          context.eax = 0;
-
-          break;
-        }
-
-        CString name = reinterpret_cast<CString>(context.ebx);
-        UInt32 taskId = Kernel::SpawnInitBundleTask(name);
-
-        context.eax = taskId;
-
-        break;
-      }
-
       case SystemCall::Block_GetCount: {
-        context.eax = Block::GetCount();
+        context.eax = BlockDevice::GetCount();
 
         break;
       }
 
       case SystemCall::Block_GetInfo: {
         UInt32 deviceId = context.ebx;
-        Block::Info* info
-          = reinterpret_cast<Block::Info*>(context.ecx);
+        BlockDevice::Info* info
+          = reinterpret_cast<BlockDevice::Info*>(context.ecx);
 
         if (!info) {
           context.eax = 1;
@@ -304,7 +306,7 @@ namespace Quantum::System::Kernel::Handlers {
           break;
         }
 
-        bool ok = Block::GetInfo(deviceId, *info);
+        bool ok = BlockDevice::GetInfo(deviceId, *info);
 
         context.eax = ok ? 0 : 1;
 
@@ -312,8 +314,8 @@ namespace Quantum::System::Kernel::Handlers {
       }
 
       case SystemCall::Block_Read: {
-        Block::Request* request
-          = reinterpret_cast<Block::Request*>(context.ebx);
+        BlockDevice::Request* request
+          = reinterpret_cast<BlockDevice::Request*>(context.ebx);
 
         if (!request) {
           context.eax = 1;
@@ -321,14 +323,14 @@ namespace Quantum::System::Kernel::Handlers {
           break;
         }
 
-        context.eax = Block::Read(*request) ? 0 : 1;
+        context.eax = BlockDevice::Read(*request) ? 0 : 1;
 
         break;
       }
 
       case SystemCall::Block_Write: {
-        Block::Request* request
-          = reinterpret_cast<Block::Request*>(context.ebx);
+        BlockDevice::Request* request
+          = reinterpret_cast<BlockDevice::Request*>(context.ebx);
 
         if (!request) {
           context.eax = 1;
@@ -336,7 +338,7 @@ namespace Quantum::System::Kernel::Handlers {
           break;
         }
 
-        context.eax = Block::Write(*request) ? 0 : 1;
+        context.eax = BlockDevice::Write(*request) ? 0 : 1;
 
         break;
       }
@@ -345,7 +347,7 @@ namespace Quantum::System::Kernel::Handlers {
         UInt32 deviceId = context.ebx;
         UInt32 portId = context.ecx;
 
-        bool ok = Block::Bind(deviceId, portId);
+        bool ok = BlockDevice::Bind(deviceId, portId);
 
         context.eax = ok ? 0 : 1;
 
@@ -364,7 +366,7 @@ namespace Quantum::System::Kernel::Handlers {
         UInt32 physical = 0;
         UInt32 virtualAddress = 0;
         UInt32 outSize = 0;
-        bool ok = Block::AllocateDMABuffer(
+        bool ok = BlockDevice::AllocateDMABuffer(
           sizeBytes,
           physical,
           virtualAddress,

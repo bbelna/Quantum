@@ -6,11 +6,11 @@
  * IA32 user-mode entry helpers.
  */
 
-#include <Arch/IA32/Memory.hpp>
-#include <Arch/IA32/TSS.hpp>
-#include <Arch/IA32/UserMode.hpp>
-#include <Helpers/AlignHelper.hpp>
-#include <Types.hpp>
+#include "Arch/IA32/Memory.hpp"
+#include "Arch/IA32/TSS.hpp"
+#include "Arch/IA32/UserMode.hpp"
+#include "Helpers/AlignHelper.hpp"
+#include "Types.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   using AlignHelper = Helpers::AlignHelper;

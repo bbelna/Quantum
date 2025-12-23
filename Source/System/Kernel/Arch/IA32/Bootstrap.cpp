@@ -6,11 +6,11 @@
  * IA32 kernel bootstrap helpers.
  */
 
-#include <Arch/IA32/BootInfo.hpp>
-#include <Arch/IA32/Bootstrap.hpp>
-#include <Arch/IA32/LinkerSymbols.hpp>
-#include <Logger.hpp>
-#include <Types.hpp>
+#include "Arch/IA32/BootInfo.hpp"
+#include "Arch/IA32/Bootstrap.hpp"
+#include "Arch/IA32/LinkerSymbols.hpp"
+#include "Logger.hpp"
+#include "Types.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   [[gnu::section(".text.start.data")]]

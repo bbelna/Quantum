@@ -8,9 +8,10 @@
 
 #pragma once
 
-#include <Arch/IA32/Interrupts.hpp>
 #include <Prelude.hpp>
 #include <Types.hpp>
+
+#include "Interrupts.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   /**
@@ -215,54 +216,54 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
     private:
       /**
-       * Next task ID to assign.
-       */
-      static UInt32 _nextTaskId;
-
-      /**
        * Pointer to the currently executing task.
        */
-      static ControlBlock* _currentTask;
+      inline static ControlBlock* _currentTask = nullptr;
 
       /**
        * Pointer to the idle task (never exits).
        */
-      static ControlBlock* _idleTask;
+      inline static ControlBlock* _idleTask = nullptr;
 
       /**
        * Head of the global task list.
        */
-      static ControlBlock* _allTasksHead;
+      inline static ControlBlock* _allTasksHead = nullptr;
 
       /**
        * Head of the ready queue.
        */
-      static ControlBlock* _readyQueueHead;
+      inline static ControlBlock* _readyQueueHead = nullptr;
 
       /**
        * Tail of the ready queue.
        */
-      static ControlBlock* _readyQueueTail;
-
-      /**
-       * Whether preemptive scheduling is enabled.
-       */
-      static bool _preemptionEnabled;
-
-      /**
-       * When true, force a reschedule even if preemption is disabled.
-       */
-      static volatile bool _forceReschedule;
+      inline static ControlBlock* _readyQueueTail = nullptr;
 
       /**
        * Task pending cleanup (deferred until we are on a different stack).
        */
-      static ControlBlock* _pendingCleanup;
+      inline static ControlBlock* _pendingCleanup = nullptr;
+
+      /**
+       * Whether preemptive scheduling is enabled.
+       */
+      inline static bool _preemptionEnabled = false;
+
+      /**
+       * When true, force a reschedule even if preemption is disabled.
+       */
+      inline static volatile bool _forceReschedule = false;
 
       /**
        * Becomes true after the first explicit yield to gate preemption.
        */
-      static bool _schedulerActive;
+      inline static bool _schedulerActive = false;
+
+      /**
+       * Next task ID to assign.
+       */
+      inline static UInt32 _nextTaskId = 1;
 
       /**
        * Adds a task to the ready queue.

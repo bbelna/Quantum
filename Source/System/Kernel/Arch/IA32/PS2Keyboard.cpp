@@ -6,37 +6,14 @@
  * IA32 PS/2 keyboard driver.
  */
 
-#include <Interrupts.hpp>
-#include <Arch/IA32/IO.hpp>
-#include <Arch/IA32/PIC.hpp>
-#include <Arch/IA32/PS2Keyboard.hpp>
-#include <Arch/IA32/Interrupts.hpp>
-#include <Types.hpp>
+#include "Arch/IA32/Interrupts.hpp"
+#include "Arch/IA32/IO.hpp"
+#include "Arch/IA32/PIC.hpp"
+#include "Arch/IA32/PS2Keyboard.hpp"
+#include "Interrupts.hpp"
+#include "Types.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  const char PS2Keyboard::_scancodeMap[128] = {
-    0,  27, '1','2','3','4','5','6','7','8','9','0','-','=', '\b',
-    '\t','q','w','e','r','t','y','u','i','o','p','[',']','\n',
-    0,  'a','s','d','f','g','h','j','k','l',';','\'','`', 0,
-    '\\','z','x','c','v','b','n','m',',','.','/', 0, '*', 0, ' ',
-  };
-
-  const char PS2Keyboard::_scancodeMapShift[128] = {
-    0,  27, '!','@','#','$','%','^','&','*','(',')','_','+', '\b',
-    '\t','q','w','e','r','t','y','u','i','o','p','[',']','\n',
-    0,  'a','s','d','f','g','h','j','k','l',':','\"','~', 0,
-    '|','z','x','c','v','b','n','m','<','>','?', 0, '*', 0, ' ',
-  };
-
-  char PS2Keyboard::_keyBuffer[PS2Keyboard::_bufferSize] = {};
-  volatile UInt8 PS2Keyboard::_head = 0;
-  volatile UInt8 PS2Keyboard::_tail = 0;
-  volatile bool PS2Keyboard::_shiftActive = false;
-  volatile bool PS2Keyboard::_capsLock = false;
-  volatile bool PS2Keyboard::_ctrlActive = false;
-  volatile bool PS2Keyboard::_altActive = false;
-  volatile bool PS2Keyboard::_extendedPrefix = false;
-
   void PS2Keyboard::Enqueue(char ch) {
     UInt8 next = static_cast<UInt8>((_head + 1) % _bufferSize);
 

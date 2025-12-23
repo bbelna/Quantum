@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <Interrupts.hpp>
+#include "Interrupts.hpp"
 
 namespace Quantum::System::Kernel::Handlers {
   /**

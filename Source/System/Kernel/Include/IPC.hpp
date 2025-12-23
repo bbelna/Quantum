@@ -3,16 +3,16 @@
  * (c) 2025 Brandon Belna - MIT License
  *
  * System/Kernel/Include/IPC.hpp
- * Simple kernel IPC primitives (ports + message queues).
+ * Kernel IPC subsystem.
  */
 
 #pragma once
 
-#include <Types.hpp>
+#include "Types.hpp"
 
 namespace Quantum::System::Kernel {
   /**
-   * IPC subsystem (simple ports + message queues).
+   * IPC subsystem.
    */
   class IPC {
     public:
@@ -101,22 +101,60 @@ namespace Quantum::System::Kernel {
        * IPC message descriptor stored in each port queue.
        */
       struct Message {
-        UInt32 SenderId;
-        UInt32 Length;
-        UInt8 Data[maxPayloadBytes];
+        /**
+         * Identifier of the sending task.
+         */
+        UInt32 senderId;
+
+        /**
+         * Length of the payload in bytes.
+         */
+        UInt32 length;
+
+        /**
+         * Message payload data.
+         */
+        UInt8 data[maxPayloadBytes];
       };
 
       /**
        * IPC port state tracked by the kernel.
        */
       struct Port {
-        bool Used;
-        UInt32 Id;
-        UInt32 OwnerTaskId;
-        UInt32 Head;
-        UInt32 Tail;
-        UInt32 Count;
-        Message Queue[maxQueueDepth];
+        /**
+         * Whether this port slot is in use.
+         */
+        bool used;
+
+        /**
+         * Unique port identifier.
+         */
+        UInt32 id;
+
+        /**
+         * Identifier of the owning task.
+         */
+        UInt32 ownerTaskId;
+
+        /**
+         * Head index in the message queue.
+         */
+        UInt32 head;
+
+        /**
+         * Tail index in the message queue.
+         */
+        UInt32 tail;
+
+        /**
+         * Number of messages currently queued.
+         */
+        UInt32 count;
+
+        /**
+         * Message queue.
+         */
+        Message queue[maxQueueDepth];
       };
 
       /**
@@ -127,12 +165,12 @@ namespace Quantum::System::Kernel {
       /**
        * Global IPC port table.
        */
-      static Port _ports[_maxPorts];
+      inline static Port _ports[_maxPorts] = {};
 
       /**
        * Next port id to hand out.
        */
-      static UInt32 _nextPortId;
+      inline static UInt32 _nextPortId = 1;
 
       /**
        * Finds a port by id.

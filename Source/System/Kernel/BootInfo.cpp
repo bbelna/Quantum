@@ -29,15 +29,18 @@ namespace Quantum::System::Kernel {
     if (!view || view->initBundleSize == 0) {
       info.physical = 0;
       info.size = 0;
+
       return false;
     }
 
     info.physical = view->initBundlePhysical;
     info.size = view->initBundleSize;
+
     return true;
     #else
     info.physical = 0;
     info.size = 0;
+
     return false;
     #endif
   }

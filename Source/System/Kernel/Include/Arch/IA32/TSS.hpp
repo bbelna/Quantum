@@ -93,12 +93,12 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       /**
        * Dedicated ring0 stack for privilege transitions.
        */
-      alignas(16) static UInt8 _ring0Stack[4096];
+      static UInt8 _ring0Stack[4096];
 
       /**
        * TSS instance.
        */
-      static Structure _tss;
+      inline static Structure _tss = {};
 
       /**
        * Index of the TSS descriptor in the GDT.

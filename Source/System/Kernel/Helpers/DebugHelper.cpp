@@ -6,8 +6,8 @@
  * Debug/diagnostic helper utilities.
  */
 
-#include <Helpers/CStringHelper.hpp>
-#include <Helpers/DebugHelper.hpp>
+#include "Helpers/CStringHelper.hpp"
+#include "Helpers/DebugHelper.hpp"
 
 namespace Quantum::System::Kernel::Helpers {
   using Helpers::CStringHelper;

@@ -6,18 +6,19 @@
  * IA32 kernel entry routines.
  */
 
-#include <Arch/IA32/BootInfo.hpp>
-#include <Arch/IA32/Bootstrap.hpp>
-#include <Arch/IA32/CPU.hpp>
-#include <Arch/IA32/Entry.hpp>
-#include <Arch/IA32/LinkerSymbols.hpp>
-#include <Arch/IA32/TSS.hpp>
-#include <Console.hpp>
-#include <Kernel.hpp>
-#include <Logger.hpp>
-#include <Memory.hpp>
-#include <Prelude.hpp>
-#include <Types.hpp>
+#include "Arch/IA32/BootInfo.hpp"
+#include "Arch/IA32/Bootstrap.hpp"
+#include "Arch/IA32/CPU.hpp"
+#include "Arch/IA32/Entry.hpp"
+#include "Arch/IA32/LinkerSymbols.hpp"
+#include "Arch/IA32/TSS.hpp"
+#include "Console.hpp"
+#include "Logger.hpp"
+#include "Macros.hpp"
+#include "Main.hpp"
+#include "Memory.hpp"
+#include "Prelude.hpp"
+#include "Types.hpp"
 
 using Bootstrap = Kernel::Arch::IA32::Bootstrap;
 using CPU = Kernel::Arch::IA32::CPU;
@@ -119,9 +120,9 @@ extern "C" void Start(UInt32 bootInfoPhysicalAddress) {
 
   TSS::Initialize(0);
 
-  Kernel::Initialize(bootInfoPhysicalAddress);
+  Main(bootInfoPhysicalAddress);
 
-  PANIC("Returned from Kernel::Initialize()");
+  PANIC("Returned from Main()");
 }
 
 void ClearBSS() {

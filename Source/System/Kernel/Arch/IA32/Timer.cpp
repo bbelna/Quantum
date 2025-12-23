@@ -6,21 +6,18 @@
  * IA32 PIT timer driver.
  */
 
-#include <Arch/IA32/IO.hpp>
-#include <Arch/IA32/PIC.hpp>
-#include <Arch/IA32/Task.hpp>
-#include <Arch/IA32/Timer.hpp>
-#include <Arch/IA32/Interrupts.hpp>
-#include <Interrupts.hpp>
-#include <Logger.hpp>
-#include <Prelude.hpp>
-#include <Types.hpp>
+#include "Arch/IA32/Interrupts.hpp"
+#include "Arch/IA32/IO.hpp"
+#include "Arch/IA32/PIC.hpp"
+#include "Arch/IA32/Task.hpp"
+#include "Arch/IA32/Timer.hpp"
+#include "Interrupts.hpp"
+#include "Logger.hpp"
+#include "Prelude.hpp"
+#include "Types.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   using LogLevel = Logger::Level;
-
-  volatile UInt64 Timer::_tickCount = 0;
-  volatile bool Timer::_tickLoggingEnabled = false;
 
   Interrupts::Context* Timer::TimerHandler(Interrupts::Context& context) {
     ++_tickCount;

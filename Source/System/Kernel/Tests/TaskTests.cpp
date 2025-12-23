@@ -6,16 +6,12 @@
  * Tasking tests.
  */
 
-#include <Task.hpp>
-#include <Testing.hpp>
-#include <Tests/TaskTests.hpp>
+#include "Macros.hpp"
+#include "Task.hpp"
+#include "Testing.hpp"
+#include "Tests/TaskTests.hpp"
 
 namespace Quantum::System::Kernel::Tests {
-  volatile bool TaskTests::_stopSpinTasks = false;
-  volatile UInt32 TaskTests::_taskCounter = 0;
-  volatile UInt32 TaskTests::_preemptCounterA = 0;
-  volatile UInt32 TaskTests::_preemptCounterB = 0;
-
   void TaskTests::TaskA() {
     _taskCounter += 1;
 

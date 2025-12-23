@@ -6,24 +6,20 @@
  * INIT.BND handling and launch helpers.
  */
 
-#include <BootInfo.hpp>
-#include <Helpers/AlignHelper.hpp>
-#include <InitBundle.hpp>
-#include <Logger.hpp>
-#include <Memory.hpp>
-#include <Task.hpp>
-#include <Types.hpp>
-#include <UserMode.hpp>
+#include "BootInfo.hpp"
+#include "Helpers/AlignHelper.hpp"
+#include "InitBundle.hpp"
+#include "Logger.hpp"
+#include "Memory.hpp"
+#include "Task.hpp"
+#include "Types.hpp"
+#include "UserMode.hpp"
 
 namespace Quantum::System::Kernel {
-  using LogLevel = Logger::Level;
-  using BundleHeader = ::Quantum::ABI::InitBundle::Header;
-  using BundleEntry = ::Quantum::ABI::InitBundle::Entry;
   using AlignHelper = Helpers::AlignHelper;
-
-  UInt32 InitBundle::_initBundleMappedBase = 0;
-  UInt32 InitBundle::_initBundleMappedSize = 0;
-  UInt32 InitBundle::_initBundleMappedUserBase = 0;
+  using BundleHeader = ABI::InitBundle::Header;
+  using BundleEntry = ABI::InitBundle::Entry;
+  using LogLevel = Logger::Level;
 
   void InitBundle::MapInitBundle() {
     BootInfo::InitBundleInfo initBundle{};
@@ -34,12 +30,14 @@ namespace Quantum::System::Kernel {
 
     UInt32 size = initBundle.size;
     UInt32 base = initBundle.physical;
+
     Logger::WriteFormatted(
       LogLevel::Debug,
       "INIT.BND boot info: phys=%p size=0x%x",
       base,
       size
     );
+
     UInt32 pageCount = AlignHelper::Up(size, 4096) / 4096;
 
     for (UInt32 i = 0; i < pageCount; ++i) {
@@ -184,6 +182,7 @@ namespace Quantum::System::Kernel {
       "INIT.BND has %u entries but no init type",
       entryCount
     );
+
     return nullptr;
   }
 
@@ -247,11 +246,11 @@ namespace Quantum::System::Kernel {
       Task::Exit();
     }
 
+    constexpr UInt32 pageSize = 4096;
     const UInt8* bundleBase
       = reinterpret_cast<const UInt8*>(_initBundleMappedBase);
     const UInt8* payload = bundleBase + entry->offset;
     UInt32 size = entry->size;
-    constexpr UInt32 pageSize = 4096;
 
     if (size < sizeof(UInt32)) {
       Logger::Write(LogLevel::Warning, "Coordinator payload too small");
@@ -354,6 +353,7 @@ namespace Quantum::System::Kernel {
   UInt32 InitBundle::SpawnTask(CString name) {
     if (_initBundleMappedSize == 0 || _initBundleMappedBase == 0) {
       Logger::Write(LogLevel::Warning, "SpawnTask: INIT.BND not mapped");
+
       return 0;
     }
 
@@ -361,6 +361,7 @@ namespace Quantum::System::Kernel {
 
     if (!entry) {
       Logger::Write(LogLevel::Warning, "SpawnTask: entry not found");
+
       return 0;
     }
 
@@ -373,17 +374,19 @@ namespace Quantum::System::Kernel {
         _initBundleMappedSize
       );
       Logger::Write(LogLevel::Warning, "SpawnTask: entry out of range");
+
       return 0;
     }
 
+    constexpr UInt32 pageSize = 4096;
     const UInt8* bundleBase
       = reinterpret_cast<const UInt8*>(_initBundleMappedBase);
     const UInt8* payload = bundleBase + entry->offset;
     UInt32 size = entry->size;
-    constexpr UInt32 pageSize = 4096;
 
     if (size < sizeof(UInt32)) {
       Logger::Write(LogLevel::Warning, "SpawnTask: payload too small");
+
       return 0;
     }
 
@@ -407,18 +410,22 @@ namespace Quantum::System::Kernel {
         entryOffset,
         size
       );
+
       if (size >= sizeof(UInt32)) {
         UInt32 raw0 = *reinterpret_cast<const UInt32*>(payload);
         UInt32 raw1 = 0;
+
         if (size >= sizeof(UInt32) * 2) {
           raw1 = *reinterpret_cast<const UInt32*>(payload + sizeof(UInt32));
         }
+
         Logger::WriteFormatted(
           LogLevel::Warning,
           "SpawnTask: payload head=%p %p",
           raw0,
           raw1
         );
+
         BootInfo::InitBundleInfo initInfo{};
 
         if (BootInfo::GetInitBundleInfo(initInfo)) {
@@ -443,7 +450,9 @@ namespace Quantum::System::Kernel {
           );
         }
       }
+
       Logger::Write(LogLevel::Warning, "SpawnTask: entry offset out of range");
+
       return 0;
     }
 
@@ -451,6 +460,7 @@ namespace Quantum::System::Kernel {
 
     if (addressSpace == 0) {
       Logger::Write(LogLevel::Warning, "SpawnTask: failed to create address space");
+
       return 0;
     }
 

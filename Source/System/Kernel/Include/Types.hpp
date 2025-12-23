@@ -8,9 +8,11 @@
 
 #pragma once
 
-#define VARIABLE_ARGUMENTS_START(list, last) ((list) = (VariableArgumentsList)(&last + 1))
+#define VARIABLE_ARGUMENTS_START(list, last) \
+  ((list) = (VariableArgumentsList)(&last + 1))
 #define VARIABLE_ARGUMENTS_END(list)
-#define VARIABLE_ARGUMENTS(list, type) (list += sizeof(type), *(type *)(list - sizeof(type)))
+#define VARIABLE_ARGUMENTS(list, type) \
+  (list += sizeof(type), *(type *)(list - sizeof(type)))
 
 typedef unsigned char UInt8;
 typedef unsigned short UInt16;

@@ -6,20 +6,13 @@
  * User-mode execution tests.
  */
 
-#include <Memory.hpp>
-#include <Task.hpp>
-#include <Testing.hpp>
-#include <Tests/UserModeTests.hpp>
+#include "Macros.hpp"
+#include "Memory.hpp"
+#include "Task.hpp"
+#include "Testing.hpp"
+#include "Tests/UserModeTests.hpp"
 
 namespace Quantum::System::Kernel::Tests {
-  const UInt8 UserModeTests::_userTestProgram[] = {
-    0xB8, 0x02, 0x00, 0x00, 0x00, // mov eax, SYS_YIELD
-    0xCD, 0x80,                   // int 0x80
-    0xB8, 0x01, 0x00, 0x00, 0x00, // mov eax, SYS_EXIT
-    0xCD, 0x80,                   // int 0x80
-    0xEB, 0xFE                    // jmp $
-  };
-
   bool UserModeTests::TestUserSyscallPath() {
     Task::DisablePreemption();
 
@@ -27,7 +20,9 @@ namespace Quantum::System::Kernel::Tests {
 
     if (addressSpace == 0) {
       Task::EnablePreemption();
+
       TEST_ASSERT(false, "Failed to create user address space");
+
       return false;
     }
 
@@ -36,7 +31,9 @@ namespace Quantum::System::Kernel::Tests {
     if (codePage == nullptr) {
       Memory::DestroyAddressSpace(addressSpace);
       Task::EnablePreemption();
+
       TEST_ASSERT(false, "Failed to allocate user program page");
+
       return false;
     }
 
@@ -63,7 +60,9 @@ namespace Quantum::System::Kernel::Tests {
     if (stackPage == nullptr) {
       Memory::DestroyAddressSpace(addressSpace);
       Task::EnablePreemption();
+
       TEST_ASSERT(false, "Failed to allocate user stack page");
+
       return false;
     }
 
@@ -85,7 +84,9 @@ namespace Quantum::System::Kernel::Tests {
     if (tcb == nullptr) {
       Memory::DestroyAddressSpace(addressSpace);
       Task::EnablePreemption();
+
       TEST_ASSERT(false, "Failed to create user task");
+
       return false;
     }
 
@@ -97,6 +98,7 @@ namespace Quantum::System::Kernel::Tests {
 
       if (tcb->state == Arch::IA32::Task::State::Terminated) {
         terminated = true;
+
         break;
       }
     }
@@ -104,11 +106,14 @@ namespace Quantum::System::Kernel::Tests {
     if (terminated) {
       Task::Yield(); // allow deferred cleanup to run
       Task::EnablePreemption();
+
       return true;
     }
 
     Task::EnablePreemption();
+
     TEST_ASSERT(false, "User task did not terminate");
+
     return false;
   }
 

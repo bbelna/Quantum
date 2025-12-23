@@ -6,26 +6,26 @@
  * Architecture-agnostic memory manager.
  */
 
-#include <Helpers/AlignHelper.hpp>
-#include <Kernel.hpp>
-#include <Logger.hpp>
-#include <Memory.hpp>
-#include <Types.hpp>
+#include "Helpers/AlignHelper.hpp"
+#include "Logger.hpp"
+#include "Macros.hpp"
+#include "Memory.hpp"
+#include "Types.hpp"
 
 #if defined(QUANTUM_ARCH_IA32)
-#include <Arch/IA32/CPU.hpp>
-#include <Arch/IA32/Memory.hpp>
+#include "Arch/IA32/CPU.hpp"
+#include "Arch/IA32/Memory.hpp"
 #endif
 
 namespace Quantum::System::Kernel {
+  using LogLevel = Logger::Level;
+  using AlignHelper = Helpers::AlignHelper;
+
   #if defined(QUANTUM_ARCH_IA32)
   using ArchPhysicalAllocatorState = Arch::IA32::Memory::PhysicalAllocatorState;
   using ArchMemory = Arch::IA32::Memory;
   using ArchCPU = Arch::IA32::CPU;
   #endif
-
-  using LogLevel = Logger::Level;
-  using AlignHelper = Helpers::AlignHelper;
 
   #if defined(QUANTUM_ARCH_IA32)
   UInt32 Memory::_heapStartVirtualAddress = ArchMemory::kernelHeapBase;
@@ -34,18 +34,6 @@ namespace Quantum::System::Kernel {
   UInt32 Memory::_heapStartVirtualAddress = 0x00400000;
   UInt32 Memory::_heapRegionBytes = 0;
   #endif
-
-  const UInt32 Memory::_binSizes[Memory::_binCount] = { 16, 32, 64, 128 };
-
-  UInt8* Memory::_heapBase = nullptr;
-  UInt8* Memory::_heapMappedEnd = nullptr;
-  UInt8* Memory::_guardAddress = nullptr;
-  UInt32 Memory::_heapMappedBytes = 0;
-  UInt8* Memory::_heapCurrent = nullptr;
-  UInt32 Memory::_requiredTailPages = 2;
-  Memory::FreeBlock* Memory::_freeList = nullptr;
-  Memory::FreeBlock* Memory::_binFreeLists[Memory::_binCount]
-    = { nullptr, nullptr, nullptr, nullptr };
 
   void Memory::SetFreeBlockCanary(Memory::FreeBlock* block) {
     if (block->size < sizeof(UInt32)) {

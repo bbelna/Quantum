@@ -8,8 +8,9 @@
 
 #pragma once
 
-#include <Arch/IA32/Interrupts.hpp>
 #include <Types.hpp>
+
+#include "Interrupts.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   /**
@@ -348,17 +349,17 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       /**
        * Total bytes under management by the physical allocator.
        */
-      static UInt32 _managedBytes;
+      inline static UInt32 _managedBytes = _defaultManagedBytes;
 
       /**
        * Total number of 4 KB pages under management.
        */
-      static UInt32 _pageCount;
+      inline static UInt32 _pageCount = _defaultManagedBytes / _pageSize;
 
       /**
        * Number of pages currently marked used.
        */
-      static UInt32 _usedPages;
+      inline static UInt32 _usedPages = 0;
 
       /**
        * Kernel page directory storage.
@@ -373,12 +374,27 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       /**
        * Bitmap tracking physical page usage.
        */
-      static UInt32* _pageBitmap;
+      inline static UInt32* _pageBitmap = nullptr;
 
       /**
        * Length of the page bitmap in 32-bit words.
        */
-      static UInt32 _bitmapLengthWords;
+      inline static UInt32 _bitmapLengthWords = 0;
+
+      /**
+       * Start page index of the initial boot bundle.
+       */
+      inline static UInt32 _initBundleStartPage = 0;
+
+      /**
+       * End page index of the initial boot bundle.
+       */
+      inline static UInt32 _initBundleEndPage = 0;
+
+      /**
+       * Whether we've logged skipping INIT.BND pages yet.
+       */
+      inline static bool _loggedBundleSkip = false;
 
       /**
        * Allocates a single physical 4 KB page.

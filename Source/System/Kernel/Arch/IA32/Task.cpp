@@ -6,32 +6,21 @@
  * IA32 task context and control structures.
  */
 
-#include <Arch/IA32/CPU.hpp>
-#include <Arch/IA32/Memory.hpp>
-#include <Arch/IA32/Task.hpp>
-#include <Arch/IA32/TSS.hpp>
-#include <CPU.hpp>
-#include <Kernel.hpp>
-#include <Logger.hpp>
-#include <Memory.hpp>
-#include <Prelude.hpp>
-#include <Types.hpp>
-#include <UserMode.hpp>
+#include "Arch/IA32/CPU.hpp"
+#include "Arch/IA32/Memory.hpp"
+#include "Arch/IA32/Task.hpp"
+#include "Arch/IA32/TSS.hpp"
+#include "CPU.hpp"
+#include "Logger.hpp"
+#include "Macros.hpp"
+#include "Memory.hpp"
+#include "Prelude.hpp"
+#include "Types.hpp"
+#include "UserMode.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   using LogLevel = Logger::Level;
   using UserMode = Kernel::UserMode;
-
-  volatile bool Task::_forceReschedule = false;
-  bool Task::_preemptionEnabled = false;
-  bool Task::_schedulerActive = false;
-  UInt32 Task::_nextTaskId = 1;
-  Task::ControlBlock* Task::_currentTask = nullptr;
-  Task::ControlBlock* Task::_idleTask = nullptr;
-  Task::ControlBlock* Task::_allTasksHead = nullptr;
-  Task::ControlBlock* Task::_readyQueueHead = nullptr;
-  Task::ControlBlock* Task::_readyQueueTail = nullptr;
-  Task::ControlBlock* Task::_pendingCleanup = nullptr;
 
   void Task::AddToReadyQueue(Task::ControlBlock* task) {
     task->state = Task::State::Ready;
@@ -78,6 +67,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       if (*current == task) {
         *current = task->allNext;
         task->allNext = nullptr;
+
         return;
       }
 
@@ -359,6 +349,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   ) {
     if (pageDirectoryPhysical == 0) {
       Logger::Write(LogLevel::Error, "CreateUser: null address space");
+
       return nullptr;
     }
 

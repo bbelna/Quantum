@@ -6,19 +6,10 @@
  * IA32 VGA text-mode console driver.
  */
 
-#include <Arch/IA32/IO.hpp>
-#include <Arch/IA32/VGAConsole.hpp>
+#include "Arch/IA32/IO.hpp"
+#include "Arch/IA32/VGAConsole.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using Writer = Logger::Writer;
-
-  volatile UInt16* const VGAConsole::_buffer
-    = reinterpret_cast<volatile UInt16*>(0xB8000);
-  UInt8 VGAConsole::_cursorRow = 0;
-  UInt8 VGAConsole::_cursorColumn = 0;
-  UInt16 VGAConsole::_cursorSavedCell = 0;
-  bool VGAConsole::_cursorDrawn = false;
-
   UInt16 VGAConsole::Index(UInt8 row, UInt8 column) {
     return static_cast<UInt16>(row * _columns + column);
   }
@@ -68,14 +59,20 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     HideCursor();
 
     switch (character) {
-      case '\n':
+      case '\n': {
         _cursorColumn = 0;
         _cursorRow++;
+
         break;
-      case '\r':
+      }
+
+      case '\r': {
         _cursorColumn = 0;
+
         break;
-      case '\b':
+      }
+
+      case '\b': {
         if (_cursorColumn > 0) {
           _cursorColumn--;
           _buffer[Index(_cursorRow, _cursorColumn)]
@@ -86,15 +83,21 @@ namespace Quantum::System::Kernel::Arch::IA32 {
           _buffer[Index(_cursorRow, _cursorColumn)]
             = MakeEntry(' ', _defaultColor);
         }
+
         break;
+      }
+
       default: {
         UInt16 entry = MakeEntry(character, _defaultColor);
+
         _buffer[Index(_cursorRow, _cursorColumn)] = entry;
         _cursorColumn++;
+
         if (_cursorColumn >= _columns) {
           _cursorColumn = 0;
           _cursorRow++;
         }
+
         break;
       }
     }
@@ -107,6 +110,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       UInt16 blank = MakeEntry(' ', _defaultColor);
+
       for (UInt16 c = 0; c < _columns; ++c) {
         _buffer[Index(_rows - 1, c)] = blank;
       }

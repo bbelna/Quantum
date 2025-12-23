@@ -6,23 +6,13 @@
  * IA32 boot info parsing and architecture-neutral accessors.
  */
 
-#include <Arch/IA32/BootInfo.hpp>
-#include <Types.hpp>
+#include "Arch/IA32/BootInfo.hpp"
+#include "Types.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  [[gnu::section(".text.start.data")]]
-  BootInfo::View BootInfo::_bootInfoView{};
-
-  [[gnu::section(".text.start.data")]]
-  UInt32 BootInfo::_bootInfoPhysicalAddress = 0;
-
-  [[gnu::section(".text.start.data")]]
-  UInt32 BootInfo::_bootInfoValid = 0;
-
   void BootInfo::Initialize(UInt32 bootInfoPhysicalAddress) {
     _bootInfoPhysicalAddress = bootInfoPhysicalAddress;
     _bootInfoValid = 0;
-
     _bootInfoView = {};
 
     if (bootInfoPhysicalAddress == 0) {

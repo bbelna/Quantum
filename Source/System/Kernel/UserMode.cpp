@@ -6,16 +6,17 @@
  * Kernel user-mode entry helpers.
  */
 
-#include <UserMode.hpp>
+#include "UserMode.hpp"
 
 #if defined(QUANTUM_ARCH_IA32)
-#include <Arch/IA32/UserMode.hpp>
+#include "Arch/IA32/Prelude.hpp"
+#include "Arch/IA32/UserMode.hpp"
 #endif
 
 namespace Quantum::System::Kernel {
   bool UserMode::MapUserStack(UInt32 userStackTop, UInt32 sizeBytes) {
     #if defined(QUANTUM_ARCH_IA32)
-    return Arch::IA32::UserMode::MapUserStack(userStackTop, sizeBytes);
+    return KernelIA32::UserMode::MapUserStack(userStackTop, sizeBytes);
     #else
     (void)userStackTop;
     (void)sizeBytes;
@@ -26,7 +27,7 @@ namespace Quantum::System::Kernel {
 
   void UserMode::Enter(UInt32 entryPoint, UInt32 userStackTop) {
     #if defined(QUANTUM_ARCH_IA32)
-    Arch::IA32::UserMode::Enter(entryPoint, userStackTop);
+    KernelIA32::UserMode::Enter(entryPoint, userStackTop);
     #else
     (void)entryPoint;
     (void)userStackTop;

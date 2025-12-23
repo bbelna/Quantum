@@ -8,11 +8,11 @@
 
 #pragma once
 
-#include <Types.hpp>
-#include <Interrupts.hpp>
+#include "Types.hpp"
+#include "Interrupts.hpp"
 
 #if defined(QUANTUM_ARCH_IA32)
-#include <Arch/IA32/Task.hpp>
+#include "Arch/IA32/Task.hpp"
 #endif
 
 namespace Quantum::System::Kernel {
@@ -154,6 +154,6 @@ namespace Quantum::System::Kernel {
       /**
        * Task id of the coordinator task (for privileged operations).
        */
-      static UInt32 _coordinatorTaskId;
+      inline static UInt32 _coordinatorTaskId = 0;
   };
 }

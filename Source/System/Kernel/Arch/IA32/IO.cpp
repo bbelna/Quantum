@@ -6,7 +6,7 @@
  * IA32 port I/O primitives.
  */
 
-#include <Arch/IA32/IO.hpp>
+#include "Arch/IA32/IO.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   UInt8 IO::In8(UInt16 port) {

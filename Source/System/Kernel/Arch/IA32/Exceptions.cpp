@@ -6,13 +6,13 @@
  * IA32 exception handler registration.
  */
 
-#include <Arch/IA32/CPU.hpp>
-#include <Arch/IA32/Exceptions.hpp>
-#include <Arch/IA32/Interrupts.hpp>
-#include <Arch/IA32/Memory.hpp>
-#include <Kernel.hpp>
-#include <Logger.hpp>
-#include <Prelude.hpp>
+#include "Arch/IA32/CPU.hpp"
+#include "Arch/IA32/Exceptions.hpp"
+#include "Arch/IA32/Interrupts.hpp"
+#include "Arch/IA32/Memory.hpp"
+#include "Logger.hpp"
+#include "Macros.hpp"
+#include "Prelude.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   using LogLevel = Logger::Level;

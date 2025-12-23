@@ -2,16 +2,16 @@
  * Quantum
  * (c) 2025 Brandon Belna - MIT License
  *
- * Libraries/Quantum/Include/Console.hpp
+ * Libraries/Quantum/Include/ABI/Console.hpp
  * User-mode console wrapper.
  */
 
 #pragma once
 
-#include <ABI/SystemCall.hpp>
-#include <Types.hpp>
+#include "ABI/SystemCall.hpp"
+#include "Types.hpp"
 
-namespace Quantum {
+namespace Quantum::ABI {
   /**
    * User-mode console wrapper.
    */

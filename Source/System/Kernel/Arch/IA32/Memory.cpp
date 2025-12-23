@@ -6,35 +6,27 @@
  * IA32 paging and memory functions.
  */
 
-#include <Arch/IA32/BootInfo.hpp>
-#include <Arch/IA32/CPU.hpp>
-#include <Arch/IA32/LinkerSymbols.hpp>
-#include <Arch/IA32/Memory.hpp>
-#include <Arch/IA32/Interrupts.hpp>
-#include <Helpers/AlignHelper.hpp>
-#include <Kernel.hpp>
-#include <Logger.hpp>
-#include <Prelude.hpp>
-#include <Task.hpp>
-#include <Types.hpp>
+#include "Arch/IA32/BootInfo.hpp"
+#include "Arch/IA32/CPU.hpp"
+#include "Arch/IA32/Interrupts.hpp"
+#include "Arch/IA32/LinkerSymbols.hpp"
+#include "Arch/IA32/Memory.hpp"
+#include "Helpers/AlignHelper.hpp"
+#include "Logger.hpp"
+#include "Macros.hpp"
+#include "Prelude.hpp"
+#include "Task.hpp"
+#include "Types.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   using LogLevel = Logger::Level;
   using AlignHelper = Helpers::AlignHelper;
 
-  static UInt32 _initBundleStartPage = 0;
-  static UInt32 _initBundleEndPage = 0;
-  static bool _loggedBundleSkip = false;
-
-  UInt32 Memory::_managedBytes = Memory::_defaultManagedBytes;
-  UInt32 Memory::_pageCount = Memory::_defaultManagedBytes / Memory::_pageSize;
-  UInt32 Memory::_usedPages = 0;
   alignas(Memory::_pageSize)
   UInt32 Memory::_pageDirectory[Memory::_pageDirectoryEntries];
+
   alignas(Memory::_pageSize)
   UInt32 Memory::_firstPageTable[Memory::_pageTableEntries];
-  UInt32* Memory::_pageBitmap = nullptr;
-  UInt32 Memory::_bitmapLengthWords = 0;
 
   UInt32 Memory::KernelVirtualToPhysical(UInt32 virtualAddress) {
     // all kernel segments are offset by kernelVirtualBase;

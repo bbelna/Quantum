@@ -40,12 +40,22 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       /**
        * Scancode to ASCII mapping for standard keys.
        */
-      static const char _scancodeMap[128];
+      static inline const char _scancodeMap[128] = {
+        0,  27, '1','2','3','4','5','6','7','8','9','0','-','=', '\b',
+        '\t','q','w','e','r','t','y','u','i','o','p','[',']','\n',
+        0,  'a','s','d','f','g','h','j','k','l',';','\'','`', 0,
+        '\\','z','x','c','v','b','n','m',',','.','/', 0, '*', 0, ' ',
+      };
 
       /**
        * Scancode to ASCII mapping when Shift is active.
        */
-      static const char _scancodeMapShift[128];
+      inline static const char _scancodeMapShift[128] = {
+        0,  27, '!','@','#','$','%','^','&','*','(',')','_','+', '\b',
+        '\t','q','w','e','r','t','y','u','i','o','p','[',']','\n',
+        0,  'a','s','d','f','g','h','j','k','l',':','\"','~', 0,
+        '|','z','x','c','v','b','n','m','<','>','?', 0, '*', 0, ' ',
+      };
 
       /**
        * Left shift make code.
@@ -105,42 +115,42 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       /**
        * Keyboard input buffer.
        */
-      static char _keyBuffer[_bufferSize];
+      inline static char _keyBuffer[_bufferSize] = {};
 
       /**
        * Head index for the keyboard buffer.
        */
-      static volatile UInt8 _head;
+      inline static volatile UInt8 _head = 0;
 
       /**
        * Tail index for the keyboard buffer.
        */
-      static volatile UInt8 _tail;
+      inline static volatile UInt8 _tail = 0;
 
       /**
        * Indicates if Shift key is active.
        */
-      static volatile bool _shiftActive;
+      inline static volatile bool _shiftActive = false;
 
       /**
        * Indicates if Caps Lock is active.
        */
-      static volatile bool _capsLock;
+      inline static volatile bool _capsLock = false;
 
       /**
        * Indicates if Control key is active.
        */
-      static volatile bool _ctrlActive;
+      inline static volatile bool _ctrlActive = false;
 
       /**
        * Indicates if Alt key is active.
        */
-      static volatile bool _altActive;
+      inline static volatile bool _altActive = false;
 
       /**
        * Indicates if the last scancode was an extended prefix (0xE0).
        */
-      static volatile bool _extendedPrefix;
+      inline static volatile bool _extendedPrefix = false;
 
       /**
        * Enqueues a character into the keyboard buffer.

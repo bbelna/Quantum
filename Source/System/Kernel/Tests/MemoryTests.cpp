@@ -6,9 +6,10 @@
  * Memory subsystem tests.
  */
 
-#include <Memory.hpp>
-#include <Testing.hpp>
-#include <Tests/MemoryTests.hpp>
+#include "Macros.hpp"
+#include "Memory.hpp"
+#include "Testing.hpp"
+#include "Tests/MemoryTests.hpp"
 
 namespace Quantum::System::Kernel::Tests {
   bool MemoryTests::TestMemoryAllocation() {

@@ -6,25 +6,24 @@
  * Architecture-agnostic console driver.
  */
 
-#include <Console.hpp>
-#include <CPU.hpp>
-#include <Helpers/CStringHelper.hpp>
-#include <Types.hpp>
+#include "Console.hpp"
+#include "CPU.hpp"
+#include "Helpers/CStringHelper.hpp"
+#include "Types.hpp"
 
 #if defined(QUANTUM_ARCH_IA32)
-#include <Arch/IA32/VGAConsole.hpp>
+#include "Arch/IA32/VGAConsole.hpp"
 
 namespace Arch = Quantum::System::Kernel::Arch::IA32;
 using ConsoleDriver = Arch::VGAConsole;
 #endif
 
 namespace Quantum::System::Kernel {
-  using Helpers::CStringHelper;
-
-  volatile UInt32 Console::_writing = 0;
+  using CStringHelper = Helpers::CStringHelper;
 
   Logger::Writer& Console::GetWriter() {
     static WriterAdapter writerAdapter;
+
     return writerAdapter;
   }
 
@@ -179,6 +178,7 @@ namespace Quantum::System::Kernel {
     }
 
     UInt32 length = static_cast<UInt32>(CStringHelper::Length(string));
+
     WriteLine(string, length);
   }
 
@@ -205,7 +205,9 @@ namespace Quantum::System::Kernel {
     }
 
     VARIABLE_ARGUMENTS_START(args, format);
+
     WriteFormattedVariableArguments(format, args);
+
     VARIABLE_ARGUMENTS_END(args);
 
     __sync_lock_release(&_writing);

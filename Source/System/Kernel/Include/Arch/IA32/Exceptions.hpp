@@ -8,8 +8,9 @@
 
 #pragma once
 
-#include <Arch/IA32/Interrupts.hpp>
 #include <Types.hpp>
+
+#include "Interrupts.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   /**

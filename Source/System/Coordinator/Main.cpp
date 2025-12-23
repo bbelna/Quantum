@@ -15,5 +15,6 @@ using namespace Quantum::System::Coordinator;
  */
 int Main() {
   Application::Main();
+
   return 0;
 }

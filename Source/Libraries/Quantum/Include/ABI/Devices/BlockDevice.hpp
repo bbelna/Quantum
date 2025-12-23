@@ -2,21 +2,21 @@
  * Quantum
  * (c) 2025 Brandon Belna - MIT License
  *
- * Libraries/Quantum/Include/ABI/Devices/Block.hpp
+ * Libraries/Quantum/Include/ABI/Devices/BlockDevice.hpp
  * Block device syscall wrappers.
  */
 
 #pragma once
 
-#include <ABI/IPC.hpp>
-#include <ABI/SystemCall.hpp>
-#include <Types.hpp>
+#include "ABI/IPC.hpp"
+#include "ABI/SystemCall.hpp"
+#include "Types.hpp"
 
 namespace Quantum::ABI::Devices {
   /**
    * Block device syscall wrappers.
    */
-  class Block {
+  class BlockDevice {
     public:
       /**
        * Block I/O operation identifiers.

@@ -6,17 +6,20 @@
  * IA32 system call setup.
  */
 
-#include <Arch/IA32/IDT.hpp>
-#include <Arch/IA32/SystemCall.hpp>
-#include <Arch/IA32/Interrupts.hpp>
-#include <Kernel.hpp>
-#include <Types.hpp>
+#include "Arch/IA32/IDT.hpp"
+#include "Arch/IA32/Interrupts.hpp"
+#include "Arch/IA32/SystemCall.hpp"
+#include "Handlers/SystemCallHandler.hpp"
+#include "Prelude.hpp"
+#include "Types.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
+  using SystemCallHandler = Kernel::Handlers::SystemCallHandler;
+
   extern "C" void SYSCALL80();
 
   Interrupts::Context* SystemCall::OnSystemCall(Interrupts::Context& context) {
-    return Kernel::HandleSystemCall(context);
+    return SystemCallHandler::Handle(context);
   }
 
   void SystemCall::Initialize() {

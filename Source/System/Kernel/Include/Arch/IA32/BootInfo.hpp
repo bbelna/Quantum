@@ -75,16 +75,19 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       /**
        * Cached boot info view for IA32.
        */
-      static View _bootInfoView;
+      [[gnu::section(".text.start.data")]]
+      inline static View _bootInfoView {};
 
       /**
        * Physical address of the boot info structure.
        */
-      static UInt32 _bootInfoPhysicalAddress;
+      [[gnu::section(".text.start.data")]]
+      inline static UInt32 _bootInfoPhysicalAddress = 0;
 
       /**
        * Whether the cached boot info view is valid.
        */
-      static UInt32 _bootInfoValid;
+      [[gnu::section(".text.start.data")]]
+      inline static UInt32 _bootInfoValid = 0;
   };
 }

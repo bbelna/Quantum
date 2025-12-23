@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <Types.hpp>
+#include "Types.hpp"
 
 namespace Quantum::System::Kernel::Helpers {
   /**
@@ -113,7 +113,7 @@ namespace Quantum::System::Kernel::Helpers {
       /**
        * Static buffer for integer to C-string conversions.
        */
-      static char _staticBuffer[_bufferSize];
+      inline static char _staticBuffer[_bufferSize] = {};
 
       /**
        * Writes an integer value to the given buffer as a C-string.

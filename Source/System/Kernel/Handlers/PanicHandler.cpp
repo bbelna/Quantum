@@ -6,12 +6,12 @@
  * Kernel panic handler.
  */
 
-#include <CPU.hpp>
-#include <Handlers/PanicHandler.hpp>
-#include <Helpers/CStringHelper.hpp>
-#include <Helpers/DebugHelper.hpp>
-#include <Logger.hpp>
-#include <Prelude.hpp>
+#include "CPU.hpp"
+#include "Handlers/PanicHandler.hpp"
+#include "Helpers/CStringHelper.hpp"
+#include "Helpers/DebugHelper.hpp"
+#include "Logger.hpp"
+#include "Prelude.hpp"
 
 namespace Quantum::System::Kernel::Handlers {
   using CPU = Kernel::CPU;

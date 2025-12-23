@@ -8,10 +8,10 @@
 
 #pragma once
 
-#include <Types.hpp>
+#include "Types.hpp"
 
 #if defined(QUANTUM_ARCH_IA32)
-#include <Arch/IA32/Interrupts.hpp>
+#include "Arch/IA32/Interrupts.hpp"
 #endif
 
 namespace Quantum::System::Kernel {

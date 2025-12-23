@@ -3,23 +3,27 @@
  * (c) 2025 Brandon Belna - MIT License
  *
  * System/Drivers/Storage/Floppy/Driver.hpp
- * User-mode floppy driver.
+ * Quantum's floppy driver.
  */
 
 #pragma once
 
-#include <ABI/Devices/Block.hpp>
+#include <ABI/Devices/BlockDevice.hpp>
 #include <ABI/IPC.hpp>
+#include <ABI/Prelude.hpp>
 #include <Types.hpp>
 
 namespace Quantum::System::Drivers::Storage::Floppy {
+  using BlockDevice = ABI::Devices::BlockDevice;
+  using IPC = ABI::IPC;
+
   /**
    * Floppy driver.
    */
   class Driver {
     public:
       /**
-       * Entry point for the floppy driver service.
+       * Entry point for the floppy driver.
        */
       static void Main();
 
@@ -132,7 +136,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       /**
        * True after the controller is initialized.
        */
-      static bool _initialized;
+      inline static bool _initialized = false;
 
       /**
        * Maximum number of floppy devices to track.
@@ -142,22 +146,22 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       /**
        * Bound block device identifiers.
        */
-      static UInt32 _deviceIds[_maxDevices];
+      inline static UInt32 _deviceIds[_maxDevices] = {};
 
       /**
        * Device sector sizes in bytes.
        */
-      static UInt32 _deviceSectorSizes[_maxDevices];
+      inline static UInt32 _deviceSectorSizes[_maxDevices] = {};
 
       /**
        * Device indices (A=0, B=1).
        */
-      static UInt8 _deviceIndices[_maxDevices];
+      inline static UInt8 _deviceIndices[_maxDevices] = {};
 
       /**
        * Number of bound devices.
        */
-      static UInt32 _deviceCount;
+      inline static UInt32 _deviceCount = 0;
 
       /**
        * Default DMA buffer size in bytes.
@@ -167,32 +171,32 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       /**
        * DMA buffer physical address.
        */
-      static UInt32 _dmaBufferPhysical;
+      inline static UInt32 _dmaBufferPhysical = 0;
 
       /**
        * DMA buffer virtual address.
        */
-      static UInt8* _dmaBufferVirtual;
+      inline static UInt8* _dmaBufferVirtual = nullptr;
 
       /**
        * DMA buffer size in bytes.
        */
-      static UInt32 _dmaBufferBytes;
+      inline static UInt32 _dmaBufferBytes = 0;
 
       /**
        * Cached cylinder per drive index.
        */
-      static UInt8 _currentCylinder[_maxDevices];
+      inline static UInt8 _currentCylinder[_maxDevices] = {};
 
       /**
        * Pending floppy interrupt count.
        */
-      static volatile UInt32 _irqPendingCount;
+      inline static volatile UInt32 _irqPendingCount = 0;
 
       /**
        * IPC port id for this driver.
        */
-      static UInt32 _portId;
+      inline static UInt32 _portId = 0;
 
       /**
        * Maximum number of queued non-IRQ messages while waiting.
@@ -202,32 +206,32 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       /**
        * Pending IPC messages received during IRQ waits.
        */
-      static ABI::IPC::Message _pendingMessages[_maxPendingMessages];
+      inline static IPC::Message _pendingMessages[_maxPendingMessages] = {};
 
       /**
        * Number of pending IPC messages.
        */
-      static UInt32 _pendingCount;
+      inline static UInt32 _pendingCount = 0;
 
       /**
        * IPC receive buffer.
        */
-      static ABI::IPC::Message _receiveMessage;
+      inline static IPC::Message _receiveMessage {};
 
       /**
        * IPC send buffer.
        */
-      static ABI::IPC::Message _sendMessage;
+      inline static IPC::Message _sendMessage {};
 
       /**
        * Parsed block request message.
        */
-      static ABI::Devices::Block::Message _blockRequest;
+      inline static BlockDevice::Message _blockRequest {};
 
       /**
        * Prepared block response message.
        */
-      static ABI::Devices::Block::Message _blockResponse;
+      inline static BlockDevice::Message _blockResponse {};
 
       /**
        * Waits for the controller FIFO to enter the desired phase.
@@ -317,14 +321,14 @@ namespace Quantum::System::Drivers::Storage::Floppy {
        * @return
        *   True if the message is an IRQ notification; false otherwise.
        */
-      static bool IsIRQMessage(const ABI::IPC::Message& msg);
+      static bool IsIRQMessage(const IPC::Message& msg);
 
       /**
        * Queues a non-IRQ message while waiting for an IRQ.
        * @param msg
        *   IPC message to queue.
        */
-      static void QueuePendingMessage(const ABI::IPC::Message& msg);
+      static void QueuePendingMessage(const IPC::Message& msg);
 
       /**
        * Fills a buffer with a byte value.
@@ -370,7 +374,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       /**
        * Converts LBA to CHS for 1.44MB geometry.
        */
-      static void LbaToCHS(
+      static void LBAToCHS(
         UInt32 lba,
         UInt8& cylinder,
         UInt8& head,
@@ -394,7 +398,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
        * @return
        *   True if the device was recorded; false otherwise.
        */
-      static bool RegisterDevice(const ABI::Devices::Block::Info& info);
+      static bool RegisterDevice(const BlockDevice::Info& info);
 
       /**
        * Resolves a device id to its drive index and sector size.

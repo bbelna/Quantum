@@ -8,10 +8,11 @@
 
 #pragma once
 
-#include <Arch/IA32/Interrupts.hpp>
 #include <Interrupts.hpp>
 #include <Prelude.hpp>
 #include <Types.hpp>
+
+#include "Interrupts.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   /**
@@ -117,17 +118,17 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       /**
        * IDT entries array.
        */
-      static Entry _idtEntries[256];
+      inline static Entry _idtEntries[256];
 
       /**
        * IDT descriptor for `lidt` instruction.
        */
-      static Descriptor _idtDescriptor;
+      inline static Descriptor _idtDescriptor {};
 
       /**
        * Interrupt handler table.
        */
-      static Interrupts::Handler _handlerTable[256];
+      inline static Interrupts::Handler _handlerTable[256] = { nullptr };
 
       /**
        * Exception ISR stub table.

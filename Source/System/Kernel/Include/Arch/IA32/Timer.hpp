@@ -65,12 +65,12 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       /**
        * Tick count since timer initialization.
        */
-      static volatile UInt64 _tickCount;
+      inline static volatile UInt64 _tickCount = 0;
 
       /**
        * Whether periodic tick logging is enabled.
        */
-      static volatile bool _tickLoggingEnabled;
+      inline static volatile bool _tickLoggingEnabled = false;
 
       /**
        * PIT timer interrupt handler.

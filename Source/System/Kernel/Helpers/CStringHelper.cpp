@@ -6,11 +6,9 @@
  * C-string helper utilities.
  */
 
-#include <Helpers/CStringHelper.hpp>
+#include "Helpers/CStringHelper.hpp"
 
 namespace Quantum::System::Kernel::Helpers {
-  char CStringHelper::_staticBuffer[CStringHelper::_bufferSize] = {};
-
   bool CStringHelper::WriteIntToBuffer(
     Int32 value,
     CStringMutable buffer,

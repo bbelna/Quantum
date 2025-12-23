@@ -6,8 +6,8 @@
  * 8259A Programmable Interrupt Controller (PIC) driver.
  */
 
-#include <Arch/IA32/IO.hpp>
-#include <Arch/IA32/PIC.hpp>
+#include "Arch/IA32/IO.hpp"
+#include "Arch/IA32/PIC.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   void PIC::Initialize(UInt8 offset1, UInt8 offset2) {

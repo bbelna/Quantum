@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <Types.hpp>
+#include "Types.hpp"
 
 namespace Quantum::System::Kernel {
   class Memory {
@@ -232,11 +232,6 @@ namespace Quantum::System::Kernel {
       static constexpr UInt32 _binCount = 4;
 
       /**
-       * Sizes of fixed-size bins.
-       */
-      static const UInt32 _binSizes[_binCount];
-
-      /**
        * Poison pattern used to fill newly allocated payloads.
        */
       static constexpr UInt8 _poisonAllocated = 0xAA;
@@ -252,45 +247,50 @@ namespace Quantum::System::Kernel {
       static constexpr UInt32 _canaryValue = 0xDEADC0DE;
 
       /**
+       * Sizes of fixed-size bins.
+       */
+      inline static const UInt32 _binSizes[_binCount] = { 16, 32, 64, 128 };
+
+      /**
        * Pointer to the start of the heap region.
        */
-      static UInt8* _heapBase;
+      inline static UInt8* _heapBase = nullptr;
 
       /**
        * Pointer to the end of the mapped heap region (next unmapped byte).
        */
-      static UInt8* _heapMappedEnd;
+      inline static UInt8* _heapMappedEnd = nullptr;
 
       /**
        * Address of the guard page immediately following the mapped heap.
        */
-      static UInt8* _guardAddress;
+      inline static UInt8* _guardAddress = nullptr;
 
       /**
        * Number of bytes currently mapped in the heap.
        */
-      static UInt32 _heapMappedBytes;
+      inline static UInt32 _heapMappedBytes = 0;
 
       /**
        * Pointer to the current position in the heap for allocations.
        */
-      static UInt8* _heapCurrent;
+      inline static UInt8* _heapCurrent = nullptr;
 
       /**
        * Tracks the minimum contiguous pages we should keep free at the tail of
        * the heap to satisfy the largest allocation request seen so far.
        */
-      static UInt32 _requiredTailPages;
+      inline static UInt32 _requiredTailPages = 2;
 
       /**
        * Head of the general free list.
        */
-      static FreeBlock* _freeList;
+      inline static FreeBlock* _freeList = nullptr;
 
       /**
        * Free lists for each fixed-size bin.
        */
-      static FreeBlock* _binFreeLists[_binCount];
+      inline static FreeBlock* _binFreeLists[_binCount] = { nullptr, nullptr, nullptr, nullptr };
 
       /**
        * Writes the canary for a free block at the end of its payload.

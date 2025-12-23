@@ -6,18 +6,14 @@
  * IA32 Interrupt Descriptor Table management.
  */
 
-#include <Logger.hpp>
-#include <Arch/IA32/CPU.hpp>
-#include <Arch/IA32/IDT.hpp>
-#include <Arch/IA32/Interrupts.hpp>
-#include <Arch/IA32/PIC.hpp>
+#include "Arch/IA32/CPU.hpp"
+#include "Arch/IA32/IDT.hpp"
+#include "Arch/IA32/Interrupts.hpp"
+#include "Arch/IA32/PIC.hpp"
+#include "Logger.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   using LogLevel = Logger::Level;
-
-  IDT::Entry IDT::_idtEntries[256];
-  IDT::Descriptor IDT::_idtDescriptor{};
-  Interrupts::Handler IDT::_handlerTable[256] = { nullptr };
 
   extern "C" void ISR0();
   extern "C" void ISR1();

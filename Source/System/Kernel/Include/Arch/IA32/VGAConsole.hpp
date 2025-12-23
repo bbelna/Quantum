@@ -10,8 +10,8 @@
 
 #include <Logger.hpp>
 #include <Prelude.hpp>
-#include <Types.hpp>
 #include <String.hpp>
+#include <Types.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   /**
@@ -52,37 +52,38 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       /**
        * The VGA text-mode buffer.
        */
-      static volatile UInt16* const _buffer;
+      inline static volatile UInt16* const _buffer
+        = reinterpret_cast<volatile UInt16*>(0xB8000);
 
       /**
        * The current cursor row.
        */
-      static UInt8 _cursorRow;
+      inline static UInt8 _cursorRow = 0;
 
       /**
        * The current cursor column.
        */
-      static UInt8 _cursorColumn;
+      inline static UInt8 _cursorColumn = 0;
 
       /**
        * Saved cursor row for restore.
        */
-      static UInt8 _cursorSavedRow;
+      inline static UInt8 _cursorSavedRow = 0;
 
       /**
        * Saved cursor column for restore.
        */
-      static UInt8 _cursorSavedColumn;
+      inline static UInt8 _cursorSavedColumn = 0;
 
       /**
        * The saved cell value under the cursor.
        */
-      static UInt16 _cursorSavedCell;
+      inline static UInt16 _cursorSavedCell = 0;
 
       /**
        * Whether the cursor is currently drawn.
        */
-      static bool _cursorDrawn;
+      inline static bool _cursorDrawn = false;
 
       /**
        * Calculates the linear index in the VGA buffer for the given row and

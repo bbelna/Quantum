@@ -6,23 +6,21 @@
  * Architecture-agnostic task management.
  */
 
-#include <Interrupts.hpp>
-#include <Logger.hpp>
-#include <Task.hpp>
-#include <Types.hpp>
+#include "Interrupts.hpp"
+#include "Logger.hpp"
+#include "Task.hpp"
+#include "Types.hpp"
 
 #if defined(QUANTUM_ARCH_IA32)
-#include <Arch/IA32/Task.hpp>
+#include "Arch/IA32/Task.hpp"
 #endif
 
 namespace Quantum::System::Kernel {
+  using LogLevel = Logger::Level;
+
   #if defined(QUANTUM_ARCH_IA32)
   using ArchTask = Arch::IA32::Task;
   #endif
-
-  using LogLevel = Logger::Level;
-
-  UInt32 Task::_coordinatorTaskId = 0;
 
   void Task::Initialize() {
     ArchTask::Initialize();
@@ -47,6 +45,7 @@ namespace Quantum::System::Kernel {
     (void)entryPoint;
     (void)userStackTop;
     (void)pageDirectoryPhysical;
+
     return nullptr;
     #endif
   }
@@ -108,6 +107,7 @@ namespace Quantum::System::Kernel {
     return true;
     #else
     (void)taskId;
+
     return false;
     #endif
   }

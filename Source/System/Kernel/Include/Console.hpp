@@ -8,8 +8,8 @@
 
 #pragma once
 
-#include <Logger.hpp>
-#include <Types.hpp>
+#include "Logger.hpp"
+#include "Types.hpp"
 
 namespace Quantum::System::Kernel {
   /**
@@ -88,7 +88,7 @@ namespace Quantum::System::Kernel {
       /**
        * Flag indicating whether a write operation is in progress.
        */
-      static volatile UInt32 _writing;
+      inline static volatile UInt32 _writing = 0;
 
       /**
        * Converts an unsigned integer to a string in the given base.

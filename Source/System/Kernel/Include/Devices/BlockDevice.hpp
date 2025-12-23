@@ -2,20 +2,20 @@
  * Quantum
  * (c) 2025 Brandon Belna - MIT License
  *
- * System/Kernel/Include/Devices/Block.hpp
+ * System/Kernel/Include/Devices/BlockDevice.hpp
  * Kernel block device registry and interface.
  */
 
 #pragma once
 
-#include <IPC.hpp>
-#include <Types.hpp>
+#include "IPC.hpp"
+#include "Types.hpp"
 
 namespace Quantum::System::Kernel::Devices {
   /**
    * Block device registry and I/O interface.
    */
-  class Block {
+  class BlockDevice {
     public:
       /**
        * Block I/O operation identifiers.
@@ -340,21 +340,6 @@ namespace Quantum::System::Kernel::Devices {
       static constexpr UInt32 _maxDevices = 8;
 
       /**
-       * Registered device pointers.
-       */
-      static Device* _devices[_maxDevices];
-
-      /**
-       * Number of active devices.
-       */
-      static UInt32 _deviceCount;
-
-      /**
-       * Next device id to assign.
-       */
-      static UInt32 _nextDeviceId;
-
-      /**
        * Maximum number of floppy devices to register.
        */
       static constexpr UInt32 _maxFloppyDevices = 2;
@@ -370,9 +355,19 @@ namespace Quantum::System::Kernel::Devices {
       static constexpr UInt8 _floppyDriveBIndex = 1;
 
       /**
-       * Registered floppy device descriptors.
+       * CMOS address port.
        */
-      static Device _floppyDevices[_maxFloppyDevices];
+      static constexpr UInt16 _cmosAddressPort = 0x70;
+
+      /**
+       * CMOS data port.
+       */
+      static constexpr UInt16 _cmosDataPort = 0x71;
+
+      /**
+       * CMOS register index for floppy drive types.
+       */
+      static constexpr UInt8 _cmosDriveTypeRegister = 0x10;
 
       /**
        * Magic tag for boot drive stored in boot info reserved field.
@@ -395,29 +390,29 @@ namespace Quantum::System::Kernel::Devices {
       static constexpr UInt32 _dmaMaxPhysicalAddress = 0x01000000;
 
       /**
+       * Registered device pointers.
+       */
+      inline static Device* _devices[_maxDevices] = { nullptr };
+
+      /**
+       * Number of active devices.
+       */
+      inline static UInt32 _deviceCount = 0;
+
+      /**
+       * Next device id to assign.
+       */
+      inline static UInt32 _nextDeviceId = 1;
+
+      /**
        * Physical address of the DMA buffer (0 if unallocated).
        */
-      static UInt32 _dmaBufferPhysical;
+      inline static UInt32 _dmaBufferPhysical = 0;
 
       /**
        * Size of the DMA buffer in bytes.
        */
-      static UInt32 _dmaBufferBytes;
-
-      /**
-       * CMOS address port.
-       */
-      static constexpr UInt16 _cmosAddressPort = 0x70;
-
-      /**
-       * CMOS data port.
-       */
-      static constexpr UInt16 _cmosDataPort = 0x71;
-
-      /**
-       * CMOS register index for floppy drive types.
-       */
-      static constexpr UInt8 _cmosDriveTypeRegister = 0x10;
+      inline static UInt32 _dmaBufferBytes = 0;
 
       /**
        * Finds a device by id.
@@ -528,5 +523,46 @@ namespace Quantum::System::Kernel::Devices {
        */
       static void CopyBytes(void* dest, const void* src, UInt32 length);
 
+      /**
+       * Temporary stub read callback for uninitialized floppy devices.
+       */
+      static bool FloppyStubRead(UInt32 lba, UInt32 count, void* buffer);
+
+      /**
+       * Temporary stub write callback for uninitialized floppy devices.
+       */
+      static bool FloppyStubWrite(UInt32 lba, UInt32 count, const void* buffer);
+
+      /**
+       * Registered floppy device descriptors.
+       */
+      inline static Device _floppyDevices[_maxFloppyDevices]  = {
+        Device{
+          Info{
+            0,
+            Type::Floppy,
+            512,
+            2880,
+            flagRemovable,
+            _floppyDriveAIndex
+          },
+          0,
+          &FloppyStubRead,
+          &FloppyStubWrite
+        },
+        Device{
+          Info{
+            0,
+            Type::Floppy,
+            512,
+            2880,
+            flagRemovable,
+            _floppyDriveBIndex
+          },
+          0,
+          &FloppyStubRead,
+          &FloppyStubWrite
+        }
+      };
   };
 }

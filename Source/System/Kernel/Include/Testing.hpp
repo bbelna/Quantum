@@ -8,8 +8,8 @@
 
 #pragma once
 
-#include <Types.hpp>
-#include <String.hpp>
+#include "String.hpp"
+#include "Types.hpp"
 
 namespace Quantum::System::Kernel {
   /**
@@ -90,27 +90,27 @@ namespace Quantum::System::Kernel {
       /**
        * Registered test cases.
        */
-      static TestCase _tests[_maxTests];
+      inline static TestCase _tests[_maxTests];
 
       /**
        * Number of registered tests.
        */
-      static UInt32 _testCount;
+      inline static UInt32 _testCount = 0;
 
       /**
        * Number of passed tests.
        */
-      static UInt32 _testsPassed;
+      inline static UInt32 _testsPassed = 0;
 
       /**
        * Number of failed tests.
        */
-      static UInt32 _testsFailed;
+      inline static UInt32 _testsFailed = 0;
 
       /**
        * Number of assertion failures recorded.
        */
-      static UInt32 _assertFailures;
+      inline static UInt32 _assertFailures = 0;
 
       /**
        * Logs the header before running tests.
@@ -123,6 +123,3 @@ namespace Quantum::System::Kernel {
       static void LogFooter();
   };
 }
-
-#define TEST_ASSERT(cond, msg) \
-  ::Quantum::System::Kernel::Testing::Assert((cond), (msg), __FILE__, __LINE__)

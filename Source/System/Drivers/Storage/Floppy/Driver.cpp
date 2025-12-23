@@ -3,39 +3,20 @@
  * (c) 2025 Brandon Belna - MIT License
  *
  * System/Drivers/Storage/Floppy/Driver.cpp
- * User-mode floppy driver.
+ * Quantum's floppy driver.
  */
 
-#include <ABI/Devices/Block.hpp>
-#include <ABI/IPC.hpp>
+#include <ABI/Console.hpp>
+#include <ABI/Devices/BlockDevice.hpp>
 #include <ABI/IO.hpp>
-#include <Console.hpp>
-#include <Task.hpp>
+#include <ABI/Task.hpp>
 
 #include "Driver.hpp"
 
 namespace Quantum::System::Drivers::Storage::Floppy {
-  using Block = ABI::Devices::Block;
-  using IPC = ABI::IPC;
+  using Console = ABI::Console;
   using IO = ABI::IO;
-
-  bool Driver::_initialized = false;
-  UInt32 Driver::_deviceIds[Driver::_maxDevices] = {};
-  UInt32 Driver::_deviceSectorSizes[Driver::_maxDevices] = {};
-  UInt8 Driver::_deviceIndices[Driver::_maxDevices] = {};
-  UInt32 Driver::_deviceCount = 0;
-  UInt32 Driver::_dmaBufferPhysical = 0;
-  UInt8* Driver::_dmaBufferVirtual = nullptr;
-  UInt32 Driver::_dmaBufferBytes = 0;
-  UInt8 Driver::_currentCylinder[Driver::_maxDevices] = {};
-  volatile UInt32 Driver::_irqPendingCount = 0;
-  UInt32 Driver::_portId = 0;
-  IPC::Message Driver::_pendingMessages[Driver::_maxPendingMessages]{};
-  UInt32 Driver::_pendingCount = 0;
-  IPC::Message Driver::_receiveMessage{};
-  IPC::Message Driver::_sendMessage{};
-  Block::Message Driver::_blockRequest{};
-  Block::Message Driver::_blockResponse{};
+  using Task = ABI::Task;
 
   bool Driver::WaitForFIFOReady(bool readPhase) {
     const UInt32 maxSpins = 100000;
@@ -226,20 +207,20 @@ namespace Quantum::System::Drivers::Storage::Floppy {
   }
 
   bool Driver::IsIRQMessage(const IPC::Message& msg) {
-    if (msg.length < Block::messageHeaderBytes) {
+    if (msg.length < BlockDevice::messageHeaderBytes) {
       return false;
     }
 
-    Block::Message header{};
+    BlockDevice::Message header{};
     UInt32 copyBytes = msg.length;
 
-    if (copyBytes > sizeof(Block::Message)) {
-      copyBytes = sizeof(Block::Message);
+    if (copyBytes > sizeof(BlockDevice::Message)) {
+      copyBytes = sizeof(BlockDevice::Message);
     }
 
     CopyMessageBytes(&header, msg.payload, copyBytes);
 
-    return header.op == Block::Operation::Response &&
+    return header.op == BlockDevice::Operation::Response &&
       header.replyPortId == 0;
   }
 
@@ -417,7 +398,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     return true;
   }
 
-  void Driver::LbaToCHS(
+  void Driver::LBAToCHS(
     UInt32 lba,
     UInt8& cylinder,
     UInt8& head,
@@ -452,7 +433,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     UInt8 head = 0;
     UInt8 sector = 0;
 
-    LbaToCHS(lba, cylinder, head, sector);
+    LBAToCHS(lba, cylinder, head, sector);
     SetDrive(driveIndex, true);
     WaitForMotorSpinUp();
 
@@ -564,7 +545,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     return true;
   }
 
-  bool Driver::RegisterDevice(const Block::Info& info) {
+  bool Driver::RegisterDevice(const BlockDevice::Info& info) {
     if (_deviceCount >= _maxDevices) {
       return false;
     }
@@ -611,18 +592,18 @@ namespace Quantum::System::Drivers::Storage::Floppy {
   void Driver::Main() {
     Console::WriteLine("Floppy driver starting (stub)");
 
-    UInt32 count = Block::GetCount();
+    UInt32 count = BlockDevice::GetCount();
 
     _deviceCount = 0;
 
     for (UInt32 i = 1; i <= count; ++i) {
-      Block::Info info{};
+      BlockDevice::Info info{};
 
-      if (Block::GetInfo(i, info) != 0) {
+      if (BlockDevice::GetInfo(i, info) != 0) {
         continue;
       }
 
-      if (info.type == Block::Type::Floppy) {
+      if (info.type == BlockDevice::Type::Floppy) {
         if (!RegisterDevice(info)) {
           Console::WriteLine("Floppy driver skipping device");
         }
@@ -643,9 +624,9 @@ namespace Quantum::System::Drivers::Storage::Floppy {
 
     _portId = portId;
 
-    Block::DMABuffer dmaBuffer{};
+    BlockDevice::DMABuffer dmaBuffer{};
 
-    if (Block::AllocateDMABuffer(_dmaBufferDefaultBytes, dmaBuffer) != 0) {
+    if (BlockDevice::AllocateDMABuffer(_dmaBufferDefaultBytes, dmaBuffer) != 0) {
       Console::WriteLine("Floppy driver failed to allocate DMA buffer");
       Task::Exit(1);
     }
@@ -659,7 +640,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     }
 
     for (UInt32 i = 0; i < _deviceCount; ++i) {
-      if (Block::Bind(_deviceIds[i], portId) != 0) {
+      if (BlockDevice::Bind(_deviceIds[i], portId) != 0) {
         Console::WriteLine("Floppy driver failed to bind block device");
         Task::Exit(1);
       }
@@ -705,21 +686,21 @@ namespace Quantum::System::Drivers::Storage::Floppy {
         }
       }
 
-      if (msg.length < Block::messageHeaderBytes) {
+      if (msg.length < BlockDevice::messageHeaderBytes) {
         continue;
       }
 
-      Block::Message& request = _blockRequest;
+      BlockDevice::Message& request = _blockRequest;
       UInt32 copyBytes = msg.length;
 
-      if (copyBytes > sizeof(Block::Message)) {
-        copyBytes = sizeof(Block::Message);
+      if (copyBytes > sizeof(BlockDevice::Message)) {
+        copyBytes = sizeof(BlockDevice::Message);
       }
 
       CopyBytes(&request, msg.payload, copyBytes);
 
       if (
-        request.op == Block::Operation::Response &&
+        request.op == BlockDevice::Operation::Response &&
         request.replyPortId == 0
       ) {
         ++_irqPendingCount;
@@ -731,9 +712,9 @@ namespace Quantum::System::Drivers::Storage::Floppy {
         continue;
       }
 
-      Block::Message& response = _blockResponse;
+      BlockDevice::Message& response = _blockResponse;
 
-      response.op = Block::Operation::Response;
+      response.op = BlockDevice::Operation::Response;
       response.deviceId = request.deviceId;
       response.lba = request.lba;
       response.count = request.count;
@@ -753,9 +734,9 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       if (response.status == 0) {
         UInt32 bytes = request.count * sectorSize;
 
-        if (bytes > Block::messageDataBytes) {
+        if (bytes > BlockDevice::messageDataBytes) {
           response.status = 3;
-        } else if (request.op == Block::Operation::Read) {
+        } else if (request.op == BlockDevice::Operation::Read) {
           if (_dmaBufferBytes < sectorSize) {
             response.status = 5;
           } else {
@@ -776,14 +757,14 @@ namespace Quantum::System::Drivers::Storage::Floppy {
               );
             }
           }
-        } else if (request.op != Block::Operation::Write) {
+        } else if (request.op != BlockDevice::Operation::Write) {
           response.status = 4;
         }
       }
 
       IPC::Message& reply = _sendMessage;
 
-      reply.length = Block::messageHeaderBytes + response.dataLength;
+      reply.length = BlockDevice::messageHeaderBytes + response.dataLength;
 
       if (reply.length > IPC::maxPayloadBytes) {
         continue;

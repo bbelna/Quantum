@@ -12,6 +12,8 @@
 #include <Types.hpp>
 
 namespace Quantum::System::Coordinator {
+  using InitBundle = ABI::InitBundle;
+
   class Application {
     public:
       /**
@@ -23,35 +25,63 @@ namespace Quantum::System::Coordinator {
       /**
        * INIT.BND header layout.
        */
-      using BundleHeader = Quantum::ABI::InitBundle::Header;
+      using BundleHeader = InitBundle::Header;
 
       /**
        * INIT.BND entry layout.
        */
-      using BundleEntry = Quantum::ABI::InitBundle::Entry;
+      using BundleEntry = InitBundle::Entry;
+
+      /**
+       * Cached floppy presence state.
+       */
+      inline static bool _floppyPresent = false;
+
+      /**
+       * Cached floppy block device id.
+       */
+      inline static UInt32 _floppyDeviceId = 0;
 
       /**
        * Validates the INIT.BND header magic.
+       * @param header
+       *   INIT.BND header to validate.
+       * @return
+       *   True if the magic is valid; false otherwise.
        */
       static bool HasMagic(const BundleHeader& header);
 
       /**
        * Returns the length of the entry name.
+       * @param entry
+       *   Entry to measure.
+       * @return
+       *   Length of the entry name.
        */
       static UInt32 EntryNameLength(const BundleEntry& entry);
 
       /**
        * Compares an entry name to a target name.
+       * @param entry
+       *   Entry to compare.
+       * @param name
+       *   Null-terminated target name.
+       * @return
+       *   True if the names are equal; false otherwise.
        */
       static bool EntryNameEquals(const BundleEntry& entry, CString name);
 
       /**
-       * Spawns an INIT.BND entry, skipping the coordinator.
+       * Spawns an INIT.BND entry.
+       * @param entry
+       *   INIT.BND entry to spawn.
        */
       static void SpawnEntry(const BundleEntry& entry);
 
       /**
        * Detects whether a floppy block device is present.
+       * @return
+       *   True if a floppy device is present; false otherwise.
        */
       static bool HasFloppyDevice();
 
@@ -59,15 +89,5 @@ namespace Quantum::System::Coordinator {
        * Runs a small block read test against the floppy device.
        */
       static void TestFloppyBlockRead();
-
-      /**
-       * Cached floppy presence state.
-       */
-      static bool _floppyPresent;
-
-      /**
-       * Cached floppy block device id.
-       */
-      static UInt32 _floppyDeviceId;
   };
 }

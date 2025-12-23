@@ -12,5 +12,6 @@ using namespace Quantum::System::Drivers::Storage::Floppy;
 
 int Main() {
   Driver::Main();
+
   return 0;
 }

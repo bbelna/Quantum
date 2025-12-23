@@ -8,8 +8,8 @@
 
 #pragma once
 
-#include <Types.hpp>
-#include <String.hpp>
+#include "String.hpp"
+#include "Types.hpp"
 
 namespace Quantum::System::Kernel {
   /**
@@ -87,16 +87,16 @@ namespace Quantum::System::Kernel {
       /**
        * The minimum log level.
        */
-      static Level _minimumLevel;
+      static inline Level _minimumLevel = Level::Debug;
 
       /**
        * The array of writers.
        */
-      static Writer** _writers;
+      static inline Writer** _writers = nullptr;
 
       /**
        * The number of writers.
        */
-      static Size _writerCount;
+      static inline Size _writerCount = 0;
   };
 }

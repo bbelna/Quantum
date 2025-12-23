@@ -6,18 +6,19 @@
  * IA32 floppy controller interrupt handling.
  */
 
-#include <Arch/IA32/Floppy.hpp>
-#include <Arch/IA32/PIC.hpp>
-#include <Devices/Block.hpp>
-#include <Interrupts.hpp>
+#include "Arch/IA32/Floppy.hpp"
+#include "Arch/IA32/PIC.hpp"
+#include "Devices/BlockDevice.hpp"
+#include "Interrupts.hpp"
+#include "Prelude.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using Block = ::Quantum::System::Kernel::Devices::Block;
+  using BlockDevice = Kernel::Devices::BlockDevice;
 
   Interrupts::Context* Floppy::FloppyIRQHandler(
     Interrupts::Context& context
   ) {
-    Block::HandleFloppyIRQ();
+    BlockDevice::HandleFloppyIRQ();
 
     return &context;
   }

@@ -6,10 +6,10 @@
  * IA32 CPU control.
  */
 
-#include <Logger.hpp>
-#include <Prelude.hpp>
-#include <Arch/IA32/CPU.hpp>
-#include <Types.hpp>
+#include "Arch/IA32/CPU.hpp"
+#include "Logger.hpp"
+#include "Prelude.hpp"
+#include "Types.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   using LogLevel = Logger::Level;

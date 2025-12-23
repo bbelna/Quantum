@@ -6,17 +6,19 @@
  * System coordinator implementation.
  */
 
-#include <ABI/Devices/Block.hpp>
+#include <ABI/Console.hpp>
+#include <ABI/Devices/BlockDevice.hpp>
 #include <ABI/InitBundle.hpp>
 #include <ABI/IO.hpp>
-#include <Console.hpp>
-#include <Task.hpp>
+#include <ABI/Task.hpp>
 
 #include "Application.hpp"
 
 namespace Quantum::System::Coordinator {
-  bool Application::_floppyPresent = false;
-  UInt32 Application::_floppyDeviceId = 0;
+  using Console = ABI::Console;
+  using BlockDevice = ABI::Devices::BlockDevice;
+  using IO = ABI::IO;
+  using Task = ABI::Task;
 
   bool Application::HasMagic(const BundleHeader& header) {
     const char expected[8] = { 'I','N','I','T','B','N','D','\0' };
@@ -66,20 +68,22 @@ namespace Quantum::System::Coordinator {
       return;
     }
 
-    UInt32 taskId = Quantum::ABI::InitBundle::Spawn(entry.name);
+    UInt32 taskId = InitBundle::Spawn(entry.name);
 
     if (taskId == 0) {
       Console::WriteLine("Failed to spawn INIT.BND entry");
+
       return;
     }
 
     if (EntryNameEquals(entry, "floppy")) {
       if (!_floppyPresent) {
         Console::WriteLine("Floppy device not detected; skipping driver");
+
         return;
       }
 
-      UInt32 grant = Quantum::ABI::IO::GrantIOAccess(taskId);
+      UInt32 grant = IO::GrantIOAccess(taskId);
 
       if (grant == 0) {
         Console::WriteLine("Floppy driver granted I/O access");
@@ -90,22 +94,22 @@ namespace Quantum::System::Coordinator {
   }
 
   bool Application::HasFloppyDevice() {
-    using BlockDevices = Quantum::ABI::Devices::Block;
-
-    UInt32 count = BlockDevices::GetCount();
+    UInt32 count = BlockDevice::GetCount();
     bool found = false;
+
     _floppyDeviceId = 0;
 
     for (UInt32 i = 1; i <= count; ++i) {
-      BlockDevices::Info info{};
+      BlockDevice::Info info{};
 
-      if (BlockDevices::GetInfo(i, info) != 0) {
+      if (BlockDevice::GetInfo(i, info) != 0) {
         continue;
       }
 
-      if (info.type == BlockDevices::Type::Floppy) {
+      if (info.type == BlockDevice::Type::Floppy) {
         found = true;
         _floppyDeviceId = info.id;
+
         break;
       }
     }
@@ -120,19 +124,18 @@ namespace Quantum::System::Coordinator {
   }
 
   void Application::TestFloppyBlockRead() {
-    using BlockDevices = Quantum::ABI::Devices::Block;
-
     if (_floppyDeviceId == 0) {
       return;
     }
 
-    BlockDevices::Info info{};
+    BlockDevice::Info info{};
     bool ready = false;
 
     for (UInt32 i = 0; i < 64; ++i) {
-      if (BlockDevices::GetInfo(_floppyDeviceId, info) == 0) {
-        if ((info.flags & BlockDevices::flagReady) != 0) {
+      if (BlockDevice::GetInfo(_floppyDeviceId, info) == 0) {
+        if ((info.flags & BlockDevice::flagReady) != 0) {
           ready = true;
+
           break;
         }
       }
@@ -142,20 +145,34 @@ namespace Quantum::System::Coordinator {
 
     if (!ready) {
       Console::WriteLine("Floppy block device not ready; skipping test");
+
       return;
     }
 
     UInt8 buffer[512] = {};
-    BlockDevices::Request request{};
+    BlockDevice::Request request{};
+
     request.deviceId = _floppyDeviceId;
     request.lba = 0;
     request.count = 1;
     request.buffer = buffer;
 
-    UInt32 result = BlockDevices::Read(request);
+    UInt32 result = BlockDevice::Read(request);
 
     if (result == 0) {
-      Console::WriteLine("Floppy block read test succeeded");
+      UInt32 nonZeroCount = 0;
+
+      for (UInt32 i = 0; i < sizeof(buffer); ++i) {
+        if (buffer[i] != 0) {
+          nonZeroCount++;
+        }
+      }
+
+      if (nonZeroCount == 0) {
+        Console::WriteLine("Floppy block read test returned empty data");
+      } else {
+        Console::WriteLine("Floppy block read test succeeded");
+      }
     } else {
       Console::WriteLine("Floppy block read test returned error");
     }
@@ -166,9 +183,9 @@ namespace Quantum::System::Coordinator {
 
     _floppyPresent = HasFloppyDevice();
 
-    Quantum::ABI::InitBundle::Info info{};
+    InitBundle::Info info{};
 
-    bool ok = Quantum::ABI::InitBundle::GetInfo(info);
+    bool ok = InitBundle::GetInfo(info);
 
     if (!ok || info.base == 0 || info.size == 0) {
       Console::WriteLine("INIT.BND not available");
@@ -223,6 +240,7 @@ namespace Quantum::System::Coordinator {
         }
 
         line[writeIndex] = '\0';
+
         Console::WriteLine(line);
       } else {
         Console::WriteLine("  (unnamed)");

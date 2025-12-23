@@ -9,7 +9,9 @@
 #pragma once
 
 #include <ABI/InitBundle.hpp>
-#include <Types.hpp>
+#include <ABI/Prelude.hpp>
+
+#include "Types.hpp"
 
 namespace Quantum::System::Kernel {
   /**
@@ -76,17 +78,17 @@ namespace Quantum::System::Kernel {
       /**
        * Kernel virtual base where INIT.BND is mapped; 0 if absent.
        */
-      static UInt32 _initBundleMappedBase;
+      inline static UInt32 _initBundleMappedBase = 0;
 
       /**
        * Size of INIT.BND in bytes; 0 if absent.
        */
-      static UInt32 _initBundleMappedSize;
+      inline static UInt32 _initBundleMappedSize = 0;
 
       /**
        * User virtual base where INIT.BND is mapped; 0 if absent.
        */
-      static UInt32 _initBundleMappedUserBase;
+      inline static UInt32 _initBundleMappedUserBase = 0;
 
       /**
        * Maps INIT.BND into kernel and user space.
@@ -96,33 +98,29 @@ namespace Quantum::System::Kernel {
       /**
        * Validates the INIT.BND header magic.
        */
-      static bool HasMagic(const ::Quantum::ABI::InitBundle::Header& header);
+      static bool HasMagic(const ABI::InitBundle::Header& header);
 
       /**
        * Retrieves the bundle entries table.
        */
-      static const ::Quantum::ABI::InitBundle::Entry* GetBundleEntries(
-        UInt32& entryCount
-      );
+      static const ABI::InitBundle::Entry* GetBundleEntries(UInt32& entryCount);
 
       /**
        * Finds the coordinator entry in INIT.BND.
        */
-      static const ::Quantum::ABI::InitBundle::Entry* FindCoordinatorEntry();
+      static const ABI::InitBundle::Entry* FindCoordinatorEntry();
 
       /**
        * Compares an entry name to a target name.
        */
       static bool EntryNameMatches(
-        const ::Quantum::ABI::InitBundle::Entry& entry,
+        const ABI::InitBundle::Entry& entry,
         CString name
       );
 
       /**
        * Finds an entry by name in INIT.BND.
        */
-      static const ::Quantum::ABI::InitBundle::Entry* FindEntryByName(
-        CString name
-      );
+      static const ABI::InitBundle::Entry* FindEntryByName(CString name);
   };
 }

@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <ABI/SystemCall.hpp>
+#include "ABI/SystemCall.hpp"
 
 namespace Quantum::ABI {
   /**

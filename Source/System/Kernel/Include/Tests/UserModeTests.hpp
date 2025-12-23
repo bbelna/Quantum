@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <Types.hpp>
+#include "Types.hpp"
 
 namespace Quantum::System::Kernel::Tests {
   /**
@@ -40,7 +40,13 @@ namespace Quantum::System::Kernel::Tests {
       /**
        * User-mode test program machine code (yield then exit).
        */
-      static const UInt8 _userTestProgram[];
+      inline static const UInt8 _userTestProgram[]  = {
+        0xB8, 0x02, 0x00, 0x00, 0x00, // mov eax, SYS_YIELD
+        0xCD, 0x80,                   // int 0x80
+        0xB8, 0x01, 0x00, 0x00, 0x00, // mov eax, SYS_EXIT
+        0xCD, 0x80,                   // int 0x80
+        0xEB, 0xFE                    // jmp $
+      };
 
       /**
        * Verifies user-mode system call and return path.

@@ -6,13 +6,12 @@
  * IA32 Task State Segment setup.
  */
 
-#include <Arch/IA32/TSS.hpp>
-#include <Arch/IA32/GDT.hpp>
-#include <Types.hpp>
+#include "Arch/IA32/TSS.hpp"
+#include "Arch/IA32/GDT.hpp"
+#include "Types.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   alignas(16) UInt8 TSS::_ring0Stack[4096];
-  TSS::Structure TSS::_tss = {};
 
   /**
    * GDT table provided by assembly.
@@ -37,7 +36,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     }
 
     if (kernelStackTop == 0) {
-      kernelStackTop = reinterpret_cast<UInt32>(_ring0Stack)
+      kernelStackTop
+        = reinterpret_cast<UInt32>(_ring0Stack)
         + sizeof(_ring0Stack);
     }
 
@@ -57,7 +57,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
   void TSS::SetKernelStack(UInt32 kernelStackTop) {
     if (kernelStackTop == 0) {
-      kernelStackTop = reinterpret_cast<UInt32>(_ring0Stack)
+      kernelStackTop
+        = reinterpret_cast<UInt32>(_ring0Stack)
         + sizeof(_ring0Stack);
     }
 

@@ -6,23 +6,15 @@
  * Test harness for subsystem verification.
  */
 
-#include <Logger.hpp>
-#include <Testing.hpp>
-#include <Tests/MemoryTests.hpp>
-#include <Tests/TaskTests.hpp>
-#include <Tests/UserModeTests.hpp>
-#include <Types.hpp>
+#include "Logger.hpp"
+#include "Testing.hpp"
+#include "Tests/MemoryTests.hpp"
+#include "Tests/TaskTests.hpp"
+#include "Tests/UserModeTests.hpp"
+#include "Types.hpp"
 
 namespace Quantum::System::Kernel {
-  using namespace Tests;
-
   using LogLevel = Logger::Level;
-
-  Testing::TestCase Testing::_tests[Testing::_maxTests];
-  UInt32 Testing::_testCount = 0;
-  UInt32 Testing::_testsPassed = 0;
-  UInt32 Testing::_testsFailed = 0;
-  UInt32 Testing::_assertFailures = 0;
 
   void Testing::LogHeader() {
     Logger::Write(LogLevel::Info, "Running kernel test suite...");
@@ -100,8 +92,8 @@ namespace Quantum::System::Kernel {
   }
 
   void Testing::RegisterBuiltins() {
-    MemoryTests::RegisterTests();
-    TaskTests::RegisterTests();
-    UserModeTests::RegisterTests();
+    Tests::MemoryTests::RegisterTests();
+    Tests::TaskTests::RegisterTests();
+    Tests::UserModeTests::RegisterTests();
   }
 }
