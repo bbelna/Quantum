@@ -459,7 +459,10 @@ namespace Quantum::System::Kernel {
     UInt32 addressSpace = Memory::CreateAddressSpace();
 
     if (addressSpace == 0) {
-      Logger::Write(LogLevel::Warning, "SpawnTask: failed to create address space");
+      Logger::Write(
+        LogLevel::Warning,
+        "SpawnTask: failed to create address space"
+      );
 
       return 0;
     }
