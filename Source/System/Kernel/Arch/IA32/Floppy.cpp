@@ -182,13 +182,13 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       if (id == 0) {
         Logger::WriteFormatted(
           LogLevel::Warning,
-          "BlockDevices: failed to register floppy %c",
+          "Failed to register floppy %c",
           driveLetter
         );
       } else {
         Logger::WriteFormatted(
           LogLevel::Info,
-          "BlockDevices: registered floppy %c id=%u type=0x%x",
+          "Registered floppy %c id=%u type=0x%x",
           driveLetter,
           id,
           driveType
@@ -222,17 +222,17 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       if (id == 0) {
         Logger::Write(
           LogLevel::Warning,
-          "BlockDevices: failed to register fallback"
+          "Failed to register floppy fallback"
         );
       } else {
         Logger::WriteFormatted(
           LogLevel::Debug,
-          "BlockDevices: CMOS empty; using boot drive %c",
+          "CMOS empty; using boot drive %c",
           driveLetter
         );
       }
     } else {
-      Logger::Write(LogLevel::Debug, "BlockDevices: no floppy detected");
+      Logger::Write(LogLevel::Debug, "No floppy detected");
     }
   }
 }

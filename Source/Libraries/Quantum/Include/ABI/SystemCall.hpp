@@ -25,6 +25,7 @@ namespace Quantum::ABI {
     IPC_CreatePort = 400,
     IPC_Send = 401,
     IPC_Receive = 402,
+    IPC_TryReceive = 403,
     IO_In8 = 500,
     IO_In16 = 501,
     IO_In32 = 502,

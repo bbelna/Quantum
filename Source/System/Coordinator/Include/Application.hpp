@@ -17,7 +17,8 @@ namespace Quantum::System::Coordinator {
   class Application {
     public:
       /**
-       * Coordinator entry point.
+       * Coordinator entry point. Reads INIT.BND and spawns entries.
+       * Driver entries are granted I/O access.
        */
       static void Main();
 
@@ -84,6 +85,13 @@ namespace Quantum::System::Coordinator {
        *   True if a floppy device is present; false otherwise.
        */
       static bool HasFloppyDevice();
+
+      /**
+       * Waits for the floppy block device to become ready.
+       * @return
+       *   True if ready; false on timeout or missing device.
+       */
+      static bool WaitForFloppyReady();
 
   };
 }

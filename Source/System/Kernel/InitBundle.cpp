@@ -19,6 +19,7 @@ namespace Quantum::System::Kernel {
   using AlignHelper = Helpers::AlignHelper;
   using BundleHeader = ABI::InitBundle::Header;
   using BundleEntry = ABI::InitBundle::Entry;
+  using BundleEntryType = ABI::InitBundle::EntryType;
   using LogLevel = Logger::Level;
 
   void InitBundle::MapInitBundle() {
@@ -172,7 +173,7 @@ namespace Quantum::System::Kernel {
     }
 
     for (UInt32 i = 0; i < entryCount; ++i) {
-      if (entries[i].type == 1) {
+      if (entries[i].type == BundleEntryType::Init) {
         return &entries[i];
       }
     }

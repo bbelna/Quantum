@@ -19,11 +19,11 @@ namespace Quantum::ABI {
   class FileSystem {
     public:
       /**
-       * Filesystem type identifiers.
+       * File system type identifiers.
        */
       enum class Type : UInt32 {
         /**
-         * FAT12 filesystem.
+         * FAT12 file system.
          */
         FAT12 = 1
       };
@@ -73,7 +73,7 @@ namespace Quantum::ABI {
         char label[maxLabelLength];
 
         /**
-         * Filesystem type identifier.
+         * File system type identifier.
          */
         UInt32 fsType;
 
@@ -114,18 +114,33 @@ namespace Quantum::ABI {
       };
 
       /**
-       * IPC message header size for filesystem service messages.
+       * Volume entry descriptor.
+       */
+      struct VolumeEntry {
+        /**
+         * Volume label (null-terminated).
+         */
+        char label[maxLabelLength];
+
+        /**
+         * File system type identifier.
+         */
+        UInt32 fsType;
+      };
+
+      /**
+       * IPC message header size for file system service messages.
        */
       static constexpr UInt32 messageHeaderBytes = 7 * sizeof(UInt32);
 
       /**
-       * IPC message data bytes for filesystem service messages.
+       * IPC message data bytes for file system service messages.
        */
       static constexpr UInt32 messageDataBytes
         = IPC::maxPayloadBytes - messageHeaderBytes;
 
       /**
-       * Filesystem service IPC message.
+       * File system service IPC message.
        */
       struct ServiceMessage {
         /**
@@ -466,9 +481,9 @@ namespace Quantum::ABI {
       }
 
       /**
-       * Registers a filesystem service with the kernel.
+       * Registers a file system service with the kernel.
        * @param type
-       *   Filesystem type identifier.
+       *   File system type identifier.
        * @param portId
        *   IPC port owned by the service.
        * @return

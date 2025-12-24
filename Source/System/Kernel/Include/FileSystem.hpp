@@ -3,7 +3,7 @@
  * (c) 2025 Brandon Belna - MIT License
  *
  * System/Kernel/Include/FileSystem.hpp
- * Kernel filesystem service routing.
+ * Kernel file system service routing.
  */
 
 #pragma once
@@ -15,33 +15,33 @@
 
 namespace Quantum::System::Kernel {
   /**
-   * Kernel filesystem service registry and routing.
+   * Kernel file system service registry and routing.
    */
   class FileSystem {
     public:
       /**
-       * Filesystem type identifiers.
+       * File system type identifiers.
        */
       enum class Type : UInt32 {
         /**
-         * FAT12 filesystem.
+         * FAT12 file system.
          */
         FAT12 = 1
       };
 
       /**
-       * IPC message header size for filesystem service messages.
+       * IPC message header size for file system service messages.
        */
       static constexpr UInt32 messageHeaderBytes = 7 * sizeof(UInt32);
 
       /**
-       * IPC message data bytes for filesystem service messages.
+       * IPC message data bytes for file system service messages.
        */
       static constexpr UInt32 messageDataBytes
         = IPC::maxPayloadBytes - messageHeaderBytes;
 
       /**
-       * Filesystem service IPC message.
+       * File system service IPC message.
        */
       struct ServiceMessage {
         /**
@@ -86,9 +86,54 @@ namespace Quantum::System::Kernel {
       };
 
       /**
-       * Registers a filesystem service with the kernel.
+       * Volume entry descriptor.
+       */
+      struct VolumeEntry {
+        /**
+         * Volume label (null-terminated).
+         */
+        char label[16];
+
+        /**
+         * File system type identifier.
+         */
+        UInt32 fsType;
+      };
+
+      /**
+       * Volume information descriptor.
+       */
+      struct VolumeInfo {
+        /**
+         * Volume label (null-terminated).
+         */
+        char label[16];
+
+        /**
+         * File system type identifier.
+         */
+        UInt32 fsType;
+
+        /**
+         * Bytes per sector.
+         */
+        UInt32 sectorSize;
+
+        /**
+         * Total sector count.
+         */
+        UInt32 sectorCount;
+
+        /**
+         * Free sector count.
+         */
+        UInt32 freeSectors;
+      };
+
+      /**
+       * Registers a file system service with the kernel.
        * @param type
-       *   Filesystem type identifier.
+       *   File system type identifier.
        * @param portId
        *   IPC port owned by the service.
        * @return
@@ -97,9 +142,9 @@ namespace Quantum::System::Kernel {
       static bool RegisterService(Type type, UInt32 portId);
 
       /**
-       * Dispatches a filesystem syscall to a registered service.
+       * Dispatches a file system syscall to a registered service.
        * @param call
-       *   Filesystem syscall identifier.
+       *   File system syscall identifier.
        * @param arg0
        *   EBX argument.
        * @param arg1
@@ -118,16 +163,16 @@ namespace Quantum::System::Kernel {
 
     private:
       /**
-       * Maximum number of filesystem services.
+       * Maximum number of file system services.
        */
       static constexpr UInt32 _maxServices = 4;
 
       /**
-       * Registered filesystem service descriptor.
+       * Registered file system service descriptor.
        */
       struct Service {
         /**
-         * Filesystem type.
+         * File system type.
          */
         Type type;
 

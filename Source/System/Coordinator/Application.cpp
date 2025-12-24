@@ -16,6 +16,8 @@
 #include "Application.hpp"
 #include "Testing.hpp"
 
+#define TEST
+
 namespace Quantum::System::Coordinator {
   using Console = ABI::Console;
   using BlockDevice = ABI::Devices::BlockDevice;
@@ -66,7 +68,8 @@ namespace Quantum::System::Coordinator {
   }
 
   void Application::SpawnEntry(const BundleEntry& entry) {
-    if (entry.type == 1) {
+    // don't respawn coordinator
+    if (entry.type == InitBundle::EntryType::Init) {
       return;
     }
 
@@ -78,19 +81,16 @@ namespace Quantum::System::Coordinator {
       return;
     }
 
-    if (EntryNameEquals(entry, "floppy")) {
-      if (!_floppyPresent) {
-        Console::WriteLine("Floppy device not detected; skipping driver");
-
-        return;
-      }
-
+    // grant I/O access to drivers
+    if (entry.type == InitBundle::EntryType::Driver) {
       UInt32 grant = IO::GrantIOAccess(taskId);
 
       if (grant == 0) {
-        Console::WriteLine("Floppy driver granted I/O access");
+        Console::Write("Granted I/O access to ");
+        Console::WriteLine(entry.name);
       } else {
-        Console::WriteLine("Failed to grant I/O access to floppy driver");
+        Console::Write("Failed to grant I/O access to ");
+        Console::WriteLine(entry.name);
       }
     }
   }
@@ -125,10 +125,37 @@ namespace Quantum::System::Coordinator {
     return found;
   }
 
-  void Application::Main() {
-    Console::WriteLine("Coordinator initialized");
+  bool Application::WaitForFloppyReady() {
+    if (_floppyDeviceId == 0) {
+      return false;
+    }
 
-    _floppyPresent = HasFloppyDevice();
+    BlockDevice::Info info{};
+
+    for (UInt32 i = 0; i < 2048; ++i) {
+      // Wait for the driver to report geometry before running tests.
+      if (BlockDevice::GetInfo(_floppyDeviceId, info) == 0) {
+        if (
+          (info.flags & BlockDevice::flagReady) != 0 &&
+          info.sectorSize != 0 &&
+          info.sectorCount != 0
+        ) {
+          return true;
+        }
+      }
+
+      Task::Yield();
+    }
+
+    Console::WriteLine("Floppy device not ready; tests may skip");
+
+    return false;
+  }
+
+  void Application::Main() {
+    #if defined(DEBUG)
+    Console::WriteLine("Coordinator initialized");
+    #endif
 
     InitBundle::Info info {};
 
@@ -162,13 +189,17 @@ namespace Quantum::System::Coordinator {
       Task::Exit(1);
     }
 
+    #if defined(DEBUG)
     Console::WriteLine("INIT entries:");
+    #endif
 
     const BundleEntry* entries
       = reinterpret_cast<const BundleEntry*>(base + tableOffset);
 
     for (UInt32 i = 0; i < entryCount; ++i) {
       const BundleEntry& entry = entries[i];
+
+      #if defined(DEBUG)
       UInt32 nameLen = EntryNameLength(entry);
 
       if (nameLen > 0) {
@@ -192,12 +223,21 @@ namespace Quantum::System::Coordinator {
       } else {
         Console::WriteLine("  (unnamed)");
       }
+      #endif
 
       SpawnEntry(entry);
     }
 
+    #if defined(TEST)
+    _floppyPresent = HasFloppyDevice();
+
+    if (_floppyPresent) {
+      WaitForFloppyReady();
+    }
+
     Testing::RegisterBuiltins();
     Testing::RunAll();
+    #endif
 
     Task::Exit(0);
   }

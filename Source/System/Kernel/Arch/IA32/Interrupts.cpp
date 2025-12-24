@@ -24,7 +24,6 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
     Timer::Initialize();
     PS2Keyboard::Initialize();
-    Floppy::Initialize();
 
     CPU::EnableInterrupts();
   }

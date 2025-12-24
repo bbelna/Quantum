@@ -246,14 +246,17 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       if (_portId != 0) {
         IPC::Message msg {};
 
-        if (IPC::Receive(_portId, msg) == 0) {
+        // Poll the port so we can time out if no IRQ arrives.
+        if (IPC::TryReceive(_portId, msg) == 0) {
           if (IsIRQMessage(msg)) {
             return true;
           }
 
           QueuePendingMessage(msg);
         }
-      } else if ((i & 0x3FF) == 0) {
+      }
+
+      if ((i & 0x3FF) == 0) {
         Task::Yield();
       }
     }
@@ -1024,7 +1027,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
   }
 
   void Driver::Main() {
-    Console::WriteLine("Floppy driver starting (stub)");
+    Console::WriteLine("Floppy driver starting");
 
     UInt32 count = BlockDevice::GetCount();
 

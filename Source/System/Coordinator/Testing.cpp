@@ -9,6 +9,7 @@
 #include <ABI/Console.hpp>
 
 #include "Testing.hpp"
+#include "Tests/FAT12Tests.hpp"
 #include "Tests/FloppyTests.hpp"
 
 namespace Quantum::System::Coordinator {
@@ -109,5 +110,6 @@ namespace Quantum::System::Coordinator {
 
   void Testing::RegisterBuiltins() {
     Tests::FloppyTests::RegisterTests();
+    Tests::FAT12Tests::RegisterTests();
   }
 }

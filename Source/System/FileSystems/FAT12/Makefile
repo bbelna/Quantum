@@ -1,4 +1,4 @@
-# Makefile for the FAT12 filesystem service (user-mode) on IA32
+# Makefile for the FAT12 file system service (user-mode) on IA32
 #
 # Expects PROJECT_ROOT, BUILD_DIR, ARCH from the top-level Makefile.
 

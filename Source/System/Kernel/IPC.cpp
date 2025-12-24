@@ -117,6 +117,38 @@ namespace Quantum::System::Kernel {
     return true;
   }
 
+  bool IPC::TryReceive(
+    UInt32 portId,
+    UInt32& outSenderId,
+    void* outBuffer,
+    UInt32 bufferCapacity,
+    UInt32& outLength
+  ) {
+    if (!outBuffer || bufferCapacity == 0) {
+      return false;
+    }
+
+    Port* port = FindPort(portId);
+
+    if (!port || port->count == 0) {
+      return false;
+    }
+
+    Message& msg = port->queue[port->head];
+
+    outSenderId = msg.senderId;
+    outLength = msg.length;
+
+    UInt32 toCopy = msg.length < bufferCapacity ? msg.length : bufferCapacity;
+
+    CopyPayload(outBuffer, msg.data, toCopy);
+
+    port->head = (port->head + 1) % maxQueueDepth;
+    --port->count;
+
+    return true;
+  }
+
   bool IPC::DestroyPort(UInt32 portId) {
     Port* port = FindPort(portId);
 

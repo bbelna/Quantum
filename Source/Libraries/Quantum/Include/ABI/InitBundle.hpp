@@ -28,11 +28,20 @@ namespace Quantum::ABI {
       };
 
       /**
+       * INIT.BND entry types.
+       */
+      enum class EntryType : UInt8 {
+        Init = 1,
+        Driver = 2,
+        Service = 3
+      };
+
+      /**
        * INIT.BND entry table layout.
        */
       struct Entry {
         char name[32];
-        UInt8 type;
+        EntryType type;
         UInt8 flags;
         UInt8 reserved[2];
         UInt32 offset;

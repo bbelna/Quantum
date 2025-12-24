@@ -58,7 +58,12 @@ namespace Quantum::System::Coordinator::Tests {
   static bool WaitForReady(UInt32 deviceId, BlockDevice::Info& info) {
     for (UInt32 i = 0; i < 64; ++i) {
       if (BlockDevice::GetInfo(deviceId, info) == 0) {
-        if ((info.flags & BlockDevice::flagReady) != 0) {
+        // Require geometry so reads don't race driver init.
+        if (
+          (info.flags & BlockDevice::flagReady) != 0 &&
+          info.sectorSize != 0 &&
+          info.sectorCount != 0
+        ) {
           return true;
         }
       }

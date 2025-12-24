@@ -92,5 +92,26 @@ namespace Quantum::ABI {
           0
         );
       }
+
+      /**
+       * Attempts to receive a message without blocking.
+       * @param portId
+       *   Port to receive from.
+       * @param outMessage
+       *   Receives the message contents.
+       * @return
+       *   0 on success, non-zero when no message or on failure.
+       */
+      static UInt32 TryReceive(
+        UInt32 portId,
+        Message& outMessage
+      ) {
+        return InvokeSystemCall(
+          SystemCall::IPC_TryReceive,
+          portId,
+          reinterpret_cast<UInt32>(&outMessage),
+          0
+        );
+      }
   };
 }

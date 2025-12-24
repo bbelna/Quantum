@@ -3,14 +3,14 @@
  * (c) 2025 Brandon Belna - MIT License
  *
  * System/FileSystems/FAT12/Include/Service.hpp
- * FAT12 filesystem service.
+ * FAT12 file system service.
  */
 
 #pragma once
 
 namespace Quantum::System::FileSystems::FAT12 {
   /**
-   * FAT12 filesystem service.
+   * FAT12 file system service.
    */
   class Service {
     public:

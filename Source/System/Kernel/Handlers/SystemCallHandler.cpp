@@ -176,6 +176,36 @@ namespace Quantum::System::Kernel::Handlers {
         break;
       }
 
+      case SystemCall::IPC_TryReceive: {
+        UInt32 portId = context.ebx;
+        IPC::Message* msg = reinterpret_cast<IPC::Message*>(context.ecx);
+
+        if (!msg) {
+          context.eax = 1;
+
+          break;
+        }
+
+        UInt32 sender = 0;
+        UInt32 length = 0;
+        bool ok = Kernel::IPC::TryReceive(
+          portId,
+          sender,
+          msg->payload,
+          IPC::maxPayloadBytes,
+          length
+        );
+
+        if (ok) {
+          msg->senderId = sender;
+          msg->length = length;
+        }
+
+        context.eax = ok ? 0 : 1;
+
+        break;
+      }
+
       case SystemCall::IO_In8: {
         if (!Task::HasIOAccess()) {
           context.eax = 1;
