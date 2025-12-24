@@ -117,6 +117,7 @@ namespace Quantum::System::Coordinator::Tests {
     request.buffer = buffer;
 
     UInt32 result = BlockDevice::Read(request);
+
     TEST_ASSERT(result == 0, "Floppy read failed");
 
     if (result != 0) {
@@ -153,6 +154,7 @@ namespace Quantum::System::Coordinator::Tests {
     request.buffer = buffer;
 
     UInt32 result = BlockDevice::Read(request);
+
     TEST_ASSERT(result == 0, "Floppy multi-sector read failed");
 
     if (result != 0) {
@@ -208,6 +210,7 @@ namespace Quantum::System::Coordinator::Tests {
     request.buffer = original;
 
     UInt32 result = BlockDevice::Read(request);
+
     TEST_ASSERT(result == 0, "Floppy write test read original failed");
 
     if (result != 0) {
@@ -316,6 +319,7 @@ namespace Quantum::System::Coordinator::Tests {
 
     request.buffer = verify;
     result = BlockDevice::Read(request);
+
     TEST_ASSERT(result == 0, "Floppy multi-sector verify read failed");
 
     if (result != 0) {
