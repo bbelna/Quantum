@@ -14,6 +14,7 @@
 
 #include "Console.hpp"
 #include "Devices/BlockDevice.hpp"
+#include "FileSystem.hpp"
 #include "Handlers/SystemCallHandler.hpp"
 #include "InitBundle.hpp"
 #include "Interrupts.hpp"
@@ -418,7 +419,25 @@ namespace Quantum::System::Kernel::Handlers {
       case SystemCall::FileSystem_CreateFile:
       case SystemCall::FileSystem_Remove:
       case SystemCall::FileSystem_Rename: {
-        context.eax = 1;
+        context.eax = FileSystem::Dispatch(
+          id,
+          context.ebx,
+          context.ecx,
+          context.edx
+        );
+
+        break;
+      }
+
+      case SystemCall::FileSystem_RegisterService: {
+        UInt32 typeValue = context.ebx;
+        UInt32 portId = context.ecx;
+        bool ok = FileSystem::RegisterService(
+          static_cast<FileSystem::Type>(typeValue),
+          portId
+        );
+
+        context.eax = ok ? 0 : 1;
 
         break;
       }

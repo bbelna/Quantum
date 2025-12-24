@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "ABI/IPC.hpp"
 #include "ABI/SystemCall.hpp"
 #include "Types.hpp"
 
@@ -17,6 +18,16 @@ namespace Quantum::ABI {
    */
   class FileSystem {
     public:
+      /**
+       * Filesystem type identifiers.
+       */
+      enum class Type : UInt32 {
+        /**
+         * FAT12 filesystem.
+         */
+        FAT12 = 1
+      };
+
       /**
        * File handle.
        */
@@ -100,6 +111,62 @@ namespace Quantum::ABI {
          * Entry size in bytes.
          */
         UInt32 sizeBytes;
+      };
+
+      /**
+       * IPC message header size for filesystem service messages.
+       */
+      static constexpr UInt32 messageHeaderBytes = 7 * sizeof(UInt32);
+
+      /**
+       * IPC message data bytes for filesystem service messages.
+       */
+      static constexpr UInt32 messageDataBytes
+        = IPC::maxPayloadBytes - messageHeaderBytes;
+
+      /**
+       * Filesystem service IPC message.
+       */
+      struct ServiceMessage {
+        /**
+         * Operation identifier.
+         */
+        UInt32 op;
+
+        /**
+         * Status code (0 success, non-zero failure).
+         */
+        UInt32 status;
+
+        /**
+         * Reply port id for responses.
+         */
+        UInt32 replyPortId;
+
+        /**
+         * First argument.
+         */
+        UInt32 arg0;
+
+        /**
+         * Second argument.
+         */
+        UInt32 arg1;
+
+        /**
+         * Third argument.
+         */
+        UInt32 arg2;
+
+        /**
+         * Payload length in bytes.
+         */
+        UInt32 dataLength;
+
+        /**
+         * Payload data.
+         */
+        UInt8 data[messageDataBytes];
       };
 
       /**
@@ -395,6 +462,24 @@ namespace Quantum::ABI {
           volume,
           reinterpret_cast<UInt32>(fromPath),
           reinterpret_cast<UInt32>(toPath)
+        );
+      }
+
+      /**
+       * Registers a filesystem service with the kernel.
+       * @param type
+       *   Filesystem type identifier.
+       * @param portId
+       *   IPC port owned by the service.
+       * @return
+       *   0 on success, non-zero on failure.
+       */
+      static UInt32 RegisterService(Type type, UInt32 portId) {
+        return InvokeSystemCall(
+          SystemCall::FileSystem_RegisterService,
+          static_cast<UInt32>(type),
+          portId,
+          0
         );
       }
   };

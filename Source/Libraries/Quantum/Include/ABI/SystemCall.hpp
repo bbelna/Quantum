@@ -53,7 +53,8 @@ namespace Quantum::ABI {
     FileSystem_CreateDirectory = 712,
     FileSystem_CreateFile = 713,
     FileSystem_Remove = 714,
-    FileSystem_Rename = 715
+    FileSystem_Rename = 715,
+    FileSystem_RegisterService = 716
   };
 
   /**
