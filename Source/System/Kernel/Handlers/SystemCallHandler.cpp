@@ -402,6 +402,27 @@ namespace Quantum::System::Kernel::Handlers {
         break;
       }
 
+      case SystemCall::FileSystem_ListVolumes:
+      case SystemCall::FileSystem_GetVolumeInfo:
+      case SystemCall::FileSystem_SetVolumeLabel:
+      case SystemCall::FileSystem_OpenVolume:
+      case SystemCall::FileSystem_CloseVolume:
+      case SystemCall::FileSystem_Open:
+      case SystemCall::FileSystem_Close:
+      case SystemCall::FileSystem_Read:
+      case SystemCall::FileSystem_Write:
+      case SystemCall::FileSystem_Seek:
+      case SystemCall::FileSystem_Stat:
+      case SystemCall::FileSystem_ReadDirectory:
+      case SystemCall::FileSystem_CreateDirectory:
+      case SystemCall::FileSystem_CreateFile:
+      case SystemCall::FileSystem_Remove:
+      case SystemCall::FileSystem_Rename: {
+        context.eax = 1;
+
+        break;
+      }
+
       default: {
         Logger::WriteFormatted(LogLevel::Warning, "Unknown SystemCall %p", id);
 
