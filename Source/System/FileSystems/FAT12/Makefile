@@ -30,12 +30,12 @@ all: fat12
 
 fat12: $(SERVICE_QX)
 
-$(SERVICE_ELF): $(FAT12_DIR)/Service.cpp $(FAT12_DIR)/Main.cpp $(USER_RUNTIME)/CRT0.cpp $(FAT12_DIR)/Link.ld
+$(SERVICE_ELF): $(FAT12_DIR)/Service.cpp $(FAT12_DIR)/Volume.cpp $(FAT12_DIR)/Main.cpp $(USER_RUNTIME)/CRT0.cpp $(FAT12_DIR)/Link.ld
 	@mkdir -p $(dir $@)
 	$(CC32) $(CFLAGS32) -m32 -ffreestanding -nostdlib -static -Wl,--no-pie \
 		-I$(LIBQ_INCLUDE) -I$(FAT12_INCLUDE) \
 		-T $(FAT12_DIR)/Link.ld \
-		$(FAT12_DIR)/Service.cpp $(FAT12_DIR)/Main.cpp $(USER_RUNTIME)/CRT0.cpp -o $@
+		$(FAT12_DIR)/Service.cpp $(FAT12_DIR)/Volume.cpp $(FAT12_DIR)/Main.cpp $(USER_RUNTIME)/CRT0.cpp -o $@
 	@echo "[OK] Linked FAT12.elf -> $@"
 
 $(SERVICE_QX): $(SERVICE_ELF)
