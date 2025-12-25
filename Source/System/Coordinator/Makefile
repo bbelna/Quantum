@@ -30,12 +30,12 @@ all: coordinator
 
 coordinator: $(COORD_QX)
 
-$(COORD_ELF): $(COORD_DIR)/Application.cpp $(COORD_DIR)/Main.cpp $(COORD_DIR)/Testing.cpp $(COORD_DIR)/Tests/FloppyTests.cpp $(COORD_DIR)/Tests/FAT12Tests.cpp $(COORD_DIR)/IRQ.cpp $(COORD_DIR)/FileSystem.cpp $(USER_RUNTIME)/CRT0.cpp $(COORD_DIR)/Include/Application.hpp $(COORD_DIR)/Include/Testing.hpp $(COORD_DIR)/Include/Tests/FloppyTests.hpp $(COORD_DIR)/Include/Tests/FAT12Tests.hpp $(COORD_DIR)/Include/IRQ.hpp $(COORD_DIR)/Include/FileSystem.hpp $(COORD_DIR)/Link.ld
+$(COORD_ELF): $(COORD_DIR)/Application.cpp $(COORD_DIR)/Main.cpp $(COORD_DIR)/IRQ.cpp $(COORD_DIR)/FileSystem.cpp $(USER_RUNTIME)/CRT0.cpp $(COORD_DIR)/Include/Application.hpp $(COORD_DIR)/Include/IRQ.hpp $(COORD_DIR)/Include/FileSystem.hpp $(COORD_DIR)/Link.ld
 	@mkdir -p $(dir $@)
 	$(CC32) $(CFLAGS32) -m32 -ffreestanding -nostdlib -static -Wl,--no-pie \
 		-I$(LIBQ_INCLUDE) -I$(COORD_INCLUDE) \
 		-T $(COORD_DIR)/Link.ld \
-		$(COORD_DIR)/Application.cpp $(COORD_DIR)/Main.cpp $(COORD_DIR)/Testing.cpp $(COORD_DIR)/Tests/FloppyTests.cpp $(COORD_DIR)/Tests/FAT12Tests.cpp $(COORD_DIR)/IRQ.cpp $(COORD_DIR)/FileSystem.cpp $(USER_RUNTIME)/CRT0.cpp -o $@
+		$(COORD_DIR)/Application.cpp $(COORD_DIR)/Main.cpp $(COORD_DIR)/IRQ.cpp $(COORD_DIR)/FileSystem.cpp $(USER_RUNTIME)/CRT0.cpp -o $@
 	@echo "[OK] Linked Coordinator.elf -> $@"
 
 $(COORD_QX): $(COORD_ELF)

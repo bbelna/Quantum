@@ -12,6 +12,9 @@
 #include <ABI/Task.hpp>
 
 #include "Service.hpp"
+#include "Tests.hpp"
+
+#define TEST
 
 namespace Quantum::System::FileSystems::FAT12 {
   using Console = ABI::Console;
@@ -44,6 +47,10 @@ namespace Quantum::System::FileSystems::FAT12 {
 
     Console::WriteLine("FAT12 service ready");
     InitializeVolume();
+
+    #if defined(TEST)
+    Tests::Run();
+    #endif
 
     for (;;) {
       IPC::Message msg {};

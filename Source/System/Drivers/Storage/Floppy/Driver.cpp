@@ -13,6 +13,7 @@
 #include <ABI/Task.hpp>
 
 #include "Driver.hpp"
+#include "Tests.hpp"
 
 namespace Quantum::System::Drivers::Storage::Floppy {
   using Console = ABI::Console;
@@ -279,6 +280,115 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       Console::WriteLine("Floppy driver IRQ register failed");
     }
   }
+
+  #if defined(TEST)
+  bool Driver::TestGetDevice(
+    UInt32& deviceId,
+    BlockDevice::Info& info,
+    UInt8& driveIndex,
+    UInt32& sectorSize,
+    UInt32& sectorCount,
+    UInt8& sectorsPerTrack,
+    UInt8& headCount
+  ) {
+    if (_deviceCount == 0) {
+      return false;
+    }
+
+    deviceId = _deviceIds[0];
+    driveIndex = _deviceIndices[0];
+    sectorSize = _deviceSectorSizes[0];
+    sectorCount = _deviceSectorCounts[0];
+    sectorsPerTrack = _deviceSectorsPerTrack[0];
+    headCount = _deviceHeadCounts[0];
+
+    if (deviceId == 0) {
+      return false;
+    }
+
+    if (BlockDevice::GetInfo(deviceId, info) != 0) {
+      return false;
+    }
+
+    return true;
+  }
+
+  bool Driver::TestRead(
+    UInt8 driveIndex,
+    UInt32 lba,
+    UInt32 count,
+    UInt32 sectorSize,
+    UInt8 sectorsPerTrack,
+    UInt8 headCount,
+    void* outBuffer,
+    UInt32 bufferBytes
+  ) {
+    if (!outBuffer || sectorSize == 0 || count == 0) {
+      return false;
+    }
+
+    UInt32 bytes = count * sectorSize;
+
+    if (bufferBytes < bytes) {
+      return false;
+    }
+
+    if (!ReadSectors(
+      driveIndex,
+      lba,
+      count,
+      sectorSize,
+      sectorsPerTrack,
+      headCount
+    )) {
+      return false;
+    }
+
+    if (_dmaBufferVirtual == nullptr || _dmaBufferBytes < bytes) {
+      return false;
+    }
+
+    CopyBytes(outBuffer, _dmaBufferVirtual, bytes);
+
+    return true;
+  }
+
+  bool Driver::TestWrite(
+    UInt8 driveIndex,
+    UInt32 lba,
+    UInt32 count,
+    UInt32 sectorSize,
+    UInt8 sectorsPerTrack,
+    UInt8 headCount,
+    const void* buffer,
+    UInt32 bufferBytes
+  ) {
+    if (!buffer || sectorSize == 0 || count == 0) {
+      return false;
+    }
+
+    UInt32 bytes = count * sectorSize;
+
+    if (bufferBytes < bytes) {
+      return false;
+    }
+
+    if (_dmaBufferVirtual == nullptr || _dmaBufferBytes < bytes) {
+      return false;
+    }
+
+    CopyBytes(_dmaBufferVirtual, buffer, bytes);
+
+    return WriteSectors(
+      driveIndex,
+      lba,
+      count,
+      sectorSize,
+      sectorsPerTrack,
+      headCount
+    );
+  }
+  #endif
 
   bool Driver::ProgramDMARead(UInt32 physicalAddress, UInt32 lengthBytes) {
     if (lengthBytes == 0 || lengthBytes > 0x10000) {
@@ -1177,6 +1287,10 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     }
 
     Console::WriteLine("Floppy driver bound to block device");
+
+    #if defined(TEST)
+    Tests::Run();
+    #endif
 
     for (;;) {
       IPC::Message& msg = _receiveMessage;

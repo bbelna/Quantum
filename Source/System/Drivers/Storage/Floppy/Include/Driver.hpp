@@ -13,6 +13,8 @@
 #include <ABI/Prelude.hpp>
 #include <Types.hpp>
 
+#define TEST
+
 namespace Quantum::System::Drivers::Storage::Floppy {
   using BlockDevice = ABI::Devices::BlockDevice;
   using IPC = ABI::IPC;
@@ -26,6 +28,101 @@ namespace Quantum::System::Drivers::Storage::Floppy {
        * Entry point for the floppy driver.
        */
       static void Main();
+
+      #if defined(TEST)
+      /**
+       * Locates the first floppy device and returns its info.
+       * @param deviceId
+       *   Receives the block device id.
+       * @param info
+       *   Receives the block device info.
+       * @param driveIndex
+       *   Receives the drive index.
+       * @param sectorSize
+       *   Receives the sector size.
+       * @param sectorCount
+       *   Receives the sector count.
+       * @param sectorsPerTrack
+       *   Receives the sectors per track.
+       * @param headCount
+       *   Receives the head count.
+       * @return
+       *   True if a device was found; false otherwise.
+       */
+      static bool TestGetDevice(
+        UInt32& deviceId,
+        BlockDevice::Info& info,
+        UInt8& driveIndex,
+        UInt32& sectorSize,
+        UInt32& sectorCount,
+        UInt8& sectorsPerTrack,
+        UInt8& headCount
+      );
+
+      /**
+       * Reads sectors directly via the controller.
+       * @param driveIndex
+       *   Target drive index.
+       * @param lba
+       *   Starting logical block address.
+       * @param count
+       *   Number of sectors to read.
+       * @param sectorSize
+       *   Sector size in bytes.
+       * @param sectorsPerTrack
+       *   Sectors per track.
+       * @param headCount
+       *   Head count.
+       * @param outBuffer
+       *   Destination buffer.
+       * @param bufferBytes
+       *   Size of the destination buffer in bytes.
+       * @return
+       *   True on success; false otherwise.
+       */
+      static bool TestRead(
+        UInt8 driveIndex,
+        UInt32 lba,
+        UInt32 count,
+        UInt32 sectorSize,
+        UInt8 sectorsPerTrack,
+        UInt8 headCount,
+        void* outBuffer,
+        UInt32 bufferBytes
+      );
+
+      /**
+       * Writes sectors directly via the controller.
+       * @param driveIndex
+       *   Target drive index.
+       * @param lba
+       *   Starting logical block address.
+       * @param count
+       *   Number of sectors to write.
+       * @param sectorSize
+       *   Sector size in bytes.
+       * @param sectorsPerTrack
+       *   Sectors per track.
+       * @param headCount
+       *   Head count.
+       * @param buffer
+       *   Source buffer.
+       * @param bufferBytes
+       *   Size of the source buffer in bytes.
+       * @return
+       *   True on success; false otherwise.
+       */
+      static bool TestWrite(
+        UInt8 driveIndex,
+        UInt32 lba,
+        UInt32 count,
+        UInt32 sectorSize,
+        UInt8 sectorsPerTrack,
+        UInt8 headCount,
+        const void* buffer,
+        UInt32 bufferBytes
+      );
+      #endif
 
     private:
       /**

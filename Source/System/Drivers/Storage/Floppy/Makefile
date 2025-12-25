@@ -30,12 +30,12 @@ all: floppy
 
 floppy: $(DRIVER_QX)
 
-$(DRIVER_ELF): $(DRIVER_DIR)/Driver.cpp $(DRIVER_DIR)/Main.cpp $(USER_RUNTIME)/CRT0.cpp $(DRIVER_DIR)/Link.ld
+$(DRIVER_ELF): $(DRIVER_DIR)/Driver.cpp $(DRIVER_DIR)/Tests.cpp $(DRIVER_DIR)/Main.cpp $(USER_RUNTIME)/CRT0.cpp $(DRIVER_DIR)/Include/Tests.hpp $(DRIVER_DIR)/Link.ld
 	@mkdir -p $(dir $@)
 	$(CC32) $(CFLAGS32) -m32 -ffreestanding -nostdlib -static -Wl,--no-pie \
 		-I$(LIBQ_INCLUDE) -I$(FLOPPY_INCLUDE) \
 		-T $(DRIVER_DIR)/Link.ld \
-		$(DRIVER_DIR)/Driver.cpp $(DRIVER_DIR)/Main.cpp $(USER_RUNTIME)/CRT0.cpp -o $@
+		$(DRIVER_DIR)/Driver.cpp $(DRIVER_DIR)/Tests.cpp $(DRIVER_DIR)/Main.cpp $(USER_RUNTIME)/CRT0.cpp -o $@
 	@echo "[OK] Linked Floppy.elf -> $@"
 
 $(DRIVER_QX): $(DRIVER_ELF)

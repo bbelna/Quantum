@@ -16,7 +16,6 @@
 #include "Application.hpp"
 #include "FileSystem.hpp"
 #include "IRQ.hpp"
-#include "Testing.hpp"
 
 namespace Quantum::System::Coordinator {
   using Console = ABI::Console;
@@ -237,17 +236,6 @@ namespace Quantum::System::Coordinator {
 
       SpawnEntry(entry);
     }
-
-    #if defined(TEST)
-    _floppyPresent = HasFloppyDevice();
-
-    if (_floppyPresent) {
-      WaitForFloppyReady();
-    }
-
-    Testing::RegisterBuiltins();
-    Testing::RunAll();
-    #endif
 
     for (;;) {
       IRQ::ProcessPending();
