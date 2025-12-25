@@ -312,6 +312,36 @@ namespace Quantum::System::FileSystems::FAT12 {
     return true;
   }
 
+  bool Volume::GetEntryInfo(
+    UInt32 parentCluster,
+    bool parentIsRoot,
+    CString name,
+    FileSystem::FileInfo& outInfo,
+    UInt8& outAttributes
+  ) {
+    UInt32 cluster = 0;
+    UInt32 sizeBytes = 0;
+
+    if (
+      !FindEntry(
+        parentCluster,
+        parentIsRoot,
+        name,
+        cluster,
+        outAttributes,
+        sizeBytes
+      )
+    ) {
+      return false;
+    }
+
+    outInfo = FileSystem::FileInfo {};
+    outInfo.sizeBytes = sizeBytes;
+    outInfo.attributes = outAttributes;
+
+    return true;
+  }
+
   bool Volume::CreateDirectory(
     UInt32 parentCluster,
     bool parentIsRoot,
@@ -325,14 +355,16 @@ namespace Quantum::System::FileSystems::FAT12 {
     UInt8 existingAttributes = 0;
     UInt32 existingSize = 0;
 
-    if (FindEntry(
+    if (
+      FindEntry(
         parentCluster,
         parentIsRoot,
         name,
         existingCluster,
         existingAttributes,
         existingSize
-      )) {
+      )
+    ) {
       return false;
     }
 
@@ -370,8 +402,10 @@ namespace Quantum::System::FileSystems::FAT12 {
     }
 
     UInt8 dirSector[512] = {};
-    UInt8 dotName[11] = { '.', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ' };
-    UInt8 dotDotName[11] = { '.', '.', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ' };
+    UInt8 dotName[11]
+      = { '.', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ' };
+    UInt8 dotDotName[11]
+      = { '.', '.', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ' };
 
     for (UInt32 i = 0; i < 11; ++i) {
       dirSector[i] = dotName[i];
@@ -445,14 +479,16 @@ namespace Quantum::System::FileSystems::FAT12 {
     UInt8 existingAttributes = 0;
     UInt32 existingSize = 0;
 
-    if (FindEntry(
+    if (
+      FindEntry(
         parentCluster,
         parentIsRoot,
         name,
         existingCluster,
         existingAttributes,
         existingSize
-      )) {
+      )
+    ) {
       return false;
     }
 
@@ -465,12 +501,14 @@ namespace Quantum::System::FileSystems::FAT12 {
     UInt32 entryLba = 0;
     UInt32 entryOffset = 0;
 
-    if (!FindFreeDirectorySlot(
+    if (
+      !FindFreeDirectorySlot(
         parentCluster,
         parentIsRoot,
         entryLba,
         entryOffset
-      )) {
+      )
+    ) {
       return false;
     }
 
@@ -481,6 +519,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     }
 
     entryBytes[11] = 0x20;
+
     WriteUInt16(entryBytes, 26, 0);
     WriteUInt32(entryBytes, 28, 0);
 

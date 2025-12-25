@@ -71,6 +71,11 @@ namespace Quantum::System::FileSystems::FAT12 {
          * Current file offset in bytes.
          */
         UInt32 fileOffset;
+
+        /**
+         * Entry attribute flags.
+         */
+        UInt32 attributes;
       };
 
       /**

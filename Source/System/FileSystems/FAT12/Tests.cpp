@@ -465,6 +465,7 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     UInt32 cluster = 0;
     UInt8 attributes = 0;
     UInt32 sizeBytes = 0;
+    FileSystem::FileInfo info {};
 
     if (
       !volume.FindEntry(
@@ -482,19 +483,18 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     }
 
     if (
-      !volume.FindEntry(
+      !volume.GetEntryInfo(
         0,
         true,
         "NEWDIR",
-        cluster,
-        attributes,
-        sizeBytes
+        info,
+        attributes
       )
     ) {
       return Assert(false, "directory not found");
     }
 
-    return Assert((attributes & 0x10) != 0, "directory not created");
+    return Assert((info.attributes & 0x10) != 0, "directory not created");
   }
 
   static bool TestCreateFile() {
@@ -515,6 +515,7 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     UInt32 dirCluster = 0;
     UInt8 dirAttributes = 0;
     UInt32 dirSize = 0;
+    FileSystem::FileInfo info {};
 
     if (
       !volume.FindEntry(
@@ -555,23 +556,60 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     }
 
     if (
-      !volume.FindEntry(
+      !volume.GetEntryInfo(
         dirCluster,
         false,
         "NEWFILE.TXT",
-        fileCluster,
-        fileAttributes,
-        fileSize
+        info,
+        fileAttributes
       )
     ) {
       return Assert(false, "file not found");
     }
 
-    if ((fileAttributes & 0x10) != 0) {
+    if ((info.attributes & 0x10) != 0) {
       return Assert(false, "file is a directory");
     }
 
     return Assert(true, "file created");
+  }
+
+  static bool TestStat() {
+    if (!WaitForFloppyReady()) {
+      LogSkip("floppy not ready");
+
+      return true;
+    }
+
+    Volume volume {};
+
+    if (!volume.Load()) {
+      LogSkip("no FAT12 volume");
+
+      return true;
+    }
+
+    FileSystem::FileInfo info {};
+    UInt8 attributes = 0;
+
+    if (
+      !volume.GetEntryInfo(
+        0,
+        true,
+        "TESTDIR",
+        info,
+        attributes
+      )
+    ) {
+      return Assert(false, "stat missing");
+    }
+
+    bool ok = true;
+
+    ok &= Assert((info.attributes & 0x10) != 0, "stat attributes");
+    ok &= Assert(info.sizeBytes == 0, "stat size");
+
+    return ok;
   }
 
   static void RunTest(CString name, bool (*func)()) {
@@ -603,6 +641,7 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     RunTest("FAT12 TEST.TXT seek", TestFileSeek);
     RunTest("FAT12 create directory", TestCreateDirectory);
     RunTest("FAT12 create file", TestCreateFile);
+    RunTest("FAT12 stat", TestStat);
 
     LogFooter();
   }

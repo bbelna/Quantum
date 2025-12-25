@@ -158,6 +158,29 @@ namespace Quantum::System::FileSystems::FAT12 {
       );
 
       /**
+       * Retrieves entry info by name.
+       * @param parentCluster
+       *   Parent directory cluster.
+       * @param parentIsRoot
+       *   True if the parent is the root directory.
+       * @param name
+       *   Entry name to locate.
+       * @param outInfo
+       *   Receives file info.
+       * @param outAttributes
+       *   Receives entry attributes.
+       * @return
+       *   True if the entry was found.
+       */
+      bool GetEntryInfo(
+        UInt32 parentCluster,
+        bool parentIsRoot,
+        CString name,
+        ABI::FileSystem::FileInfo& outInfo,
+        UInt8& outAttributes
+      );
+
+      /**
        * Creates a directory entry under the given parent.
        * @param parentCluster
        *   Parent directory cluster.

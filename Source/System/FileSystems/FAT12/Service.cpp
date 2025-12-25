@@ -62,6 +62,7 @@ namespace Quantum::System::FileSystems::FAT12 {
         _handles[i].nextIndex = 0;
         _handles[i].fileSize = fileSize;
         _handles[i].fileOffset = 0;
+        _handles[i].attributes = isDirectory ? 0x10 : 0x20;
 
         return static_cast<FileSystem::Handle>(_handleBase + i);
       }
@@ -84,6 +85,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     state->nextIndex = 0;
     state->fileSize = 0;
     state->fileOffset = 0;
+    state->attributes = 0;
   }
 
   Service::HandleState* Service::GetHandleState(FileSystem::Handle handle) {
@@ -343,6 +345,14 @@ namespace Quantum::System::FileSystems::FAT12 {
                   0
                 );
 
+                if (handle != 0) {
+                  HandleState* state = GetHandleState(handle);
+
+                  if (state) {
+                    state->attributes = lastAttributes;
+                  }
+                }
+
                 response.status = handle;
               } else if (lastCluster != 0 || lastSize == 0) {
                 FileSystem::Handle handle = AllocateHandle(
@@ -351,6 +361,15 @@ namespace Quantum::System::FileSystems::FAT12 {
                   lastCluster,
                   lastSize
                 );
+
+                if (handle != 0) {
+                  HandleState* state = GetHandleState(handle);
+
+                  if (state) {
+                    state->attributes = lastAttributes;
+                    state->fileSize = lastSize;
+                  }
+                }
 
                 response.status = handle;
               }
@@ -494,6 +513,31 @@ namespace Quantum::System::FileSystems::FAT12 {
             } else {
               response.status = 0;
             }
+          }
+        }
+      } else if (
+        request.op == static_cast<UInt32>(FileSystem::Operation::Stat)
+      ) {
+        HandleState* state = GetHandleState(request.arg0);
+
+        if (!_volume || !state || !state->inUse) {
+          response.status = 1;
+        } else {
+          FileSystem::FileInfo info {};
+
+          info.sizeBytes = state->fileSize;
+          info.attributes = state->attributes;
+
+          UInt32 bytes
+            = static_cast<UInt32>(sizeof(FileSystem::FileInfo));
+
+          if (bytes <= FileSystem::messageDataBytes) {
+            for (UInt32 i = 0; i < bytes; ++i) {
+              response.data[i] = reinterpret_cast<UInt8*>(&info)[i];
+            }
+
+            response.dataLength = bytes;
+            response.status = 0;
           }
         }
       } else if (
