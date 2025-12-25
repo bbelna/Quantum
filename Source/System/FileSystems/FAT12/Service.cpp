@@ -14,7 +14,7 @@
 #include "Service.hpp"
 #include "Tests.hpp"
 
-#define TEST
+#define TEST // TODO #18
 
 namespace Quantum::System::FileSystems::FAT12 {
   using Console = ABI::Console;
@@ -493,6 +493,41 @@ namespace Quantum::System::FileSystems::FAT12 {
             } else {
               response.status = 0;
             }
+          }
+        }
+      } else if (
+        request.op == static_cast<UInt32>(FileSystem::Operation::Seek)
+      ) {
+        HandleState* state = GetHandleState(request.arg0);
+
+        if (!_volume || !state || !state->inUse || state->isDirectory) {
+          response.status = 0;
+        } else {
+          UInt32 origin = request.arg2;
+          UInt32 base = 0;
+          bool validOrigin = true;
+
+          if (origin == 0) {
+            base = 0;
+          } else if (origin == 1) {
+            base = state->fileOffset;
+          } else if (origin == 2) {
+            base = state->fileSize;
+          } else {
+            response.status = 0;
+            validOrigin = false;
+          }
+
+          if (validOrigin) {
+            UInt32 newOffset = base + request.arg1;
+
+            // clamp to file size
+            if (newOffset > state->fileSize) {
+              newOffset = state->fileSize;
+            }
+
+            state->fileOffset = newOffset;
+            response.status = newOffset;
           }
         }
       }

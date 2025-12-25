@@ -354,6 +354,97 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     return Assert(true, "test.txt read");
   }
 
+  static bool TestFileSeek() {
+    if (!WaitForFloppyReady()) {
+      LogSkip("floppy not ready");
+
+      return true;
+    }
+
+    Volume volume {};
+
+    if (!volume.Load()) {
+      LogSkip("no FAT12 volume");
+
+      return true;
+    }
+
+    UInt32 dirCluster = 0;
+    UInt8 dirAttributes = 0;
+    UInt32 dirSize = 0;
+
+    if (
+      !volume.FindEntry(
+        0,
+        true,
+        "TESTDIR",
+        dirCluster,
+        dirAttributes,
+        dirSize
+      )
+    ) {
+      LogSkip("testdir missing");
+
+      return true;
+    }
+
+    UInt32 fileCluster = 0;
+    UInt8 fileAttributes = 0;
+    UInt32 fileSize = 0;
+
+    if (
+      !volume.FindEntry(
+        dirCluster,
+        false,
+        "TEST.TXT",
+        fileCluster,
+        fileAttributes,
+        fileSize
+      )
+    ) {
+      LogSkip("test.txt missing");
+
+      return true;
+    }
+
+    char buffer[32] = {};
+    UInt32 bytes = 0;
+
+    if (
+      !volume.ReadFile(
+        fileCluster,
+        8,
+        reinterpret_cast<UInt8*>(buffer),
+        sizeof(buffer) - 1,
+        bytes,
+        fileSize
+      )
+    ) {
+      return Assert(false, "seek read failed");
+    }
+
+    if (bytes == 0) {
+      return Assert(false, "seek read failed");
+    }
+
+    buffer[bytes] = '\0';
+    Console::WriteLine("FAT12 seek read:");
+    Console::Write("  ");
+    Console::WriteLine(buffer);
+
+    const char expected[] = "FAT12";
+    bool match = true;
+
+    for (UInt32 i = 0; expected[i] != '\0'; ++i) {
+      if (buffer[i] != expected[i]) {
+        match = false;
+        break;
+      }
+    }
+
+    return Assert(match, "seek read");
+  }
+
   static void RunTest(CString name, bool (*func)()) {
     Console::Write("[TEST] ");
     Console::WriteLine(name ? name : "(unnamed)");
@@ -380,6 +471,7 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     RunTest("FAT12 root directory", TestRootDirectory);
     RunTest("FAT12 TESTDIR", TestSubDirectory);
     RunTest("FAT12 TEST.TXT read", TestFileRead);
+    RunTest("FAT12 TEST.TXT seek", TestFileSeek);
 
     LogFooter();
   }
