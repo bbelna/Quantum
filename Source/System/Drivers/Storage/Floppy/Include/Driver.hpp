@@ -531,6 +531,13 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       static void RegisterIRQRoute(UInt32 portId);
 
       /**
+       * Sends a readiness signal to the coordinator.
+       * @param deviceTypeId
+       *   Device type identifier.
+       */
+      static void SendReadySignal(UInt8 deviceTypeId);
+
+      /**
        * Programs the DMA controller for a floppy read.
        */
       static bool ProgramDMARead(UInt32 physicalAddress, UInt32 lengthBytes);

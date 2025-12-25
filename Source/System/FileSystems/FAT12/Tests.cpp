@@ -153,6 +153,50 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     return ok;
   }
 
+  static bool TestRootDirectory() {
+    if (!WaitForFloppyReady()) {
+      LogSkip("floppy not ready");
+
+      return true;
+    }
+
+    Volume volume {};
+
+    if (!volume.Load()) {
+      LogSkip("no FAT12 volume");
+
+      return true;
+    }
+
+    bool found = false;
+    FileSystem::DirectoryEntry entry {};
+
+    Console::WriteLine("FAT12 root directory entries:");
+
+    for (UInt32 i = 0; i < volume.GetRootEntryCount(); ++i) {
+      bool end = false;
+
+      if (volume.ReadRootEntry(i, entry, end)) {
+        Console::Write("  ");
+        Console::WriteLine(entry.name);
+
+        found = true;
+      }
+
+      if (end) {
+        break;
+      }
+    }
+
+    if (!found) {
+      LogSkip("no directory entries");
+
+      return true;
+    }
+
+    return Assert(entry.name[0] != '\0', "root entry read");
+  }
+
   static void RunTest(CString name, bool (*func)()) {
     Console::Write("[TEST] ");
     Console::WriteLine(name ? name : "(unnamed)");
@@ -174,6 +218,7 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
 
     RunTest("FAT12 load volume", TestVolumeLoad);
     RunTest("FAT12 volume info", TestVolumeInfo);
+    RunTest("FAT12 root directory", TestRootDirectory);
 
     LogFooter();
   }

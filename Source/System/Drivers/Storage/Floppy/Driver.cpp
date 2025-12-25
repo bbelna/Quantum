@@ -7,9 +7,11 @@
  */
 
 #include <ABI/Console.hpp>
+#include <ABI/Coordinator.hpp>
 #include <ABI/Devices/BlockDevice.hpp>
 #include <ABI/IO.hpp>
 #include <ABI/IRQ.hpp>
+#include <ABI/IPC.hpp>
 #include <ABI/Task.hpp>
 
 #include "Driver.hpp"
@@ -23,6 +25,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
   bool Driver::WaitForFIFOReady(bool readPhase) {
     const UInt32 maxSpins = 100000;
 
+    // keep spinning until the controller is ready or we time out
     for (UInt32 i = 0; i < maxSpins; ++i) {
       UInt8 status = IO::In8(_mainStatusRegisterPort);
       bool ready = (status & _mainStatusRequestMask) != 0;
@@ -43,6 +46,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
   bool Driver::WaitForIOAccess() {
     const UInt32 maxSpins = 100000;
 
+    // keep spinning until we can access I/O or we time out
     for (UInt32 i = 0; i < maxSpins; ++i) {
       if (IO::Out8(_ioAccessProbePort, 0) == 0) {
         return true;
@@ -100,12 +104,14 @@ namespace Quantum::System::Drivers::Storage::Floppy {
   }
 
   bool Driver::ResetController() {
+    // pulse reset line
     IO::Out8(_digitalOutputRegisterPort, 0x00);
     IO::Out8(_digitalOutputRegisterPort, 0x0C);
 
     UInt8 st0 = 0;
     UInt8 cyl = 0;
 
+    // read interrupt status up to 4 times to clear any pending interrupts
     for (UInt32 i = 0; i < 4; ++i) {
       if (!SenseInterruptStatus(st0, cyl)) {
         return false;
@@ -279,6 +285,20 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     if (status != 0) {
       Console::WriteLine("Floppy driver IRQ register failed");
     }
+  }
+
+  void Driver::SendReadySignal(UInt8 deviceTypeId) {
+    ABI::Coordinator::ReadyMessage ready {};
+    IPC::Message msg {};
+
+    ready.deviceId = deviceTypeId;
+    ready.state = 1;
+
+    msg.length = sizeof(ready);
+
+    CopyBytes(msg.payload, &ready, msg.length);
+
+    IPC::Send(ABI::IPC::Ports::CoordinatorReady, msg);
   }
 
   bool Driver::GetDeviceInfo(
@@ -1285,6 +1305,8 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     }
 
     Console::WriteLine("Floppy driver bound to block device");
+
+    SendReadySignal(1);
 
     #if defined(TEST)
     Tests::Run();

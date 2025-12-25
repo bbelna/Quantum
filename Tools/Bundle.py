@@ -13,7 +13,7 @@ import sys
 
 
 HEADER_FMT = "<8sHHI8s"  # magic, version, entryCount, tableOffset, reserved
-ENTRY_FMT = "<32sBB2sIII"  # name[32], type, flags, reserved[2], offset, size, checksum
+ENTRY_FMT = "<32sBBBBIII"  # name[32], type, flags, device, dependsMask, offset, size, checksum
 ALIGN = 4096
 MAGIC = b"INITBND\x00"
 VERSION = 1
@@ -23,6 +23,11 @@ TYPE_MAP = {
     "init": 1,
     "driver": 2,
     "service": 3,
+    "filesystem": 3,
+}
+
+DEVICE_MAP = {
+    "floppy": 1,
 }
 
 
@@ -39,6 +44,8 @@ def load_entries(manifest_path: str, base_path: str):
         name = item.get("name")
         path = item.get("path")
         type_str = (item.get("type") or "").lower()
+        device_raw = item.get("device")
+        depends_raw = item.get("dependsOn")
         required = bool(item.get("required"))
 
         if not name or not path:
@@ -57,11 +64,37 @@ def load_entries(manifest_path: str, base_path: str):
 
         type_byte = TYPE_MAP.get(type_str, 0)
         flags = 0x01 if required else 0x00
+        device_id = 0
+        depends_mask = 0
+
+        if isinstance(device_raw, str):
+            device_id = DEVICE_MAP.get(device_raw.lower(), 0)
+        elif isinstance(device_raw, int):
+            device_id = device_raw
+
+        if depends_raw:
+            depends_list = depends_raw
+            if isinstance(depends_raw, (str, int)):
+                depends_list = [depends_raw]
+
+            for dep in depends_list:
+                dep_id = 0
+                if isinstance(dep, str):
+                    dep_id = DEVICE_MAP.get(dep.lower(), 0)
+                elif isinstance(dep, int):
+                    dep_id = dep
+
+                if dep_id <= 0 or dep_id > 8:
+                    continue
+
+                depends_mask |= 1 << (dep_id - 1)
 
         entries.append({
             "name": name_bytes,
             "type": type_byte,
             "flags": flags,
+            "device": device_id,
+            "dependsMask": depends_mask,
             "payload": payload,
         })
 
@@ -102,7 +135,8 @@ def build_bundle(entries, output_path: str):
                 name_field,
                 e["type"],
                 e["flags"],
-                b"\x00\x00",
+                e["device"] & 0xFF,
+                e["dependsMask"] & 0xFF,
                 e["offset"],
                 e["size"],
                 e["checksum"],

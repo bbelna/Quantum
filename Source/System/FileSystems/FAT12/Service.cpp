@@ -27,6 +27,64 @@ namespace Quantum::System::FileSystems::FAT12 {
     _volume->Load();
   }
 
+  bool Service::IsRootPath(CString path) {
+    if (!path || path[0] == '\0') {
+      return true;
+    }
+
+    if (path[0] == '/' && path[1] == '\0') {
+      return true;
+    }
+
+    if (path[0] == '\\' && path[1] == '\0') {
+      return true;
+    }
+
+    if (path[0] == '.' && path[1] == '\0') {
+      return true;
+    }
+
+    return false;
+  }
+
+  FileSystem::Handle Service::AllocateHandle() {
+    for (UInt32 i = 0; i < _maxHandles; ++i) {
+      if (!_handles[i].inUse) {
+        _handles[i].inUse = true;
+        _handles[i].nextIndex = 0;
+
+        return static_cast<FileSystem::Handle>(_handleBase + i);
+      }
+    }
+
+    return 0;
+  }
+
+  void Service::ReleaseHandle(FileSystem::Handle handle) {
+    HandleState* state = GetHandleState(handle);
+
+    if (!state) {
+      return;
+    }
+
+    state->inUse = false;
+    state->nextIndex = 0;
+  }
+
+  Service::HandleState* Service::GetHandleState(FileSystem::Handle handle) {
+    if (handle < _handleBase) {
+      return nullptr;
+    }
+
+    UInt32 index = handle - _handleBase;
+
+    if (index >= _maxHandles) {
+      return nullptr;
+    }
+
+    return &_handles[index];
+  }
+
   void Service::Main() {
     UInt32 portId = IPC::CreatePort();
 
@@ -149,6 +207,94 @@ namespace Quantum::System::FileSystems::FAT12 {
 
             response.dataLength = bytes;
             response.status = 0;
+          }
+        }
+      } else if (
+        request.op == static_cast<UInt32>(FileSystem::Operation::Open)
+      ) {
+        CString path = reinterpret_cast<CString>(request.data);
+
+        if (_volume && request.arg0 == _volume->GetHandle()) {
+          if (IsRootPath(path)) {
+            FileSystem::Handle handle = AllocateHandle();
+
+            response.status = handle;
+          }
+        }
+      } else if (
+        request.op == static_cast<UInt32>(FileSystem::Operation::Close)
+      ) {
+        HandleState* state = GetHandleState(request.arg0);
+
+        if (!state || !state->inUse) {
+          response.status = 1;
+        } else {
+          ReleaseHandle(request.arg0);
+
+          response.status = 0;
+        }
+      } else if (
+        request.op == static_cast<UInt32>(
+          FileSystem::Operation::ReadDirectory
+        )
+      ) {
+        HandleState* state = GetHandleState(request.arg0);
+
+        if (!_volume || !state || !state->inUse) {
+          response.status = 1;
+        } else {
+          FileSystem::DirectoryEntry entry {};
+
+          bool found = false;
+
+          while (state->nextIndex < _volume->GetRootEntryCount()) {
+            bool end = false;
+
+            if (
+              _volume->ReadRootEntry(
+                state->nextIndex,
+                entry,
+                end
+              )
+            ) {
+              found = true;
+              state->nextIndex++;
+
+              break;
+            }
+
+            state->nextIndex++;
+
+            if (end) {
+              break;
+            }
+          }
+
+          if (found) {
+            UInt32 bytes
+              = static_cast<UInt32>(sizeof(FileSystem::DirectoryEntry));
+
+            if (bytes <= FileSystem::messageDataBytes) {
+              for (UInt32 i = 0; i < bytes; ++i) {
+                response.data[i] = reinterpret_cast<UInt8*>(&entry)[i];
+              }
+
+              response.dataLength = bytes;
+              response.status = 0;
+            }
+          } else {
+            FileSystem::DirectoryEntry emptyEntry {};
+            UInt32 bytes
+              = static_cast<UInt32>(sizeof(FileSystem::DirectoryEntry));
+
+            if (bytes <= FileSystem::messageDataBytes) {
+              for (UInt32 i = 0; i < bytes; ++i) {
+                response.data[i] = reinterpret_cast<UInt8*>(&emptyEntry)[i];
+              }
+
+              response.dataLength = bytes;
+              response.status = 0;
+            }
           }
         }
       }

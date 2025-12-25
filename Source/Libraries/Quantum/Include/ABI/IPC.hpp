@@ -35,6 +35,11 @@ namespace Quantum::ABI {
          * File system broker port.
          */
         static constexpr UInt32 FileSystem = 2;
+
+        /**
+         * Coordinator readiness port.
+         */
+        static constexpr UInt32 CoordinatorReady = 3;
       };
 
       /**

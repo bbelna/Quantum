@@ -8,12 +8,16 @@
   {
     "name": "floppy",
     "type": "driver",
+    "device": "floppy",
     "required": false,
     "path": "Build/Drivers/Storage/Floppy/Floppy.qx"
   },
   {
     "name": "fat12",
     "type": "filesystem",
+    "dependsOn": [
+      "floppy"
+    ],
     "required": false,
     "path": "Build/FileSystems/FAT12/fat12.qx"
   }

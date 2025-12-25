@@ -104,6 +104,88 @@ namespace Quantum::System::FileSystems::FAT12 {
     entry.fsType = _info.fsType;
   }
 
+  UInt32 Volume::GetRootEntryCount() const {
+    return _rootEntryCount;
+  }
+
+  bool Volume::ReadRootEntry(
+    UInt32 index,
+    FileSystem::DirectoryEntry& entry,
+    bool& end
+  ) {
+    end = false;
+
+    if (!_valid) {
+      return false;
+    }
+
+    UInt32 bytesPerSector = _info.sectorSize;
+
+    if (bytesPerSector != 512) {
+      // only support 512-byte sectors for now
+      return false;
+    }
+
+    if (index >= _rootEntryCount) {
+      end = true;
+
+      return false;
+    }
+
+    UInt32 entriesPerSector = bytesPerSector / 32;
+    UInt32 sectorIndex = index / entriesPerSector;
+    UInt32 entryIndex = index % entriesPerSector;
+
+    if (sectorIndex >= _rootDirectorySectors) {
+      end = true;
+
+      return false;
+    }
+
+    UInt8 sector[512] = {};
+    BlockDevice::Request request {};
+
+    request.deviceId = _device.id;
+    request.lba = _rootDirectoryStartLBA + sectorIndex;
+    request.count = 1;
+    request.buffer = sector;
+
+    if (BlockDevice::Read(request) != 0) {
+      return false;
+    }
+
+    const UInt8* base = sector + (entryIndex * 32);
+    UInt8 first = base[0];
+
+    if (first == 0x00) {
+      end = true;
+
+      return false;
+    }
+
+    if (first == 0xE5) {
+      return false;
+    }
+
+    UInt8 attributes = base[11];
+
+    if (attributes == 0x0F) {
+      return false;
+    }
+
+    if ((attributes & 0x08) != 0) {
+      return false;
+    }
+
+    entry = FileSystem::DirectoryEntry {};
+    entry.attributes = attributes;
+    entry.sizeBytes = ReadUInt32(base, 28);
+
+    FormatName(base, entry.name, FileSystem::maxDirectoryLength);
+
+    return entry.name[0] != '\0';
+  }
+
   bool Volume::ReadBootSector(UInt8* buffer, UInt32 bufferBytes) {
     if (!buffer || bufferBytes < 512) {
       return false;
@@ -185,5 +267,48 @@ namespace Quantum::System::FileSystems::FAT12 {
     }
 
     return label[i] == '\0' && expected[i] == '\0';
+  }
+
+  void Volume::FormatName(
+    const UInt8* base,
+    char* outName,
+    UInt32 outBytes
+  ) {
+    if (!base || !outName || outBytes == 0) {
+      return;
+    }
+
+    UInt32 nameLength = 0;
+    UInt32 extLength = 0;
+
+    for (UInt32 i = 0; i < 8; ++i) {
+      if (base[i] == ' ') {
+        break;
+      }
+
+      if (nameLength + 1 < outBytes) {
+        outName[nameLength++] = static_cast<char>(base[i]);
+      }
+    }
+
+    for (UInt32 i = 0; i < 3; ++i) {
+      UInt8 c = base[8 + i];
+
+      if (c == ' ') {
+        break;
+      }
+
+      if (nameLength + extLength + 2 < outBytes) {
+        outName[nameLength + 1 + extLength] = static_cast<char>(c);
+        ++extLength;
+      }
+    }
+
+    if (extLength > 0 && nameLength + 1 < outBytes) {
+      outName[nameLength] = '.';
+      outName[nameLength + 1 + extLength] = '\0';
+    } else if (nameLength < outBytes) {
+      outName[nameLength] = '\0';
+    }
   }
 }

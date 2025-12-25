@@ -24,6 +24,14 @@ namespace Quantum::System::Coordinator {
 
     private:
       /**
+       * Device type identifiers for startup dependencies.
+       */
+      enum class DeviceType : UInt8 {
+        None = 0,
+        Floppy = 1
+      };
+
+      /**
        * INIT.BND header layout.
        */
       using BundleHeader = InitBundle::Header;
@@ -34,14 +42,29 @@ namespace Quantum::System::Coordinator {
       using BundleEntry = InitBundle::Entry;
 
       /**
-       * Cached floppy presence state.
+       * Detected device bitmask.
        */
-      inline static bool _floppyPresent = false;
+      inline static UInt8 _detectedDevices = 0;
 
       /**
-       * Cached floppy block device id.
+       * Spawned device bitmask.
        */
-      inline static UInt32 _floppyDeviceId = 0;
+      inline static UInt8 _spawnedDevices = 0;
+
+      /**
+       * Ready device bitmask.
+       */
+      inline static UInt8 _readyDevices = 0;
+
+      /**
+       * Coordinator readiness port id.
+       */
+      inline static UInt32 _readyPortId = 0;
+
+      /**
+       * Maximum INIT.BND entries to process.
+       */
+      static constexpr UInt32 _maxBundleEntries = 64;
 
       /**
        * Validates the INIT.BND header magic.
@@ -76,22 +99,47 @@ namespace Quantum::System::Coordinator {
        * Spawns an INIT.BND entry.
        * @param entry
        *   INIT.BND entry to spawn.
+       * @return
+       *   True if spawned successfully; false otherwise.
        */
-      static void SpawnEntry(const BundleEntry& entry);
+      static bool SpawnEntry(const BundleEntry& entry);
 
       /**
-       * Detects whether a floppy block device is present.
+       * Detects available devices.
+       * @return
+       *   Detected device mask.
+       */
+      static UInt8 DetectDevices();
+
+      /**
+       * Returns the device mask for a device identifier.
+       * @param deviceId
+       *   Device identifier from INIT.BND.
+       * @return
+       *   Device mask (0 if invalid).
+       */
+      static UInt8 DeviceMaskFromId(UInt8 deviceId);
+
+      /**
+       * Reads a CMOS register.
+       * @param reg
+       *   CMOS register index.
+       * @return
+       *   Register value.
+       */
+      static UInt8 ReadCMOS(UInt8 reg);
+
+      /**
+       * Detects whether a floppy device is present.
        * @return
        *   True if a floppy device is present; false otherwise.
        */
       static bool HasFloppyDevice();
 
       /**
-       * Waits for the floppy block device to become ready.
-       * @return
-       *   True if ready; false on timeout or missing device.
+       * Processes pending readiness messages.
        */
-      static bool WaitForFloppyReady();
+      static void ProcessReadyMessages();
 
   };
 }

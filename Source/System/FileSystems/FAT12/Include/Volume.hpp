@@ -63,6 +63,30 @@ namespace Quantum::System::FileSystems::FAT12 {
        */
       void FillEntry(ABI::FileSystem::VolumeEntry& entry) const;
 
+      /**
+       * Returns the number of root directory entries.
+       * @return
+       *   Root directory entry count.
+       */
+      UInt32 GetRootEntryCount() const;
+
+      /**
+       * Reads a root directory entry by index.
+       * @param index
+       *   Entry index within the root directory.
+       * @param entry
+       *   Output entry to populate.
+       * @param end
+       *   True if the end of directory was reached.
+       * @return
+       *   True if a valid entry was returned.
+       */
+      bool ReadRootEntry(
+        UInt32 index,
+        ABI::FileSystem::DirectoryEntry& entry,
+        bool& end
+      );
+
     private:
       /**
        * Boot sector LBA.
@@ -176,5 +200,20 @@ namespace Quantum::System::FileSystems::FAT12 {
        *   True if the labels match.
        */
       static bool MatchLabel(CString label, CString expected);
+
+      /**
+       * Formats a FAT 8.3 name into a display string.
+       * @param base
+       *   Pointer to the 11-byte name field.
+       * @param outName
+       *   Output name buffer.
+       * @param outBytes
+       *   Output buffer size in bytes.
+       */
+      static void FormatName(
+        const UInt8* base,
+        char* outName,
+        UInt32 outBytes
+      );
   };
 }

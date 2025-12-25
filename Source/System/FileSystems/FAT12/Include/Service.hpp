@@ -24,6 +24,31 @@ namespace Quantum::System::FileSystems::FAT12 {
 
     private:
       /**
+       * Maximum number of open handles.
+       */
+      static constexpr UInt32 _maxHandles = 8;
+
+      /**
+       * Base handle value for directory handles.
+       */
+      static constexpr ABI::FileSystem::Handle _handleBase = 0x100;
+
+      /**
+       * Directory handle state.
+       */
+      struct HandleState {
+        /**
+         * Whether the handle slot is active.
+         */
+        bool inUse;
+
+        /**
+         * Next entry index to read.
+         */
+        UInt32 nextIndex;
+      };
+
+      /**
        * Mounted FAT12 volume state.
        */
       inline static Volume* _volume = nullptr;
@@ -37,5 +62,42 @@ namespace Quantum::System::FileSystems::FAT12 {
        * Initializes the FAT12 volume cache.
        */
       static void InitializeVolume();
+
+      /**
+       * Returns true if the path refers to the root directory.
+       * @param path
+       *   Path string to check.
+       * @return
+       *   True if the path is root.
+       */
+      static bool IsRootPath(CString path);
+
+      /**
+       * Allocates a handle slot.
+       * @return
+       *   Handle id or 0 on failure.
+       */
+      static ABI::FileSystem::Handle AllocateHandle();
+
+      /**
+       * Releases an open handle slot.
+       * @param handle
+       *   Handle to release.
+       */
+      static void ReleaseHandle(ABI::FileSystem::Handle handle);
+
+      /**
+       * Gets the handle slot by id.
+       * @param handle
+       *   Handle to lookup.
+       * @return
+       *   Handle slot pointer or nullptr.
+       */
+      static HandleState* GetHandleState(ABI::FileSystem::Handle handle);
+
+      /**
+       * Open handle slots.
+       */
+      inline static HandleState _handles[_maxHandles] = {};
   };
 }
