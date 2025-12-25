@@ -18,12 +18,14 @@ namespace Quantum::System::FileSystems::FAT12 {
   bool Volume::Load() {
     _valid = false;
 
+    // ensure we have a floppy block device
     if (!GetFloppyInfo(_device)) {
       return false;
     }
 
     UInt8 bootSector[512] = {};
 
+    // ensure we can read the boot sector
     if (!ReadBootSector(bootSector, sizeof(bootSector))) {
       return false;
     }
@@ -34,18 +36,19 @@ namespace Quantum::System::FileSystems::FAT12 {
     UInt8 fatCount = bootSector[16];
     UInt16 rootEntryCount = ReadUInt16(bootSector, 17);
     UInt16 totalSectors16 = ReadUInt16(bootSector, 19);
-    UInt16 sectorsPerFat = ReadUInt16(bootSector, 22);
+    UInt16 sectorsPerFAT = ReadUInt16(bootSector, 22);
     UInt32 totalSectors32 = ReadUInt32(bootSector, 32);
     UInt32 totalSectors = totalSectors16 != 0
       ? totalSectors16
       : totalSectors32;
 
+    // validate essential parameters
     if (
       bytesPerSector == 0 ||
       sectorsPerCluster == 0 ||
       reservedSectors == 0 ||
       fatCount == 0 ||
-      sectorsPerFat == 0 ||
+      sectorsPerFAT == 0 ||
       totalSectors == 0
     ) {
       return false;
@@ -54,9 +57,9 @@ namespace Quantum::System::FileSystems::FAT12 {
     UInt32 rootDirBytes = static_cast<UInt32>(rootEntryCount) * 32;
     UInt32 rootDirSectors
       = (rootDirBytes + bytesPerSector - 1) / bytesPerSector;
-    UInt32 fatStartLba = reservedSectors;
-    UInt32 rootDirStartLba = fatStartLba + fatCount * sectorsPerFat;
-    UInt32 dataStartLba = rootDirStartLba + rootDirSectors;
+    UInt32 fatStartLBA = reservedSectors;
+    UInt32 rootDirStartLBA = fatStartLBA + fatCount * sectorsPerFAT;
+    UInt32 dataStartLBA = rootDirStartLBA + rootDirSectors;
 
     _info = FileSystem::VolumeInfo {};
     _info.label[0] = 'A';
@@ -66,11 +69,11 @@ namespace Quantum::System::FileSystems::FAT12 {
     _info.sectorCount = totalSectors;
     _info.freeSectors = 0;
 
-    _fatStartLBA = fatStartLba;
-    _fatSectors = sectorsPerFat;
-    _rootDirectoryStartLBA = rootDirStartLba;
+    _fatStartLBA = fatStartLBA;
+    _fatSectors = sectorsPerFAT;
+    _rootDirectoryStartLBA = rootDirStartLBA;
     _rootDirectorySectors = rootDirSectors;
-    _dataStartLBA = dataStartLba;
+    _dataStartLBA = dataStartLBA;
     _sectorsPerCluster = sectorsPerCluster;
     _rootEntryCount = rootEntryCount;
     _valid = true;
@@ -113,6 +116,148 @@ namespace Quantum::System::FileSystems::FAT12 {
     FileSystem::DirectoryEntry& entry,
     bool& end
   ) {
+    DirectoryRecord record {};
+
+    if (!ReadRootRecord(index, record, end)) {
+      return false;
+    }
+
+    return RecordToEntry(record, entry);
+  }
+
+  bool Volume::ReadDirectoryEntry(
+    UInt32 startCluster,
+    UInt32 index,
+    FileSystem::DirectoryEntry& entry,
+    bool& end
+  ) {
+    DirectoryRecord record {};
+
+    if (!ReadDirectoryRecord(startCluster, index, record, end)) {
+      return false;
+    }
+
+    return RecordToEntry(record, entry);
+  }
+
+  bool Volume::FindEntry(
+    UInt32 startCluster,
+    bool isRoot,
+    CString name,
+    UInt32& outCluster,
+    UInt8& outAttributes
+  ) {
+    if (!name || name[0] == '\0') {
+      return false;
+    }
+
+    DirectoryRecord record {};
+    bool end = false;
+    UInt32 index = 0;
+
+    for (;;) {
+      bool ok = false;
+
+      if (isRoot) {
+        ok = ReadRootRecord(index, record, end);
+      } else {
+        ok = ReadDirectoryRecord(startCluster, index, record, end);
+      }
+
+      if (ok) {
+        FileSystem::DirectoryEntry entry {};
+
+        if (RecordToEntry(record, entry)) {
+          if (MatchName(entry.name, name)) {
+            outCluster = record.startCluster;
+            outAttributes = record.attributes;
+
+            return true;
+          }
+        }
+      }
+
+      if (end) {
+        break;
+      }
+
+      ++index;
+    }
+
+    return false;
+  }
+
+  bool Volume::ReadFATEntry(UInt32 cluster, UInt32& nextCluster) {
+    if (!_valid) {
+      return false;
+    }
+
+    UInt32 bytesPerSector = _info.sectorSize;
+
+    if (bytesPerSector != 512) {
+      // only support 512-byte sectors for now
+      return false;
+    }
+
+    UInt32 fatOffset = cluster + (cluster / 2);
+    UInt32 sectorOffset = fatOffset / bytesPerSector;
+    UInt32 byteOffset = fatOffset % bytesPerSector;
+    UInt32 fatLBA = _fatStartLBA + sectorOffset;
+
+    UInt8 sector[512] = {};
+
+    BlockDevice::Request request {};
+
+    request.deviceId = _device.id;
+    request.lba = fatLBA;
+    request.count = 1;
+    request.buffer = sector;
+
+    if (BlockDevice::Read(request) != 0) {
+      return false;
+    }
+
+    UInt16 value = 0;
+
+    if (byteOffset == bytesPerSector - 1) {
+      UInt8 nextSector[512] = {};
+
+      request.lba = fatLBA + 1;
+      request.buffer = nextSector;
+
+      if (BlockDevice::Read(request) != 0) {
+        return false;
+      }
+
+      value = static_cast<UInt16>(
+        sector[byteOffset]
+        | (static_cast<UInt16>(nextSector[0]) << 8)
+      );
+    } else {
+      value = static_cast<UInt16>(
+        sector[byteOffset]
+        | (static_cast<UInt16>(sector[byteOffset + 1]) << 8)
+      );
+    }
+
+    if ((cluster & 1u) != 0) {
+      nextCluster = static_cast<UInt32>(value >> 4);
+    } else {
+      nextCluster = static_cast<UInt32>(value & 0x0FFF);
+    }
+
+    return true;
+  }
+
+  bool Volume::IsEndOfChain(UInt32 value) {
+    return value >= 0xFF8;
+  }
+
+  bool Volume::ReadRootRecord(
+    UInt32 index,
+    DirectoryRecord& record,
+    bool& end
+  ) {
     end = false;
 
     if (!_valid) {
@@ -136,6 +281,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     UInt32 sectorIndex = index / entriesPerSector;
     UInt32 entryIndex = index % entriesPerSector;
 
+    // check for end of root directory
     if (sectorIndex >= _rootDirectorySectors) {
       end = true;
 
@@ -157,6 +303,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     const UInt8* base = sector + (entryIndex * 32);
     UInt8 first = base[0];
 
+    // check for end-of-directory marker
     if (first == 0x00) {
       end = true;
 
@@ -177,13 +324,15 @@ namespace Quantum::System::FileSystems::FAT12 {
       return false;
     }
 
-    entry = FileSystem::DirectoryEntry {};
-    entry.attributes = attributes;
-    entry.sizeBytes = ReadUInt32(base, 28);
+    for (UInt32 i = 0; i < sizeof(record.name); ++i) {
+      record.name[i] = base[i];
+    }
 
-    FormatName(base, entry.name, FileSystem::maxDirectoryLength);
+    record.attributes = attributes;
+    record.startCluster = ReadUInt16(base, 26);
+    record.sizeBytes = ReadUInt32(base, 28);
 
-    return entry.name[0] != '\0';
+    return true;
   }
 
   bool Volume::ReadBootSector(UInt8* buffer, UInt32 bufferBytes) {
@@ -194,7 +343,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     BlockDevice::Request request {};
 
     request.deviceId = _device.id;
-    request.lba = _bootSectorLba;
+    request.lba = _bootSectorLBA;
     request.count = 1;
     request.buffer = buffer;
 
@@ -269,6 +418,35 @@ namespace Quantum::System::FileSystems::FAT12 {
     return label[i] == '\0' && expected[i] == '\0';
   }
 
+  bool Volume::MatchName(CString left, CString right) {
+    if (!left || !right) {
+      return false;
+    }
+
+    UInt32 i = 0;
+
+    while (left[i] != '\0' && right[i] != '\0') {
+      char a = left[i];
+      char b = right[i];
+
+      if (a >= 'a' && a <= 'z') {
+        a = static_cast<char>(a - 'a' + 'A');
+      }
+
+      if (b >= 'a' && b <= 'z') {
+        b = static_cast<char>(b - 'a' + 'A');
+      }
+
+      if (a != b) {
+        return false;
+      }
+
+      ++i;
+    }
+
+    return left[i] == '\0' && right[i] == '\0';
+  }
+
   void Volume::FormatName(
     const UInt8* base,
     char* outName,
@@ -310,5 +488,111 @@ namespace Quantum::System::FileSystems::FAT12 {
     } else if (nameLength < outBytes) {
       outName[nameLength] = '\0';
     }
+  }
+
+  bool Volume::ReadDirectoryRecord(
+    UInt32 startCluster,
+    UInt32 index,
+    DirectoryRecord& record,
+    bool& end
+  ) {
+    end = false;
+
+    if (!_valid || startCluster < 2) {
+      return false;
+    }
+
+    UInt32 bytesPerSector = _info.sectorSize;
+
+    if (bytesPerSector != 512) {
+      // only support 512-byte sectors for now
+      return false;
+    }
+
+    UInt32 entriesPerSector = bytesPerSector / 32;
+    UInt32 entriesPerCluster = entriesPerSector * _sectorsPerCluster;
+    UInt32 clusterIndex = index / entriesPerCluster;
+    UInt32 entryOffset = index % entriesPerCluster;
+
+    UInt32 cluster = startCluster;
+
+    for (UInt32 i = 0; i < clusterIndex; ++i) {
+      UInt32 nextCluster = 0;
+
+      if (!ReadFATEntry(cluster, nextCluster)) {
+        return false;
+      }
+
+      if (IsEndOfChain(nextCluster)) {
+        end = true;
+
+        return false;
+      }
+
+      cluster = nextCluster;
+    }
+
+    UInt32 sectorInCluster = entryOffset / entriesPerSector;
+    UInt32 entryIndex = entryOffset % entriesPerSector;
+    UInt32 lba
+      = _dataStartLBA + (cluster - 2) * _sectorsPerCluster + sectorInCluster;
+
+    UInt8 sector[512] = {};
+    BlockDevice::Request request {};
+
+    request.deviceId = _device.id;
+    request.lba = lba;
+    request.count = 1;
+    request.buffer = sector;
+
+    if (BlockDevice::Read(request) != 0) {
+      return false;
+    }
+
+    const UInt8* base = sector + (entryIndex * 32);
+    UInt8 first = base[0];
+
+    if (first == 0x00) {
+      end = true;
+
+      return false;
+    }
+
+    if (first == 0xE5) {
+      return false;
+    }
+
+    UInt8 attributes = base[11];
+
+    if (attributes == 0x0F) {
+      return false;
+    }
+
+    if ((attributes & 0x08) != 0) {
+      return false;
+    }
+
+    for (UInt32 i = 0; i < sizeof(record.name); ++i) {
+      record.name[i] = base[i];
+    }
+
+    record.attributes = attributes;
+    record.startCluster = ReadUInt16(base, 26);
+    record.sizeBytes = ReadUInt32(base, 28);
+
+    return true;
+  }
+
+  bool Volume::RecordToEntry(
+    const DirectoryRecord& record,
+    FileSystem::DirectoryEntry& entry
+  ) {
+    entry = FileSystem::DirectoryEntry {};
+    entry.attributes = record.attributes;
+    entry.sizeBytes = record.sizeBytes;
+
+    FormatName(record.name, entry.name, FileSystem::maxDirectoryLength);
+
+    return entry.name[0] != '\0';
   }
 }

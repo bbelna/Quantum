@@ -43,6 +43,16 @@ namespace Quantum::System::FileSystems::FAT12 {
         bool inUse;
 
         /**
+         * True if this handle refers to the root directory.
+         */
+        bool isRoot;
+
+        /**
+         * Start cluster for directory handles.
+         */
+        UInt32 startCluster;
+
+        /**
          * Next entry index to read.
          */
         UInt32 nextIndex;
@@ -77,7 +87,10 @@ namespace Quantum::System::FileSystems::FAT12 {
        * @return
        *   Handle id or 0 on failure.
        */
-      static ABI::FileSystem::Handle AllocateHandle();
+      static ABI::FileSystem::Handle AllocateHandle(
+        bool isRoot,
+        UInt32 startCluster
+      );
 
       /**
        * Releases an open handle slot.

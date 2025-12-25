@@ -47,10 +47,15 @@ namespace Quantum::System::FileSystems::FAT12 {
     return false;
   }
 
-  FileSystem::Handle Service::AllocateHandle() {
+  FileSystem::Handle Service::AllocateHandle(
+    bool isRoot,
+    UInt32 startCluster
+  ) {
     for (UInt32 i = 0; i < _maxHandles; ++i) {
       if (!_handles[i].inUse) {
         _handles[i].inUse = true;
+        _handles[i].isRoot = isRoot;
+        _handles[i].startCluster = startCluster;
         _handles[i].nextIndex = 0;
 
         return static_cast<FileSystem::Handle>(_handleBase + i);
@@ -68,6 +73,8 @@ namespace Quantum::System::FileSystems::FAT12 {
     }
 
     state->inUse = false;
+    state->isRoot = false;
+    state->startCluster = 0;
     state->nextIndex = 0;
   }
 
@@ -216,9 +223,72 @@ namespace Quantum::System::FileSystems::FAT12 {
 
         if (_volume && request.arg0 == _volume->GetHandle()) {
           if (IsRootPath(path)) {
-            FileSystem::Handle handle = AllocateHandle();
+            FileSystem::Handle handle = AllocateHandle(true, 0);
 
             response.status = handle;
+          } else {
+            UInt32 cluster = 0;
+            bool isRoot = true;
+            bool ok = true;
+            const char* cursor = path;
+
+            while (*cursor == '/' || *cursor == '\\') {
+              ++cursor;
+            }
+
+            while (*cursor != '\0') {
+              char segment[FileSystem::maxDirectoryLength] = {};
+              UInt32 length = 0;
+
+              while (
+                *cursor != '\0' &&
+                *cursor != '/' &&
+                *cursor != '\\' &&
+                length + 1 < sizeof(segment)
+              ) {
+                segment[length++] = *cursor++;
+              }
+
+              segment[length] = '\0';
+
+              while (*cursor == '/' || *cursor == '\\') {
+                ++cursor;
+              }
+
+              if (segment[0] == '\0') {
+                continue;
+              }
+
+              UInt32 nextCluster = 0;
+              UInt8 attributes = 0;
+
+              if (
+                !_volume->FindEntry(
+                  cluster,
+                  isRoot,
+                  segment,
+                  nextCluster,
+                  attributes
+                )
+              ) {
+                ok = false;
+                break;
+              }
+
+              if ((attributes & 0x10) == 0) {
+                ok = false;
+                break;
+              }
+
+              cluster = nextCluster;
+              isRoot = false;
+            }
+
+            if (ok && !isRoot && cluster >= 2) {
+              FileSystem::Handle handle = AllocateHandle(false, cluster);
+
+              response.status = handle;
+            }
           }
         }
       } else if (
@@ -247,26 +317,52 @@ namespace Quantum::System::FileSystems::FAT12 {
 
           bool found = false;
 
-          while (state->nextIndex < _volume->GetRootEntryCount()) {
-            bool end = false;
+          if (state->isRoot) {
+            while (state->nextIndex < _volume->GetRootEntryCount()) {
+              bool end = false;
 
-            if (
-              _volume->ReadRootEntry(
-                state->nextIndex,
-                entry,
-                end
-              )
-            ) {
-              found = true;
+              if (
+                _volume->ReadRootEntry(
+                  state->nextIndex,
+                  entry,
+                  end
+                )
+              ) {
+                found = true;
+                state->nextIndex++;
+
+                break;
+              }
+
               state->nextIndex++;
 
-              break;
+              if (end) {
+                break;
+              }
             }
+          } else {
+            for (;;) {
+              bool end = false;
 
-            state->nextIndex++;
+              if (
+                _volume->ReadDirectoryEntry(
+                  state->startCluster,
+                  state->nextIndex,
+                  entry,
+                  end
+                )
+              ) {
+                found = true;
+                state->nextIndex++;
 
-            if (end) {
-              break;
+                break;
+              }
+
+              state->nextIndex++;
+
+              if (end) {
+                break;
+              }
             }
           }
 

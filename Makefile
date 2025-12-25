@@ -39,8 +39,9 @@ OBJCOPY32 ?= x86_64-linux-gnu-objcopy
 # Utilities for FAT12 image creation (mtools)
 MKFS   ?= mkfs.vfat
 MCOPY  ?= mcopy
+MMD    ?= mmd
 
-export ASM ASFLAGS CC32 CFLAGS32 LD32 LDFLAGS32 OBJCOPY32 MKFS MCOPY PROJECT_ROOT BUILD_DIR ARCH BOOT_MEDIUM
+export ASM ASFLAGS CC32 CFLAGS32 LD32 LDFLAGS32 OBJCOPY32 MKFS MCOPY MMD PROJECT_ROOT BUILD_DIR ARCH BOOT_MEDIUM
 
 # Artifacts
 BOOT_STAGE1_BIN := $(BUILD_DIR)/Boot/$(ARCH)/$(BOOT_MEDIUM)/Stage1.bin
@@ -51,6 +52,8 @@ IMG         := $(BUILD_DIR)/Quantum.img
 IMG_SECTORS := 2880       # 1.44 MB / 512 B
 IMG_BS      := 512
 FAT12_LABEL := QUANTUM
+FAT12_TEST_DIR := TESTDIR
+FAT12_TEST_FILE := $(BUILD_DIR)/FAT12_TEST.TXT
 
 # INIT bundle
 INIT_MANIFEST ?= $(PROJECT_ROOT)/InitManifest.json
@@ -123,6 +126,11 @@ $(IMG): $(KER_BIN) $(BOOT_STAGE1_BIN) $(BOOT_STAGE2_BIN) $(COORD_QX) $(FLOPPY_QX
 	else \
 		echo "INIT.BND not present; skipping bundle copy."; \
 	fi
+	@echo "Creating FAT12 test directory and file"
+	@mkdir -p $(BUILD_DIR)
+	@printf "Quantum FAT12 test file.\n" > $(FAT12_TEST_FILE)
+	@$(MMD) -i $@ ::/$(FAT12_TEST_DIR)
+	@$(MCOPY) -i $@ $(FAT12_TEST_FILE) ::/$(FAT12_TEST_DIR)/TEST.TXT
 	@echo "[OK] Built FAT12 floppy image -> $@"
 
 boot-clean:
