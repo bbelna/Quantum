@@ -58,7 +58,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     UInt32 rootDirStartLba = fatStartLba + fatCount * sectorsPerFat;
     UInt32 dataStartLba = rootDirStartLba + rootDirSectors;
 
-    _info = FileSystem::VolumeInfo{};
+    _info = FileSystem::VolumeInfo {};
     _info.label[0] = 'A';
     _info.label[1] = '\0';
     _info.fsType = static_cast<UInt32>(FileSystem::Type::FAT12);
@@ -109,7 +109,7 @@ namespace Quantum::System::FileSystems::FAT12 {
       return false;
     }
 
-    BlockDevice::Request request{};
+    BlockDevice::Request request {};
 
     request.deviceId = _device.id;
     request.lba = _bootSectorLba;
@@ -123,7 +123,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     UInt32 count = BlockDevice::GetCount();
 
     for (UInt32 i = 1; i <= count; ++i) {
-      BlockDevice::Info info{};
+      BlockDevice::Info info {};
 
       // find the first floppy device to bind to this service
       if (BlockDevice::GetInfo(i, info) != 0) {

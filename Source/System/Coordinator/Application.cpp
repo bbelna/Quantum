@@ -14,15 +14,18 @@
 #include <ABI/Task.hpp>
 
 #include "Application.hpp"
+#include "FileSystem.hpp"
+#include "IRQ.hpp"
 #include "Testing.hpp"
-
-#define TEST
 
 namespace Quantum::System::Coordinator {
   using Console = ABI::Console;
   using BlockDevice = ABI::Devices::BlockDevice;
   using IO = ABI::IO;
   using Task = ABI::Task;
+  using FileSystem = Coordinator::FileSystem;
+
+  using IRQ = Coordinator::IRQ;
 
   bool Application::HasMagic(const BundleHeader& header) {
     const char expected[8] = { 'I','N','I','T','B','N','D','\0' };
@@ -130,10 +133,14 @@ namespace Quantum::System::Coordinator {
       return false;
     }
 
-    BlockDevice::Info info{};
+    BlockDevice::Info info {};
 
     for (UInt32 i = 0; i < 2048; ++i) {
-      // Wait for the driver to report geometry before running tests.
+      IRQ::ProcessPending();
+
+      FileSystem::ProcessPending();
+
+      // wait for the driver to report geometry before running tests
       if (BlockDevice::GetInfo(_floppyDeviceId, info) == 0) {
         if (
           (info.flags & BlockDevice::flagReady) != 0 &&
@@ -156,6 +163,9 @@ namespace Quantum::System::Coordinator {
     #if defined(DEBUG)
     Console::WriteLine("Coordinator initialized");
     #endif
+
+    IRQ::Initialize();
+    FileSystem::Initialize();
 
     InitBundle::Info info {};
 
@@ -239,6 +249,9 @@ namespace Quantum::System::Coordinator {
     Testing::RunAll();
     #endif
 
-    Task::Exit(0);
+    for (;;) {
+      IRQ::ProcessPending();
+      FileSystem::ProcessPending();
+    }
   }
 }

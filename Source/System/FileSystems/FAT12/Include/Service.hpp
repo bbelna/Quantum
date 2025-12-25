@@ -31,7 +31,7 @@ namespace Quantum::System::FileSystems::FAT12 {
       /**
        * Storage for the FAT12 volume instance.
        */
-      inline static Volume _volumeStorage{};
+      inline static Volume _volumeStorage {};
 
       /**
        * Initializes the FAT12 volume cache.

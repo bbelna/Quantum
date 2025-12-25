@@ -15,7 +15,7 @@
 #include "Prelude.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using LogLevel = Logger::Level;
+  using LogLevel = Kernel::Logger::Level;
 
   void Exceptions::DumpContext(
     const Interrupts::Context& context,
@@ -64,6 +64,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     Interrupts::Context& context
   ) {
     DumpContext(context);
+
     PANIC("Divide by zero fault");
 
     return &context;
@@ -73,6 +74,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     Interrupts::Context& context
   ) {
     DumpContext(context);
+
     PANIC("General protection fault");
 
     return &context;

@@ -11,16 +11,17 @@
 #include "InitBundle.hpp"
 #include "Logger.hpp"
 #include "Memory.hpp"
+#include "Prelude.hpp"
 #include "Task.hpp"
 #include "Types.hpp"
 #include "UserMode.hpp"
 
 namespace Quantum::System::Kernel {
-  using AlignHelper = Helpers::AlignHelper;
+  using AlignHelper = Kernel::Helpers::AlignHelper;
   using BundleHeader = ABI::InitBundle::Header;
   using BundleEntry = ABI::InitBundle::Entry;
   using BundleEntryType = ABI::InitBundle::EntryType;
-  using LogLevel = Logger::Level;
+  using LogLevel = Kernel::Logger::Level;
 
   void InitBundle::MapInitBundle() {
     BootInfo::InitBundleInfo initBundle {};

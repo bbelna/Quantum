@@ -12,7 +12,7 @@
 #include "Types.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using LogLevel = Logger::Level;
+  using LogLevel = Kernel::Logger::Level;
 
   bool CPU::IsCPUIDSupported() {
     UInt32 flags1, flags2;

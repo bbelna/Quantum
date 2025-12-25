@@ -14,11 +14,11 @@
 
 #include "Console.hpp"
 #include "Devices/BlockDevice.hpp"
-#include "FileSystem.hpp"
 #include "Handlers/SystemCallHandler.hpp"
 #include "InitBundle.hpp"
 #include "Interrupts.hpp"
 #include "IPC.hpp"
+#include "IRQ.hpp"
 #include "Logger.hpp"
 #include "Prelude.hpp"
 #include "Task.hpp"
@@ -29,15 +29,16 @@
 
 // TODO: refactor into arch code
 namespace Quantum::System::Kernel::Handlers {
-  using BlockDevice = Devices::BlockDevice;
+  using BlockDevice = Kernel::Devices::BlockDevice;
   using Console = Kernel::Console;
   using DMABuffer = ABI::Devices::BlockDevice::DMABuffer;
   using InitBundle = ABI::InitBundle;
   using IPC = ABI::IPC;
   using Logger = Kernel::Logger;
-  using LogLevel = Logger::Level;
+  using LogLevel = Kernel::Logger::Level;
   using SystemCall = ABI::SystemCall;
   using Task = Kernel::Task;
+  using IRQ = Kernel::IRQ;
 
   Interrupts::Context* SystemCallHandler::Handle(Interrupts::Context& context) {
     SystemCall id = static_cast<SystemCall>(context.eax);
@@ -344,6 +345,21 @@ namespace Quantum::System::Kernel::Handlers {
         break;
       }
 
+      case SystemCall::Block_Register: {
+        BlockDevice::Info* info
+          = reinterpret_cast<BlockDevice::Info*>(context.ebx);
+
+        if (!info) {
+          context.eax = 0;
+
+          break;
+        }
+
+        context.eax = BlockDevice::RegisterUser(*info);
+
+        break;
+      }
+
       case SystemCall::Block_UpdateInfo: {
         UInt32 deviceId = context.ebx;
         BlockDevice::Info* info
@@ -433,39 +449,61 @@ namespace Quantum::System::Kernel::Handlers {
         break;
       }
 
-      case SystemCall::FileSystem_ListVolumes:
-      case SystemCall::FileSystem_GetVolumeInfo:
-      case SystemCall::FileSystem_SetVolumeLabel:
-      case SystemCall::FileSystem_OpenVolume:
-      case SystemCall::FileSystem_CloseVolume:
-      case SystemCall::FileSystem_Open:
-      case SystemCall::FileSystem_Close:
-      case SystemCall::FileSystem_Read:
-      case SystemCall::FileSystem_Write:
-      case SystemCall::FileSystem_Seek:
-      case SystemCall::FileSystem_Stat:
-      case SystemCall::FileSystem_ReadDirectory:
-      case SystemCall::FileSystem_CreateDirectory:
-      case SystemCall::FileSystem_CreateFile:
-      case SystemCall::FileSystem_Remove:
-      case SystemCall::FileSystem_Rename: {
-        context.eax = FileSystem::Dispatch(
-          id,
-          context.ebx,
-          context.ecx,
-          context.edx
-        );
+      case SystemCall::IRQ_Register: {
+        if (!Task::IsCurrentTaskCoordinator()) {
+          context.eax = 1;
+
+          break;
+        }
+
+        UInt32 irq = context.ebx;
+        UInt32 portId = context.ecx;
+        bool ok = IRQ::Register(irq, portId);
+
+        context.eax = ok ? 0 : 1;
 
         break;
       }
 
-      case SystemCall::FileSystem_RegisterService: {
-        UInt32 typeValue = context.ebx;
-        UInt32 portId = context.ecx;
-        bool ok = FileSystem::RegisterService(
-          static_cast<FileSystem::Type>(typeValue),
-          portId
-        );
+      case SystemCall::IRQ_Unregister: {
+        if (!Task::IsCurrentTaskCoordinator()) {
+          context.eax = 1;
+
+          break;
+        }
+
+        UInt32 irq = context.ebx;
+        bool ok = IRQ::Unregister(irq);
+
+        context.eax = ok ? 0 : 1;
+
+        break;
+      }
+
+      case SystemCall::IRQ_Enable: {
+        if (!Task::IsCurrentTaskCoordinator()) {
+          context.eax = 1;
+
+          break;
+        }
+
+        UInt32 irq = context.ebx;
+        bool ok = IRQ::Enable(irq);
+
+        context.eax = ok ? 0 : 1;
+
+        break;
+      }
+
+      case SystemCall::IRQ_Disable: {
+        if (!Task::IsCurrentTaskCoordinator()) {
+          context.eax = 1;
+
+          break;
+        }
+
+        UInt32 irq = context.ebx;
+        bool ok = IRQ::Disable(irq);
 
         context.eax = ok ? 0 : 1;
 

@@ -10,6 +10,7 @@
 #include "Logger.hpp"
 #include "Macros.hpp"
 #include "Memory.hpp"
+#include "Prelude.hpp"
 #include "Types.hpp"
 
 #if defined(QUANTUM_ARCH_IA32)
@@ -18,8 +19,8 @@
 #endif
 
 namespace Quantum::System::Kernel {
-  using LogLevel = Logger::Level;
-  using AlignHelper = Helpers::AlignHelper;
+  using LogLevel = Kernel::Logger::Level;
+  using AlignHelper = Kernel::Helpers::AlignHelper;
 
   #if defined(QUANTUM_ARCH_IA32)
   using ArchPhysicalAllocatorState = Arch::IA32::Memory::PhysicalAllocatorState;
@@ -800,6 +801,7 @@ namespace Quantum::System::Kernel {
         GetHeapState().freeBytes,
         GetHeapState().freeBlocks
       );
+
       PANIC("Heap free: canary corrupted");
     }
 

@@ -32,7 +32,7 @@ namespace Quantum::System::Kernel {
 
   void Testing::Register(CString name, Testing::TestFunction func) {
     if (_testCount < _maxTests) {
-      _tests[_testCount++] = Testing::TestCase{ name, func };
+      _tests[_testCount++] = Testing::TestCase { name, func };
     } else {
       Logger::Write(LogLevel::Error, "Test registry full");
     }

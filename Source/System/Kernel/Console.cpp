@@ -10,6 +10,7 @@
 #include "CPU.hpp"
 #include "Helpers/CStringHelper.hpp"
 #include "Types.hpp"
+#include "Prelude.hpp"
 
 #if defined(QUANTUM_ARCH_IA32)
 #include "Arch/IA32/VGAConsole.hpp"
@@ -19,7 +20,7 @@ using ConsoleDriver = Arch::VGAConsole;
 #endif
 
 namespace Quantum::System::Kernel {
-  using CStringHelper = Helpers::CStringHelper;
+  using CStringHelper = Kernel::Helpers::CStringHelper;
 
   Logger::Writer& Console::GetWriter() {
     static WriterAdapter writerAdapter;

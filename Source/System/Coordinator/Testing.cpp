@@ -47,7 +47,7 @@ namespace Quantum::System::Coordinator {
 
   void Testing::Register(CString name, Testing::TestFunction func) {
     if (_testCount < _maxTests) {
-      _tests[_testCount++] = Testing::TestCase{ name, func };
+      _tests[_testCount++] = Testing::TestCase { name, func };
     } else {
       Console::WriteLine("Test registry full");
     }

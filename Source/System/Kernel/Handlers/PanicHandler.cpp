@@ -16,8 +16,8 @@
 namespace Quantum::System::Kernel::Handlers {
   using CPU = Kernel::CPU;
   using Logger = Kernel::Logger;
-  using CStringHelper = Helpers::CStringHelper;
-  using LogLevel = Logger::Level;
+  using CStringHelper = Kernel::Helpers::CStringHelper;
+  using LogLevel = Kernel::Logger::Level;
 
   void PanicHandler::Handle(
     String message,

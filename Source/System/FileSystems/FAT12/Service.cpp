@@ -85,7 +85,7 @@ namespace Quantum::System::FileSystems::FAT12 {
 
       if (
         request.op == static_cast<UInt32>(
-          ABI::SystemCall::FileSystem_ListVolumes
+          FileSystem::Operation::ListVolumes
         )
       ) {
         UInt32 maxEntries = request.arg1;
@@ -98,7 +98,7 @@ namespace Quantum::System::FileSystems::FAT12 {
           sizeof(FileSystem::VolumeEntry) <= FileSystem::messageDataBytes
         ) {
           // return a single "A" volume for now
-          FileSystem::VolumeEntry entry{};
+          FileSystem::VolumeEntry entry {};
 
           _volume->FillEntry(entry);
 
@@ -115,7 +115,7 @@ namespace Quantum::System::FileSystems::FAT12 {
         }
       } else if (
         request.op == static_cast<UInt32>(
-          ABI::SystemCall::FileSystem_OpenVolume
+          FileSystem::Operation::OpenVolume
         )
       ) {
         CString label = reinterpret_cast<CString>(request.data);
@@ -128,7 +128,7 @@ namespace Quantum::System::FileSystems::FAT12 {
         }
       } else if (
         request.op == static_cast<UInt32>(
-          ABI::SystemCall::FileSystem_GetVolumeInfo
+          FileSystem::Operation::GetVolumeInfo
         )
       ) {
         if (_volume && request.arg0 == _volume->GetHandle()) {

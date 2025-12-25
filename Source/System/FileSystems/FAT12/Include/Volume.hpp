@@ -82,12 +82,12 @@ namespace Quantum::System::FileSystems::FAT12 {
       /**
        * Backing block device info.
        */
-      ABI::Devices::BlockDevice::Info _device{};
+      ABI::Devices::BlockDevice::Info _device {};
 
       /**
        * Cached volume info.
        */
-      ABI::FileSystem::VolumeInfo _info{};
+      ABI::FileSystem::VolumeInfo _info {};
 
       /**
        * FAT region start LBA.

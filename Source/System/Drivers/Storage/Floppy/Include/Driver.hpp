@@ -79,6 +79,21 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       static constexpr UInt16 _ioAccessProbePort = 0x80;
 
       /**
+       * CMOS address register port.
+       */
+      static constexpr UInt16 _cmosAddressPort = 0x70;
+
+      /**
+       * CMOS data register port.
+       */
+      static constexpr UInt16 _cmosDataPort = 0x71;
+
+      /**
+       * CMOS floppy drive type register.
+       */
+      static constexpr UInt8 _cmosFloppyTypeRegister = 0x10;
+
+      /**
        * Main status request/ready bit mask.
        */
       static constexpr UInt8 _mainStatusRequestMask = 0x80;
@@ -132,6 +147,11 @@ namespace Quantum::System::Drivers::Storage::Floppy {
        * Write data command with multi-track enabled.
        */
       static constexpr UInt8 _commandWriteDataMultiTrack = 0xC5 | 0x80;
+
+      /**
+       * IRQ line for the floppy controller.
+       */
+      static constexpr UInt32 _irqLine = 6;
 
       /**
        * Recalibrate command.
@@ -298,6 +318,15 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       static bool WaitForFIFOReady(bool readPhase);
 
       /**
+       * Reads a CMOS register.
+       * @param reg
+       *   CMOS register index.
+       * @return
+       *   Register value.
+       */
+      static UInt8 ReadCMOS(UInt8 reg);
+
+      /**
        * Waits for the kernel to grant port I/O access.
        * @return
        *   True once I/O access is available; false on timeout.
@@ -400,6 +429,11 @@ namespace Quantum::System::Drivers::Storage::Floppy {
        * Waits for a floppy IRQ to be delivered.
        */
       static bool WaitForIRQ();
+
+      /**
+       * Registers the IRQ route with the coordinator.
+       */
+      static void RegisterIRQRoute(UInt32 portId);
 
       /**
        * Programs the DMA controller for a floppy read.
@@ -554,12 +588,20 @@ namespace Quantum::System::Drivers::Storage::Floppy {
 
       /**
        * Registers a floppy device mapping.
-        * @param info
+       * @param info
        *   Block device info for the floppy.
+       * @param sectorsPerTrack
+       *   Detected sectors per track.
+       * @param headCount
+       *   Detected head count.
        * @return
        *   True if the device was recorded; false otherwise.
        */
-      static bool RegisterDevice(const BlockDevice::Info& info);
+      static bool RegisterDevice(
+        const BlockDevice::Info& info,
+        UInt8 sectorsPerTrack,
+        UInt8 headCount
+      );
 
       /**
        * Resolves a device id to its drive index and sector size.

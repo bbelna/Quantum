@@ -23,6 +23,21 @@ namespace Quantum::ABI {
       static constexpr UInt32 maxPayloadBytes = 1024;
 
       /**
+       * Coordinator port identifiers.
+       */
+      struct Ports {
+        /**
+         * IRQ routing control port.
+         */
+        static constexpr UInt32 IRQ = 1;
+
+        /**
+         * File system broker port.
+         */
+        static constexpr UInt32 FileSystem = 2;
+      };
+
+      /**
        * IPC message layout.
        */
       struct Message {

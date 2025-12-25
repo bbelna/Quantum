@@ -231,6 +231,15 @@ namespace Quantum::System::Kernel::Devices {
       );
 
       /**
+       * Registers a user-provided block device.
+       * @param info
+       *   Device info payload (id ignored).
+       * @return
+       *   Assigned device id, or 0 on failure.
+       */
+      static UInt32 RegisterUser(const Info& info);
+
+      /**
        * Registers a new block device.
        * @param device
        *   Device descriptor to register.
@@ -326,6 +335,11 @@ namespace Quantum::System::Kernel::Devices {
        * Registered device pointers.
        */
       inline static Device* _devices[_maxDevices] = { nullptr };
+
+      /**
+       * Storage for user-registered devices.
+       */
+      inline static Device _deviceStorage[_maxDevices] = {};
 
       /**
        * Number of active devices.
