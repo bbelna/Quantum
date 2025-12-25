@@ -130,6 +130,7 @@ namespace Quantum::System::FileSystems::FAT12 {
 
       if (IPC::Receive(portId, msg) != 0) {
         Task::Yield();
+
         continue;
       }
 
@@ -491,6 +492,226 @@ namespace Quantum::System::FileSystems::FAT12 {
               response.dataLength = bytesRead;
               response.status = bytesRead;
             } else {
+              response.status = 0;
+            }
+          }
+        }
+      } else if (
+        request.op == static_cast<UInt32>(
+          FileSystem::Operation::CreateDirectory
+        )
+      ) {
+        CString path = reinterpret_cast<CString>(request.data);
+
+        if (_volume && request.arg0 == _volume->GetHandle()) {
+          UInt32 parentCluster = 0;
+          bool parentIsRoot = true;
+          char name[FileSystem::maxDirectoryLength] = {};
+          bool ok = true;
+
+          const char* cursor = path;
+
+          while (*cursor == '/' || *cursor == '\\') {
+            ++cursor;
+          }
+
+          const char* lastSegment = cursor;
+
+          while (*cursor != '\0') {
+            if (*cursor == '/' || *cursor == '\\') {
+              lastSegment = cursor + 1;
+            }
+
+            ++cursor;
+          }
+
+          if (!lastSegment || *lastSegment == '\0') {
+            ok = false;
+          } else {
+            UInt32 i = 0;
+            const char* nameCursor = lastSegment;
+
+            while (
+              *nameCursor != '\0' &&
+              *nameCursor != '/' &&
+              *nameCursor != '\\' &&
+              i + 1 < sizeof(name)
+            ) {
+              name[i++] = *nameCursor++;
+            }
+
+            name[i] = '\0';
+
+            cursor = path;
+
+            while (*cursor == '/' || *cursor == '\\') {
+              ++cursor;
+            }
+
+            while (*cursor != '\0' && cursor < lastSegment) {
+              char segment[FileSystem::maxDirectoryLength] = {};
+              UInt32 length = 0;
+
+              while (
+                *cursor != '\0' &&
+                *cursor != '/' &&
+                *cursor != '\\' &&
+                length + 1 < sizeof(segment)
+              ) {
+                segment[length++] = *cursor++;
+              }
+
+              segment[length] = '\0';
+
+              while (*cursor == '/' || *cursor == '\\') {
+                ++cursor;
+              }
+
+              if (segment[0] == '\0') {
+                continue;
+              }
+
+              UInt32 nextCluster = 0;
+              UInt8 attributes = 0;
+              UInt32 sizeBytes = 0;
+
+              if (
+                !_volume->FindEntry(
+                  parentCluster,
+                  parentIsRoot,
+                  segment,
+                  nextCluster,
+                  attributes,
+                  sizeBytes
+                )
+              ) {
+                ok = false;
+
+                break;
+              }
+
+              if ((attributes & 0x10) == 0) {
+                ok = false;
+
+                break;
+              }
+
+              parentCluster = nextCluster;
+              parentIsRoot = false;
+            }
+          }
+
+          if (ok && name[0] != '\0') {
+            if (_volume->CreateDirectory(parentCluster, parentIsRoot, name)) {
+              response.status = 0;
+            }
+          }
+        }
+      } else if (
+        request.op == static_cast<UInt32>(FileSystem::Operation::CreateFile)
+      ) {
+        CString path = reinterpret_cast<CString>(request.data);
+
+        if (_volume && request.arg0 == _volume->GetHandle()) {
+          UInt32 parentCluster = 0;
+          bool parentIsRoot = true;
+          char name[FileSystem::maxDirectoryLength] = {};
+          bool ok = true;
+
+          const char* cursor = path;
+
+          while (*cursor == '/' || *cursor == '\\') {
+            ++cursor;
+          }
+
+          const char* lastSegment = cursor;
+
+          while (*cursor != '\0') {
+            if (*cursor == '/' || *cursor == '\\') {
+              lastSegment = cursor + 1;
+            }
+
+            ++cursor;
+          }
+
+          if (!lastSegment || *lastSegment == '\0') {
+            ok = false;
+          } else {
+            UInt32 i = 0;
+            const char* nameCursor = lastSegment;
+
+            while (
+              *nameCursor != '\0' &&
+              *nameCursor != '/' &&
+              *nameCursor != '\\' &&
+              i + 1 < sizeof(name)
+            ) {
+              name[i++] = *nameCursor++;
+            }
+
+            name[i] = '\0';
+
+            cursor = path;
+
+            while (*cursor == '/' || *cursor == '\\') {
+              ++cursor;
+            }
+
+            while (*cursor != '\0' && cursor < lastSegment) {
+              char segment[FileSystem::maxDirectoryLength] = {};
+              UInt32 length = 0;
+
+              while (
+                *cursor != '\0' &&
+                *cursor != '/' &&
+                *cursor != '\\' &&
+                length + 1 < sizeof(segment)
+              ) {
+                segment[length++] = *cursor++;
+              }
+
+              segment[length] = '\0';
+
+              while (*cursor == '/' || *cursor == '\\') {
+                ++cursor;
+              }
+
+              if (segment[0] == '\0') {
+                continue;
+              }
+
+              UInt32 nextCluster = 0;
+              UInt8 attributes = 0;
+              UInt32 sizeBytes = 0;
+
+              if (
+                !_volume->FindEntry(
+                  parentCluster,
+                  parentIsRoot,
+                  segment,
+                  nextCluster,
+                  attributes,
+                  sizeBytes
+                )
+              ) {
+                ok = false;
+
+                break;
+              }
+
+              if ((attributes & 0x10) == 0) {
+                ok = false;
+
+                break;
+              }
+
+              parentCluster = nextCluster;
+              parentIsRoot = false;
+            }
+          }
+
+          if (ok && name[0] != '\0') {
+            if (_volume->CreateFile(parentCluster, parentIsRoot, name)) {
               response.status = 0;
             }
           }

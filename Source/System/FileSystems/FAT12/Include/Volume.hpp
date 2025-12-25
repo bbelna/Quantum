@@ -158,6 +158,40 @@ namespace Quantum::System::FileSystems::FAT12 {
       );
 
       /**
+       * Creates a directory entry under the given parent.
+       * @param parentCluster
+       *   Parent directory cluster.
+       * @param parentIsRoot
+       *   True if the parent is the root directory.
+       * @param name
+       *   Directory name.
+       * @return
+       *   True if the directory was created.
+       */
+      bool CreateDirectory(
+        UInt32 parentCluster,
+        bool parentIsRoot,
+        CString name
+      );
+
+      /**
+       * Creates a file entry under the given parent.
+       * @param parentCluster
+       *   Parent directory cluster.
+       * @param parentIsRoot
+       *   True if the parent is the root directory.
+       * @param name
+       *   File name.
+       * @return
+       *   True if the file entry was created.
+       */
+      bool CreateFile(
+        UInt32 parentCluster,
+        bool parentIsRoot,
+        CString name
+      );
+
+      /**
        * Reads a FAT12 table entry.
        * @param cluster
        *   Cluster index to read.
@@ -167,6 +201,44 @@ namespace Quantum::System::FileSystems::FAT12 {
        *   True if the FAT entry was read.
        */
       bool ReadFATEntry(UInt32 cluster, UInt32& nextCluster);
+
+      /**
+       * Writes a FAT12 entry to disk.
+       * @param cluster
+       *   Cluster to update.
+       * @param value
+       *   FAT entry value.
+       * @return
+       *   True if the write succeeded.
+       */
+      bool WriteFATEntry(UInt32 cluster, UInt32 value);
+
+      /**
+       * Finds a free cluster.
+       * @param outCluster
+       *   Receives the free cluster id.
+       * @return
+       *   True if a free cluster was found.
+       */
+      bool FindFreeCluster(UInt32& outCluster);
+
+      /**
+       * Loads the FAT into a local cache.
+       * @return
+       *   True if the cache was loaded.
+       */
+      bool LoadFATCache();
+
+      /**
+       * Reads a cached FAT entry.
+       * @param cluster
+       *   Cluster index to read.
+       * @param nextCluster
+       *   Receives the next cluster.
+       * @return
+       *   True if the entry was read.
+       */
+      bool ReadFATEntryCached(UInt32 cluster, UInt32& nextCluster) const;
 
       /**
        * Returns true if the FAT entry marks end of chain.
@@ -239,6 +311,26 @@ namespace Quantum::System::FileSystems::FAT12 {
       UInt32 _fatSectors = 0;
 
       /**
+       * FAT table count.
+       */
+      UInt32 _fatCount = 0;
+
+      /**
+       * Cached FAT data.
+       */
+      UInt8 _fatCache[8192] = {};
+
+      /**
+       * Cached FAT size in bytes.
+       */
+      UInt32 _fatCacheBytes = 0;
+
+      /**
+       * Whether the FAT cache is valid.
+       */
+      bool _fatCached = false;
+
+      /**
        * Root directory start LBA.
        */
       UInt32 _rootDirectoryStartLBA = 0;
@@ -262,6 +354,16 @@ namespace Quantum::System::FileSystems::FAT12 {
        * Root directory entry count.
        */
       UInt32 _rootEntryCount = 0;
+
+      /**
+       * Next free cluster hint.
+       */
+      UInt32 _nextFreeCluster = 2;
+
+      /**
+       * Total cluster count.
+       */
+      UInt32 _clusterCount = 0;
 
       /**
        * Reads the current boot sector into the provided buffer.
@@ -306,6 +408,28 @@ namespace Quantum::System::FileSystems::FAT12 {
       static UInt32 ReadUInt32(const UInt8* base, UInt32 offset);
 
       /**
+       * Writes a little-endian 16-bit value.
+       * @param base
+       *   Pointer to the base buffer.
+       * @param offset
+       *   Offset within the buffer.
+       * @param value
+       *   Value to write.
+       */
+      static void WriteUInt16(UInt8* base, UInt32 offset, UInt16 value);
+
+      /**
+       * Writes a little-endian 32-bit value.
+       * @param base
+       *   Pointer to the base buffer.
+       * @param offset
+       *   Offset within the buffer.
+       * @param value
+       *   Value to write.
+       */
+      static void WriteUInt32(UInt8* base, UInt32 offset, UInt32 value);
+
+      /**
        * Case-insensitive label comparison for single-letter volumes.
        * @param label
        *   Volume label to check.
@@ -343,6 +467,17 @@ namespace Quantum::System::FileSystems::FAT12 {
       );
 
       /**
+       * Builds an 8.3 name field.
+       * @param name
+       *   Input name string.
+       * @param outName
+       *   Output 11-byte name buffer.
+       * @return
+       *   True if the name was valid.
+       */
+      static bool BuildShortName(CString name, UInt8* outName);
+
+      /**
        * Reads a directory record from the root directory.
        * @param index
        *   Entry index within the root directory.
@@ -373,6 +508,43 @@ namespace Quantum::System::FileSystems::FAT12 {
         UInt32 index,
         DirectoryRecord& record,
         bool& end
+      );
+
+      /**
+       * Finds a free directory slot in the parent.
+       * @param parentCluster
+       *   Parent directory cluster.
+       * @param parentIsRoot
+       *   True if the parent is root.
+       * @param outLba
+       *   Receives the LBA to write.
+       * @param outOffset
+       *   Receives the byte offset within the sector.
+       * @return
+       *   True if a slot was found.
+       */
+      bool FindFreeDirectorySlot(
+        UInt32 parentCluster,
+        bool parentIsRoot,
+        UInt32& outLba,
+        UInt32& outOffset
+      );
+
+      /**
+       * Writes a directory entry to disk.
+       * @param lba
+       *   Sector LBA to write.
+       * @param offset
+       *   Byte offset within the sector.
+       * @param entryBytes
+       *   Entry bytes to write.
+       * @return
+       *   True if the entry was written.
+       */
+      bool WriteDirectoryEntry(
+        UInt32 lba,
+        UInt32 offset,
+        const UInt8* entryBytes
       );
 
       /**

@@ -169,6 +169,7 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     }
 
     bool found = false;
+
     FileSystem::DirectoryEntry entry {};
 
     Console::WriteLine("FAT12 root directory entries:");
@@ -347,6 +348,7 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     }
 
     buffer[bytesRead] = '\0';
+
     Console::WriteLine("FAT12 TEST.TXT contents:");
     Console::Write("  ");
     Console::WriteLine(reinterpret_cast<CString>(buffer));
@@ -445,6 +447,133 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     return Assert(match, "seek read");
   }
 
+  static bool TestCreateDirectory() {
+    if (!WaitForFloppyReady()) {
+      LogSkip("floppy not ready");
+
+      return true;
+    }
+
+    Volume volume {};
+
+    if (!volume.Load()) {
+      LogSkip("no FAT12 volume");
+
+      return true;
+    }
+
+    UInt32 cluster = 0;
+    UInt8 attributes = 0;
+    UInt32 sizeBytes = 0;
+
+    if (
+      !volume.FindEntry(
+        0,
+        true,
+        "NEWDIR",
+        cluster,
+        attributes,
+        sizeBytes
+      )
+    ) {
+      if (!volume.CreateDirectory(0, true, "NEWDIR")) {
+        return Assert(false, "create directory failed");
+      }
+    }
+
+    if (
+      !volume.FindEntry(
+        0,
+        true,
+        "NEWDIR",
+        cluster,
+        attributes,
+        sizeBytes
+      )
+    ) {
+      return Assert(false, "directory not found");
+    }
+
+    return Assert((attributes & 0x10) != 0, "directory not created");
+  }
+
+  static bool TestCreateFile() {
+    if (!WaitForFloppyReady()) {
+      LogSkip("floppy not ready");
+
+      return true;
+    }
+
+    Volume volume {};
+
+    if (!volume.Load()) {
+      LogSkip("no FAT12 volume");
+
+      return true;
+    }
+
+    UInt32 dirCluster = 0;
+    UInt8 dirAttributes = 0;
+    UInt32 dirSize = 0;
+
+    if (
+      !volume.FindEntry(
+        0,
+        true,
+        "NEWDIR",
+        dirCluster,
+        dirAttributes,
+        dirSize
+      )
+    ) {
+      if (!volume.CreateDirectory(0, true, "NEWDIR")) {
+        return Assert(false, "create directory failed");
+      }
+    }
+
+    if ((dirAttributes & 0x10) == 0) {
+      return Assert(false, "newdir not a directory");
+    }
+
+    UInt32 fileCluster = 0;
+    UInt8 fileAttributes = 0;
+    UInt32 fileSize = 0;
+
+    if (
+      !volume.FindEntry(
+        dirCluster,
+        false,
+        "NEWFILE.TXT",
+        fileCluster,
+        fileAttributes,
+        fileSize
+      )
+    ) {
+      if (!volume.CreateFile(dirCluster, false, "NEWFILE.TXT")) {
+        return Assert(false, "create file failed");
+      }
+    }
+
+    if (
+      !volume.FindEntry(
+        dirCluster,
+        false,
+        "NEWFILE.TXT",
+        fileCluster,
+        fileAttributes,
+        fileSize
+      )
+    ) {
+      return Assert(false, "file not found");
+    }
+
+    if ((fileAttributes & 0x10) != 0) {
+      return Assert(false, "file is a directory");
+    }
+
+    return Assert(true, "file created");
+  }
+
   static void RunTest(CString name, bool (*func)()) {
     Console::Write("[TEST] ");
     Console::WriteLine(name ? name : "(unnamed)");
@@ -472,6 +601,8 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     RunTest("FAT12 TESTDIR", TestSubDirectory);
     RunTest("FAT12 TEST.TXT read", TestFileRead);
     RunTest("FAT12 TEST.TXT seek", TestFileSeek);
+    RunTest("FAT12 create directory", TestCreateDirectory);
+    RunTest("FAT12 create file", TestCreateFile);
 
     LogFooter();
   }

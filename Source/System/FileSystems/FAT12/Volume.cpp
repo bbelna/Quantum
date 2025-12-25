@@ -60,6 +60,8 @@ namespace Quantum::System::FileSystems::FAT12 {
     UInt32 fatStartLBA = reservedSectors;
     UInt32 rootDirStartLBA = fatStartLBA + fatCount * sectorsPerFAT;
     UInt32 dataStartLBA = rootDirStartLBA + rootDirSectors;
+    UInt32 dataSectors = totalSectors - dataStartLBA;
+    UInt32 clusterCount = dataSectors / sectorsPerCluster;
 
     _info = FileSystem::VolumeInfo {};
     _info.label[0] = 'A';
@@ -71,12 +73,17 @@ namespace Quantum::System::FileSystems::FAT12 {
 
     _fatStartLBA = fatStartLBA;
     _fatSectors = sectorsPerFAT;
+    _fatCount = fatCount;
     _rootDirectoryStartLBA = rootDirStartLBA;
     _rootDirectorySectors = rootDirSectors;
     _dataStartLBA = dataStartLBA;
     _sectorsPerCluster = sectorsPerCluster;
     _rootEntryCount = rootEntryCount;
+    _clusterCount = clusterCount;
     _valid = true;
+    _nextFreeCluster = 2;
+
+    LoadFATCache();
 
     return true;
   }
@@ -305,9 +312,188 @@ namespace Quantum::System::FileSystems::FAT12 {
     return true;
   }
 
+  bool Volume::CreateDirectory(
+    UInt32 parentCluster,
+    bool parentIsRoot,
+    CString name
+  ) {
+    if (!_valid) {
+      return false;
+    }
+
+    UInt32 existingCluster = 0;
+    UInt8 existingAttributes = 0;
+    UInt32 existingSize = 0;
+
+    if (FindEntry(
+        parentCluster,
+        parentIsRoot,
+        name,
+        existingCluster,
+        existingAttributes,
+        existingSize
+      )) {
+      return false;
+    }
+
+    UInt8 shortName[11] = {};
+
+    if (!BuildShortName(name, shortName)) {
+      return false;
+    }
+
+    UInt32 newCluster = 0;
+
+    if (!FindFreeCluster(newCluster)) {
+      return false;
+    }
+
+    if (!WriteFATEntry(newCluster, 0xFFF)) {
+      return false;
+    }
+
+    UInt32 clusterLba
+      = _dataStartLBA + (newCluster - 2) * _sectorsPerCluster;
+    UInt8 zeroSector[512] = {};
+
+    for (UInt32 s = 0; s < _sectorsPerCluster; ++s) {
+      BlockDevice::Request request {};
+
+      request.deviceId = _device.id;
+      request.lba = clusterLba + s;
+      request.count = 1;
+      request.buffer = zeroSector;
+
+      if (BlockDevice::Write(request) != 0) {
+        return false;
+      }
+    }
+
+    UInt8 dirSector[512] = {};
+    UInt8 dotName[11] = { '.', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ' };
+    UInt8 dotDotName[11] = { '.', '.', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ' };
+
+    for (UInt32 i = 0; i < 11; ++i) {
+      dirSector[i] = dotName[i];
+    }
+
+    dirSector[11] = 0x10;
+
+    WriteUInt16(dirSector, 26, static_cast<UInt16>(newCluster));
+    WriteUInt32(dirSector, 28, 0);
+
+    for (UInt32 i = 0; i < 11; ++i) {
+      dirSector[32 + i] = dotDotName[i];
+    }
+
+    dirSector[32 + 11] = 0x10;
+
+    WriteUInt16(
+      dirSector,
+      32 + 26,
+      static_cast<UInt16>(parentIsRoot ? 0 : parentCluster)
+    );
+    WriteUInt32(dirSector, 32 + 28, 0);
+
+    BlockDevice::Request request {};
+
+    request.deviceId = _device.id;
+    request.lba = clusterLba;
+    request.count = 1;
+    request.buffer = dirSector;
+
+    if (BlockDevice::Write(request) != 0) {
+      return false;
+    }
+
+    UInt32 entryLba = 0;
+    UInt32 entryOffset = 0;
+
+    if (!FindFreeDirectorySlot(
+        parentCluster,
+        parentIsRoot,
+        entryLba,
+        entryOffset
+      )) {
+      return false;
+    }
+
+    UInt8 entryBytes[32] = {};
+
+    for (UInt32 i = 0; i < 11; ++i) {
+      entryBytes[i] = shortName[i];
+    }
+
+    entryBytes[11] = 0x10;
+
+    WriteUInt16(entryBytes, 26, static_cast<UInt16>(newCluster));
+    WriteUInt32(entryBytes, 28, 0);
+
+    return WriteDirectoryEntry(entryLba, entryOffset, entryBytes);
+  }
+
+  bool Volume::CreateFile(
+    UInt32 parentCluster,
+    bool parentIsRoot,
+    CString name
+  ) {
+    if (!_valid) {
+      return false;
+    }
+
+    UInt32 existingCluster = 0;
+    UInt8 existingAttributes = 0;
+    UInt32 existingSize = 0;
+
+    if (FindEntry(
+        parentCluster,
+        parentIsRoot,
+        name,
+        existingCluster,
+        existingAttributes,
+        existingSize
+      )) {
+      return false;
+    }
+
+    UInt8 shortName[11] = {};
+
+    if (!BuildShortName(name, shortName)) {
+      return false;
+    }
+
+    UInt32 entryLba = 0;
+    UInt32 entryOffset = 0;
+
+    if (!FindFreeDirectorySlot(
+        parentCluster,
+        parentIsRoot,
+        entryLba,
+        entryOffset
+      )) {
+      return false;
+    }
+
+    UInt8 entryBytes[32] = {};
+
+    for (UInt32 i = 0; i < 11; ++i) {
+      entryBytes[i] = shortName[i];
+    }
+
+    entryBytes[11] = 0x20;
+    WriteUInt16(entryBytes, 26, 0);
+    WriteUInt32(entryBytes, 28, 0);
+
+    return WriteDirectoryEntry(entryLba, entryOffset, entryBytes);
+  }
+
   bool Volume::ReadFATEntry(UInt32 cluster, UInt32& nextCluster) {
     if (!_valid) {
       return false;
+    }
+
+    if (ReadFATEntryCached(cluster, nextCluster)) {
+      return true;
     }
 
     UInt32 bytesPerSector = _info.sectorSize;
@@ -367,8 +553,250 @@ namespace Quantum::System::FileSystems::FAT12 {
     return true;
   }
 
+  bool Volume::LoadFATCache() {
+    _fatCached = false;
+    _fatCacheBytes = 0;
+
+    if (!_valid || _fatSectors == 0) {
+      return false;
+    }
+
+    UInt32 bytesPerSector = _info.sectorSize;
+
+    if (bytesPerSector != 512) {
+      // only support 512-byte sectors for now
+      return false;
+    }
+
+    UInt32 fatBytes = _fatSectors * bytesPerSector;
+
+    if (fatBytes > sizeof(_fatCache)) {
+      return false;
+    }
+
+    for (UInt32 s = 0; s < _fatSectors; ++s) {
+      BlockDevice::Request request {};
+
+      request.deviceId = _device.id;
+      request.lba = _fatStartLBA + s;
+      request.count = 1;
+      request.buffer = _fatCache + (s * bytesPerSector);
+
+      if (BlockDevice::Read(request) != 0) {
+        return false;
+      }
+    }
+
+    _fatCacheBytes = fatBytes;
+    _fatCached = true;
+
+    return true;
+  }
+
+  bool Volume::ReadFATEntryCached(
+    UInt32 cluster,
+    UInt32& nextCluster
+  ) const {
+    if (!_fatCached || _fatCacheBytes == 0) {
+      return false;
+    }
+
+    UInt32 fatOffset = cluster + (cluster / 2);
+
+    if (fatOffset + 1 >= _fatCacheBytes) {
+      return false;
+    }
+
+    UInt16 value = static_cast<UInt16>(
+      _fatCache[fatOffset]
+      | (static_cast<UInt16>(_fatCache[fatOffset + 1]) << 8)
+    );
+
+    if ((cluster & 1u) != 0) {
+      nextCluster = static_cast<UInt32>(value >> 4);
+    } else {
+      nextCluster = static_cast<UInt32>(value & 0x0FFF);
+    }
+
+    return true;
+  }
+
   bool Volume::IsEndOfChain(UInt32 value) {
     return value >= 0xFF8;
+  }
+
+  bool Volume::WriteFATEntry(UInt32 cluster, UInt32 value) {
+    if (!_valid) {
+      return false;
+    }
+
+    UInt32 bytesPerSector = _info.sectorSize;
+
+    if (bytesPerSector != 512) {
+      // only support 512-byte sectors for now
+      return false;
+    }
+
+    UInt32 fatOffset = cluster + (cluster / 2);
+    UInt32 sectorOffset = fatOffset / bytesPerSector;
+    UInt32 byteOffset = fatOffset % bytesPerSector;
+
+    if (sectorOffset >= _fatSectors) {
+      return false;
+    }
+
+    UInt16 packed = static_cast<UInt16>(value & 0x0FFF);
+
+    if (_fatCached && fatOffset + 1 < _fatCacheBytes) {
+      UInt16 existing = static_cast<UInt16>(
+        _fatCache[fatOffset]
+        | (static_cast<UInt16>(_fatCache[fatOffset + 1]) << 8)
+      );
+
+      if ((cluster & 1u) != 0) {
+        existing = static_cast<UInt16>((existing & 0x000F) | (packed << 4));
+      } else {
+        existing = static_cast<UInt16>((existing & 0xF000) | packed);
+      }
+
+      _fatCache[fatOffset] = static_cast<UInt8>(existing & 0xFF);
+      _fatCache[fatOffset + 1] = static_cast<UInt8>((existing >> 8) & 0xFF);
+    }
+
+    for (UInt32 fatIndex = 0; fatIndex < _fatCount; ++fatIndex) {
+      UInt32 fatLBA = _fatStartLBA + fatIndex * _fatSectors + sectorOffset;
+      UInt8 sector[512] = {};
+
+      BlockDevice::Request request {};
+
+      request.deviceId = _device.id;
+      request.lba = fatLBA;
+      request.count = 1;
+      request.buffer = sector;
+
+      if (BlockDevice::Read(request) != 0) {
+        return false;
+      }
+
+      if (byteOffset == bytesPerSector - 1) {
+        UInt8 nextSector[512] = {};
+
+        request.lba = fatLBA + 1;
+        request.buffer = nextSector;
+
+        if (BlockDevice::Read(request) != 0) {
+          return false;
+        }
+
+        UInt16 existing = static_cast<UInt16>(
+          sector[byteOffset]
+          | (static_cast<UInt16>(nextSector[0]) << 8)
+        );
+
+        if ((cluster & 1u) != 0) {
+          existing = static_cast<UInt16>((existing & 0x000F) | (packed << 4));
+        } else {
+          existing = static_cast<UInt16>((existing & 0xF000) | packed);
+        }
+
+        sector[byteOffset] = static_cast<UInt8>(existing & 0xFF);
+        nextSector[0] = static_cast<UInt8>((existing >> 8) & 0xFF);
+
+        request.lba = fatLBA;
+        request.buffer = sector;
+
+        if (BlockDevice::Write(request) != 0) {
+          return false;
+        }
+
+        request.lba = fatLBA + 1;
+        request.buffer = nextSector;
+
+        if (BlockDevice::Write(request) != 0) {
+          return false;
+        }
+      } else {
+        UInt16 existing = static_cast<UInt16>(
+          sector[byteOffset]
+          | (static_cast<UInt16>(sector[byteOffset + 1]) << 8)
+        );
+
+        if ((cluster & 1u) != 0) {
+          existing = static_cast<UInt16>((existing & 0x000F) | (packed << 4));
+        } else {
+          existing = static_cast<UInt16>((existing & 0xF000) | packed);
+        }
+
+        sector[byteOffset] = static_cast<UInt8>(existing & 0xFF);
+        sector[byteOffset + 1] = static_cast<UInt8>((existing >> 8) & 0xFF);
+
+        request.lba = fatLBA;
+        request.buffer = sector;
+
+        if (BlockDevice::Write(request) != 0) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  bool Volume::FindFreeCluster(UInt32& outCluster) {
+    if (!_valid || _clusterCount == 0) {
+      return false;
+    }
+
+    UInt32 maxCluster = _clusterCount + 1;
+    UInt32 start = _nextFreeCluster;
+
+    if (start < 2 || start > maxCluster) {
+      start = 2;
+    }
+
+    for (UInt32 cluster = start; cluster <= maxCluster; ++cluster) {
+      UInt32 nextCluster = 0;
+
+      if (_fatCached) {
+        if (!ReadFATEntryCached(cluster, nextCluster)) {
+          return false;
+        }
+      } else {
+        if (!ReadFATEntry(cluster, nextCluster)) {
+          return false;
+        }
+      }
+
+      if (nextCluster == 0x000) {
+        outCluster = cluster;
+        _nextFreeCluster = cluster + 1;
+
+        return true;
+      }
+    }
+
+    for (UInt32 cluster = 2; cluster < start; ++cluster) {
+      UInt32 nextCluster = 0;
+
+      if (_fatCached) {
+        if (!ReadFATEntryCached(cluster, nextCluster)) {
+          return false;
+        }
+      } else {
+        if (!ReadFATEntry(cluster, nextCluster)) {
+          return false;
+        }
+      }
+
+      if (nextCluster == 0x000) {
+        outCluster = cluster;
+        _nextFreeCluster = cluster + 1;
+
+        return true;
+      }
+    }
+
+    return false;
   }
 
   bool Volume::ReadRootRecord(
@@ -502,6 +930,18 @@ namespace Quantum::System::FileSystems::FAT12 {
       | (static_cast<UInt32>(base[offset + 3]) << 24);
   }
 
+  void Volume::WriteUInt16(UInt8* base, UInt32 offset, UInt16 value) {
+    base[offset] = static_cast<UInt8>(value & 0xFF);
+    base[offset + 1] = static_cast<UInt8>((value >> 8) & 0xFF);
+  }
+
+  void Volume::WriteUInt32(UInt8* base, UInt32 offset, UInt32 value) {
+    base[offset] = static_cast<UInt8>(value & 0xFF);
+    base[offset + 1] = static_cast<UInt8>((value >> 8) & 0xFF);
+    base[offset + 2] = static_cast<UInt8>((value >> 16) & 0xFF);
+    base[offset + 3] = static_cast<UInt8>((value >> 24) & 0xFF);
+  }
+
   bool Volume::MatchLabel(CString label, CString expected) {
     if (!label || !expected) {
       return false;
@@ -608,6 +1048,49 @@ namespace Quantum::System::FileSystems::FAT12 {
     }
   }
 
+  bool Volume::BuildShortName(CString name, UInt8* outName) {
+    if (!name || !outName) {
+      return false;
+    }
+
+    for (UInt32 i = 0; i < 11; ++i) {
+      outName[i] = ' ';
+    }
+
+    UInt32 nameLen = 0;
+    UInt32 extLen = 0;
+    bool inExt = false;
+
+    for (UInt32 i = 0; name[i] != '\0'; ++i) {
+      char c = name[i];
+
+      if (c == '.') {
+        inExt = true;
+        continue;
+      }
+
+      if (c >= 'a' && c <= 'z') {
+        c = static_cast<char>(c - 'a' + 'A');
+      }
+
+      if (inExt) {
+        if (extLen >= 3) {
+          return false;
+        }
+
+        outName[8 + extLen++] = static_cast<UInt8>(c);
+      } else {
+        if (nameLen >= 8) {
+          return false;
+        }
+
+        outName[nameLen++] = static_cast<UInt8>(c);
+      }
+    }
+
+    return nameLen > 0;
+  }
+
   bool Volume::ReadDirectoryRecord(
     UInt32 startCluster,
     UInt32 index,
@@ -699,6 +1182,127 @@ namespace Quantum::System::FileSystems::FAT12 {
     record.sizeBytes = ReadUInt32(base, 28);
 
     return true;
+  }
+
+  bool Volume::FindFreeDirectorySlot(
+    UInt32 parentCluster,
+    bool parentIsRoot,
+    UInt32& outLba,
+    UInt32& outOffset
+  ) {
+    UInt32 bytesPerSector = _info.sectorSize;
+
+    if (bytesPerSector != 512) {
+      // only support 512-byte sectors for now
+      return false;
+    }
+
+    UInt32 entriesPerSector = bytesPerSector / 32;
+
+    if (parentIsRoot) {
+      for (UInt32 s = 0; s < _rootDirectorySectors; ++s) {
+        UInt8 sector[512] = {};
+        BlockDevice::Request request {};
+
+        request.deviceId = _device.id;
+        request.lba = _rootDirectoryStartLBA + s;
+        request.count = 1;
+        request.buffer = sector;
+
+        if (BlockDevice::Read(request) != 0) {
+          return false;
+        }
+
+        for (UInt32 e = 0; e < entriesPerSector; ++e) {
+          UInt32 offset = e * 32;
+          UInt8 first = sector[offset];
+
+          if (first == 0x00 || first == 0xE5) {
+            outLba = _rootDirectoryStartLBA + s;
+            outOffset = offset;
+
+            return true;
+          }
+        }
+      }
+
+      return false;
+    }
+
+    UInt32 cluster = parentCluster;
+
+    for (;;) {
+      for (UInt32 s = 0; s < _sectorsPerCluster; ++s) {
+        UInt8 sector[512] = {};
+        BlockDevice::Request request {};
+
+        request.deviceId = _device.id;
+        request.lba
+          = _dataStartLBA + (cluster - 2) * _sectorsPerCluster + s;
+        request.count = 1;
+        request.buffer = sector;
+
+        if (BlockDevice::Read(request) != 0) {
+          return false;
+        }
+
+        for (UInt32 e = 0; e < entriesPerSector; ++e) {
+          UInt32 offset = e * 32;
+          UInt8 first = sector[offset];
+
+          if (first == 0x00 || first == 0xE5) {
+            outLba
+              = _dataStartLBA + (cluster - 2) * _sectorsPerCluster + s;
+            outOffset = offset;
+
+            return true;
+          }
+        }
+      }
+
+      UInt32 nextCluster = 0;
+
+      if (!ReadFATEntry(cluster, nextCluster)) {
+        return false;
+      }
+
+      if (IsEndOfChain(nextCluster)) {
+        return false;
+      }
+
+      cluster = nextCluster;
+    }
+  }
+
+  bool Volume::WriteDirectoryEntry(
+    UInt32 lba,
+    UInt32 offset,
+    const UInt8* entryBytes
+  ) {
+    if (!entryBytes) {
+      return false;
+    }
+
+    UInt8 sector[512] = {};
+    BlockDevice::Request request {};
+
+    request.deviceId = _device.id;
+    request.lba = lba;
+    request.count = 1;
+    request.buffer = sector;
+
+    if (BlockDevice::Read(request) != 0) {
+      return false;
+    }
+
+    for (UInt32 i = 0; i < 32; ++i) {
+      sector[offset + i] = entryBytes[i];
+    }
+
+    request.lba = lba;
+    request.buffer = sector;
+
+    return BlockDevice::Write(request) == 0;
   }
 
   bool Volume::RecordToEntry(

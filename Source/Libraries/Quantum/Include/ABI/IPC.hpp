@@ -76,7 +76,7 @@ namespace Quantum::ABI {
        * @param portId
        *   Target port.
        * @param message
-       *   Message to send; Length must be <= MaxPayloadBytes.
+       *   Message to send; length must be <= `maxPayloadBytes`.
        * @return
        *   0 on success, non-zero on failure.
        */
