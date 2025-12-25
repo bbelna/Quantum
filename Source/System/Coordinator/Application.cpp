@@ -20,12 +20,10 @@
 
 namespace Quantum::System::Coordinator {
   using Console = ABI::Console;
-  namespace CoordinatorABI = ABI::Coordinator;
   using IO = ABI::IO;
   using IPC = ABI::IPC;
   using Task = ABI::Task;
   using FileSystem = Coordinator::FileSystem;
-
   using IRQ = Coordinator::IRQ;
 
   bool Application::HasMagic(const BundleHeader& header) {
@@ -151,11 +149,11 @@ namespace Quantum::System::Coordinator {
         break;
       }
 
-      if (msg.length < sizeof(CoordinatorABI::ReadyMessage)) {
+      if (msg.length < sizeof(ABI::Coordinator::ReadyMessage)) {
         continue;
       }
 
-      CoordinatorABI::ReadyMessage ready {};
+      ABI::Coordinator::ReadyMessage ready {};
 
       for (UInt32 i = 0; i < sizeof(ready); ++i) {
         reinterpret_cast<UInt8*>(&ready)[i] = msg.payload[i];

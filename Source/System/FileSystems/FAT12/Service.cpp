@@ -48,15 +48,20 @@ namespace Quantum::System::FileSystems::FAT12 {
   }
 
   FileSystem::Handle Service::AllocateHandle(
+    bool isDirectory,
     bool isRoot,
-    UInt32 startCluster
+    UInt32 startCluster,
+    UInt32 fileSize
   ) {
     for (UInt32 i = 0; i < _maxHandles; ++i) {
       if (!_handles[i].inUse) {
         _handles[i].inUse = true;
+        _handles[i].isDirectory = isDirectory;
         _handles[i].isRoot = isRoot;
         _handles[i].startCluster = startCluster;
         _handles[i].nextIndex = 0;
+        _handles[i].fileSize = fileSize;
+        _handles[i].fileOffset = 0;
 
         return static_cast<FileSystem::Handle>(_handleBase + i);
       }
@@ -73,9 +78,12 @@ namespace Quantum::System::FileSystems::FAT12 {
     }
 
     state->inUse = false;
+    state->isDirectory = false;
     state->isRoot = false;
     state->startCluster = 0;
     state->nextIndex = 0;
+    state->fileSize = 0;
+    state->fileOffset = 0;
   }
 
   Service::HandleState* Service::GetHandleState(FileSystem::Handle handle) {
@@ -223,14 +231,33 @@ namespace Quantum::System::FileSystems::FAT12 {
 
         if (_volume && request.arg0 == _volume->GetHandle()) {
           if (IsRootPath(path)) {
-            FileSystem::Handle handle = AllocateHandle(true, 0);
+            FileSystem::Handle handle = AllocateHandle(true, true, 0, 0);
 
             response.status = handle;
           } else {
             UInt32 cluster = 0;
+            UInt32 lastCluster = 0;
+            UInt8 lastAttributes = 0;
+            UInt32 lastSize = 0;
+            const char* cursor = path;
             bool isRoot = true;
             bool ok = true;
-            const char* cursor = path;
+            bool sawSegment = false;
+            bool endsWithSeparator = false;
+
+            if (path) {
+              UInt32 len = 0;
+
+              while (path[len] != '\0') {
+                ++len;
+              }
+
+              if (len > 0) {
+                char last = path[len - 1];
+
+                endsWithSeparator = (last == '/' || last == '\\');
+              }
+            }
 
             while (*cursor == '/' || *cursor == '\\') {
               ++cursor;
@@ -250,9 +277,13 @@ namespace Quantum::System::FileSystems::FAT12 {
               }
 
               segment[length] = '\0';
+              sawSegment = true;
+
+              bool hadSeparator = false;
 
               while (*cursor == '/' || *cursor == '\\') {
                 ++cursor;
+                hadSeparator = true;
               }
 
               if (segment[0] == '\0') {
@@ -261,6 +292,9 @@ namespace Quantum::System::FileSystems::FAT12 {
 
               UInt32 nextCluster = 0;
               UInt8 attributes = 0;
+              UInt32 sizeBytes = 0;
+              bool lastSegment = (*cursor == '\0');
+              bool requireDirectory = lastSegment && hadSeparator;
 
               if (
                 !_volume->FindEntry(
@@ -268,26 +302,57 @@ namespace Quantum::System::FileSystems::FAT12 {
                   isRoot,
                   segment,
                   nextCluster,
-                  attributes
+                  attributes,
+                  sizeBytes
                 )
               ) {
                 ok = false;
+
                 break;
               }
 
-              if ((attributes & 0x10) == 0) {
-                ok = false;
-                break;
+              lastCluster = nextCluster;
+              lastAttributes = attributes;
+              lastSize = sizeBytes;
+
+              if (!lastSegment || requireDirectory) {
+                if ((attributes & 0x10) == 0) {
+                  ok = false;
+
+                  break;
+                }
               }
 
-              cluster = nextCluster;
-              isRoot = false;
+              if ((attributes & 0x10) != 0) {
+                cluster = nextCluster;
+                isRoot = false;
+              }
             }
 
-            if (ok && !isRoot && cluster >= 2) {
-              FileSystem::Handle handle = AllocateHandle(false, cluster);
+            if (ok && sawSegment) {
+              bool isDirectory = (lastAttributes & 0x10) != 0;
 
-              response.status = handle;
+              if (endsWithSeparator && !isDirectory) {
+                ok = false;
+              } else if (isDirectory) {
+                FileSystem::Handle handle = AllocateHandle(
+                  true,
+                  false,
+                  lastCluster,
+                  0
+                );
+
+                response.status = handle;
+              } else if (lastCluster != 0 || lastSize == 0) {
+                FileSystem::Handle handle = AllocateHandle(
+                  false,
+                  false,
+                  lastCluster,
+                  lastSize
+                );
+
+                response.status = handle;
+              }
             }
           }
         }
@@ -310,7 +375,7 @@ namespace Quantum::System::FileSystems::FAT12 {
       ) {
         HandleState* state = GetHandleState(request.arg0);
 
-        if (!_volume || !state || !state->inUse) {
+        if (!_volume || !state || !state->inUse || !state->isDirectory) {
           response.status = 1;
         } else {
           FileSystem::DirectoryEntry entry {};
@@ -389,6 +454,43 @@ namespace Quantum::System::FileSystems::FAT12 {
               }
 
               response.dataLength = bytes;
+              response.status = 0;
+            }
+          }
+        }
+      } else if (
+        request.op == static_cast<UInt32>(FileSystem::Operation::Read)
+      ) {
+        HandleState* state = GetHandleState(request.arg0);
+
+        if (!_volume || !state || !state->inUse || state->isDirectory) {
+          response.status = 0;
+        } else {
+          UInt32 maxBytes = request.arg1;
+
+          if (maxBytes > FileSystem::messageDataBytes) {
+            maxBytes = FileSystem::messageDataBytes;
+          }
+
+          if (maxBytes == 0 || state->fileOffset >= state->fileSize) {
+            response.status = 0;
+          } else {
+            UInt32 bytesRead = 0;
+
+            if (
+              _volume->ReadFile(
+                state->startCluster,
+                state->fileOffset,
+                response.data,
+                maxBytes,
+                bytesRead,
+                state->fileSize
+              )
+            ) {
+              state->fileOffset += bytesRead;
+              response.dataLength = bytesRead;
+              response.status = bytesRead;
+            } else {
               response.status = 0;
             }
           }

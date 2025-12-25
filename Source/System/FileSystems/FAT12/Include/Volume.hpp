@@ -127,7 +127,34 @@ namespace Quantum::System::FileSystems::FAT12 {
         bool isRoot,
         CString name,
         UInt32& outCluster,
-        UInt8& outAttributes
+        UInt8& outAttributes,
+        UInt32& outSize
+      );
+
+      /**
+       * Reads file data into a buffer.
+       * @param startCluster
+       *   First cluster of the file.
+       * @param offset
+       *   Byte offset within the file.
+       * @param buffer
+       *   Output buffer to populate.
+       * @param length
+       *   Maximum bytes to read.
+       * @param outRead
+       *   Receives the number of bytes read.
+       * @param fileSize
+       *   File size in bytes.
+       * @return
+       *   True if the read completed.
+       */
+      bool ReadFile(
+        UInt32 startCluster,
+        UInt32 offset,
+        UInt8* buffer,
+        UInt32 length,
+        UInt32& outRead,
+        UInt32 fileSize
       );
 
       /**

@@ -43,6 +43,11 @@ namespace Quantum::System::FileSystems::FAT12 {
         bool inUse;
 
         /**
+         * True if this handle refers to a directory.
+         */
+        bool isDirectory;
+
+        /**
          * True if this handle refers to the root directory.
          */
         bool isRoot;
@@ -56,6 +61,16 @@ namespace Quantum::System::FileSystems::FAT12 {
          * Next entry index to read.
          */
         UInt32 nextIndex;
+
+        /**
+         * File size in bytes.
+         */
+        UInt32 fileSize;
+
+        /**
+         * Current file offset in bytes.
+         */
+        UInt32 fileOffset;
       };
 
       /**
@@ -88,8 +103,10 @@ namespace Quantum::System::FileSystems::FAT12 {
        *   Handle id or 0 on failure.
        */
       static ABI::FileSystem::Handle AllocateHandle(
+        bool isDirectory,
         bool isRoot,
-        UInt32 startCluster
+        UInt32 startCluster,
+        UInt32 fileSize
       );
 
       /**

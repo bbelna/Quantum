@@ -145,7 +145,8 @@ namespace Quantum::System::FileSystems::FAT12 {
     bool isRoot,
     CString name,
     UInt32& outCluster,
-    UInt8& outAttributes
+    UInt8& outAttributes,
+    UInt32& outSize
   ) {
     if (!name || name[0] == '\0') {
       return false;
@@ -171,6 +172,7 @@ namespace Quantum::System::FileSystems::FAT12 {
           if (MatchName(entry.name, name)) {
             outCluster = record.startCluster;
             outAttributes = record.attributes;
+            outSize = record.sizeBytes;
 
             return true;
           }
@@ -185,6 +187,122 @@ namespace Quantum::System::FileSystems::FAT12 {
     }
 
     return false;
+  }
+
+  bool Volume::ReadFile(
+    UInt32 startCluster,
+    UInt32 offset,
+    UInt8* buffer,
+    UInt32 length,
+    UInt32& outRead,
+    UInt32 fileSize
+  ) {
+    outRead = 0;
+
+    if (!_valid || !buffer || length == 0) {
+      return false;
+    }
+
+    if (offset >= fileSize) {
+      return true;
+    }
+
+    UInt32 bytesPerSector = _info.sectorSize;
+
+    if (bytesPerSector != 512) {
+      // only support 512-byte sectors for now
+      return false;
+    }
+
+    UInt32 remaining = length;
+    UInt32 maxReadable = fileSize - offset;
+
+    if (remaining > maxReadable) {
+      remaining = maxReadable;
+    }
+
+    if (startCluster < 2) {
+      return true;
+    }
+
+    UInt32 clusterSize = bytesPerSector * _sectorsPerCluster;
+    UInt32 skipClusters = offset / clusterSize;
+    UInt32 clusterOffset = offset % clusterSize;
+    UInt32 cluster = startCluster;
+
+    for (UInt32 i = 0; i < skipClusters; ++i) {
+      UInt32 nextCluster = 0;
+
+      if (!ReadFATEntry(cluster, nextCluster)) {
+        return false;
+      }
+
+      if (IsEndOfChain(nextCluster)) {
+        return true;
+      }
+
+      cluster = nextCluster;
+    }
+
+    UInt32 sectorOffset = clusterOffset / bytesPerSector;
+    UInt32 byteOffset = clusterOffset % bytesPerSector;
+
+    while (remaining > 0) {
+      UInt8 sector[512] = {};
+      UInt32 lba
+        = _dataStartLBA
+        + (cluster - 2) * _sectorsPerCluster
+        + sectorOffset;
+
+      BlockDevice::Request request {};
+
+      request.deviceId = _device.id;
+      request.lba = lba;
+      request.count = 1;
+      request.buffer = sector;
+
+      if (BlockDevice::Read(request) != 0) {
+        return false;
+      }
+
+      UInt32 copyStart = byteOffset;
+      UInt32 copyBytes = bytesPerSector - copyStart;
+
+      if (copyBytes > remaining) {
+        copyBytes = remaining;
+      }
+
+      for (UInt32 i = 0; i < copyBytes; ++i) {
+        buffer[outRead + i] = sector[copyStart + i];
+      }
+
+      outRead += copyBytes;
+      remaining -= copyBytes;
+
+      if (remaining == 0) {
+        break;
+      }
+
+      byteOffset = 0;
+      sectorOffset++;
+
+      if (sectorOffset >= _sectorsPerCluster) {
+        UInt32 nextCluster = 0;
+
+        if (!ReadFATEntry(cluster, nextCluster)) {
+          return false;
+        }
+
+        if (IsEndOfChain(nextCluster)) {
+          break;
+        }
+
+        cluster = nextCluster;
+        sectorOffset = 0;
+      }
+    }
+
+    return true;
   }
 
   bool Volume::ReadFATEntry(UInt32 cluster, UInt32& nextCluster) {

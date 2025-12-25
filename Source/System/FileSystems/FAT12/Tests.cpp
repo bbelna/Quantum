@@ -214,8 +214,18 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
 
     UInt32 startCluster = 0;
     UInt8 attributes = 0;
+    UInt32 sizeBytes = 0;
 
-    if (!volume.FindEntry(0, true, "TESTDIR", startCluster, attributes)) {
+    if (
+      !volume.FindEntry(
+        0,
+        true,
+        "TESTDIR",
+        startCluster,
+        attributes,
+        sizeBytes
+      )
+    ) {
       LogSkip("testdir missing");
 
       return true;
@@ -228,6 +238,7 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     Console::WriteLine("FAT12 TESTDIR entries:");
 
     bool found = false;
+
     FileSystem::DirectoryEntry entry {};
 
     for (UInt32 i = 0; i < 256; ++i) {
@@ -236,6 +247,7 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
       if (volume.ReadDirectoryEntry(startCluster, i, entry, end)) {
         Console::Write("  ");
         Console::WriteLine(entry.name);
+
         found = true;
       }
 
@@ -253,9 +265,99 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     return Assert(true, "testdir read");
   }
 
+  static bool TestFileRead() {
+    if (!WaitForFloppyReady()) {
+      LogSkip("floppy not ready");
+
+      return true;
+    }
+
+    Volume volume {};
+
+    if (!volume.Load()) {
+      LogSkip("no FAT12 volume");
+
+      return true;
+    }
+
+    UInt32 dirCluster = 0;
+    UInt8 dirAttributes = 0;
+    UInt32 dirSize = 0;
+
+    if (
+      !volume.FindEntry(
+        0,
+        true,
+        "TESTDIR",
+        dirCluster,
+        dirAttributes,
+        dirSize
+      )
+    ) {
+      LogSkip("testdir missing");
+
+      return true;
+    }
+
+    if ((dirAttributes & 0x10) == 0) {
+      return Assert(false, "testdir not a directory");
+    }
+
+    UInt32 fileCluster = 0;
+    UInt8 fileAttributes = 0;
+    UInt32 fileSize = 0;
+
+    if (
+      !volume.FindEntry(
+        dirCluster,
+        false,
+        "TEST.TXT",
+        fileCluster,
+        fileAttributes,
+        fileSize
+      )
+    ) {
+      LogSkip("test.txt missing");
+
+      return true;
+    }
+
+    if ((fileAttributes & 0x10) != 0) {
+      return Assert(false, "test.txt is a directory");
+    }
+
+    UInt8 buffer[128] = {};
+    UInt32 bytesRead = 0;
+
+    if (
+      !volume.ReadFile(
+        fileCluster,
+        0,
+        buffer,
+        sizeof(buffer) - 1,
+        bytesRead,
+        fileSize
+      )
+    ) {
+      return Assert(false, "test.txt read failed");
+    }
+
+    if (bytesRead == 0) {
+      return Assert(false, "test.txt empty");
+    }
+
+    buffer[bytesRead] = '\0';
+    Console::WriteLine("FAT12 TEST.TXT contents:");
+    Console::Write("  ");
+    Console::WriteLine(reinterpret_cast<CString>(buffer));
+
+    return Assert(true, "test.txt read");
+  }
+
   static void RunTest(CString name, bool (*func)()) {
     Console::Write("[TEST] ");
     Console::WriteLine(name ? name : "(unnamed)");
+
     _testCount++;
 
     bool ok = func ? func() : false;
@@ -264,6 +366,7 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
       _testsPassed++;
     } else {
       _testsFailed++;
+
       Console::Write("[FAIL] ");
       Console::WriteLine(name ? name : "(unnamed)");
     }
@@ -276,6 +379,7 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     RunTest("FAT12 volume info", TestVolumeInfo);
     RunTest("FAT12 root directory", TestRootDirectory);
     RunTest("FAT12 TESTDIR", TestSubDirectory);
+    RunTest("FAT12 TEST.TXT read", TestFileRead);
 
     LogFooter();
   }
