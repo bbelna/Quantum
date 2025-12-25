@@ -24,18 +24,28 @@ OBJCOPY32 ?= x86_64-linux-gnu-objcopy
 DRIVER_ELF := $(BUILD_DIR)/Drivers/Storage/Floppy/Floppy.elf
 DRIVER_QX  := $(BUILD_DIR)/Drivers/Storage/Floppy/Floppy.qx
 
+FLOPPY_SRCS := \
+	$(DRIVER_DIR)/Driver.cpp \
+	$(DRIVER_DIR)/Tests.cpp \
+	$(DRIVER_DIR)/Main.cpp \
+	$(USER_RUNTIME)/CRT0.cpp \
+	$(USER_RUNTIME)/Memory.cpp
+
+FLOPPY_HDRS := \
+	$(DRIVER_DIR)/Include/Tests.hpp
+
 .PHONY: all clean floppy
 
 all: floppy
 
 floppy: $(DRIVER_QX)
 
-$(DRIVER_ELF): $(DRIVER_DIR)/Driver.cpp $(DRIVER_DIR)/Tests.cpp $(DRIVER_DIR)/Main.cpp $(USER_RUNTIME)/CRT0.cpp $(USER_RUNTIME)/Memory.cpp $(DRIVER_DIR)/Include/Tests.hpp $(DRIVER_DIR)/Link.ld
+$(DRIVER_ELF): $(FLOPPY_SRCS) $(FLOPPY_HDRS) $(DRIVER_DIR)/Link.ld
 	@mkdir -p $(dir $@)
 	$(CC32) $(CFLAGS32) -m32 -ffreestanding -nostdlib -static -Wl,--no-pie \
 		-I$(LIBQ_INCLUDE) -I$(FLOPPY_INCLUDE) \
 		-T $(DRIVER_DIR)/Link.ld \
-		$(DRIVER_DIR)/Driver.cpp $(DRIVER_DIR)/Tests.cpp $(DRIVER_DIR)/Main.cpp $(USER_RUNTIME)/CRT0.cpp $(USER_RUNTIME)/Memory.cpp -o $@
+		$(FLOPPY_SRCS) -o $@
 	@echo "[OK] Linked Floppy.elf -> $@"
 
 $(DRIVER_QX): $(DRIVER_ELF)

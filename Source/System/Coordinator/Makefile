@@ -48,9 +48,7 @@ $(COORD_ELF): $(COORD_SRCS) $(COORD_HDRS) $(COORD_DIR)/Link.ld
 	$(CC32) $(CFLAGS32) -m32 -ffreestanding -nostdlib -static -Wl,--no-pie \
 		-I$(LIBQ_INCLUDE) -I$(COORD_INCLUDE) \
 		-T $(COORD_DIR)/Link.ld \
-		$(COORD_DIR)/Application.cpp $(COORD_DIR)/Main.cpp $(COORD_DIR)/IRQ.cpp \
-			$(COORD_DIR)/FileSystem.cpp $(USER_RUNTIME)/CRT0.cpp \
-			$(USER_RUNTIME)/Memory.cpp -o $@
+		$(COORD_SRCS) -o $@
 	@echo "[OK] Linked Coordinator.elf -> $@"
 
 $(COORD_QX): $(COORD_ELF)

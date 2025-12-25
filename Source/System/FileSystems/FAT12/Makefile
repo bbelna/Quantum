@@ -24,18 +24,29 @@ OBJCOPY32 ?= x86_64-linux-gnu-objcopy
 SERVICE_ELF := $(BUILD_DIR)/FileSystems/FAT12/FAT12.elf
 SERVICE_QX  := $(BUILD_DIR)/FileSystems/FAT12/fat12.qx
 
+FAT12_SRCS := \
+	$(FAT12_DIR)/Service.cpp \
+	$(FAT12_DIR)/Volume.cpp \
+	$(FAT12_DIR)/Tests.cpp \
+	$(FAT12_DIR)/Main.cpp \
+	$(USER_RUNTIME)/CRT0.cpp \
+	$(USER_RUNTIME)/Memory.cpp
+
+FAT12_HDRS := \
+	$(FAT12_DIR)/Include/Tests.hpp
+
 .PHONY: all clean fat12
 
 all: fat12
 
 fat12: $(SERVICE_QX)
 
-$(SERVICE_ELF): $(FAT12_DIR)/Service.cpp $(FAT12_DIR)/Volume.cpp $(FAT12_DIR)/Tests.cpp $(FAT12_DIR)/Main.cpp $(USER_RUNTIME)/CRT0.cpp $(USER_RUNTIME)/Memory.cpp $(FAT12_DIR)/Include/Tests.hpp $(FAT12_DIR)/Link.ld
+$(SERVICE_ELF): $(FAT12_SRCS) $(FAT12_HDRS) $(FAT12_DIR)/Link.ld
 	@mkdir -p $(dir $@)
 	$(CC32) $(CFLAGS32) -m32 -ffreestanding -nostdlib -static -Wl,--no-pie \
 		-I$(LIBQ_INCLUDE) -I$(FAT12_INCLUDE) \
 		-T $(FAT12_DIR)/Link.ld \
-		$(FAT12_DIR)/Service.cpp $(FAT12_DIR)/Volume.cpp $(FAT12_DIR)/Tests.cpp $(FAT12_DIR)/Main.cpp $(USER_RUNTIME)/CRT0.cpp $(USER_RUNTIME)/Memory.cpp -o $@
+		$(FAT12_SRCS) -o $@
 	@echo "[OK] Linked FAT12.elf -> $@"
 
 $(SERVICE_QX): $(SERVICE_ELF)

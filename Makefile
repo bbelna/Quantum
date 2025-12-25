@@ -41,7 +41,8 @@ MKFS   ?= mkfs.vfat
 MCOPY  ?= mcopy
 MMD    ?= mmd
 
-export ASM ASFLAGS CC32 CFLAGS32 LD32 LDFLAGS32 OBJCOPY32 MKFS MCOPY MMD PROJECT_ROOT BUILD_DIR ARCH BOOT_MEDIUM
+export ASM ASFLAGS CC32 CFLAGS32 LD32 LDFLAGS32 OBJCOPY32 MKFS MCOPY MMD \
+	PROJECT_ROOT BUILD_DIR ARCH BOOT_MEDIUM
 
 # Artifacts
 BOOT_STAGE1_BIN := $(BUILD_DIR)/Boot/$(ARCH)/$(BOOT_MEDIUM)/Stage1.bin
@@ -83,43 +84,54 @@ ifeq ($(HAS_INIT_MANIFEST),)
 	@echo "INIT manifest not found ($(INIT_MANIFEST)); skipping bundle."
 else
 	@echo "Bundling INIT.BND from $(INIT_MANIFEST)"
-	@$(BUNDLER) --manifest "$(INIT_MANIFEST)" --output "$(INIT_BUNDLE)" --base "$(PROJECT_ROOT)"
+	@$(BUNDLER) --manifest "$(INIT_MANIFEST)" --output "$(INIT_BUNDLE)" \
+		--base "$(PROJECT_ROOT)"
 endif
 
 $(BOOT_STAGE1_BIN):
-	$(MAKE) -C $(BOOT_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) ARCH=$(ARCH) BOOT_MEDIUM=$(BOOT_MEDIUM) stage1
+	$(MAKE) -C $(BOOT_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) \
+		ARCH=$(ARCH) BOOT_MEDIUM=$(BOOT_MEDIUM) stage1
 
 $(BOOT_STAGE2_BIN):
-	$(MAKE) -C $(BOOT_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) ARCH=$(ARCH) BOOT_MEDIUM=$(BOOT_MEDIUM) stage2
+	$(MAKE) -C $(BOOT_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) \
+		ARCH=$(ARCH) BOOT_MEDIUM=$(BOOT_MEDIUM) stage2
 
 $(KER_BIN):
-	$(MAKE) -C $(KERNEL_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) ARCH=$(ARCH) kernel
+	$(MAKE) -C $(KERNEL_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) \
+		ARCH=$(ARCH) kernel
 
 COORD_QX := $(BUILD_DIR)/Coordinator/Coordinator.qx
 FLOPPY_QX := $(BUILD_DIR)/Drivers/Storage/Floppy/Floppy.qx
 FAT12_QX := $(BUILD_DIR)/FileSystems/FAT12/fat12.qx
 
 $(COORD_QX):
-	$(MAKE) -C $(COORD_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) ARCH=$(ARCH) coordinator
+	$(MAKE) -C $(COORD_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) \
+		ARCH=$(ARCH) coordinator
 
 $(FLOPPY_QX):
-	$(MAKE) -C $(FLOPPY_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) ARCH=$(ARCH) floppy
+	$(MAKE) -C $(FLOPPY_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) \
+		ARCH=$(ARCH) floppy
 
 $(FAT12_QX):
-	$(MAKE) -C $(FAT12_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) ARCH=$(ARCH) fat12
+	$(MAKE) -C $(FAT12_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) \
+		ARCH=$(ARCH) fat12
 
-$(IMG): $(KER_BIN) $(BOOT_STAGE1_BIN) $(BOOT_STAGE2_BIN) $(COORD_QX) $(FLOPPY_QX) $(FAT12_QX) init-bundle
+$(IMG): $(KER_BIN) $(BOOT_STAGE1_BIN) $(BOOT_STAGE2_BIN) $(COORD_QX) \
+	$(FLOPPY_QX) $(FAT12_QX) init-bundle
 	@mkdir -p $(dir $@)
 	@echo "Creating blank 1.44 MB image: $@"
-	dd if=/dev/zero of=$@ bs=$(IMG_BS) count=$(IMG_SECTORS) conv=notrunc status=none
+	dd if=/dev/zero of=$@ bs=$(IMG_BS) count=$(IMG_SECTORS) conv=notrunc \
+		status=none
 	@echo "Formatting as FAT12 (volume label: $(FAT12_LABEL))"
 	$(MKFS) -F 12 -R 5 -n $(FAT12_LABEL) $@
 	@echo "Copying kernel (KERNEL.QX) into FAT12 root directory"
 	$(MCOPY) -i $@ $(KER_BIN) ::/KERNEL.QX
 	@echo "Installing Stage 1 bootloader (sector 0)"
-	dd if=$(BOOT_STAGE1_BIN) of=$@ bs=$(IMG_BS) seek=0 count=1 conv=notrunc status=none
+	dd if=$(BOOT_STAGE1_BIN) of=$@ bs=$(IMG_BS) seek=0 count=1 conv=notrunc \
+		status=none
 	@echo "Installing Stage 2 bootloader (sectors 1-4)"
-	dd if=$(BOOT_STAGE2_BIN) of=$@ bs=$(IMG_BS) seek=1 count=4 conv=notrunc,sync status=none
+	dd if=$(BOOT_STAGE2_BIN) of=$@ bs=$(IMG_BS) seek=1 count=4 conv=notrunc,sync \
+		status=none
 	@if [ -f "$(INIT_BUNDLE)" ]; then \
 		echo "Copying INIT.BND into FAT12 root directory"; \
 		$(MCOPY) -i $@ $(INIT_BUNDLE) ::/INIT.BND; \
@@ -134,10 +146,12 @@ $(IMG): $(KER_BIN) $(BOOT_STAGE1_BIN) $(BOOT_STAGE2_BIN) $(COORD_QX) $(FLOPPY_QX
 	@echo "[OK] Built FAT12 floppy image -> $@"
 
 boot-clean:
-	$(MAKE) -C $(BOOT_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) ARCH=$(ARCH) BOOT_MEDIUM=$(BOOT_MEDIUM) clean
+	$(MAKE) -C $(BOOT_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) \
+		ARCH=$(ARCH) BOOT_MEDIUM=$(BOOT_MEDIUM) clean
 
 kernel-clean:
-	$(MAKE) -C $(KERNEL_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) ARCH=$(ARCH) clean
+	$(MAKE) -C $(KERNEL_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) \
+		ARCH=$(ARCH) clean
 
 clean: boot-clean kernel-clean
 	@echo "Removing $(BUILD_DIR)/"
