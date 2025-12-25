@@ -84,7 +84,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
     UInt8& sectorsPerTrack,
     UInt8& headCount
   ) {
-    if (!Driver::TestGetDevice(
+    if (!Driver::GetDeviceInfo(
       deviceId,
       info,
       driveIndex,
@@ -130,7 +130,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
     }
 
     UInt8 buffer[512] = {};
-    bool ok = Driver::TestRead(
+    bool ok = Driver::ReadToBuffer(
       driveIndex,
       0,
       1,
@@ -179,7 +179,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
     }
 
     UInt8 buffer[1024] = {};
-    bool ok = Driver::TestRead(
+    bool ok = Driver::ReadToBuffer(
       driveIndex,
       0,
       2,
@@ -245,7 +245,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
     UInt8 original[512] = {};
     UInt8 writeData[512] = {};
     UInt8 verify[512] = {};
-    bool ok = Driver::TestRead(
+    bool ok = Driver::ReadToBuffer(
       driveIndex,
       scratchLba,
       1,
@@ -264,7 +264,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
       writeData[i] = static_cast<UInt8>(0xA5 ^ i);
     }
 
-    ok = Driver::TestWrite(
+    ok = Driver::WriteFromBuffer(
       driveIndex,
       scratchLba,
       1,
@@ -279,7 +279,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
       return false;
     }
 
-    ok = Driver::TestRead(
+    ok = Driver::ReadToBuffer(
       driveIndex,
       scratchLba,
       1,
@@ -306,7 +306,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
 
     Assert(match, "floppy write verify mismatch");
 
-    Driver::TestWrite(
+    Driver::WriteFromBuffer(
       driveIndex,
       scratchLba,
       1,
@@ -364,7 +364,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
     UInt8 original[maxBytes] = {};
     UInt8 writeData[maxBytes] = {};
     UInt8 verify[maxBytes] = {};
-    bool ok = Driver::TestRead(
+    bool ok = Driver::ReadToBuffer(
       driveIndex,
       scratchLba,
       sectorCount,
@@ -383,7 +383,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
       writeData[i] = static_cast<UInt8>(0x5A ^ i);
     }
 
-    ok = Driver::TestWrite(
+    ok = Driver::WriteFromBuffer(
       driveIndex,
       scratchLba,
       sectorCount,
@@ -398,7 +398,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
       return false;
     }
 
-    ok = Driver::TestRead(
+    ok = Driver::ReadToBuffer(
       driveIndex,
       scratchLba,
       sectorCount,
@@ -425,7 +425,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
 
     Assert(match, "floppy multi-sector verify mismatch");
 
-    Driver::TestWrite(
+    Driver::WriteFromBuffer(
       driveIndex,
       scratchLba,
       sectorCount,
@@ -492,7 +492,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
     UInt8 original[maxBytes] = {};
     UInt8 writeData[maxBytes] = {};
     UInt8 verify[maxBytes] = {};
-    bool ok = Driver::TestRead(
+    bool ok = Driver::ReadToBuffer(
       driveIndex,
       desiredLba,
       sectorCount,
@@ -511,7 +511,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
       writeData[i] = static_cast<UInt8>(0x3C ^ i);
     }
 
-    ok = Driver::TestWrite(
+    ok = Driver::WriteFromBuffer(
       driveIndex,
       desiredLba,
       sectorCount,
@@ -526,7 +526,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
       return false;
     }
 
-    ok = Driver::TestRead(
+    ok = Driver::ReadToBuffer(
       driveIndex,
       desiredLba,
       sectorCount,
@@ -553,7 +553,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
 
     Assert(match, "floppy cross-track verify mismatch");
 
-    Driver::TestWrite(
+    Driver::WriteFromBuffer(
       driveIndex,
       desiredLba,
       sectorCount,

@@ -23,7 +23,7 @@ namespace Quantum::ABI {
        */
       enum class Operation : UInt32 {
         /**
-         * requests IRQ routing to a port.
+         * Requests IRQ routing to a port.
          */
         Register = 1
       };
@@ -33,7 +33,7 @@ namespace Quantum::ABI {
        */
       struct Message {
         /**
-         * operation identifier (0 for IRQ notification).
+         * Operation identifier (0 for IRQ notification).
          */
         UInt32 op;
 
@@ -43,17 +43,17 @@ namespace Quantum::ABI {
         UInt32 irq;
 
         /**
-         * target port id.
+         * Target port id.
          */
         UInt32 portId;
 
         /**
-         * reply port id for acknowledgements.
+         * Reply port id for acknowledgements.
          */
         UInt32 replyPortId;
 
         /**
-         * reserved payload data.
+         * Reserved payload data.
          */
         UInt32 data;
       };

@@ -29,7 +29,6 @@ namespace Quantum::System::Drivers::Storage::Floppy {
        */
       static void Main();
 
-      #if defined(TEST)
       /**
        * Locates the first floppy device and returns its info.
        * @param deviceId
@@ -49,7 +48,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
        * @return
        *   True if a device was found; false otherwise.
        */
-      static bool TestGetDevice(
+      static bool GetDeviceInfo(
         UInt32& deviceId,
         BlockDevice::Info& info,
         UInt8& driveIndex,
@@ -80,7 +79,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
        * @return
        *   True on success; false otherwise.
        */
-      static bool TestRead(
+      static bool ReadToBuffer(
         UInt8 driveIndex,
         UInt32 lba,
         UInt32 count,
@@ -112,7 +111,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
        * @return
        *   True on success; false otherwise.
        */
-      static bool TestWrite(
+      static bool WriteFromBuffer(
         UInt8 driveIndex,
         UInt32 lba,
         UInt32 count,
@@ -122,7 +121,6 @@ namespace Quantum::System::Drivers::Storage::Floppy {
         const void* buffer,
         UInt32 bufferBytes
       );
-      #endif
 
     private:
       /**
@@ -719,5 +717,44 @@ namespace Quantum::System::Drivers::Storage::Floppy {
         UInt8& sectorsPerTrack,
         UInt8& headCount
       );
+
+      /**
+       * Writes a hexadecimal byte to the console.
+       * @param value
+       *   Byte value to write.
+       */
+      static void WriteHexByte(UInt8 value);
+
+      /**
+       * Writes a decimal unsigned integer to the console.
+       * @param value
+       *   Unsigned integer value to write.
+       */
+      static void WriteDecUInt(UInt32 value);
+
+      /**
+       * Logs result bytes from the controller for debugging.
+       * @param result
+       *   Result byte array.
+       */
+      static void LogResultBytes(const UInt8* result);
+
+      /**
+       * Logs a read failure message.
+       * @param message
+       *   Failure message.
+       */
+      static void LogReadFailure(CString message);
+
+      /**
+       * Logs the status of a calibrate attempt.
+       * @param attempt
+       *   Attempt number.
+       * @param st0
+       *   ST0 status byte.
+       * @param cyl
+       *   Current cylinder.
+       */
+      static void LogCalibrateStatus(UInt32 attempt, UInt8 st0, UInt8 cyl);
   };
 }

@@ -148,7 +148,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     }
   }
 
-  static void WriteHexByte(UInt8 value) {
+  void Driver::WriteHexByte(UInt8 value) {
     const char digits[] = "0123456789ABCDEF";
     char out[5] = {};
 
@@ -161,7 +161,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     Console::Write(out);
   }
 
-  static void WriteDecUInt(UInt32 value) {
+  void Driver::WriteDecUInt(UInt32 value) {
     char buffer[16] = {};
     UInt32 idx = 0;
 
@@ -177,7 +177,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     }
   }
 
-  static void LogResultBytes(const UInt8* result) {
+  void Driver::LogResultBytes(const UInt8* result) {
     Console::Write("FDC result: ");
 
     for (UInt32 i = 0; i < 7; ++i) {
@@ -191,12 +191,12 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     Console::WriteLine("");
   }
 
-  static void LogReadFailure(CString message) {
+  void Driver::LogReadFailure(CString message) {
     Console::Write("FDC read failed: ");
     Console::WriteLine(message);
   }
 
-  static void LogCalibrateStatus(UInt32 attempt, UInt8 st0, UInt8 cyl) {
+  void Driver::LogCalibrateStatus(UInt32 attempt, UInt8 st0, UInt8 cyl) {
     Console::Write("FDC calibrate attempt ");
     WriteDecUInt(attempt);
     Console::Write(": st0=");
@@ -281,8 +281,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     }
   }
 
-  #if defined(TEST)
-  bool Driver::TestGetDevice(
+  bool Driver::GetDeviceInfo(
     UInt32& deviceId,
     BlockDevice::Info& info,
     UInt8& driveIndex,
@@ -313,7 +312,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     return true;
   }
 
-  bool Driver::TestRead(
+  bool Driver::ReadToBuffer(
     UInt8 driveIndex,
     UInt32 lba,
     UInt32 count,
@@ -353,7 +352,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     return true;
   }
 
-  bool Driver::TestWrite(
+  bool Driver::WriteFromBuffer(
     UInt8 driveIndex,
     UInt32 lba,
     UInt32 count,
@@ -388,7 +387,6 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       headCount
     );
   }
-  #endif
 
   bool Driver::ProgramDMARead(UInt32 physicalAddress, UInt32 lengthBytes) {
     if (lengthBytes == 0 || lengthBytes > 0x10000) {
