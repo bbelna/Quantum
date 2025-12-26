@@ -252,24 +252,17 @@ namespace Quantum::System::FileSystems::FAT12 {
     FileSystem::FileInfo& outInfo,
     UInt8& outAttributes
   ) {
-    UInt32 sizeBytes = 0;
-    UInt8 attributes = 0;
-
     if (
       !_directory.GetEntryInfo(
         parentCluster,
         parentIsRoot,
         name,
-        attributes,
-        sizeBytes
+        outInfo,
+        outAttributes
       )
     ) {
       return false;
     }
-
-    outInfo.sizeBytes = sizeBytes;
-    outInfo.attributes = attributes;
-    outAttributes = attributes;
 
     return true;
   }

@@ -38,68 +38,84 @@ namespace Quantum::System::FileSystems::FAT12 {
       return false;
     }
 
-    if (index >= _volume->_rootEntryCount) {
-      end = true;
-
-      return false;
-    }
-
-    UInt32 entriesPerSector = bytesPerSector / 32;
-    UInt32 sectorIndex = index / entriesPerSector;
-    UInt32 entryIndex = index % entriesPerSector;
-
-    // check for end of root directory
-    if (sectorIndex >= _volume->_rootDirectorySectors) {
-      end = true;
-
-      return false;
-    }
-
     UInt8 sector[512] = {};
-    BlockDevice::Request request {};
+    UInt32 entriesPerSector = bytesPerSector / 32;
+    UInt32 rawCount = _volume->_rootEntryCount;
+    UInt32 currentSector = 0xFFFFFFFF;
+    UInt32 logicalIndex = 0;
+    LFNState lfn {};
 
-    request.deviceId = _volume->_device.id;
-    request.lba = _volume->_rootDirectoryStartLBA + sectorIndex;
-    request.count = 1;
-    request.buffer = sector;
+    ClearLFN(lfn);
 
-    if (BlockDevice::Read(request) != 0) {
-      return false;
+    for (UInt32 rawIndex = 0; rawIndex < rawCount; ++rawIndex) {
+      UInt32 sectorIndex = rawIndex / entriesPerSector;
+      UInt32 entryIndex = rawIndex % entriesPerSector;
+
+      if (sectorIndex >= _volume->_rootDirectorySectors) {
+        end = true;
+
+        return false;
+      }
+
+      if (sectorIndex != currentSector) {
+        BlockDevice::Request request {};
+
+        request.deviceId = _volume->_device.id;
+        request.lba = _volume->_rootDirectoryStartLBA + sectorIndex;
+        request.count = 1;
+        request.buffer = sector;
+
+        if (BlockDevice::Read(request) != 0) {
+          return false;
+        }
+
+        currentSector = sectorIndex;
+      }
+
+      const UInt8* base = sector + (entryIndex * 32);
+      UInt8 first = base[0];
+
+      if (first == 0x00) {
+        end = true;
+
+        return false;
+      }
+
+      if (first == 0xE5) {
+        ClearLFN(lfn);
+
+        continue;
+      }
+
+      UInt8 attributes = base[11];
+
+      if (attributes == 0x0F) {
+        ParseLFNEntry(base, lfn);
+
+        continue;
+      }
+
+      if ((attributes & 0x08) != 0) {
+        ClearLFN(lfn);
+
+        continue;
+      }
+
+      if (logicalIndex == index) {
+        PopulateRecord(_volume, base, lfn, record);
+        ClearLFN(lfn);
+
+        return true;
+      }
+
+      ++logicalIndex;
+
+      ClearLFN(lfn);
     }
 
-    const UInt8* base = sector + (entryIndex * 32);
-    UInt8 first = base[0];
+    end = true;
 
-    // check for end-of-directory marker
-    if (first == 0x00) {
-      end = true;
-
-      return false;
-    }
-
-    if (first == 0xE5) {
-      return false;
-    }
-
-    UInt8 attributes = base[11];
-
-    if (attributes == 0x0F) {
-      return false;
-    }
-
-    if ((attributes & 0x08) != 0) {
-      return false;
-    }
-
-    for (UInt32 i = 0; i < sizeof(record.name); ++i) {
-      record.name[i] = base[i];
-    }
-
-    record.attributes = attributes;
-    record.startCluster = _volume->ReadUInt16(base, 26);
-    record.sizeBytes = _volume->ReadUInt32(base, 28);
-
-    return true;
+    return false;
   }
 
   bool Directory::BuildShortName(CString name, UInt8* outName) {
@@ -111,9 +127,9 @@ namespace Quantum::System::FileSystems::FAT12 {
       outName[i] = ' ';
     }
 
+    bool inExtension = false;
     UInt32 index = 0;
     UInt32 outIndex = 0;
-    bool inExtension = false;
 
     while (name[index] != '\0') {
       char ch = name[index];
@@ -172,14 +188,82 @@ namespace Quantum::System::FileSystems::FAT12 {
       return false;
     }
 
-    UInt32 entriesPerCluster
-      = (bytesPerSector / 32) * _volume->_sectorsPerCluster;
-    UInt32 clusterIndex = index / entriesPerCluster;
-    UInt32 entryIndex = index % entriesPerCluster;
-
+    UInt32 entriesPerSector = bytesPerSector / 32;
     UInt32 cluster = startCluster;
+    UInt32 logicalIndex = 0;
+    LFNState lfn {};
 
-    for (UInt32 i = 0; i < clusterIndex; ++i) {
+    ClearLFN(lfn);
+
+    for (;;) {
+      UInt32 baseLBA
+        = _volume->_dataStartLBA
+        + (cluster - 2) * _volume->_sectorsPerCluster;
+
+      for (
+        UInt32 sectorIndex = 0;
+        sectorIndex < _volume->_sectorsPerCluster;
+        ++sectorIndex
+      ) {
+        UInt8 sector[512] = {};
+        BlockDevice::Request request {};
+
+        request.deviceId = _volume->_device.id;
+        request.lba = baseLBA + sectorIndex;
+        request.count = 1;
+        request.buffer = sector;
+
+        if (BlockDevice::Read(request) != 0) {
+          return false;
+        }
+
+        for (
+          UInt32 entryIndex = 0;
+          entryIndex < entriesPerSector;
+          ++entryIndex
+        ) {
+          const UInt8* base = sector + (entryIndex * 32);
+          UInt8 first = base[0];
+
+          if (first == 0x00) {
+            end = true;
+
+            return false;
+          }
+
+          if (first == 0xE5) {
+            ClearLFN(lfn);
+
+            continue;
+          }
+
+          UInt8 attributes = base[11];
+
+          if (attributes == 0x0F) {
+            ParseLFNEntry(base, lfn);
+
+            continue;
+          }
+
+          if ((attributes & 0x08) != 0) {
+            ClearLFN(lfn);
+
+            continue;
+          }
+
+          if (logicalIndex == index) {
+            PopulateRecord(_volume, base, lfn, record);
+            ClearLFN(lfn);
+
+            return true;
+          }
+
+          ++logicalIndex;
+
+          ClearLFN(lfn);
+        }
+      }
+
       UInt32 nextCluster = 0;
 
       if (!_volume || !_volume->ReadFATEntry(cluster, nextCluster)) {
@@ -195,104 +279,76 @@ namespace Quantum::System::FileSystems::FAT12 {
       cluster = nextCluster;
     }
 
-    UInt32 entriesPerSector = bytesPerSector / 32;
-    UInt32 sectorIndex = entryIndex / entriesPerSector;
-    UInt32 entryOffset = entryIndex % entriesPerSector;
+    end = true;
 
-    UInt32 lba
-      = _volume->_dataStartLBA + (cluster - 2)
-      * _volume->_sectorsPerCluster + sectorIndex;
-    UInt8 sector[512] = {};
-    BlockDevice::Request request {};
-
-    request.deviceId = _volume->_device.id;
-    request.lba = lba;
-    request.count = 1;
-    request.buffer = sector;
-
-    if (BlockDevice::Read(request) != 0) {
-      return false;
-    }
-
-    const UInt8* base = sector + (entryOffset * 32);
-    UInt8 first = base[0];
-
-    if (first == 0x00) {
-      end = true;
-
-      return false;
-    }
-
-    if (first == 0xE5) {
-      return false;
-    }
-
-    UInt8 attributes = base[11];
-
-    if (attributes == 0x0F) {
-      return false;
-    }
-
-    if ((attributes & 0x08) != 0) {
-      return false;
-    }
-
-    for (UInt32 i = 0; i < sizeof(record.name); ++i) {
-      record.name[i] = base[i];
-    }
-
-    record.attributes = attributes;
-    record.startCluster = _volume->ReadUInt16(base, 26);
-    record.sizeBytes = _volume->ReadUInt32(base, 28);
-
-    return true;
+    return false;
   }
 
   bool Directory::RecordToEntry(
     const Record& record,
     FileSystem::DirectoryEntry& entry
   ) {
-    UInt32 outIndex = 0;
-    bool hasExtension = false;
-    bool inExtension = false;
+    if (record.longName[0] != '\0') {
+      UInt32 limit = sizeof(entry.name) - 1;
 
-    for (UInt32 i = 8; i < 11; ++i) {
-      if (record.name[i] != ' ') {
-        hasExtension = true;
+      for (UInt32 i = 0; i < limit; ++i) {
+        entry.name[i] = record.longName[i];
 
-        break;
+        if (record.longName[i] == '\0') {
+          break;
+        }
       }
-    }
 
-    for (UInt32 i = 0; i < 11; ++i) {
-      UInt8 ch = record.name[i];
+      entry.name[limit] = '\0';
+    } else {
+      bool hasExtension = false;
+      bool inExtension = false;
+      UInt32 outIndex = 0;
 
-      if (i == 8) {
-        if (hasExtension) {
-          entry.name[outIndex++] = '.';
+      for (UInt32 i = 8; i < 11; ++i) {
+        if (record.name[i] != ' ') {
+          hasExtension = true;
+
+          break;
+        }
+      }
+
+      for (UInt32 i = 0; i < 11; ++i) {
+        UInt8 ch = record.name[i];
+
+        if (i == 8) {
+          if (hasExtension) {
+            entry.name[outIndex++] = '.';
+          }
+
+          inExtension = true;
         }
 
-        inExtension = true;
-      }
+        if (ch == ' ') {
+          if (!inExtension) {
+            continue;
+          }
 
-      if (ch == ' ') {
-        if (!inExtension) {
-          continue;
+          break;
         }
 
-        break;
+        if (outIndex >= sizeof(entry.name) - 1) {
+          break;
+        }
+
+        entry.name[outIndex++] = static_cast<char>(ch);
       }
 
-      if (outIndex >= sizeof(entry.name) - 1) {
-        break;
-      }
-
-      entry.name[outIndex++] = static_cast<char>(ch);
+      entry.name[outIndex] = '\0';
     }
 
-    entry.name[outIndex] = '\0';
     entry.attributes = record.attributes;
     entry.sizeBytes = record.sizeBytes;
+    entry.createTime = record.createTime;
+    entry.createDate = record.createDate;
+    entry.accessDate = record.accessDate;
+    entry.writeTime = record.writeTime;
+    entry.writeDate = record.writeDate;
 
     return true;
   }
@@ -313,9 +369,33 @@ namespace Quantum::System::FileSystems::FAT12 {
       return false;
     }
 
-    Record record {};
     bool end = false;
+    Record record {};
     UInt32 index = 0;
+
+    auto matchesName = [&](const Record& candidate) -> bool {
+      FileSystem::DirectoryEntry entry {};
+
+      if (RecordToEntry(candidate, entry)) {
+        if (_volume->MatchName(entry.name, name)) {
+          return true;
+        }
+      }
+
+      if (candidate.longName[0] != '\0') {
+        Record shortRecord = candidate;
+
+        shortRecord.longName[0] = '\0';
+
+        FileSystem::DirectoryEntry shortEntry {};
+
+        if (RecordToEntry(shortRecord, shortEntry)) {
+          return _volume->MatchName(shortEntry.name, name);
+        }
+      }
+
+      return false;
+    };
 
     for (;;) {
       bool ok = false;
@@ -326,18 +406,12 @@ namespace Quantum::System::FileSystems::FAT12 {
         ok = ReadRecord(startCluster, index, record, end);
       }
 
-      if (ok) {
-        FileSystem::DirectoryEntry entry {};
+      if (ok && matchesName(record)) {
+        outCluster = record.startCluster;
+        outAttributes = record.attributes;
+        outSize = record.sizeBytes;
 
-        if (RecordToEntry(record, entry)) {
-          if (_volume->MatchName(entry.name, name)) {
-            outCluster = record.startCluster;
-            outAttributes = record.attributes;
-            outSize = record.sizeBytes;
-
-            return true;
-          }
-        }
+        return true;
       }
 
       if (end) {
@@ -366,101 +440,200 @@ namespace Quantum::System::FileSystems::FAT12 {
       return false;
     }
 
-    bool end = false;
-    UInt32 index = 0;
+    UInt32 bytesPerSector = _volume->_info.sectorSize;
 
-    auto computeLocation = [&](
-      UInt32 entryIndex,
-      UInt32& lba,
-      UInt32& offset
-    ) -> bool {
-      if (!_volume || !_volume->_valid) {
-        return false;
+    if (bytesPerSector != 512) {
+      // only support 512-byte sectors for now
+      return false;
+    }
+
+    UInt32 entriesPerSector = bytesPerSector / 32;
+    LFNState lfn {};
+
+    ClearLFN(lfn);
+
+    auto matchesName = [&](const Record& candidate) -> bool {
+      FileSystem::DirectoryEntry entry {};
+
+      if (RecordToEntry(candidate, entry)) {
+        if (_volume->MatchName(entry.name, name)) {
+          return true;
+        }
       }
 
-      UInt32 bytesPerSector = _volume->_info.sectorSize;
+      if (candidate.longName[0] != '\0') {
+        Record shortRecord = candidate;
 
-      if (bytesPerSector != 512) {
-        // only support 512-byte sectors for now
-        return false;
+        shortRecord.longName[0] = '\0';
+
+        FileSystem::DirectoryEntry shortEntry {};
+
+        if (RecordToEntry(shortRecord, shortEntry)) {
+          return _volume->MatchName(shortEntry.name, name);
+        }
       }
 
-      if (parentIsRoot) {
-        UInt32 entriesPerSector = bytesPerSector / 32;
-        UInt32 sectorIndex = entryIndex / entriesPerSector;
-        UInt32 entryOffset = entryIndex % entriesPerSector;
+      return false;
+    };
+
+    if (parentIsRoot) {
+      UInt8 sector[512] = {};
+      UInt32 rawCount = _volume->_rootEntryCount;
+      UInt32 currentSector = 0xFFFFFFFF;
+
+      for (UInt32 rawIndex = 0; rawIndex < rawCount; ++rawIndex) {
+        UInt32 sectorIndex = rawIndex / entriesPerSector;
+        UInt32 entryIndex = rawIndex % entriesPerSector;
 
         if (sectorIndex >= _volume->_rootDirectorySectors) {
           return false;
         }
 
-        lba = _volume->_rootDirectoryStartLBA + sectorIndex;
-        offset = entryOffset * 32;
+        if (sectorIndex != currentSector) {
+          BlockDevice::Request request {};
 
-        return true;
+          request.deviceId = _volume->_device.id;
+          request.lba = _volume->_rootDirectoryStartLBA + sectorIndex;
+          request.count = 1;
+          request.buffer = sector;
+
+          if (BlockDevice::Read(request) != 0) {
+            return false;
+          }
+
+          currentSector = sectorIndex;
+        }
+
+        const UInt8* base = sector + (entryIndex * 32);
+        UInt8 first = base[0];
+
+        if (first == 0x00) {
+          return false;
+        }
+
+        if (first == 0xE5) {
+          ClearLFN(lfn);
+
+          continue;
+        }
+
+        UInt8 attributes = base[11];
+
+        if (attributes == 0x0F) {
+          ParseLFNEntry(base, lfn);
+
+          continue;
+        }
+
+        if ((attributes & 0x08) != 0) {
+          ClearLFN(lfn);
+
+          continue;
+        }
+
+        PopulateRecord(_volume, base, lfn, record);
+
+        if (matchesName(record)) {
+          outLBA = _volume->_rootDirectoryStartLBA + sectorIndex;
+          outOffset = entryIndex * 32;
+
+          ClearLFN(lfn);
+
+          return true;
+        }
+
+        ClearLFN(lfn);
       }
 
-      if (parentCluster < 2) {
+      return false;
+    }
+
+    if (parentCluster < 2) {
+      return false;
+    }
+
+    UInt32 cluster = parentCluster;
+
+    for (;;) {
+      UInt32 baseLBA
+        = _volume->_dataStartLBA
+        + (cluster - 2) * _volume->_sectorsPerCluster;
+
+      for (
+        UInt32 sectorIndex = 0;
+        sectorIndex < _volume->_sectorsPerCluster;
+        ++sectorIndex
+      ) {
+        UInt8 sector[512] = {};
+        BlockDevice::Request request {};
+
+        request.deviceId = _volume->_device.id;
+        request.lba = baseLBA + sectorIndex;
+        request.count = 1;
+        request.buffer = sector;
+
+        if (BlockDevice::Read(request) != 0) {
+          return false;
+        }
+
+        for (
+          UInt32 entryIndex = 0;
+          entryIndex < entriesPerSector;
+          ++entryIndex
+        ) {
+          const UInt8* base = sector + (entryIndex * 32);
+          UInt8 first = base[0];
+
+          if (first == 0x00) {
+            return false;
+          }
+
+          if (first == 0xE5) {
+            ClearLFN(lfn);
+
+            continue;
+          }
+
+          UInt8 attributes = base[11];
+
+          if (attributes == 0x0F) {
+            ParseLFNEntry(base, lfn);
+
+            continue;
+          }
+
+          if ((attributes & 0x08) != 0) {
+            ClearLFN(lfn);
+
+            continue;
+          }
+
+          PopulateRecord(_volume, base, lfn, record);
+
+          if (matchesName(record)) {
+            outLBA = baseLBA + sectorIndex;
+            outOffset = entryIndex * 32;
+
+            ClearLFN(lfn);
+
+            return true;
+          }
+
+          ClearLFN(lfn);
+        }
+      }
+
+      UInt32 nextCluster = 0;
+
+      if (!_volume || !_volume->ReadFATEntry(cluster, nextCluster)) {
         return false;
       }
 
-      UInt32 entriesPerCluster
-        = (bytesPerSector / 32) * _volume->_sectorsPerCluster;
-      UInt32 clusterIndex = entryIndex / entriesPerCluster;
-      UInt32 clusterEntryIndex = entryIndex % entriesPerCluster;
-      UInt32 cluster = parentCluster;
-
-      for (UInt32 i = 0; i < clusterIndex; ++i) {
-        UInt32 nextCluster = 0;
-
-        if (!_volume || !_volume->ReadFATEntry(cluster, nextCluster)) {
-          return false;
-        }
-
-        if (FAT::IsEndOfChain(nextCluster)) {
-          return false;
-        }
-
-        cluster = nextCluster;
-      }
-
-      UInt32 entriesPerSector = bytesPerSector / 32;
-      UInt32 sectorIndex = clusterEntryIndex / entriesPerSector;
-      UInt32 entryOffset = clusterEntryIndex % entriesPerSector;
-
-      lba
-        = _volume->_dataStartLBA
-        + (cluster - 2) * _volume->_sectorsPerCluster
-        + sectorIndex;
-      offset = entryOffset * 32;
-
-      return true;
-    };
-
-    for (;;) {
-      bool ok = false;
-
-      if (parentIsRoot) {
-        ok = ReadRootRecord(index, record, end);
-      } else {
-        ok = ReadRecord(parentCluster, index, record, end);
-      }
-
-      if (ok) {
-        FileSystem::DirectoryEntry entry {};
-
-        if (RecordToEntry(record, entry)) {
-          if (_volume->MatchName(entry.name, name)) {
-            return computeLocation(index, outLBA, outOffset);
-          }
-        }
-      }
-
-      if (end) {
+      if (FAT::IsEndOfChain(nextCluster)) {
         break;
       }
 
-      ++index;
+      cluster = nextCluster;
     }
 
     return false;
@@ -689,8 +862,8 @@ namespace Quantum::System::FileSystems::FAT12 {
       return false;
     }
 
-    UInt32 existingCluster = 0;
     UInt8 existingAttributes = 0;
+    UInt32 existingCluster = 0;
     UInt32 existingSize = 0;
 
     if (
@@ -727,9 +900,9 @@ namespace Quantum::System::FileSystems::FAT12 {
         = _volume->_freeClusters * _volume->_sectorsPerCluster;
     }
 
+    UInt8 zeroSector[512] = {};
     UInt32 clusterLBA
       = _volume->_dataStartLBA + (newCluster - 2) * _volume->_sectorsPerCluster;
-    UInt8 zeroSector[512] = {};
 
     for (UInt32 s = 0; s < _volume->_sectorsPerCluster; ++s) {
       BlockDevice::Request request {};
@@ -820,8 +993,8 @@ namespace Quantum::System::FileSystems::FAT12 {
       return false;
     }
 
-    UInt32 existingCluster = 0;
     UInt8 existingAttributes = 0;
+    UInt32 existingCluster = 0;
     UInt32 existingSize = 0;
 
     if (
@@ -978,8 +1151,8 @@ namespace Quantum::System::FileSystems::FAT12 {
     UInt32 parentCluster,
     bool parentIsRoot,
     CString name,
-    UInt8& outAttributes,
-    UInt32& outSize
+    FileSystem::FileInfo& outInfo,
+    UInt8& outAttributes
   ) {
     Record record {};
     UInt32 lba = 0;
@@ -998,10 +1171,157 @@ namespace Quantum::System::FileSystems::FAT12 {
       return false;
     }
 
+    outInfo.sizeBytes = record.sizeBytes;
+    outInfo.attributes = record.attributes;
+    outInfo.createTime = record.createTime;
+    outInfo.createDate = record.createDate;
+    outInfo.accessDate = record.accessDate;
+    outInfo.writeTime = record.writeTime;
+    outInfo.writeDate = record.writeDate;
     outAttributes = record.attributes;
-    outSize = record.sizeBytes;
 
     return true;
   }
 
+  void Directory::ClearLFN(LFNState& state) {
+    state.checksum = 0;
+    state.expected = 0;
+    state.seenMask = 0;
+    state.active = false;
+    state.name[0] = '\0';
+  }
+
+  UInt8 Directory::LFNChecksum(const UInt8* shortName) {
+    UInt8 sum = 0;
+
+    for (UInt32 i = 0; i < 11; ++i) {
+      sum = static_cast<UInt8>(((sum & 1) ? 0x80 : 0) + (sum >> 1));
+      sum = static_cast<UInt8>(sum + shortName[i]);
+    }
+
+    return sum;
+  }
+
+  void Directory::CopyLFNChars(
+    LFNState& state,
+    UInt32 offset,
+    const UInt8* base,
+    UInt32 count
+  ) {
+    UInt32 maxChars = FileSystem::maxDirectoryLength - 1;
+
+    for (UInt32 i = 0; i < count; ++i) {
+      UInt16 value = static_cast<UInt16>(
+        base[i * 2] | (static_cast<UInt16>(base[i * 2 + 1]) << 8)
+      );
+
+      if (value == 0x0000 || value == 0xFFFF) {
+        if (offset + i < FileSystem::maxDirectoryLength) {
+          state.name[offset + i] = '\0';
+        }
+
+        return;
+      }
+
+      if (offset + i >= maxChars) {
+        return;
+      }
+
+      state.name[offset + i]
+        = value <= 0x7F ? static_cast<char>(value) : '?';
+    }
+  }
+
+  void Directory::ParseLFNEntry(const UInt8* base, LFNState& state) {
+    UInt8 order = static_cast<UInt8>(base[0] & 0x1F);
+    UInt8 checksum = base[13];
+
+    if (order == 0) {
+      ClearLFN(state);
+
+      return;
+    }
+
+    if ((base[0] & 0x40) != 0) {
+      ClearLFN(state);
+
+      state.active = true;
+      state.checksum = checksum;
+      state.expected = order;
+
+      for (UInt32 i = 0; i < FileSystem::maxDirectoryLength; ++i) {
+        state.name[i] = '\0';
+      }
+    }
+
+    if (!state.active || checksum != state.checksum) {
+      ClearLFN(state);
+
+      return;
+    }
+
+    UInt32 maxSegments
+      = (FileSystem::maxDirectoryLength + 12) / 13;
+
+    if (order > maxSegments) {
+      return;
+    }
+
+    UInt32 offset = (order - 1) * 13;
+
+    CopyLFNChars(state, offset, base + 1, 5);
+    CopyLFNChars(state, offset + 5, base + 14, 6);
+    CopyLFNChars(state, offset + 11, base + 28, 2);
+
+    state.seenMask = static_cast<UInt8>(state.seenMask | (1u << (order - 1)));
+  }
+
+  bool Directory::UseLFN(const LFNState& state, const UInt8* shortName) {
+    if (!state.active || state.name[0] == '\0') {
+      return false;
+    }
+
+    return LFNChecksum(shortName) == state.checksum;
+  }
+
+  void Directory::PopulateRecord(
+    Volume* volume,
+    const UInt8* base,
+    const LFNState& lfn,
+    Record& record
+  ) {
+    if (!volume || !base) {
+      return;
+    }
+
+    for (UInt32 i = 0; i < sizeof(record.name); ++i) {
+      record.name[i] = base[i];
+    }
+
+    record.longName[0] = '\0';
+
+    if (UseLFN(lfn, record.name)) {
+      UInt32 limit = sizeof(record.longName) - 1;
+
+      for (UInt32 i = 0; i < limit; ++i) {
+        record.longName[i] = lfn.name[i];
+
+        if (lfn.name[i] == '\0') {
+          break;
+        }
+      }
+
+      record.longName[limit] = '\0';
+    }
+
+    record.attributes = base[11];
+    record.createTime = volume->ReadUInt16(base, 14);
+    record.createDate = volume->ReadUInt16(base, 16);
+    record.accessDate = volume->ReadUInt16(base, 18);
+    record.writeTime = volume->ReadUInt16(base, 22);
+    record.writeDate = volume->ReadUInt16(base, 24);
+    record.startCluster = volume->ReadUInt16(base, 26);
+    record.sizeBytes = volume->ReadUInt32(base, 28);
+  }
 }
+

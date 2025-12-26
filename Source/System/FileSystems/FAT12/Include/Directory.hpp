@@ -30,9 +30,39 @@ namespace Quantum::System::FileSystems::FAT12 {
         UInt8 name[11];
 
         /**
+         * Entry long name.
+         */
+        char longName[ABI::FileSystem::maxDirectoryLength];
+
+        /**
          * Entry attribute flags.
          */
         UInt8 attributes;
+
+        /**
+         * FAT create time.
+         */
+        UInt16 createTime;
+
+        /**
+         * FAT create date.
+         */
+        UInt16 createDate;
+
+        /**
+         * FAT last access date.
+         */
+        UInt16 accessDate;
+
+        /**
+         * FAT last write time.
+         */
+        UInt16 writeTime;
+
+        /**
+         * FAT last write date.
+         */
+        UInt16 writeDate;
 
         /**
          * Entry start cluster.
@@ -279,10 +309,10 @@ namespace Quantum::System::FileSystems::FAT12 {
        *   True if parent is root.
        * @param name
        *   Entry name.
+       * @param outInfo
+       *   Receives file info.
        * @param outAttributes
        *   Receives attributes.
-       * @param outSize
-       *   Receives size.
        * @return
        *   True on success.
        */
@@ -290,11 +320,93 @@ namespace Quantum::System::FileSystems::FAT12 {
         UInt32 parentCluster,
         bool parentIsRoot,
         CString name,
-        UInt8& outAttributes,
-        UInt32& outSize
+        ABI::FileSystem::FileInfo& outInfo,
+        UInt8& outAttributes
       );
 
     private:
+      /**
+       * Long filename tracking state.
+       */
+      struct LFNState {
+        char name[ABI::FileSystem::maxDirectoryLength];
+        UInt8 checksum;
+        UInt8 expected;
+        UInt8 seenMask;
+        bool active;
+      };
+
+      /**
+       * Clears LFN tracking state.
+       * @param state
+       *   State to clear.
+       */
+      static void ClearLFN(LFNState& state);
+
+      /**
+       * Computes the LFN checksum for a short name.
+       * @param shortName
+       *   8.3 name bytes.
+       * @return
+       *   LFN checksum.
+       */
+      static UInt8 LFNChecksum(const UInt8* shortName);
+
+      /**
+       * Copies UTF-16 LFN characters into the state buffer.
+       * @param state
+       *   LFN state to update.
+       * @param offset
+       *   Output offset.
+       * @param base
+       *   Raw LFN entry data pointer.
+       * @param count
+       *   Character count.
+       */
+      static void CopyLFNChars(
+        LFNState& state,
+        UInt32 offset,
+        const UInt8* base,
+        UInt32 count
+      );
+
+      /**
+       * Parses an LFN entry into the tracking state.
+       * @param base
+       *   Raw entry pointer.
+       * @param state
+       *   LFN state to update.
+       */
+      static void ParseLFNEntry(const UInt8* base, LFNState& state);
+
+      /**
+       * Returns true if the LFN state matches the short name.
+       * @param state
+       *   LFN state.
+       * @param shortName
+       *   8.3 name bytes.
+       * @return
+       *   True if the LFN should be used.
+       */
+      static bool UseLFN(const LFNState& state, const UInt8* shortName);
+
+      /**
+       * Populates a record from a raw entry.
+       * @param volume
+       *   Volume instance.
+       * @param base
+       *   Raw entry pointer.
+       * @param lfn
+       *   LFN state.
+       * @param record
+       *   Record to fill.
+       */
+      static void PopulateRecord(
+        Volume* volume,
+        const UInt8* base,
+        const LFNState& lfn,
+        Record& record
+      );
       /**
        * Writes a raw directory entry.
        * @param lba

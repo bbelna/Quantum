@@ -151,6 +151,31 @@ namespace Quantum::ABI {
          * File attribute flags.
          */
         UInt32 attributes;
+
+        /**
+         * FAT create time.
+         */
+        UInt16 createTime;
+
+        /**
+         * FAT create date.
+         */
+        UInt16 createDate;
+
+        /**
+         * FAT last access date.
+         */
+        UInt16 accessDate;
+
+        /**
+         * FAT last write time.
+         */
+        UInt16 writeTime;
+
+        /**
+         * FAT last write date.
+         */
+        UInt16 writeDate;
       };
 
       /**
@@ -201,6 +226,31 @@ namespace Quantum::ABI {
          * Entry size in bytes.
          */
         UInt32 sizeBytes;
+
+        /**
+         * FAT create time.
+         */
+        UInt16 createTime;
+
+        /**
+         * FAT create date.
+         */
+        UInt16 createDate;
+
+        /**
+         * FAT last access date.
+         */
+        UInt16 accessDate;
+
+        /**
+         * FAT last write time.
+         */
+        UInt16 writeTime;
+
+        /**
+         * FAT last write date.
+         */
+        UInt16 writeDate;
       };
 
       /**

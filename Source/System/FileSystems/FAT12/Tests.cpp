@@ -24,6 +24,8 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
   static UInt32 _testsFailed = 0;
   static UInt32 _testCount = 0;
   static bool _skipLogged = false;
+  static const char _lfnDir[] = "LONGDIRNAME";
+  static const char _lfnFile[] = "LONGFILENAME.TXT";
 
   static void WriteDec(UInt32 value) {
     char buffer[16] = {};
@@ -39,6 +41,32 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
 
       Console::Write(c);
     }
+  }
+
+  static bool NameEquals(CString left, CString right) {
+    if (!left || !right) {
+      return false;
+    }
+
+    UInt32 index = 0;
+
+    while (left[index] != '\0' && right[index] != '\0') {
+      if (left[index] != right[index]) {
+        return false;
+      }
+
+      ++index;
+    }
+
+    return left[index] == '\0' && right[index] == '\0';
+  }
+
+  static bool HasTimestamp(const FileSystem::DirectoryEntry& entry) {
+    return entry.createDate != 0
+      || entry.createTime != 0
+      || entry.accessDate != 0
+      || entry.writeDate != 0
+      || entry.writeTime != 0;
   }
 
   static void LogHeader() {
@@ -261,6 +289,110 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     }
 
     return Assert(true, "testdir read");
+  }
+
+  static bool TestLFNRoot() {
+    if (!WaitForFloppyReady()) {
+      LogSkip("floppy not ready");
+
+      return true;
+    }
+
+    Volume volume {};
+
+    if (!volume.Load()) {
+      LogSkip("no FAT12 volume");
+
+      return true;
+    }
+
+    bool found = false;
+    FileSystem::DirectoryEntry entry {};
+
+    for (UInt32 i = 0; i < volume.GetRootEntryCount(); ++i) {
+      bool end = false;
+
+      if (volume.ReadRootEntry(i, entry, end)) {
+        if (NameEquals(entry.name, _lfnDir)) {
+          found = true;
+
+          if ((entry.attributes & 0x10) == 0) {
+            return Assert(false, "lfn dir not a directory");
+          }
+
+          return Assert(HasTimestamp(entry), "lfn dir timestamp missing");
+        }
+      }
+
+      if (end) {
+        break;
+      }
+    }
+
+    if (!found) {
+      return Assert(false, "lfn dir missing");
+    }
+
+    return true;
+  }
+
+  static bool TestLFNFile() {
+    if (!WaitForFloppyReady()) {
+      LogSkip("floppy not ready");
+
+      return true;
+    }
+
+    Volume volume {};
+
+    if (!volume.Load()) {
+      LogSkip("no FAT12 volume");
+
+      return true;
+    }
+
+    UInt8 dirAttributes = 0;
+    UInt32 dirCluster = 0;
+    UInt32 dirSize = 0;
+
+    if (
+      !volume.FindEntry(
+        0,
+        true,
+        _lfnDir,
+        dirCluster,
+        dirAttributes,
+        dirSize
+      )
+    ) {
+      return Assert(false, "lfn dir missing");
+    }
+
+    if ((dirAttributes & 0x10) == 0) {
+      return Assert(false, "lfn dir not a directory");
+    }
+
+    FileSystem::DirectoryEntry entry {};
+
+    for (UInt32 i = 0; i < 256; ++i) {
+      bool end = false;
+
+      if (volume.ReadDirectoryEntry(dirCluster, i, entry, end)) {
+        if (NameEquals(entry.name, _lfnFile)) {
+          if ((entry.attributes & 0x10) != 0) {
+            return Assert(false, "lfn file is a directory");
+          }
+
+          return Assert(HasTimestamp(entry), "lfn file timestamp missing");
+        }
+      }
+
+      if (end) {
+        break;
+      }
+    }
+
+    return Assert(false, "lfn file missing");
   }
 
   static bool TestFileRead() {
@@ -998,6 +1130,8 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     RunTest("FAT12 volume info", TestVolumeInfo);
     RunTest("FAT12 root directory", TestRootDirectory);
     RunTest("FAT12 TESTDIR", TestSubDirectory);
+    RunTest("FAT12 LFN root", TestLFNRoot);
+    RunTest("FAT12 LFN file", TestLFNFile);
     RunTest("FAT12 TEST.TXT read", TestFileRead);
     RunTest("FAT12 TEST.TXT seek", TestFileSeek);
     RunTest("FAT12 create directory", TestCreateDirectory);
