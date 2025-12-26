@@ -355,6 +355,15 @@ namespace Quantum::System::FileSystems::FAT12 {
       bool FindFreeCluster(UInt32& outCluster);
 
       /**
+       * Counts free clusters in the FAT.
+       * @param outCount
+       *   Receives the free cluster count.
+       * @return
+       *   True if the count was computed.
+       */
+      bool CountFreeClusters(UInt32& outCount);
+
+      /**
        * Loads the FAT into a local cache.
        * @return
        *   True if the cache was loaded.
@@ -496,6 +505,11 @@ namespace Quantum::System::FileSystems::FAT12 {
        * Total cluster count.
        */
       UInt32 _clusterCount = 0;
+
+      /**
+       * Free cluster count.
+       */
+      UInt32 _freeClusters = 0;
 
       /**
        * Reads the current boot sector into the provided buffer.

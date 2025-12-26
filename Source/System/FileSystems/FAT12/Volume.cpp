@@ -82,8 +82,13 @@ namespace Quantum::System::FileSystems::FAT12 {
     _clusterCount = clusterCount;
     _valid = true;
     _nextFreeCluster = 2;
+    _freeClusters = 0;
 
     LoadFATCache();
+
+    if (CountFreeClusters(_freeClusters)) {
+      _info.freeSectors = _freeClusters * _sectorsPerCluster;
+    }
 
     return true;
   }
@@ -260,7 +265,6 @@ namespace Quantum::System::FileSystems::FAT12 {
         = _dataStartLBA
         + (cluster - 2) * _sectorsPerCluster
         + sectorOffset;
-
       BlockDevice::Request request {};
 
       request.deviceId = _device.id;
@@ -350,6 +354,11 @@ namespace Quantum::System::FileSystems::FAT12 {
       }
 
       startCluster = firstCluster;
+
+      if (_freeClusters > 0) {
+        --_freeClusters;
+        _info.freeSectors = _freeClusters * _sectorsPerCluster;
+      }
     }
 
     UInt32 clustersNeeded = (endOffset + clusterSize - 1) / clusterSize;
@@ -391,6 +400,11 @@ namespace Quantum::System::FileSystems::FAT12 {
 
       lastCluster = newCluster;
       ++clusterCount;
+
+      if (_freeClusters > 0) {
+        --_freeClusters;
+        _info.freeSectors = _freeClusters * _sectorsPerCluster;
+      }
     }
 
     UInt32 skipClusters = offset / clusterSize;
@@ -421,7 +435,6 @@ namespace Quantum::System::FileSystems::FAT12 {
         = _dataStartLBA
         + (currentCluster - 2) * _sectorsPerCluster
         + sectorOffset;
-
       BlockDevice::Request request {};
 
       request.deviceId = _device.id;
@@ -582,6 +595,11 @@ namespace Quantum::System::FileSystems::FAT12 {
 
     if (!WriteFATEntry(newCluster, 0xFFF)) {
       return false;
+    }
+
+    if (_freeClusters > 0) {
+      --_freeClusters;
+      _info.freeSectors = _freeClusters * _sectorsPerCluster;
     }
 
     UInt32 clusterLBA
@@ -748,9 +766,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     UInt32 sectorOffset = fatOffset / bytesPerSector;
     UInt32 byteOffset = fatOffset % bytesPerSector;
     UInt32 fatLBA = _fatStartLBA + sectorOffset;
-
     UInt8 sector[512] = {};
-
     BlockDevice::Request request {};
 
     request.deviceId = _device.id;
@@ -1038,6 +1054,41 @@ namespace Quantum::System::FileSystems::FAT12 {
     }
 
     return false;
+  }
+
+  bool Volume::CountFreeClusters(UInt32& outCount) {
+    outCount = 0;
+
+    if (!_valid) {
+      return false;
+    }
+
+    if (_clusterCount == 0) {
+      return true;
+    }
+
+    UInt32 maxCluster = _clusterCount + 1;
+
+    for (UInt32 cluster = 2; cluster <= maxCluster; ++cluster) {
+      UInt32 nextCluster = 0;
+
+      if (_fatCached) {
+        if (!ReadFATEntryCached(cluster, nextCluster)) {
+          return false;
+        }
+      } else {
+        if (!ReadFATEntry(cluster, nextCluster)) {
+          return false;
+        }
+      }
+
+      // free clusters are marked with 0x000
+      if (nextCluster == 0x000) {
+        ++outCount;
+      }
+    }
+
+    return true;
   }
 
   bool Volume::ReadRootRecord(
@@ -1655,14 +1706,16 @@ namespace Quantum::System::FileSystems::FAT12 {
             UInt32 offset = 0;
             bool locEnd = false;
 
-            if (GetDirectoryEntryLocation(
+            if (
+              GetDirectoryEntryLocation(
                 parentCluster,
                 parentIsRoot,
                 index,
                 lba,
                 offset,
                 locEnd
-              )) {
+              )
+            ) {
               outLBA = lba;
               outOffset = offset;
 
@@ -1778,6 +1831,8 @@ namespace Quantum::System::FileSystems::FAT12 {
       if (!WriteFATEntry(cluster, 0x000)) {
         return false;
       }
+      ++_freeClusters;
+      _info.freeSectors = _freeClusters * _sectorsPerCluster;
 
       if (IsEndOfChain(nextCluster)) {
         break;
@@ -1832,14 +1887,16 @@ namespace Quantum::System::FileSystems::FAT12 {
     UInt32 lba = 0;
     UInt32 offset = 0;
 
-    if (!FindEntryLocation(
+    if (
+      !FindEntryLocation(
         parentCluster,
         parentIsRoot,
         name,
         record,
         lba,
         offset
-      )) {
+      )
+    ) {
       return false;
     }
 
@@ -1866,14 +1923,16 @@ namespace Quantum::System::FileSystems::FAT12 {
     UInt32 lba = 0;
     UInt32 offset = 0;
 
-    if (!FindEntryLocation(
+    if (
+      !FindEntryLocation(
         parentCluster,
         parentIsRoot,
         name,
         record,
         lba,
         offset
-      )) {
+      )
+    ) {
       return false;
     }
 
@@ -1881,14 +1940,16 @@ namespace Quantum::System::FileSystems::FAT12 {
     UInt8 existingAttributes = 0;
     UInt32 existingSize = 0;
 
-    if (FindEntry(
+    if (
+      FindEntry(
         parentCluster,
         parentIsRoot,
         newName,
         existingCluster,
         existingAttributes,
         existingSize
-      )) {
+      )
+    ) {
       return false;
     }
 
