@@ -331,8 +331,8 @@ namespace Quantum::System::Kernel::Helpers {
         default: {
           // unknown specifier: output it literally as "%x"
           if (
-            !AppendChar(buffer, length, out, '%') ||
-            !AppendChar(buffer, length, out, *p)
+            !AppendChar(buffer, length, out, '%')
+            || !AppendChar(buffer, length, out, *p)
           ) {
             ok = false;
           }

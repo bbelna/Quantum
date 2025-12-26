@@ -108,8 +108,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       previousTask->context = currentContext;
 
       if (
-        previousTask->state == Task::State::Running &&
-        previousTask != _idleTask
+        previousTask->state == Task::State::Running
+        && previousTask != _idleTask
       ) {
         previousTask->state = Task::State::Ready;
 
@@ -139,10 +139,10 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     }
 
     if (
-      previousTask &&
-      previousTask != _idleTask &&
-      previousTask->state == Task::State::Terminated &&
-      previousTask != nextTask
+      previousTask
+      && previousTask != _idleTask
+      && previousTask->state == Task::State::Terminated
+      && previousTask != nextTask
     ) {
       _pendingCleanup = previousTask;
     }

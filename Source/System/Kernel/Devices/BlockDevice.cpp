@@ -54,9 +54,9 @@ namespace Quantum::System::Kernel::Devices {
       Device* device = _devices[i];
 
       if (
-        !device ||
-        device->portId == 0 ||
-        device->info.type != type
+        !device
+        || device->portId == 0
+        || device->info.type != type
       ) {
         continue;
       }
@@ -147,9 +147,9 @@ namespace Quantum::System::Kernel::Devices {
     }
 
     if (
-      info.type == Type::Unknown ||
-      info.sectorSize == 0 ||
-      info.sectorCount == 0
+      info.type == Type::Unknown
+      || info.sectorSize == 0
+      || info.sectorCount == 0
     ) {
       return 0;
     }
@@ -162,8 +162,8 @@ namespace Quantum::System::Kernel::Devices {
       }
 
       if (
-        device->info.type == info.type &&
-        device->info.deviceIndex == info.deviceIndex
+        device->info.type == info.type
+        && device->info.deviceIndex == info.deviceIndex
       ) {
         return 0;
       }

@@ -711,8 +711,12 @@ namespace Quantum::System::FileSystems::FAT12 {
               bool haveLocation = false;
 
               if (
-                !(lastName[0] == '.' && lastName[1] == '\0') &&
-                !(lastName[0] == '.' && lastName[1] == '.' && lastName[2] == '\0')
+                !(lastName[0] == '.' && lastName[1] == '\0')
+                && !(
+                  lastName[0] == '.'
+                  && lastName[1] == '.'
+                  && lastName[2] == '\0'
+                )
               ) {
                 haveLocation = volume->GetEntryLocation(
                   lastParentCluster,

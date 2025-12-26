@@ -50,12 +50,12 @@ namespace Quantum::System::FileSystems::FAT12 {
 
     // validate essential parameters
     if (
-      bytesPerSector == 0 ||
-      sectorsPerCluster == 0 ||
-      reservedSectors == 0 ||
-      fatCount == 0 ||
-      sectorsPerFAT == 0 ||
-      totalSectors == 0
+      bytesPerSector == 0
+      || sectorsPerCluster == 0
+      || reservedSectors == 0
+      || fatCount == 0
+      || sectorsPerFAT == 0
+      || totalSectors == 0
     ) {
       return false;
     }

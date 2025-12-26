@@ -1162,8 +1162,8 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     }
 
     if (
-      bytesPerSector < 128 ||
-      (bytesPerSector & (bytesPerSector - 1)) != 0
+      bytesPerSector < 128
+      || (bytesPerSector & (bytesPerSector - 1)) != 0
     ) {
       return false;
     }

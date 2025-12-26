@@ -75,8 +75,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       if (
-        _bootInitBundlePhys != 0 &&
-        _bootInitBundleSize >= payloadOffset + 8
+        _bootInitBundlePhys != 0
+        && _bootInitBundleSize >= payloadOffset + 8
       ) {
         const UInt8* payloadBase
           = reinterpret_cast<const UInt8*>(_bootInitBundlePhys + payloadOffset);

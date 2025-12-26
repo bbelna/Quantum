@@ -252,8 +252,8 @@ namespace Quantum::System::Kernel {
       UInt8* blockEnd = blockStart + sizeof(Memory::FreeBlock) + current->size;
 
       if (
-        blockStart < _heapBase ||
-        blockEnd > _heapBase + _heapMappedBytes
+        blockStart < _heapBase
+        || blockEnd > _heapBase + _heapMappedBytes
       ) {
         Logger::Write(
           LogLevel::Error,
@@ -692,8 +692,8 @@ namespace Quantum::System::Kernel {
     UInt8* bytePointer = reinterpret_cast<UInt8*>(pointer);
 
     if (
-      bytePointer < _heapBase ||
-      bytePointer >= _heapBase + _heapMappedBytes
+      bytePointer < _heapBase
+      || bytePointer >= _heapBase + _heapMappedBytes
     ) {
       PANIC("Heap free: pointer out of range");
     }
@@ -707,8 +707,8 @@ namespace Quantum::System::Kernel {
     // if the pointer is not at the block payload start, it may be an aligned
     // allocation; verify metadata before using it
     if (
-      bytePointer != payload &&
-      bytePointer >= _heapBase + sizeof(Memory::AlignedMetadata)
+      bytePointer != payload
+      && bytePointer >= _heapBase + sizeof(Memory::AlignedMetadata)
     ) {
       Memory::AlignedMetadata* metadata
         = reinterpret_cast<Memory::AlignedMetadata*>(bytePointer) - 1;
@@ -718,8 +718,8 @@ namespace Quantum::System::Kernel {
           = reinterpret_cast<UInt8*>(metadata->block);
 
         if (
-          candidateBlockBytes >= _heapBase &&
-          candidateBlockBytes < _heapBase + _heapMappedBytes
+          candidateBlockBytes >= _heapBase
+          && candidateBlockBytes < _heapBase + _heapMappedBytes
         ) {
           Memory::FreeBlock* candidateBlock = metadata->block;
           UInt8* candidatePayload

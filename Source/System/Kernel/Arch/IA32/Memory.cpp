@@ -446,9 +446,9 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         }
 
         if (
-          _initBundleEndPage > _initBundleStartPage &&
-          pageIndex >= _initBundleStartPage &&
-          pageIndex < _initBundleEndPage
+          _initBundleEndPage > _initBundleStartPage
+          && pageIndex >= _initBundleStartPage
+          && pageIndex < _initBundleEndPage
         ) {
           SetPageUsed(pageIndex);
           ++_usedPages;

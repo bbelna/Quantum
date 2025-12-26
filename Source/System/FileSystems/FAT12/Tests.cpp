@@ -92,9 +92,9 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
         }
 
         if (
-          (info.flags & BlockDevice::flagReady) != 0 &&
-          info.sectorSize != 0 &&
-          info.sectorCount != 0
+          (info.flags & BlockDevice::flagReady) != 0
+          && info.sectorSize != 0
+          && info.sectorCount != 0
         ) {
           return true;
         }
