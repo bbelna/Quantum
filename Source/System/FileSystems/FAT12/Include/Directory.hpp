@@ -407,6 +407,27 @@ namespace Quantum::System::FileSystems::FAT12 {
         const LFNState& lfn,
         Record& record
       );
+
+      /**
+       * Writes fixed FAT timestamps into an entry.
+       * @param volume
+       *   Volume instance.
+       * @param entryBytes
+       *   Raw entry bytes.
+       * @param setCreate
+       *   True to set create timestamp.
+       * @param setAccess
+       *   True to set access date.
+       * @param setWrite
+       *   True to set write timestamp.
+       */
+      static void WriteTimestamps(
+        Volume* volume,
+        UInt8* entryBytes,
+        bool setCreate,
+        bool setAccess,
+        bool setWrite
+      );
       /**
        * Writes a raw directory entry.
        * @param lba

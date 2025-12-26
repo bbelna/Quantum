@@ -663,6 +663,7 @@ namespace Quantum::System::FileSystems::FAT12 {
 
     _volume->WriteUInt16(sector + offset, 26, startCluster);
     _volume->WriteUInt32(sector + offset, 28, sizeBytes);
+    WriteTimestamps(_volume, sector + offset, false, true, true);
 
     request.lba = lba;
     request.buffer = sector;
@@ -928,6 +929,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     }
 
     dirSector[11] = 0x10;
+    WriteTimestamps(_volume, dirSector, true, true, true);
 
     _volume->WriteUInt16(dirSector, 26, static_cast<UInt16>(newCluster));
     _volume->WriteUInt32(dirSector, 28, 0);
@@ -937,6 +939,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     }
 
     dirSector[32 + 11] = 0x10;
+    WriteTimestamps(_volume, dirSector + 32, true, true, true);
 
     _volume->WriteUInt16(
       dirSector,
@@ -977,6 +980,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     }
 
     entryBytes[11] = 0x10;
+    WriteTimestamps(_volume, entryBytes, true, true, true);
 
     _volume->WriteUInt16(entryBytes, 26, static_cast<UInt16>(newCluster));
     _volume->WriteUInt32(entryBytes, 28, 0);
@@ -1037,6 +1041,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     }
 
     entryBytes[11] = 0x20;
+    WriteTimestamps(_volume, entryBytes, true, true, true);
 
     _volume->WriteUInt16(entryBytes, 26, 0);
     _volume->WriteUInt32(entryBytes, 28, 0);
@@ -1088,6 +1093,7 @@ namespace Quantum::System::FileSystems::FAT12 {
       return false;
     }
 
+    WriteTimestamps(_volume, sector + offset, false, true, true);
     sector[offset] = 0xE5;
 
     request.lba = lba;
@@ -1140,6 +1146,8 @@ namespace Quantum::System::FileSystems::FAT12 {
     for (UInt32 i = 0; i < 11; ++i) {
       sector[offset + i] = shortName[i];
     }
+
+    WriteTimestamps(_volume, sector + offset, false, true, true);
 
     request.lba = lba;
     request.buffer = sector;
@@ -1322,6 +1330,36 @@ namespace Quantum::System::FileSystems::FAT12 {
     record.writeDate = volume->ReadUInt16(base, 24);
     record.startCluster = volume->ReadUInt16(base, 26);
     record.sizeBytes = volume->ReadUInt32(base, 28);
+  }
+
+  void Directory::WriteTimestamps(
+    Volume* volume,
+    UInt8* entryBytes,
+    bool setCreate,
+    bool setAccess,
+    bool setWrite
+  ) {
+    if (!volume || !entryBytes) {
+      return;
+    }
+
+    // fixed timestamp until we expose a real clock
+    UInt16 date = static_cast<UInt16>((45u << 9) | (1u << 5) | 1u);
+    UInt16 time = 0;
+
+    if (setCreate) {
+      volume->WriteUInt16(entryBytes, 14, time);
+      volume->WriteUInt16(entryBytes, 16, date);
+    }
+
+    if (setAccess) {
+      volume->WriteUInt16(entryBytes, 18, date);
+    }
+
+    if (setWrite) {
+      volume->WriteUInt16(entryBytes, 22, time);
+      volume->WriteUInt16(entryBytes, 24, date);
+    }
   }
 }
 
