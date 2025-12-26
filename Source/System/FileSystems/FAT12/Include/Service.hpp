@@ -43,6 +43,11 @@ namespace Quantum::System::FileSystems::FAT12 {
         bool inUse;
 
         /**
+         * Volume associated with this handle.
+         */
+        Volume* volume;
+
+        /**
          * True if this handle refers to a directory.
          */
         bool isDirectory;
@@ -89,19 +94,52 @@ namespace Quantum::System::FileSystems::FAT12 {
       };
 
       /**
-       * Mounted FAT12 volume state.
+       * Mounted volume list node.
        */
-      inline static Volume* _volume = nullptr;
+      struct VolumeNode {
+        /**
+         * Volume instance.
+         */
+        Volume* volume;
+
+        /**
+         * Next node in the list.
+         */
+        VolumeNode* next;
+      };
 
       /**
-       * Storage for the FAT12 volume instance.
+       * Head of the mounted volume list.
        */
-      inline static Volume _volumeStorage {};
+      inline static VolumeNode* _volumesHead = nullptr;
 
       /**
-       * Initializes the FAT12 volume cache.
+       * Number of mounted volumes.
        */
-      static void InitializeVolume();
+      inline static UInt32 _volumeCount = 0;
+
+      /**
+       * Initializes the FAT12 volume list.
+       */
+      static void InitializeVolumes();
+
+      /**
+       * Finds a volume by handle.
+       * @param handle
+       *   Volume handle.
+       * @return
+       *   Volume pointer or nullptr.
+       */
+      static Volume* FindVolumeByHandle(ABI::FileSystem::VolumeHandle handle);
+
+      /**
+       * Finds a volume by label.
+       * @param label
+       *   Volume label.
+       * @return
+       *   Volume pointer or nullptr.
+       */
+      static Volume* FindVolumeByLabel(CString label);
 
       /**
        * Returns true if the path refers to the root directory.
@@ -118,6 +156,7 @@ namespace Quantum::System::FileSystems::FAT12 {
        *   Handle id or 0 on failure.
        */
       static ABI::FileSystem::Handle AllocateHandle(
+        Volume* volume,
         bool isDirectory,
         bool isRoot,
         UInt32 startCluster,
@@ -156,6 +195,7 @@ namespace Quantum::System::FileSystems::FAT12 {
        *   True if the parent was resolved.
        */
       static bool ResolveParent(
+        Volume* volume,
         CString path,
         UInt32& parentCluster,
         bool& parentIsRoot,

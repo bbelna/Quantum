@@ -21,16 +21,13 @@ namespace Quantum::System::FileSystems::FAT12 {
     _file.Initialize(*this);
   }
 
-  bool Volume::Load() {
+  bool Volume::Load(const BlockDevice::Info& info) {
     // ensure helper pointers are wired
     Initialize();
 
     _valid = false;
-
-    // ensure we have a floppy block device
-    if (!GetFloppyInfo(_device)) {
-      return false;
-    }
+    _device = info;
+    _handle = static_cast<FileSystem::VolumeHandle>(info.id);
 
     UInt8 bootSector[512] = {};
 
@@ -73,8 +70,9 @@ namespace Quantum::System::FileSystems::FAT12 {
     UInt32 clusterCount = dataSectors / sectorsPerCluster;
 
     _info = FileSystem::VolumeInfo {};
-    _info.label[0] = 'A';
-    _info.label[1] = '\0';
+
+    BuildLabel(info, _info.label, sizeof(_info.label));
+
     _info.fsType = static_cast<UInt32>(FileSystem::Type::FAT12);
     _info.sectorSize = bytesPerSector;
     _info.sectorCount = totalSectors;
@@ -102,6 +100,16 @@ namespace Quantum::System::FileSystems::FAT12 {
     return true;
   }
 
+  bool Volume::Load() {
+    BlockDevice::Info info {};
+
+    if (!GetFloppyInfo(info)) {
+      return false;
+    }
+
+    return Load(info);
+  }
+
   bool Volume::IsValid() const {
     return _valid;
   }
@@ -119,12 +127,32 @@ namespace Quantum::System::FileSystems::FAT12 {
       return false;
     }
 
-    return MatchLabel(label, "A");
+    if (!label) {
+      return false;
+    }
+
+    char normalized[FileSystem::maxLabelLength] = {};
+    UInt32 idx = 0;
+
+    while (label[idx] != '\0' && idx + 1 < sizeof(normalized)) {
+      normalized[idx] = label[idx];
+      ++idx;
+    }
+
+    normalized[idx] = '\0';
+
+    if (idx > 0 && normalized[idx - 1] == ':') {
+      normalized[idx - 1] = '\0';
+    }
+
+    return MatchLabel(normalized, _info.label);
   }
 
   void Volume::FillEntry(FileSystem::VolumeEntry& entry) const {
-    entry.label[0] = _info.label[0];
-    entry.label[1] = _info.label[1];
+    for (UInt32 i = 0; i < sizeof(entry.label); ++i) {
+      entry.label[i] = _info.label[i];
+    }
+
     entry.fsType = _info.fsType;
   }
 
@@ -375,6 +403,32 @@ namespace Quantum::System::FileSystems::FAT12 {
     }
 
     return false;
+  }
+
+  void Volume::BuildLabel(
+    const BlockDevice::Info& info,
+    char* outLabel,
+    UInt32 labelBytes
+  ) {
+    if (!outLabel || labelBytes == 0) {
+      return;
+    }
+
+    for (UInt32 i = 0; i < labelBytes; ++i) {
+      outLabel[i] = '\0';
+    }
+
+    char label = '?';
+
+    if (info.type == BlockDevice::Type::Floppy && info.deviceIndex < 26) {
+      label = static_cast<char>('A' + info.deviceIndex);
+    }
+
+    outLabel[0] = label;
+
+    if (labelBytes > 1) {
+      outLabel[1] = '\0';
+    }
   }
 
   UInt16 Volume::ReadUInt16(const UInt8* base, UInt32 offset) {

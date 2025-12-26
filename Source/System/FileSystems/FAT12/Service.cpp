@@ -7,6 +7,7 @@
  */
 
 #include <ABI/Console.hpp>
+#include <ABI/Devices/BlockDevice.hpp>
 #include <ABI/FileSystem.hpp>
 #include <ABI/IPC.hpp>
 #include <ABI/Task.hpp>
@@ -19,15 +20,81 @@
 
 namespace Quantum::System::FileSystems::FAT12 {
   using Console = ABI::Console;
+  using BlockDevice = ABI::Devices::BlockDevice;
   using FileSystem = ABI::FileSystem;
   using IPC = ABI::IPC;
   using Task = ABI::Task;
 
-  void Service::InitializeVolume() {
-    // ensure helpers are wired in freestanding runtime
-    _volumeStorage.Initialize();
-    _volume = &_volumeStorage;
-    _volume->Load();
+  void Service::InitializeVolumes() {
+    _volumesHead = nullptr;
+    _volumeCount = 0;
+
+    UInt32 count = BlockDevice::GetCount();
+
+    for (UInt32 i = 1; i <= count; ++i) {
+      BlockDevice::Info info {};
+
+      if (BlockDevice::GetInfo(i, info) != 0) {
+        continue;
+      }
+
+      if (info.type != BlockDevice::Type::Floppy) {
+        continue;
+      }
+
+      Volume* volume = new Volume();
+
+      if (!volume) {
+        continue;
+      }
+
+      if (!volume->Load(info)) {
+        delete volume;
+
+        continue;
+      }
+
+      VolumeNode* node = new VolumeNode();
+
+      if (!node) {
+        delete volume;
+
+        continue;
+      }
+
+      node->volume = volume;
+      node->next = _volumesHead;
+      _volumesHead = node;
+      ++_volumeCount;
+    }
+  }
+
+  Volume* Service::FindVolumeByHandle(FileSystem::VolumeHandle handle) {
+    VolumeNode* node = _volumesHead;
+
+    while (node) {
+      if (node->volume && node->volume->GetHandle() == handle) {
+        return node->volume;
+      }
+
+      node = node->next;
+    }
+
+    return nullptr;
+  }
+
+  Volume* Service::FindVolumeByLabel(CString label) {
+    VolumeNode* node = _volumesHead;
+
+    while (node) {
+      if (node->volume && node->volume->MatchesLabel(label)) {
+        return node->volume;
+      }
+
+      node = node->next;
+    }
+
+    return nullptr;
   }
 
   bool Service::IsRootPath(CString path) {
@@ -51,6 +118,7 @@ namespace Quantum::System::FileSystems::FAT12 {
   }
 
   FileSystem::Handle Service::AllocateHandle(
+    Volume* volume,
     bool isDirectory,
     bool isRoot,
     UInt32 startCluster,
@@ -59,6 +127,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     for (UInt32 i = 0; i < _maxHandles; ++i) {
       if (!_handles[i].inUse) {
         _handles[i].inUse = true;
+        _handles[i].volume = volume;
         _handles[i].isDirectory = isDirectory;
         _handles[i].isRoot = isRoot;
         _handles[i].startCluster = startCluster;
@@ -84,6 +153,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     }
 
     state->inUse = false;
+    state->volume = nullptr;
     state->isDirectory = false;
     state->isRoot = false;
     state->startCluster = 0;
@@ -147,6 +217,7 @@ namespace Quantum::System::FileSystems::FAT12 {
   }
 
   bool Service::ResolveParent(
+    Volume* volume,
     CString path,
     UInt32& parentCluster,
     bool& parentIsRoot,
@@ -247,7 +318,7 @@ namespace Quantum::System::FileSystems::FAT12 {
         UInt32 upSize = 0;
 
         if (
-          !_volume->FindEntry(
+          !volume->FindEntry(
             parentCluster,
             false,
             "..",
@@ -270,7 +341,7 @@ namespace Quantum::System::FileSystems::FAT12 {
       UInt32 sizeBytes = 0;
 
       if (
-        !_volume->FindEntry(
+        !volume->FindEntry(
           parentCluster,
           parentIsRoot,
           segment,
@@ -312,7 +383,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     }
 
     Console::WriteLine("FAT12 service ready");
-    InitializeVolume();
+    InitializeVolumes();
 
     #if defined(TEST)
     Tests::Run();
@@ -363,40 +434,49 @@ namespace Quantum::System::FileSystems::FAT12 {
         )
       ) {
         UInt32 maxEntries = request.arg1;
-        UInt32 count = (maxEntries > 0 && _volume && _volume->IsValid())
-          ? 1
-          : 0;
+        UInt32 entryBytes = static_cast<UInt32>(sizeof(FileSystem::VolumeEntry));
+        UInt32 maxPayloadEntries = entryBytes == 0
+          ? 0
+          : (FileSystem::messageDataBytes / entryBytes);
+        UInt32 maxCount = maxEntries;
 
-        if (
-          count > 0 &&
-          sizeof(FileSystem::VolumeEntry) <= FileSystem::messageDataBytes
-        ) {
-          // return a single "A" volume for now
-          FileSystem::VolumeEntry entry {};
+        if (maxPayloadEntries < maxCount) {
+          maxCount = maxPayloadEntries;
+        }
 
-          _volume->FillEntry(entry);
+        UInt32 count = 0;
+        VolumeNode* node = _volumesHead;
 
-          UInt32 bytes = static_cast<UInt32>(sizeof(FileSystem::VolumeEntry));
+        while (node && count < maxCount) {
+          if (node->volume && node->volume->IsValid()) {
+            FileSystem::VolumeEntry entry {};
 
-          for (UInt32 i = 0; i < bytes; ++i) {
-            response.data[i] = reinterpret_cast<UInt8*>(&entry)[i];
+            node->volume->FillEntry(entry);
+
+            UInt8* dest = response.data + count * entryBytes;
+
+            for (UInt32 i = 0; i < entryBytes; ++i) {
+              dest[i] = reinterpret_cast<const UInt8*>(&entry)[i];
+            }
+
+            ++count;
           }
 
-          response.dataLength = bytes;
-          response.status = count;
-        } else {
-          response.status = 0;
+          node = node->next;
         }
+
+        response.dataLength = count * entryBytes;
+        response.status = count;
       } else if (
         request.op == static_cast<UInt32>(
           FileSystem::Operation::OpenVolume
         )
       ) {
         CString label = reinterpret_cast<CString>(request.data);
+        Volume* volume = FindVolumeByLabel(label);
 
-        // accept "A" or "A:" and return the fixed handle
-        if (_volume && _volume->MatchesLabel(label)) {
-          response.status = _volume->GetHandle();
+        if (volume) {
+          response.status = volume->GetHandle();
         } else {
           response.status = 0;
         }
@@ -405,8 +485,10 @@ namespace Quantum::System::FileSystems::FAT12 {
           FileSystem::Operation::GetVolumeInfo
         )
       ) {
-        if (_volume && request.arg0 == _volume->GetHandle()) {
-          FileSystem::VolumeInfo info = _volume->GetInfo();
+        Volume* volume = FindVolumeByHandle(request.arg0);
+
+        if (volume) {
+          FileSystem::VolumeInfo info = volume->GetInfo();
           UInt32 bytes = static_cast<UInt32>(sizeof(FileSystem::VolumeInfo));
 
           if (bytes <= FileSystem::messageDataBytes) {
@@ -422,10 +504,17 @@ namespace Quantum::System::FileSystems::FAT12 {
         request.op == static_cast<UInt32>(FileSystem::Operation::Open)
       ) {
         CString path = reinterpret_cast<CString>(request.data);
+        Volume* volume = FindVolumeByHandle(request.arg0);
 
-        if (_volume && request.arg0 == _volume->GetHandle()) {
+        if (volume) {
           if (IsRootPath(path)) {
-            FileSystem::Handle handle = AllocateHandle(true, true, 0, 0);
+            FileSystem::Handle handle = AllocateHandle(
+              volume,
+              true,
+              true,
+              0,
+              0
+            );
 
             response.status = handle;
           } else {
@@ -534,7 +623,7 @@ namespace Quantum::System::FileSystems::FAT12 {
                 UInt32 upSize = 0;
 
                 if (
-                  !_volume->FindEntry(
+                  !volume->FindEntry(
                     cluster,
                     false,
                     "..",
@@ -575,7 +664,7 @@ namespace Quantum::System::FileSystems::FAT12 {
               lastParentIsRoot = isRoot;
 
               if (
-                !_volume->FindEntry(
+                !volume->FindEntry(
                   cluster,
                   isRoot,
                   segment,
@@ -584,10 +673,10 @@ namespace Quantum::System::FileSystems::FAT12 {
                   sizeBytes
                 )
               ) {
-                ok = false;
+                  ok = false;
 
-                break;
-              }
+                  break;
+                }
 
               for (UInt32 i = 0; i < sizeof(lastName); ++i) {
                 lastName[i] = segment[i];
@@ -625,7 +714,7 @@ namespace Quantum::System::FileSystems::FAT12 {
                 !(lastName[0] == '.' && lastName[1] == '\0') &&
                 !(lastName[0] == '.' && lastName[1] == '.' && lastName[2] == '\0')
               ) {
-                haveLocation = _volume->GetEntryLocation(
+                haveLocation = volume->GetEntryLocation(
                   lastParentCluster,
                   lastParentIsRoot,
                   lastName,
@@ -638,6 +727,7 @@ namespace Quantum::System::FileSystems::FAT12 {
                 ok = false;
               } else if (isDirectory) {
                 FileSystem::Handle handle = AllocateHandle(
+                  volume,
                   true,
                   false,
                   lastCluster,
@@ -659,6 +749,7 @@ namespace Quantum::System::FileSystems::FAT12 {
                 response.status = handle;
               } else if (lastCluster != 0 || lastSize == 0) {
                 FileSystem::Handle handle = AllocateHandle(
+                  volume,
                   false,
                   false,
                   lastCluster,
@@ -702,8 +793,9 @@ namespace Quantum::System::FileSystems::FAT12 {
         )
       ) {
         HandleState* state = GetHandleState(request.arg0);
+        Volume* volume = state ? state->volume : nullptr;
 
-        if (!_volume || !state || !state->inUse || !state->isDirectory) {
+        if (!volume || !state || !state->inUse || !state->isDirectory) {
           response.status = 1;
         } else {
           FileSystem::DirectoryEntry entry {};
@@ -711,11 +803,11 @@ namespace Quantum::System::FileSystems::FAT12 {
           bool found = false;
 
           if (state->isRoot) {
-            while (state->nextIndex < _volume->GetRootEntryCount()) {
+            while (state->nextIndex < volume->GetRootEntryCount()) {
               bool end = false;
 
               if (
-                _volume->ReadRootEntry(
+                volume->ReadRootEntry(
                   state->nextIndex,
                   entry,
                   end
@@ -738,7 +830,7 @@ namespace Quantum::System::FileSystems::FAT12 {
               bool end = false;
 
               if (
-                _volume->ReadDirectoryEntry(
+                volume->ReadDirectoryEntry(
                   state->startCluster,
                   state->nextIndex,
                   entry,
@@ -790,8 +882,9 @@ namespace Quantum::System::FileSystems::FAT12 {
         request.op == static_cast<UInt32>(FileSystem::Operation::Read)
       ) {
         HandleState* state = GetHandleState(request.arg0);
+        Volume* volume = state ? state->volume : nullptr;
 
-        if (!_volume || !state || !state->inUse || state->isDirectory) {
+        if (!volume || !state || !state->inUse || state->isDirectory) {
           response.status = 0;
         } else {
           UInt32 maxBytes = request.arg1;
@@ -806,7 +899,7 @@ namespace Quantum::System::FileSystems::FAT12 {
             UInt32 bytesRead = 0;
 
             if (
-              _volume->ReadFile(
+              volume->ReadFile(
                 state->startCluster,
                 state->fileOffset,
                 response.data,
@@ -827,8 +920,9 @@ namespace Quantum::System::FileSystems::FAT12 {
         request.op == static_cast<UInt32>(FileSystem::Operation::Write)
       ) {
         HandleState* state = GetHandleState(request.arg0);
+        Volume* volume = state ? state->volume : nullptr;
 
-        if (!_volume || !state || !state->inUse || state->isDirectory) {
+        if (!volume || !state || !state->inUse || state->isDirectory) {
           response.status = 0;
         } else {
           UInt32 dataBytes = request.dataLength;
@@ -845,7 +939,7 @@ namespace Quantum::System::FileSystems::FAT12 {
             UInt32 startCluster = state->startCluster;
 
             if (
-              _volume->WriteFileData(
+              volume->WriteFileData(
                 startCluster,
                 state->fileOffset,
                 request.data,
@@ -861,7 +955,7 @@ namespace Quantum::System::FileSystems::FAT12 {
               response.status = bytesWritten;
 
               if (state->entryLBA != 0) {
-                _volume->UpdateEntry(
+                volume->UpdateEntry(
                   state->entryLBA,
                   state->entryOffset,
                   static_cast<UInt16>(startCluster),
@@ -877,8 +971,9 @@ namespace Quantum::System::FileSystems::FAT12 {
         request.op == static_cast<UInt32>(FileSystem::Operation::Stat)
       ) {
         HandleState* state = GetHandleState(request.arg0);
+        Volume* volume = state ? state->volume : nullptr;
 
-        if (!_volume || !state || !state->inUse) {
+        if (!volume || !state || !state->inUse) {
           response.status = 1;
         } else {
           FileSystem::FileInfo info {};
@@ -904,14 +999,16 @@ namespace Quantum::System::FileSystems::FAT12 {
         )
       ) {
         CString path = reinterpret_cast<CString>(request.data);
+        Volume* volume = FindVolumeByHandle(request.arg0);
 
-        if (_volume && request.arg0 == _volume->GetHandle()) {
+        if (volume) {
           UInt32 parentCluster = 0;
           bool parentIsRoot = true;
           char name[FileSystem::maxDirectoryLength] = {};
 
           if (
             ResolveParent(
+              volume,
               path,
               parentCluster,
               parentIsRoot,
@@ -919,7 +1016,7 @@ namespace Quantum::System::FileSystems::FAT12 {
               sizeof(name)
             )
           ) {
-            if (_volume->CreateDirectory(parentCluster, parentIsRoot, name)) {
+            if (volume->CreateDirectory(parentCluster, parentIsRoot, name)) {
               response.status = 0;
             }
           }
@@ -928,14 +1025,16 @@ namespace Quantum::System::FileSystems::FAT12 {
         request.op == static_cast<UInt32>(FileSystem::Operation::CreateFile)
       ) {
         CString path = reinterpret_cast<CString>(request.data);
+        Volume* volume = FindVolumeByHandle(request.arg0);
 
-        if (_volume && request.arg0 == _volume->GetHandle()) {
+        if (volume) {
           UInt32 parentCluster = 0;
           bool parentIsRoot = true;
           char name[FileSystem::maxDirectoryLength] = {};
 
           if (
             ResolveParent(
+              volume,
               path,
               parentCluster,
               parentIsRoot,
@@ -943,7 +1042,7 @@ namespace Quantum::System::FileSystems::FAT12 {
               sizeof(name)
             )
           ) {
-            if (_volume->CreateFile(parentCluster, parentIsRoot, name)) {
+            if (volume->CreateFile(parentCluster, parentIsRoot, name)) {
               response.status = 0;
             }
           }
@@ -952,14 +1051,16 @@ namespace Quantum::System::FileSystems::FAT12 {
         request.op == static_cast<UInt32>(FileSystem::Operation::Remove)
       ) {
         CString path = reinterpret_cast<CString>(request.data);
+        Volume* volume = FindVolumeByHandle(request.arg0);
 
-        if (_volume && request.arg0 == _volume->GetHandle()) {
+        if (volume) {
           UInt32 parentCluster = 0;
           bool parentIsRoot = true;
           char name[FileSystem::maxDirectoryLength] = {};
 
           if (
             ResolveParent(
+              volume,
               path,
               parentCluster,
               parentIsRoot,
@@ -967,7 +1068,7 @@ namespace Quantum::System::FileSystems::FAT12 {
               sizeof(name)
             )
           ) {
-            if (_volume->RemoveEntry(parentCluster, parentIsRoot, name)) {
+            if (volume->RemoveEntry(parentCluster, parentIsRoot, name)) {
               response.status = 0;
             }
           }
@@ -976,8 +1077,9 @@ namespace Quantum::System::FileSystems::FAT12 {
         request.op == static_cast<UInt32>(FileSystem::Operation::Rename)
       ) {
         CString fromPath = reinterpret_cast<CString>(request.data);
+        Volume* volume = FindVolumeByHandle(request.arg0);
 
-        if (_volume && request.arg0 == _volume->GetHandle()) {
+        if (volume) {
           UInt32 offset = 0;
 
           while (offset < request.dataLength && request.data[offset] != 0) {
@@ -996,6 +1098,7 @@ namespace Quantum::System::FileSystems::FAT12 {
 
             if (
               ResolveParent(
+                volume,
                 fromPath,
                 fromCluster,
                 fromIsRoot,
@@ -1003,6 +1106,7 @@ namespace Quantum::System::FileSystems::FAT12 {
                 sizeof(fromName)
               ) &&
               ResolveParent(
+                volume,
                 toPath,
                 toCluster,
                 toIsRoot,
@@ -1012,7 +1116,7 @@ namespace Quantum::System::FileSystems::FAT12 {
             ) {
               if (fromCluster == toCluster && fromIsRoot == toIsRoot) {
                 if (
-                  _volume->RenameEntry(
+                  volume->RenameEntry(
                     fromCluster,
                     fromIsRoot,
                     fromName,
@@ -1029,8 +1133,9 @@ namespace Quantum::System::FileSystems::FAT12 {
         request.op == static_cast<UInt32>(FileSystem::Operation::Seek)
       ) {
         HandleState* state = GetHandleState(request.arg0);
+        Volume* volume = state ? state->volume : nullptr;
 
-        if (!_volume || !state || !state->inUse || state->isDirectory) {
+        if (!volume || !state || !state->inUse || state->isDirectory) {
           response.status = 0;
         } else {
           UInt32 origin = request.arg2;

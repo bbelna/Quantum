@@ -30,6 +30,15 @@ namespace Quantum::System::FileSystems::FAT12 {
 
       /**
        * Loads the FAT12 volume metadata from disk.
+       * @param info
+       *   Block device info for this volume.
+       * @return
+       *   True if the volume metadata loaded successfully.
+       */
+      bool Load(const ABI::Devices::BlockDevice::Info& info);
+
+      /**
+       * Loads the FAT12 volume metadata using the first floppy device.
        * @return
        *   True if the volume metadata loaded successfully.
        */
@@ -410,9 +419,9 @@ namespace Quantum::System::FileSystems::FAT12 {
       static constexpr UInt32 _bootSectorLBA = 0;
 
       /**
-       * Fixed handle for this volume.
+       * Assigned handle for this volume.
        */
-      static constexpr ABI::FileSystem::VolumeHandle _handle = 1;
+      ABI::FileSystem::VolumeHandle _handle = 0;
 
       /**
        * Whether this volume has valid metadata.
@@ -533,6 +542,21 @@ namespace Quantum::System::FileSystems::FAT12 {
        *   True if a floppy block device was found.
        */
       bool GetFloppyInfo(ABI::Devices::BlockDevice::Info& outInfo);
+
+      /**
+       * Builds a volume label from the block device info.
+       * @param info
+       *   Block device info.
+       * @param outLabel
+       *   Output label buffer.
+       * @param labelBytes
+       *   Size of the label buffer.
+       */
+      static void BuildLabel(
+        const ABI::Devices::BlockDevice::Info& info,
+        char* outLabel,
+        UInt32 labelBytes
+      );
 
       /**
        * Reads a little-endian 16-bit value.
