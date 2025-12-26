@@ -532,6 +532,19 @@ namespace Quantum::System::Kernel {
       return 0;
     }
 
+    // initialize per-task heap bounds
+    UInt32 heapBase = AlignHelper::Up(_userProgramBase + imageBytes, pageSize);
+    UInt32 heapLimit = stackBase;
+
+    if (heapBase < heapLimit) {
+      task->userHeapBase = heapBase;
+      task->userHeapEnd = heapBase;
+      task->userHeapMappedEnd = heapBase;
+      task->userHeapLimit = heapLimit;
+    } else {
+      Logger::Write(LogLevel::Warning, "SpawnTask: no space for user heap");
+    }
+
     return task->id;
   }
 }

@@ -240,6 +240,10 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     );
     tcb->userEntryPoint = 0;
     tcb->userStackTop = 0;
+    tcb->userHeapBase = 0;
+    tcb->userHeapEnd = 0;
+    tcb->userHeapMappedEnd = 0;
+    tcb->userHeapLimit = 0;
     tcb->next = nullptr;
     tcb->allNext = nullptr;
 

@@ -20,6 +20,7 @@
 #include "IPC.hpp"
 #include "IRQ.hpp"
 #include "Logger.hpp"
+#include "Memory.hpp"
 #include "Prelude.hpp"
 #include "Task.hpp"
 
@@ -36,6 +37,7 @@ namespace Quantum::System::Kernel::Handlers {
   using IPC = ABI::IPC;
   using Logger = Kernel::Logger;
   using LogLevel = Kernel::Logger::Level;
+  using Memory = Kernel::Memory;
   using SystemCall = ABI::SystemCall;
   using Task = Kernel::Task;
   using IRQ = Kernel::IRQ;
@@ -506,6 +508,84 @@ namespace Quantum::System::Kernel::Handlers {
         bool ok = IRQ::Disable(irq);
 
         context.eax = ok ? 0 : 1;
+
+        break;
+      }
+
+      case SystemCall::Memory_ExpandHeap: {
+        constexpr UInt32 pageSize = 4096;
+        UInt32 sizeBytes = context.ebx;
+        Task::ControlBlock* tcb = Task::GetCurrent();
+
+        if (!tcb || tcb->userHeapLimit == 0) {
+          context.eax = 0;
+
+          break;
+        }
+
+        UInt32 heapEnd = tcb->userHeapEnd;
+
+        if (sizeBytes == 0) {
+          context.eax = heapEnd;
+
+          break;
+        }
+
+        UInt64 newEnd64 = static_cast<UInt64>(heapEnd) + sizeBytes;
+
+        if (newEnd64 > tcb->userHeapLimit) {
+          context.eax = 0;
+
+          break;
+        }
+
+        UInt32 newEnd = static_cast<UInt32>(newEnd64);
+        UInt32 newMappedEnd
+          = (newEnd + pageSize - 1) & ~(pageSize - 1);
+        UInt32 mappedEnd = tcb->userHeapMappedEnd;
+
+        if (mappedEnd == 0) {
+          mappedEnd = tcb->userHeapBase;
+        }
+
+        bool ok = true;
+        UInt32 mappedProgress = mappedEnd;
+
+        if (newMappedEnd > mappedEnd) {
+          UInt32 addressSpace = Task::GetCurrentAddressSpace();
+
+          for (UInt32 vaddr = mappedEnd; vaddr < newMappedEnd; vaddr += pageSize) {
+            void* phys = Memory::AllocatePage(true);
+
+            if (!phys) {
+              ok = false;
+
+              break;
+            }
+
+            Memory::MapPageInAddressSpace(
+              addressSpace,
+              vaddr,
+              reinterpret_cast<UInt32>(phys),
+              true,
+              true,
+              false
+            );
+
+            mappedProgress = vaddr + pageSize;
+          }
+        }
+
+        if (!ok) {
+          tcb->userHeapMappedEnd = mappedProgress;
+          context.eax = 0;
+
+          break;
+        }
+
+        tcb->userHeapEnd = newEnd;
+        tcb->userHeapMappedEnd = newMappedEnd;
+        context.eax = heapEnd;
 
         break;
       }

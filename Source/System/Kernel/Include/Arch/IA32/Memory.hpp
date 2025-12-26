@@ -87,6 +87,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        *   Maximum physical address (exclusive).
        * @param zero
        *   Whether to zero the page before returning it.
+       * @param boundaryBytes
+       *   Boundary in bytes that the returned page must not cross.
        * @return
        *   Pointer to the allocated page, or nullptr on failure.
        */
@@ -270,9 +272,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       static PhysicalAllocatorState GetPhysicalAllocatorState();
 
       /**
-       * Handles a page fault. Currently a stub that logs fault information and
-       * returns false to signal an unhandled fault; future implementations can
-       * resolve faults (e.g., demand paging).
+       * Handles a page fault.
        * @param context
        *   Interrupt context at the time of the fault.
        * @param faultAddress
@@ -469,7 +469,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * @param value
        *   32-bit word to scan.
        * @return
-       *   Bit index [0,31] or -1 if all bits are one.
+       *   Bit index [0, 31] or -1 if all bits are one.
        */
       static int FindFirstZeroBit(UInt32 value);
 
@@ -492,8 +492,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       static UInt32* GetPageTableVirtual(UInt32 pageDirectoryIndex);
 
       /**
-       * Ensures a page table exists for a page directory entry index, allocating
-       * if needed.
+       * Ensures a page table exists for a page directory entry index,
+       * allocating if needed.
        * @param pageDirectoryIndex
        *   Index of the page directory entry to populate.
        * @return

@@ -43,7 +43,8 @@ namespace Quantum::ABI {
     Block_Bind = 704,
     Block_AllocateDMABuffer = 705,
     Block_UpdateInfo = 706,
-    Block_Register = 707
+    Block_Register = 707,
+    Memory_ExpandHeap = 800
   };
 
   /**

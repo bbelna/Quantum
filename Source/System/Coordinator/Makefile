@@ -30,7 +30,8 @@ COORD_SRCS := \
 	$(COORD_DIR)/IRQ.cpp \
 	$(COORD_DIR)/FileSystem.cpp \
 	$(USER_RUNTIME)/CRT0.cpp \
-	$(USER_RUNTIME)/Memory.cpp
+	$(USER_RUNTIME)/Memory.cpp \
+	$(USER_RUNTIME)/Heap.cpp
 
 COORD_HDRS := \
 	$(COORD_DIR)/Include/Application.hpp \

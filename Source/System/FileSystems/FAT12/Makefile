@@ -33,7 +33,8 @@ FAT12_SRCS := \
 	$(FAT12_DIR)/Tests.cpp \
 	$(FAT12_DIR)/Main.cpp \
 	$(USER_RUNTIME)/CRT0.cpp \
-	$(USER_RUNTIME)/Memory.cpp
+	$(USER_RUNTIME)/Memory.cpp \
+	$(USER_RUNTIME)/Heap.cpp
 
 FAT12_HDRS := \
 	$(FAT12_DIR)/Include/Tests.hpp
