@@ -63,6 +63,8 @@ namespace Quantum::System::FileSystems::FAT12 {
         _handles[i].fileSize = fileSize;
         _handles[i].fileOffset = 0;
         _handles[i].attributes = isDirectory ? 0x10 : 0x20;
+        _handles[i].entryLBA = 0;
+        _handles[i].entryOffset = 0;
 
         return static_cast<FileSystem::Handle>(_handleBase + i);
       }
@@ -86,6 +88,8 @@ namespace Quantum::System::FileSystems::FAT12 {
     state->fileSize = 0;
     state->fileOffset = 0;
     state->attributes = 0;
+    state->entryLBA = 0;
+    state->entryOffset = 0;
   }
 
   Service::HandleState* Service::GetHandleState(FileSystem::Handle handle) {
@@ -100,6 +104,190 @@ namespace Quantum::System::FileSystems::FAT12 {
     }
 
     return &_handles[index];
+  }
+
+  static void NormalizeSegment(char* segment) {
+    if (!segment || segment[0] == '\0') {
+      return;
+    }
+
+    UInt32 out = 0;
+    bool lastWasSlash = false;
+
+    for (UInt32 i = 0; segment[i] != '\0'; ++i) {
+      char c = segment[i];
+
+      if (c == '\\') {
+        c = '/';
+      }
+
+      if (c == '/') {
+        if (lastWasSlash) {
+          continue;
+        }
+
+        lastWasSlash = true;
+        segment[out++] = '/';
+
+        continue;
+      }
+
+      lastWasSlash = false;
+      segment[out++] = c;
+    }
+
+    if (out > 1 && segment[out - 1] == '/') {
+      --out;
+    }
+
+    segment[out] = '\0';
+  }
+
+  bool Service::ResolveParent(
+    CString path,
+    UInt32& parentCluster,
+    bool& parentIsRoot,
+    char* name,
+    UInt32 nameBytes
+  ) {
+    if (!path || !name || nameBytes == 0) {
+      return false;
+    }
+
+    parentCluster = 0;
+    parentIsRoot = true;
+    name[0] = '\0';
+
+    char normalized[FileSystem::maxDirectoryLength] = {};
+    UInt32 p = 0;
+
+    while (path[p] != '\0' && p + 1 < sizeof(normalized)) {
+      normalized[p] = path[p];
+      ++p;
+    }
+
+    normalized[p] = '\0';
+
+    NormalizeSegment(normalized);
+
+    const char* cursor = normalized;
+
+    while (*cursor == '/' || *cursor == '\\') {
+      ++cursor;
+    }
+
+    const char* lastSegment = cursor;
+
+    while (*cursor != '\0') {
+      if (*cursor == '/') {
+        lastSegment = cursor + 1;
+      }
+
+      ++cursor;
+    }
+
+    if (!lastSegment || *lastSegment == '\0') {
+      return false;
+    }
+
+    UInt32 i = 0;
+    const char* nameCursor = lastSegment;
+
+    while (
+      *nameCursor != '\0' &&
+      *nameCursor != '/' &&
+      i + 1 < nameBytes
+    ) {
+      name[i++] = *nameCursor++;
+    }
+
+    name[i] = '\0';
+    cursor = path;
+
+    while (*cursor == '/') {
+      ++cursor;
+    }
+
+    while (*cursor != '\0' && cursor < lastSegment) {
+      char segment[FileSystem::maxDirectoryLength] = {};
+      UInt32 length = 0;
+
+      while (
+        *cursor != '\0' &&
+        *cursor != '/' &&
+        length + 1 < sizeof(segment)
+      ) {
+        segment[length++] = *cursor++;
+      }
+
+      segment[length] = '\0';
+
+      while (*cursor == '/') {
+        ++cursor;
+      }
+
+      if (segment[0] == '\0') {
+        continue;
+      }
+
+      if (segment[0] == '.' && segment[1] == '\0') {
+        continue;
+      }
+
+      if (segment[0] == '.' && segment[1] == '.' && segment[2] == '\0') {
+        if (parentIsRoot) {
+          continue;
+        }
+
+        UInt32 upCluster = 0;
+        UInt8 upAttributes = 0;
+        UInt32 upSize = 0;
+
+        if (
+          !_volume->FindEntry(
+            parentCluster,
+            false,
+            "..",
+            upCluster,
+            upAttributes,
+            upSize
+          )
+        ) {
+          return false;
+        }
+
+        parentCluster = upCluster;
+        parentIsRoot = (upCluster == 0);
+
+        continue;
+      }
+
+      UInt32 nextCluster = 0;
+      UInt8 attributes = 0;
+      UInt32 sizeBytes = 0;
+
+      if (
+        !_volume->FindEntry(
+          parentCluster,
+          parentIsRoot,
+          segment,
+          nextCluster,
+          attributes,
+          sizeBytes
+        )
+      ) {
+        return false;
+      }
+
+      if ((attributes & 0x10) == 0) {
+        return false;
+      }
+
+      parentCluster = nextCluster;
+      parentIsRoot = false;
+    }
+
+    return name[0] != '\0';
   }
 
   void Service::Main() {
@@ -242,14 +430,19 @@ namespace Quantum::System::FileSystems::FAT12 {
             UInt32 lastCluster = 0;
             UInt8 lastAttributes = 0;
             UInt32 lastSize = 0;
-            const char* cursor = path;
+            const char* cursor = nullptr;
             bool isRoot = true;
             bool ok = true;
             bool sawSegment = false;
             bool endsWithSeparator = false;
+            UInt32 lastParentCluster = 0;
+            bool lastParentIsRoot = true;
+            char lastName[FileSystem::maxDirectoryLength] = {};
+            char normalized[FileSystem::maxDirectoryLength] = {};
 
             if (path) {
               UInt32 len = 0;
+              UInt32 copy = 0;
 
               while (path[len] != '\0') {
                 ++len;
@@ -260,9 +453,20 @@ namespace Quantum::System::FileSystems::FAT12 {
 
                 endsWithSeparator = (last == '/' || last == '\\');
               }
+
+              while (path[copy] != '\0' && copy + 1 < sizeof(normalized)) {
+                normalized[copy] = path[copy];
+                ++copy;
+              }
+
+              normalized[copy] = '\0';
+
+              NormalizeSegment(normalized);
             }
 
-            while (*cursor == '/' || *cursor == '\\') {
+            cursor = normalized;
+
+            while (*cursor == '/') {
               ++cursor;
             }
 
@@ -273,7 +477,6 @@ namespace Quantum::System::FileSystems::FAT12 {
               while (
                 *cursor != '\0' &&
                 *cursor != '/' &&
-                *cursor != '\\' &&
                 length + 1 < sizeof(segment)
               ) {
                 segment[length++] = *cursor++;
@@ -284,7 +487,7 @@ namespace Quantum::System::FileSystems::FAT12 {
 
               bool hadSeparator = false;
 
-              while (*cursor == '/' || *cursor == '\\') {
+              while (*cursor == '/') {
                 ++cursor;
                 hadSeparator = true;
               }
@@ -293,11 +496,80 @@ namespace Quantum::System::FileSystems::FAT12 {
                 continue;
               }
 
+              if (segment[0] == '.' && segment[1] == '\0') {
+                if (*cursor == '\0') {
+                  lastCluster = cluster;
+                  lastAttributes = 0x10;
+                  lastSize = 0;
+                  lastParentCluster = cluster;
+                  lastParentIsRoot = isRoot;
+                  lastName[0] = '.';
+                  lastName[1] = '\0';
+                }
+
+                continue;
+              }
+
+              if (segment[0] == '.' && segment[1] == '.' && segment[2] == '\0') {
+                if (isRoot) {
+                  if (*cursor == '\0') {
+                    lastCluster = 0;
+                    lastAttributes = 0x10;
+                    lastSize = 0;
+                    lastParentCluster = 0;
+                    lastParentIsRoot = true;
+                    lastName[0] = '.';
+                    lastName[1] = '.';
+                    lastName[2] = '\0';
+                  }
+
+                  continue;
+                }
+
+                UInt32 upCluster = 0;
+                UInt8 upAttributes = 0;
+                UInt32 upSize = 0;
+
+                if (
+                  !_volume->FindEntry(
+                    cluster,
+                    false,
+                    "..",
+                    upCluster,
+                    upAttributes,
+                    upSize
+                  )
+                ) {
+                  ok = false;
+
+                  break;
+                }
+
+                cluster = upCluster;
+                isRoot = (upCluster == 0);
+
+                if (*cursor == '\0') {
+                  lastCluster = upCluster;
+                  lastAttributes = 0x10;
+                  lastSize = 0;
+                  lastParentCluster = upCluster;
+                  lastParentIsRoot = isRoot;
+                  lastName[0] = '.';
+                  lastName[1] = '.';
+                  lastName[2] = '\0';
+                }
+
+                continue;
+              }
+
               UInt32 nextCluster = 0;
               UInt8 attributes = 0;
               UInt32 sizeBytes = 0;
               bool lastSegment = (*cursor == '\0');
               bool requireDirectory = lastSegment && hadSeparator;
+
+              lastParentCluster = cluster;
+              lastParentIsRoot = isRoot;
 
               if (
                 !_volume->FindEntry(
@@ -312,6 +584,14 @@ namespace Quantum::System::FileSystems::FAT12 {
                 ok = false;
 
                 break;
+              }
+
+              for (UInt32 i = 0; i < sizeof(lastName); ++i) {
+                lastName[i] = segment[i];
+
+                if (segment[i] == '\0') {
+                  break;
+                }
               }
 
               lastCluster = nextCluster;
@@ -334,6 +614,22 @@ namespace Quantum::System::FileSystems::FAT12 {
 
             if (ok && sawSegment) {
               bool isDirectory = (lastAttributes & 0x10) != 0;
+              UInt32 entryLBA = 0;
+              UInt32 entryOffset = 0;
+              bool haveLocation = false;
+
+              if (
+                !(lastName[0] == '.' && lastName[1] == '\0') &&
+                !(lastName[0] == '.' && lastName[1] == '.' && lastName[2] == '\0')
+              ) {
+                haveLocation = _volume->GetEntryLocation(
+                  lastParentCluster,
+                  lastParentIsRoot,
+                  lastName,
+                  entryLBA,
+                  entryOffset
+                );
+              }
 
               if (endsWithSeparator && !isDirectory) {
                 ok = false;
@@ -350,6 +646,10 @@ namespace Quantum::System::FileSystems::FAT12 {
 
                   if (state) {
                     state->attributes = lastAttributes;
+                    if (haveLocation) {
+                      state->entryLBA = entryLBA;
+                      state->entryOffset = entryOffset;
+                    }
                   }
                 }
 
@@ -368,6 +668,11 @@ namespace Quantum::System::FileSystems::FAT12 {
                   if (state) {
                     state->attributes = lastAttributes;
                     state->fileSize = lastSize;
+
+                    if (haveLocation) {
+                      state->entryLBA = entryLBA;
+                      state->entryOffset = entryOffset;
+                    }
                   }
                 }
 
@@ -516,6 +821,56 @@ namespace Quantum::System::FileSystems::FAT12 {
           }
         }
       } else if (
+        request.op == static_cast<UInt32>(FileSystem::Operation::Write)
+      ) {
+        HandleState* state = GetHandleState(request.arg0);
+
+        if (!_volume || !state || !state->inUse || state->isDirectory) {
+          response.status = 0;
+        } else {
+          UInt32 dataBytes = request.dataLength;
+
+          if (dataBytes > FileSystem::messageDataBytes) {
+            dataBytes = FileSystem::messageDataBytes;
+          }
+
+          if (dataBytes == 0) {
+            response.status = 0;
+          } else {
+            UInt32 bytesWritten = 0;
+            UInt32 newSize = state->fileSize;
+            UInt32 startCluster = state->startCluster;
+
+            if (
+              _volume->WriteFileData(
+                startCluster,
+                state->fileOffset,
+                request.data,
+                dataBytes,
+                bytesWritten,
+                state->fileSize,
+                newSize
+              )
+            ) {
+              state->startCluster = startCluster;
+              state->fileSize = newSize;
+              state->fileOffset += bytesWritten;
+              response.status = bytesWritten;
+
+              if (state->entryLBA != 0) {
+                _volume->UpdateEntry(
+                  state->entryLBA,
+                  state->entryOffset,
+                  static_cast<UInt16>(startCluster),
+                  newSize
+                );
+              }
+            } else {
+              response.status = 0;
+            }
+          }
+        }
+      } else if (
         request.op == static_cast<UInt32>(FileSystem::Operation::Stat)
       ) {
         HandleState* state = GetHandleState(request.arg0);
@@ -551,101 +906,16 @@ namespace Quantum::System::FileSystems::FAT12 {
           UInt32 parentCluster = 0;
           bool parentIsRoot = true;
           char name[FileSystem::maxDirectoryLength] = {};
-          bool ok = true;
 
-          const char* cursor = path;
-
-          while (*cursor == '/' || *cursor == '\\') {
-            ++cursor;
-          }
-
-          const char* lastSegment = cursor;
-
-          while (*cursor != '\0') {
-            if (*cursor == '/' || *cursor == '\\') {
-              lastSegment = cursor + 1;
-            }
-
-            ++cursor;
-          }
-
-          if (!lastSegment || *lastSegment == '\0') {
-            ok = false;
-          } else {
-            UInt32 i = 0;
-            const char* nameCursor = lastSegment;
-
-            while (
-              *nameCursor != '\0' &&
-              *nameCursor != '/' &&
-              *nameCursor != '\\' &&
-              i + 1 < sizeof(name)
-            ) {
-              name[i++] = *nameCursor++;
-            }
-
-            name[i] = '\0';
-
-            cursor = path;
-
-            while (*cursor == '/' || *cursor == '\\') {
-              ++cursor;
-            }
-
-            while (*cursor != '\0' && cursor < lastSegment) {
-              char segment[FileSystem::maxDirectoryLength] = {};
-              UInt32 length = 0;
-
-              while (
-                *cursor != '\0' &&
-                *cursor != '/' &&
-                *cursor != '\\' &&
-                length + 1 < sizeof(segment)
-              ) {
-                segment[length++] = *cursor++;
-              }
-
-              segment[length] = '\0';
-
-              while (*cursor == '/' || *cursor == '\\') {
-                ++cursor;
-              }
-
-              if (segment[0] == '\0') {
-                continue;
-              }
-
-              UInt32 nextCluster = 0;
-              UInt8 attributes = 0;
-              UInt32 sizeBytes = 0;
-
-              if (
-                !_volume->FindEntry(
-                  parentCluster,
-                  parentIsRoot,
-                  segment,
-                  nextCluster,
-                  attributes,
-                  sizeBytes
-                )
-              ) {
-                ok = false;
-
-                break;
-              }
-
-              if ((attributes & 0x10) == 0) {
-                ok = false;
-
-                break;
-              }
-
-              parentCluster = nextCluster;
-              parentIsRoot = false;
-            }
-          }
-
-          if (ok && name[0] != '\0') {
+          if (
+            ResolveParent(
+              path,
+              parentCluster,
+              parentIsRoot,
+              name,
+              sizeof(name)
+            )
+          ) {
             if (_volume->CreateDirectory(parentCluster, parentIsRoot, name)) {
               response.status = 0;
             }
@@ -660,103 +930,95 @@ namespace Quantum::System::FileSystems::FAT12 {
           UInt32 parentCluster = 0;
           bool parentIsRoot = true;
           char name[FileSystem::maxDirectoryLength] = {};
-          bool ok = true;
 
-          const char* cursor = path;
-
-          while (*cursor == '/' || *cursor == '\\') {
-            ++cursor;
-          }
-
-          const char* lastSegment = cursor;
-
-          while (*cursor != '\0') {
-            if (*cursor == '/' || *cursor == '\\') {
-              lastSegment = cursor + 1;
-            }
-
-            ++cursor;
-          }
-
-          if (!lastSegment || *lastSegment == '\0') {
-            ok = false;
-          } else {
-            UInt32 i = 0;
-            const char* nameCursor = lastSegment;
-
-            while (
-              *nameCursor != '\0' &&
-              *nameCursor != '/' &&
-              *nameCursor != '\\' &&
-              i + 1 < sizeof(name)
-            ) {
-              name[i++] = *nameCursor++;
-            }
-
-            name[i] = '\0';
-
-            cursor = path;
-
-            while (*cursor == '/' || *cursor == '\\') {
-              ++cursor;
-            }
-
-            while (*cursor != '\0' && cursor < lastSegment) {
-              char segment[FileSystem::maxDirectoryLength] = {};
-              UInt32 length = 0;
-
-              while (
-                *cursor != '\0' &&
-                *cursor != '/' &&
-                *cursor != '\\' &&
-                length + 1 < sizeof(segment)
-              ) {
-                segment[length++] = *cursor++;
-              }
-
-              segment[length] = '\0';
-
-              while (*cursor == '/' || *cursor == '\\') {
-                ++cursor;
-              }
-
-              if (segment[0] == '\0') {
-                continue;
-              }
-
-              UInt32 nextCluster = 0;
-              UInt8 attributes = 0;
-              UInt32 sizeBytes = 0;
-
-              if (
-                !_volume->FindEntry(
-                  parentCluster,
-                  parentIsRoot,
-                  segment,
-                  nextCluster,
-                  attributes,
-                  sizeBytes
-                )
-              ) {
-                ok = false;
-
-                break;
-              }
-
-              if ((attributes & 0x10) == 0) {
-                ok = false;
-
-                break;
-              }
-
-              parentCluster = nextCluster;
-              parentIsRoot = false;
-            }
-          }
-
-          if (ok && name[0] != '\0') {
+          if (
+            ResolveParent(
+              path,
+              parentCluster,
+              parentIsRoot,
+              name,
+              sizeof(name)
+            )
+          ) {
             if (_volume->CreateFile(parentCluster, parentIsRoot, name)) {
               response.status = 0;
+            }
+          }
+        }
+      } else if (
+        request.op == static_cast<UInt32>(FileSystem::Operation::Remove)
+      ) {
+        CString path = reinterpret_cast<CString>(request.data);
+
+        if (_volume && request.arg0 == _volume->GetHandle()) {
+          UInt32 parentCluster = 0;
+          bool parentIsRoot = true;
+          char name[FileSystem::maxDirectoryLength] = {};
+
+          if (
+            ResolveParent(
+              path,
+              parentCluster,
+              parentIsRoot,
+              name,
+              sizeof(name)
+            )
+          ) {
+            if (_volume->RemoveEntry(parentCluster, parentIsRoot, name)) {
+              response.status = 0;
+            }
+          }
+        }
+      } else if (
+        request.op == static_cast<UInt32>(FileSystem::Operation::Rename)
+      ) {
+        CString fromPath = reinterpret_cast<CString>(request.data);
+
+        if (_volume && request.arg0 == _volume->GetHandle()) {
+          UInt32 offset = 0;
+
+          while (offset < request.dataLength && request.data[offset] != 0) {
+            ++offset;
+          }
+
+          if (offset + 1 < request.dataLength) {
+            CString toPath
+              = reinterpret_cast<CString>(request.data + offset + 1);
+            UInt32 fromCluster = 0;
+            UInt32 toCluster = 0;
+            bool fromIsRoot = true;
+            bool toIsRoot = true;
+            char fromName[FileSystem::maxDirectoryLength] = {};
+            char toName[FileSystem::maxDirectoryLength] = {};
+
+            if (
+              ResolveParent(
+                fromPath,
+                fromCluster,
+                fromIsRoot,
+                fromName,
+                sizeof(fromName)
+              ) &&
+              ResolveParent(
+                toPath,
+                toCluster,
+                toIsRoot,
+                toName,
+                sizeof(toName)
+              )
+            ) {
+              if (fromCluster == toCluster && fromIsRoot == toIsRoot) {
+                if (
+                  _volume->RenameEntry(
+                    fromCluster,
+                    fromIsRoot,
+                    fromName,
+                    toName
+                  )
+                ) {
+                  response.status = 0;
+                }
+              }
             }
           }
         }

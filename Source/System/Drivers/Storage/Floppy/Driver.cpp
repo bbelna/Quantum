@@ -649,7 +649,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     }
 
     UInt32 remaining = count;
-    UInt32 currentLba = lba;
+    UInt32 currentLBA = lba;
 
     SetDrive(driveIndex, true);
     WaitForMotorSpinUp();
@@ -682,7 +682,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       UInt8 head = 0;
       UInt8 sector = 0;
 
-      LBAToCHS(currentLba, sectorsPerTrack, headCount, cylinder, head, sector);
+      LBAToCHS(currentLBA, sectorsPerTrack, headCount, cylinder, head, sector);
 
       UInt32 totalLeft
         = static_cast<UInt32>((sectorsPerTrack * headCount)
@@ -832,7 +832,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       }
 
       remaining -= toRead;
-      currentLba += toRead;
+      currentLBA += toRead;
     }
 
     return true;
@@ -891,14 +891,14 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     }
 
     UInt32 remaining = count;
-    UInt32 currentLba = lba;
+    UInt32 currentLBA = lba;
 
     while (remaining > 0) {
       UInt8 cylinder = 0;
       UInt8 head = 0;
       UInt8 sector = 0;
 
-      LBAToCHS(currentLba, sectorsPerTrack, headCount, cylinder, head, sector);
+      LBAToCHS(currentLBA, sectorsPerTrack, headCount, cylinder, head, sector);
 
       UInt32 totalLeft
         = static_cast<UInt32>((sectorsPerTrack * headCount)
@@ -1048,7 +1048,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       }
 
       remaining -= toWrite;
-      currentLba += toWrite;
+      currentLBA += toWrite;
     }
 
     return true;

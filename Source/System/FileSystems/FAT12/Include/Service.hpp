@@ -76,6 +76,16 @@ namespace Quantum::System::FileSystems::FAT12 {
          * Entry attribute flags.
          */
         UInt32 attributes;
+
+        /**
+         * Directory entry LBA.
+         */
+        UInt32 entryLBA;
+
+        /**
+         * Directory entry offset.
+         */
+        UInt32 entryOffset;
       };
 
       /**
@@ -129,6 +139,29 @@ namespace Quantum::System::FileSystems::FAT12 {
        *   Handle slot pointer or nullptr.
        */
       static HandleState* GetHandleState(ABI::FileSystem::Handle handle);
+
+      /**
+       * Resolves the parent directory for a path.
+       * @param path
+       *   Path string to parse.
+       * @param parentCluster
+       *   Receives the parent directory cluster.
+       * @param parentIsRoot
+       *   True if the parent is the root directory.
+       * @param name
+       *   Receives the final segment name.
+       * @param nameBytes
+       *   Size of the name buffer.
+       * @return
+       *   True if the parent was resolved.
+       */
+      static bool ResolveParent(
+        CString path,
+        UInt32& parentCluster,
+        bool& parentIsRoot,
+        char* name,
+        UInt32 nameBytes
+      );
 
       /**
        * Open handle slots.

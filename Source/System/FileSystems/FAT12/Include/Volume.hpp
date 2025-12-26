@@ -158,6 +158,35 @@ namespace Quantum::System::FileSystems::FAT12 {
       );
 
       /**
+       * Writes file data from a buffer.
+       * @param startCluster
+       *   First cluster of the file (updated if needed).
+       * @param offset
+       *   Byte offset within the file.
+       * @param buffer
+       *   Input buffer to write.
+       * @param length
+       *   Number of bytes to write.
+       * @param outWritten
+       *   Receives the number of bytes written.
+       * @param fileSize
+       *   Current file size in bytes.
+       * @param outSize
+       *   Receives the updated file size.
+       * @return
+       *   True if the write completed.
+       */
+      bool WriteFileData(
+        UInt32& startCluster,
+        UInt32 offset,
+        const UInt8* buffer,
+        UInt32 length,
+        UInt32& outWritten,
+        UInt32 fileSize,
+        UInt32& outSize
+      );
+
+      /**
        * Retrieves entry info by name.
        * @param parentCluster
        *   Parent directory cluster.
@@ -178,6 +207,49 @@ namespace Quantum::System::FileSystems::FAT12 {
         CString name,
         ABI::FileSystem::FileInfo& outInfo,
         UInt8& outAttributes
+      );
+
+      /**
+       * Retrieves the directory entry location.
+       * @param parentCluster
+       *   Parent directory cluster.
+       * @param parentIsRoot
+       *   True if the parent is the root directory.
+       * @param name
+       *   Entry name to locate.
+       * @param outLBA
+       *   Receives the entry LBA.
+       * @param outOffset
+       *   Receives the entry offset.
+       * @return
+       *   True if the entry was found.
+       */
+      bool GetEntryLocation(
+        UInt32 parentCluster,
+        bool parentIsRoot,
+        CString name,
+        UInt32& outLBA,
+        UInt32& outOffset
+      );
+
+      /**
+       * Updates the size and start cluster for an entry.
+       * @param lba
+       *   Entry LBA.
+       * @param offset
+       *   Entry offset.
+       * @param startCluster
+       *   New start cluster.
+       * @param sizeBytes
+       *   New size in bytes.
+       * @return
+       *   True if the entry was updated.
+       */
+      bool UpdateEntry(
+        UInt32 lba,
+        UInt32 offset,
+        UInt16 startCluster,
+        UInt32 sizeBytes
       );
 
       /**
@@ -212,6 +284,43 @@ namespace Quantum::System::FileSystems::FAT12 {
         UInt32 parentCluster,
         bool parentIsRoot,
         CString name
+      );
+
+      /**
+       * Removes an entry under the given parent.
+       * @param parentCluster
+       *   Parent directory cluster.
+       * @param parentIsRoot
+       *   True if the parent is the root directory.
+       * @param name
+       *   Entry name.
+       * @return
+       *   True if the entry was removed.
+       */
+      bool RemoveEntry(
+        UInt32 parentCluster,
+        bool parentIsRoot,
+        CString name
+      );
+
+      /**
+       * Renames an entry under the given parent.
+       * @param parentCluster
+       *   Parent directory cluster.
+       * @param parentIsRoot
+       *   True if the parent is the root directory.
+       * @param name
+       *   Existing entry name.
+       * @param newName
+       *   New entry name.
+       * @return
+       *   True if the entry was renamed.
+       */
+      bool RenameEntry(
+        UInt32 parentCluster,
+        bool parentIsRoot,
+        CString name,
+        CString newName
       );
 
       /**
@@ -539,7 +648,7 @@ namespace Quantum::System::FileSystems::FAT12 {
        *   Parent directory cluster.
        * @param parentIsRoot
        *   True if the parent is root.
-       * @param outLba
+       * @param outLBA
        *   Receives the LBA to write.
        * @param outOffset
        *   Receives the byte offset within the sector.
@@ -549,8 +658,34 @@ namespace Quantum::System::FileSystems::FAT12 {
       bool FindFreeDirectorySlot(
         UInt32 parentCluster,
         bool parentIsRoot,
-        UInt32& outLba,
+        UInt32& outLBA,
         UInt32& outOffset
+      );
+
+      /**
+       * Computes the LBA and offset for a directory entry index.
+       * @param parentCluster
+       *   Parent directory cluster.
+       * @param parentIsRoot
+       *   True if the parent is root.
+       * @param index
+       *   Entry index within the directory.
+       * @param outLBA
+       *   Receives the LBA.
+       * @param outOffset
+       *   Receives the entry offset within the sector.
+       * @param end
+       *   True if the index is beyond the directory.
+       * @return
+       *   True if the location was computed.
+       */
+      bool GetDirectoryEntryLocation(
+        UInt32 parentCluster,
+        bool parentIsRoot,
+        UInt32 index,
+        UInt32& outLBA,
+        UInt32& outOffset,
+        bool& end
       );
 
       /**
@@ -569,6 +704,107 @@ namespace Quantum::System::FileSystems::FAT12 {
         UInt32 offset,
         const UInt8* entryBytes
       );
+
+      /**
+       * Finds a directory entry location.
+       * @param parentCluster
+       *   Parent directory cluster.
+       * @param parentIsRoot
+       *   True if the parent is root.
+       * @param name
+       *   Entry name to locate.
+       * @param record
+       *   Receives the entry record.
+       * @param outLBA
+       *   Receives the entry LBA.
+       * @param outOffset
+       *   Receives the entry offset within the sector.
+       * @return
+       *   True if the entry was found.
+       */
+      bool FindEntryLocation(
+        UInt32 parentCluster,
+        bool parentIsRoot,
+        CString name,
+        DirectoryRecord& record,
+        UInt32& outLBA,
+        UInt32& outOffset
+      );
+
+      /**
+       * Updates the size and start cluster for an entry.
+       * @param lba
+       *   Entry LBA.
+       * @param offset
+       *   Entry offset.
+       * @param startCluster
+       *   New start cluster.
+       * @param sizeBytes
+       *   New size in bytes.
+       * @return
+       *   True if the entry was updated.
+       */
+      bool UpdateDirectoryEntry(
+        UInt32 lba,
+        UInt32 offset,
+        UInt16 startCluster,
+        UInt32 sizeBytes
+      );
+
+      /**
+       * Marks a directory entry as deleted.
+       * @param lba
+       *   Entry LBA.
+       * @param offset
+       *   Entry offset.
+       * @return
+       *   True if the entry was marked deleted.
+       */
+      bool MarkEntryDeleted(UInt32 lba, UInt32 offset);
+
+      /**
+       * Renames a directory entry.
+       * @param lba
+       *   Entry LBA.
+       * @param offset
+       *   Entry offset.
+       * @param shortName
+       *   11-byte short name.
+       * @return
+       *   True if the entry was renamed.
+       */
+      bool RenameDirectoryEntry(
+        UInt32 lba,
+        UInt32 offset,
+        const UInt8* shortName
+      );
+
+      /**
+       * Frees a FAT cluster chain.
+       * @param startCluster
+       *   First cluster to free.
+       * @return
+       *   True if the chain was freed.
+       */
+      bool FreeClusterChain(UInt32 startCluster);
+
+      /**
+       * Returns true if a directory cluster is empty.
+       * @param startCluster
+       *   Directory start cluster.
+       * @return
+       *   True if only dot entries exist.
+       */
+      bool IsDirectoryEmpty(UInt32 startCluster);
+
+      /**
+       * Returns true if the record is "." or "..".
+       * @param record
+       *   Directory record to inspect.
+       * @return
+       *   True if the record is a dot entry.
+       */
+      static bool IsDotRecord(const DirectoryRecord& record);
 
       /**
        * Converts a directory record to a directory entry.

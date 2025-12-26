@@ -140,7 +140,6 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     }
 
     const FileSystem::VolumeInfo& info = volume.GetInfo();
-
     bool ok = true;
 
     ok &= Assert(
@@ -169,7 +168,6 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     }
 
     bool found = false;
-
     FileSystem::DirectoryEntry entry {};
 
     Console::WriteLine("FAT12 root directory entries:");
@@ -213,8 +211,8 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
       return true;
     }
 
-    UInt32 startCluster = 0;
     UInt8 attributes = 0;
+    UInt32 startCluster = 0;
     UInt32 sizeBytes = 0;
 
     if (
@@ -239,7 +237,6 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     Console::WriteLine("FAT12 TESTDIR entries:");
 
     bool found = false;
-
     FileSystem::DirectoryEntry entry {};
 
     for (UInt32 i = 0; i < 256; ++i) {
@@ -281,8 +278,8 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
       return true;
     }
 
-    UInt32 dirCluster = 0;
     UInt8 dirAttributes = 0;
+    UInt32 dirCluster = 0;
     UInt32 dirSize = 0;
 
     if (
@@ -304,8 +301,8 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
       return Assert(false, "testdir not a directory");
     }
 
-    UInt32 fileCluster = 0;
     UInt8 fileAttributes = 0;
+    UInt32 fileCluster = 0;
     UInt32 fileSize = 0;
 
     if (
@@ -371,8 +368,8 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
       return true;
     }
 
-    UInt32 dirCluster = 0;
     UInt8 dirAttributes = 0;
+    UInt32 dirCluster = 0;
     UInt32 dirSize = 0;
 
     if (
@@ -390,8 +387,8 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
       return true;
     }
 
-    UInt32 fileCluster = 0;
     UInt8 fileAttributes = 0;
+    UInt32 fileCluster = 0;
     UInt32 fileSize = 0;
 
     if (
@@ -430,6 +427,7 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     }
 
     buffer[bytes] = '\0';
+
     Console::WriteLine("FAT12 seek read:");
     Console::Write("  ");
     Console::WriteLine(buffer);
@@ -440,6 +438,7 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     for (UInt32 i = 0; expected[i] != '\0'; ++i) {
       if (buffer[i] != expected[i]) {
         match = false;
+
         break;
       }
     }
@@ -462,8 +461,8 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
       return true;
     }
 
-    UInt32 cluster = 0;
     UInt8 attributes = 0;
+    UInt32 cluster = 0;
     UInt32 sizeBytes = 0;
     FileSystem::FileInfo info {};
 
@@ -512,8 +511,8 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
       return true;
     }
 
-    UInt32 dirCluster = 0;
     UInt8 dirAttributes = 0;
+    UInt32 dirCluster = 0;
     UInt32 dirSize = 0;
     FileSystem::FileInfo info {};
 
@@ -536,8 +535,8 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
       return Assert(false, "newdir not a directory");
     }
 
-    UInt32 fileCluster = 0;
     UInt8 fileAttributes = 0;
+    UInt32 fileCluster = 0;
     UInt32 fileSize = 0;
 
     if (
@@ -612,6 +611,368 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     return ok;
   }
 
+  static bool TestRename() {
+    if (!WaitForFloppyReady()) {
+      LogSkip("floppy not ready");
+
+      return true;
+    }
+
+    Volume volume {};
+
+    if (!volume.Load()) {
+      LogSkip("no FAT12 volume");
+
+      return true;
+    }
+
+    UInt8 dirAttributes = 0;
+    UInt32 dirCluster = 0;
+    UInt32 dirSize = 0;
+
+    if (
+      !volume.FindEntry(
+        0,
+        true,
+        "NEWDIR",
+        dirCluster,
+        dirAttributes,
+        dirSize
+      )
+    ) {
+      if (!volume.CreateDirectory(0, true, "NEWDIR")) {
+        return Assert(false, "create directory failed");
+      }
+
+      if (
+        !volume.FindEntry(
+          0,
+          true,
+          "NEWDIR",
+          dirCluster,
+          dirAttributes,
+          dirSize
+        )
+      ) {
+        return Assert(false, "directory not found");
+      }
+    }
+
+    if ((dirAttributes & 0x10) == 0) {
+      return Assert(false, "newdir not a directory");
+    }
+
+    UInt8 fileAttributes = 0;
+    UInt32 fileCluster = 0;
+    UInt32 fileSize = 0;
+
+    if (
+      !volume.FindEntry(
+        dirCluster,
+        false,
+        "NEWFILE.TXT",
+        fileCluster,
+        fileAttributes,
+        fileSize
+      )
+    ) {
+      if (!volume.CreateFile(dirCluster, false, "NEWFILE.TXT")) {
+        return Assert(false, "create file failed");
+      }
+    }
+
+    if (
+      !volume.RenameEntry(
+        dirCluster,
+        false,
+        "NEWFILE.TXT",
+        "RENAMED.TXT"
+      )
+    ) {
+      return Assert(false, "rename failed");
+    }
+
+    if (
+      volume.FindEntry(
+        dirCluster,
+        false,
+        "NEWFILE.TXT",
+        fileCluster,
+        fileAttributes,
+        fileSize
+      )
+    ) {
+      return Assert(false, "old name still present");
+    }
+
+    if (
+      !volume.FindEntry(
+        dirCluster,
+        false,
+        "RENAMED.TXT",
+        fileCluster,
+        fileAttributes,
+        fileSize
+      )
+    ) {
+      return Assert(false, "renamed entry missing");
+    }
+
+    return Assert(true, "rename");
+  }
+
+  static bool TestRemove() {
+    if (!WaitForFloppyReady()) {
+      LogSkip("floppy not ready");
+
+      return true;
+    }
+
+    Volume volume {};
+
+    if (!volume.Load()) {
+      LogSkip("no FAT12 volume");
+
+      return true;
+    }
+
+    UInt8 dirAttributes = 0;
+    UInt32 dirCluster = 0;
+    UInt32 dirSize = 0;
+
+    if (
+      !volume.FindEntry(
+        0,
+        true,
+        "NEWDIR",
+        dirCluster,
+        dirAttributes,
+        dirSize
+      )
+    ) {
+      if (!volume.CreateDirectory(0, true, "NEWDIR")) {
+        return Assert(false, "create directory failed");
+      }
+
+      if (
+        !volume.FindEntry(
+          0,
+          true,
+          "NEWDIR",
+          dirCluster,
+          dirAttributes,
+          dirSize
+        )
+      ) {
+        return Assert(false, "directory not found");
+      }
+    }
+
+    UInt8 fileAttributes = 0;
+    UInt32 fileCluster = 0;
+    UInt32 fileSize = 0;
+
+    if (
+      !volume.FindEntry(
+        dirCluster,
+        false,
+        "RENAMED.TXT",
+        fileCluster,
+        fileAttributes,
+        fileSize
+      )
+    ) {
+      if (!volume.CreateFile(dirCluster, false, "RENAMED.TXT")) {
+        return Assert(false, "create file failed");
+      }
+    }
+
+    if (!volume.RemoveEntry(dirCluster, false, "RENAMED.TXT")) {
+      return Assert(false, "remove file failed");
+    }
+
+    if (
+      volume.FindEntry(
+        dirCluster,
+        false,
+        "RENAMED.TXT",
+        fileCluster,
+        fileAttributes,
+        fileSize
+      )
+    ) {
+      return Assert(false, "removed entry still present");
+    }
+
+    if (!volume.RemoveEntry(0, true, "NEWDIR")) {
+      return Assert(false, "remove directory failed");
+    }
+
+    if (
+      volume.FindEntry(
+        0,
+        true,
+        "NEWDIR",
+        dirCluster,
+        dirAttributes,
+        dirSize
+      )
+    ) {
+      return Assert(false, "directory still present");
+    }
+
+    return Assert(true, "remove");
+  }
+
+  static bool TestPathNormalization() {
+    if (!WaitForFloppyReady()) {
+      LogSkip("floppy not ready");
+
+      return true;
+    }
+
+    Volume volume {};
+
+    if (!volume.Load()) {
+      LogSkip("no FAT12 volume");
+
+      return true;
+    }
+
+    const char path[] = "TESTDIR\\..\\TESTDIR//TEST.TXT";
+    char segment[FileSystem::maxDirectoryLength] = {};
+    UInt32 segCount = 0;
+    const char* parts[8] = {};
+    static char storage[8][FileSystem::maxDirectoryLength] = {};
+
+    for (UInt32 i = 0; path[i] != '\0';) {
+      while (path[i] == '/' || path[i] == '\\') {
+        ++i;
+      }
+
+      UInt32 len = 0;
+
+      while (
+        path[i] != '\0' &&
+        path[i] != '/' &&
+        path[i] != '\\' &&
+        len + 1 < sizeof(segment)
+      ) {
+        segment[len++] = path[i++];
+      }
+
+      segment[len] = '\0';
+
+      if (segment[0] == '\0') {
+        continue;
+      }
+
+      if (segment[0] == '.' && segment[1] == '\0') {
+        continue;
+      }
+
+      if (segment[0] == '.' && segment[1] == '.' && segment[2] == '\0') {
+        if (segCount > 0) {
+          --segCount;
+        }
+
+        continue;
+      }
+
+      if (segCount < 8) {
+        UInt32 slot = segCount;
+
+        for (UInt32 c = 0; c < sizeof(storage[slot]); ++c) {
+          storage[slot][c] = segment[c];
+
+          if (segment[c] == '\0') {
+            break;
+          }
+        }
+
+        parts[slot] = storage[slot];
+        segCount++;
+      }
+    }
+
+    if (segCount < 2) {
+      return Assert(false, "normalized path parse");
+    }
+
+    bool isRoot = true;
+    UInt8 fileAttributes = 0;
+    UInt32 cluster = 0;
+    UInt32 fileCluster = 0;
+    UInt32 fileSize = 0;
+
+    for (UInt32 i = 0; i < segCount; ++i) {
+      UInt8 attributes = 0;
+      UInt32 nextCluster = 0;
+      UInt32 sizeBytes = 0;
+
+      if (
+        !volume.FindEntry(
+          cluster,
+          isRoot,
+          parts[i],
+          nextCluster,
+          attributes,
+          sizeBytes
+        )
+      ) {
+        return Assert(false, "normalized open failed");
+      }
+
+      if (i + 1 < segCount) {
+        if ((attributes & 0x10) == 0) {
+          return Assert(false, "normalized open failed");
+        }
+
+        cluster = nextCluster;
+        isRoot = false;
+      } else {
+        fileCluster = nextCluster;
+        fileAttributes = attributes;
+        fileSize = sizeBytes;
+      }
+    }
+
+    if ((fileAttributes & 0x10) != 0) {
+      return Assert(false, "normalized read failed");
+    }
+
+    UInt8 buffer[16] = {};
+    UInt32 bytes = 0;
+
+    if (
+      !volume.ReadFile(
+        fileCluster,
+        0,
+        buffer,
+        sizeof(buffer) - 1,
+        bytes,
+        fileSize
+      )
+    ) {
+      return Assert(false, "normalized read failed");
+    }
+
+    buffer[bytes] = '\0';
+
+    const char expected[] = "Quantum";
+    bool match = true;
+
+    for (UInt32 i = 0; expected[i] != '\0'; ++i) {
+      if (buffer[i] != expected[i]) {
+        match = false;
+
+        break;
+      }
+    }
+
+    return Assert(match, "normalized read");
+  }
+
   static void RunTest(CString name, bool (*func)()) {
     Console::Write("[TEST] ");
     Console::WriteLine(name ? name : "(unnamed)");
@@ -642,6 +1003,9 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     RunTest("FAT12 create directory", TestCreateDirectory);
     RunTest("FAT12 create file", TestCreateFile);
     RunTest("FAT12 stat", TestStat);
+    RunTest("FAT12 rename", TestRename);
+    RunTest("FAT12 remove", TestRemove);
+    RunTest("FAT12 path normalization", TestPathNormalization);
 
     LogFooter();
   }

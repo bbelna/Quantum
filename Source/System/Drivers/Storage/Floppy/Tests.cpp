@@ -241,13 +241,13 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
       return true;
     }
 
-    UInt32 scratchLba = totalSectors > 1 ? totalSectors - 1 : 0;
+    UInt32 scratchLBA = totalSectors > 1 ? totalSectors - 1 : 0;
     UInt8 original[512] = {};
     UInt8 writeData[512] = {};
     UInt8 verify[512] = {};
     bool ok = Driver::ReadToBuffer(
       driveIndex,
-      scratchLba,
+      scratchLBA,
       1,
       sectorSize,
       sectorsPerTrack,
@@ -266,7 +266,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
 
     ok = Driver::WriteFromBuffer(
       driveIndex,
-      scratchLba,
+      scratchLBA,
       1,
       sectorSize,
       sectorsPerTrack,
@@ -281,7 +281,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
 
     ok = Driver::ReadToBuffer(
       driveIndex,
-      scratchLba,
+      scratchLBA,
       1,
       sectorSize,
       sectorsPerTrack,
@@ -308,7 +308,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
 
     Driver::WriteFromBuffer(
       driveIndex,
-      scratchLba,
+      scratchLBA,
       1,
       sectorSize,
       sectorsPerTrack,
@@ -360,13 +360,13 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
       return true;
     }
 
-    UInt32 scratchLba = totalSectors - sectorCount;
+    UInt32 scratchLBA = totalSectors - sectorCount;
     UInt8 original[maxBytes] = {};
     UInt8 writeData[maxBytes] = {};
     UInt8 verify[maxBytes] = {};
     bool ok = Driver::ReadToBuffer(
       driveIndex,
-      scratchLba,
+      scratchLBA,
       sectorCount,
       sectorSize,
       sectorsPerTrack,
@@ -385,7 +385,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
 
     ok = Driver::WriteFromBuffer(
       driveIndex,
-      scratchLba,
+      scratchLBA,
       sectorCount,
       sectorSize,
       sectorsPerTrack,
@@ -400,7 +400,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
 
     ok = Driver::ReadToBuffer(
       driveIndex,
-      scratchLba,
+      scratchLBA,
       sectorCount,
       sectorSize,
       sectorsPerTrack,
@@ -427,7 +427,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
 
     Driver::WriteFromBuffer(
       driveIndex,
-      scratchLba,
+      scratchLBA,
       sectorCount,
       sectorSize,
       sectorsPerTrack,
@@ -480,13 +480,13 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
       return true;
     }
 
-    UInt32 scratchLba = totalSectors - sectorCount;
-    UInt32 trackBase = (scratchLba / assumedSectorsPerTrack)
+    UInt32 scratchLBA = totalSectors - sectorCount;
+    UInt32 trackBase = (scratchLBA / assumedSectorsPerTrack)
       * assumedSectorsPerTrack;
-    UInt32 desiredLba = trackBase + (assumedSectorsPerTrack - 2);
+    UInt32 desiredLBA = trackBase + (assumedSectorsPerTrack - 2);
 
-    if (desiredLba + sectorCount > totalSectors) {
-      desiredLba = scratchLba;
+    if (desiredLBA + sectorCount > totalSectors) {
+      desiredLBA = scratchLBA;
     }
 
     UInt8 original[maxBytes] = {};
@@ -494,7 +494,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
     UInt8 verify[maxBytes] = {};
     bool ok = Driver::ReadToBuffer(
       driveIndex,
-      desiredLba,
+      desiredLBA,
       sectorCount,
       sectorSize,
       sectorsPerTrack,
@@ -513,7 +513,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
 
     ok = Driver::WriteFromBuffer(
       driveIndex,
-      desiredLba,
+      desiredLBA,
       sectorCount,
       sectorSize,
       sectorsPerTrack,
@@ -528,7 +528,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
 
     ok = Driver::ReadToBuffer(
       driveIndex,
-      desiredLba,
+      desiredLBA,
       sectorCount,
       sectorSize,
       sectorsPerTrack,
@@ -555,7 +555,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
 
     Driver::WriteFromBuffer(
       driveIndex,
-      desiredLba,
+      desiredLBA,
       sectorCount,
       sectorSize,
       sectorsPerTrack,
