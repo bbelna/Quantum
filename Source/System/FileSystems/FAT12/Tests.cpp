@@ -842,7 +842,7 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     const char path[] = "TESTDIR\\..\\TESTDIR//TEST.TXT";
     char segment[FileSystem::maxDirectoryLength] = {};
     UInt32 segCount = 0;
-    const char* parts[8] = {};
+    CString parts[8] = {};
     static char storage[8][FileSystem::maxDirectoryLength] = {};
 
     for (UInt32 i = 0; path[i] != '\0';) {

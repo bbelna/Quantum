@@ -21,16 +21,9 @@ namespace Quantum::System::FileSystems::FAT12 {
   class Directory {
     public:
       /**
-       * Initializes the helper with a volume.
-       * @param volume
-       *   Volume to access.
-       */
-      void Init(Volume& volume);
-
-      /**
        * Directory record descriptor.
        */
-      struct DirectoryRecord {
+      struct Record {
         /**
          * Entry name in 8.3 format.
          */
@@ -53,6 +46,13 @@ namespace Quantum::System::FileSystems::FAT12 {
       };
 
       /**
+       * Initializes with a volume.
+       * @param volume
+       *   Volume to access.
+       */
+      void Initialize(Volume& volume);
+
+      /**
        * Reads a root directory entry by index.
        * @param index
        *   Root directory entry index.
@@ -63,7 +63,7 @@ namespace Quantum::System::FileSystems::FAT12 {
        * @return
        *   True on success.
        */
-      bool ReadRootRecord(UInt32 index, DirectoryRecord& record, bool& end);
+      bool ReadRootRecord(UInt32 index, Record& record, bool& end);
 
       /**
        * Reads a directory record by index from a cluster chain.
@@ -78,10 +78,10 @@ namespace Quantum::System::FileSystems::FAT12 {
        * @return
        *   True on success.
        */
-      bool ReadDirectoryRecord(
+      bool ReadRecord(
         UInt32 startCluster,
         UInt32 index,
-        DirectoryRecord& record,
+        Record& record,
         bool& end
       );
 
@@ -95,7 +95,7 @@ namespace Quantum::System::FileSystems::FAT12 {
        *   True on success.
        */
       static bool RecordToEntry(
-        const DirectoryRecord& record,
+        const Record& record,
         ABI::FileSystem::DirectoryEntry& entry
       );
 
@@ -157,30 +157,7 @@ namespace Quantum::System::FileSystems::FAT12 {
         UInt32 parentCluster,
         bool parentIsRoot,
         CString name,
-        DirectoryRecord& record,
-        UInt32& outLBA,
-        UInt32& outOffset
-      );
-
-      /**
-       * Finds a directory entry location without returning data.
-       * @param parentCluster
-       *   Parent directory cluster.
-       * @param parentIsRoot
-       *   True if parent is root.
-       * @param name
-       *   Entry name.
-       * @param outLBA
-       *   Receives sector LBA.
-       * @param outOffset
-       *   Receives byte offset within sector.
-       * @return
-       *   True if found.
-       */
-      bool GetDirectoryEntryLocation(
-        UInt32 parentCluster,
-        bool parentIsRoot,
-        CString name,
+        Record& record,
         UInt32& outLBA,
         UInt32& outOffset
       );
@@ -198,76 +175,11 @@ namespace Quantum::System::FileSystems::FAT12 {
        * @return
        *   True on success.
        */
-      bool UpdateDirectoryEntry(
+      bool UpdateEntry(
         UInt32 lba,
         UInt32 offset,
         UInt16 startCluster,
         UInt32 sizeBytes
-      );
-
-      /**
-       * Writes a raw directory entry.
-       * @param lba
-       *   Directory sector LBA.
-       * @param offset
-       *   Entry byte offset within sector.
-       * @param entryBytes
-       *   Raw entry bytes.
-       * @return
-       *   True on success.
-       */
-      bool WriteDirectoryEntry(
-        UInt32 lba,
-        UInt32 offset,
-        const UInt8* entryBytes
-      );
-
-      /**
-       * Finds the next free directory entry slot.
-       * @param startCluster
-       *   Directory cluster.
-       * @param isRoot
-       *   True if root directory.
-       * @param outLBA
-       *   Receives sector LBA.
-       * @param outOffset
-       *   Receives byte offset.
-       * @return
-       *   True on success.
-       */
-      bool FindFreeDirectorySlot(
-        UInt32 startCluster,
-        bool isRoot,
-        UInt32& outLBA,
-        UInt32& outOffset
-      );
-
-      /**
-       * Marks a directory entry deleted.
-       * @param lba
-       *   Entry sector LBA.
-       * @param offset
-       *   Entry byte offset.
-       * @return
-       *   True on success.
-       */
-      bool MarkEntryDeleted(UInt32 lba, UInt32 offset);
-
-      /**
-       * Renames a directory entry at a known location.
-       * @param lba
-       *   Entry sector LBA.
-       * @param offset
-       *   Entry byte offset.
-       * @param shortName
-       *   New 8.3 name bytes.
-       * @return
-       *   True on success.
-       */
-      bool RenameDirectoryEntry(
-        UInt32 lba,
-        UInt32 offset,
-        const UInt8* shortName
       );
 
       /**
@@ -277,7 +189,7 @@ namespace Quantum::System::FileSystems::FAT12 {
        * @return
        *   True if empty.
        */
-      bool IsDirectoryEmpty(UInt32 startCluster);
+      bool IsEmpty(UInt32 startCluster);
 
       /**
        * Returns true if the record is "." or "..".
@@ -286,7 +198,7 @@ namespace Quantum::System::FileSystems::FAT12 {
        * @return
        *   True if dot record.
        */
-      static bool IsDotRecord(const DirectoryRecord& record);
+      static bool IsDotRecord(const Record& record);
 
       /**
        * Creates a directory entry and allocates its cluster.
@@ -382,30 +294,44 @@ namespace Quantum::System::FileSystems::FAT12 {
         UInt32& outSize
       );
 
+    private:
       /**
-       * Returns entry location for a path.
-       * @param parentCluster
-       *   Parent directory cluster.
-       * @param parentIsRoot
-       *   True if parent is root.
-       * @param name
-       *   Entry name.
-       * @param outLBA
-       *   Receives entry LBA.
-       * @param outOffset
-       *   Receives entry offset.
+       * Writes a raw directory entry.
+       * @param lba
+       *   Directory sector LBA.
+       * @param offset
+       *   Entry byte offset within sector.
+       * @param entryBytes
+       *   Raw entry bytes.
        * @return
        *   True on success.
        */
-      bool GetEntryLocation(
-        UInt32 parentCluster,
-        bool parentIsRoot,
-        CString name,
+      bool WriteEntry(
+        UInt32 lba,
+        UInt32 offset,
+        const UInt8* entryBytes
+      );
+
+      /**
+       * Finds the next free directory entry slot.
+       * @param startCluster
+       *   Directory cluster.
+       * @param isRoot
+       *   True if root directory.
+       * @param outLBA
+       *   Receives sector LBA.
+       * @param outOffset
+       *   Receives byte offset.
+       * @return
+       *   True on success.
+       */
+      bool FindFreeSlot(
+        UInt32 startCluster,
+        bool isRoot,
         UInt32& outLBA,
         UInt32& outOffset
       );
 
-    private:
       /**
        * Associated volume.
        */

@@ -16,13 +16,13 @@ namespace Quantum::System::FileSystems::FAT12 {
   using BlockDevice = ABI::Devices::BlockDevice;
   using FileSystem = ABI::FileSystem;
 
-  void Directory::Init(Volume& volume) {
+  void Directory::Initialize(Volume& volume) {
     _volume = &volume;
   }
 
   bool Directory::ReadRootRecord(
     UInt32 index,
-    DirectoryRecord& record,
+    Record& record,
     bool& end
   ) {
     end = false;
@@ -147,10 +147,10 @@ namespace Quantum::System::FileSystems::FAT12 {
     return true;
   }
 
-  bool Directory::ReadDirectoryRecord(
+  bool Directory::ReadRecord(
     UInt32 startCluster,
     UInt32 index,
-    DirectoryRecord& record,
+    Record& record,
     bool& end
   ) {
     end = false;
@@ -249,7 +249,7 @@ namespace Quantum::System::FileSystems::FAT12 {
   }
 
   bool Directory::RecordToEntry(
-    const DirectoryRecord& record,
+    const Record& record,
     FileSystem::DirectoryEntry& entry
   ) {
     UInt32 outIndex = 0;
@@ -313,7 +313,7 @@ namespace Quantum::System::FileSystems::FAT12 {
       return false;
     }
 
-    DirectoryRecord record {};
+    Record record {};
     bool end = false;
     UInt32 index = 0;
 
@@ -323,7 +323,7 @@ namespace Quantum::System::FileSystems::FAT12 {
       if (isRoot) {
         ok = ReadRootRecord(index, record, end);
       } else {
-        ok = ReadDirectoryRecord(startCluster, index, record, end);
+        ok = ReadRecord(startCluster, index, record, end);
       }
 
       if (ok) {
@@ -354,7 +354,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     UInt32 parentCluster,
     bool parentIsRoot,
     CString name,
-    DirectoryRecord& record,
+    Record& record,
     UInt32& outLBA,
     UInt32& outOffset
   ) {
@@ -443,7 +443,7 @@ namespace Quantum::System::FileSystems::FAT12 {
       if (parentIsRoot) {
         ok = ReadRootRecord(index, record, end);
       } else {
-        ok = ReadDirectoryRecord(parentCluster, index, record, end);
+        ok = ReadRecord(parentCluster, index, record, end);
       }
 
       if (ok) {
@@ -466,26 +466,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     return false;
   }
 
-  bool Directory::GetDirectoryEntryLocation(
-    UInt32 parentCluster,
-    bool parentIsRoot,
-    CString name,
-    UInt32& outLBA,
-    UInt32& outOffset
-  ) {
-    DirectoryRecord record {};
-
-    return FindEntryLocation(
-      parentCluster,
-      parentIsRoot,
-      name,
-      record,
-      outLBA,
-      outOffset
-    );
-  }
-
-  bool Directory::UpdateDirectoryEntry(
+  bool Directory::UpdateEntry(
     UInt32 lba,
     UInt32 offset,
     UInt16 startCluster,
@@ -516,7 +497,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     return BlockDevice::Write(request) == 0;
   }
 
-  bool Directory::WriteDirectoryEntry(
+  bool Directory::WriteEntry(
     UInt32 lba,
     UInt32 offset,
     const UInt8* entryBytes
@@ -547,7 +528,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     return BlockDevice::Write(request) == 0;
   }
 
-  bool Directory::FindFreeDirectorySlot(
+  bool Directory::FindFreeSlot(
     UInt32 startCluster,
     bool isRoot,
     UInt32& outLBA,
@@ -665,65 +646,13 @@ namespace Quantum::System::FileSystems::FAT12 {
     return false;
   }
 
-  bool Directory::MarkEntryDeleted(UInt32 lba, UInt32 offset) {
-    UInt8 sector[512] = {};
-    BlockDevice::Request request {};
-
-    request.deviceId = _volume->_device.id;
-    request.lba = lba;
-    request.count = 1;
-    request.buffer = sector;
-
-    if (BlockDevice::Read(request) != 0) {
-      return false;
-    }
-
-    sector[offset] = 0xE5;
-
-    request.lba = lba;
-    request.buffer = sector;
-
-    return BlockDevice::Write(request) == 0;
-  }
-
-  bool Directory::RenameDirectoryEntry(
-    UInt32 lba,
-    UInt32 offset,
-    const UInt8* shortName
-  ) {
-    if (!shortName) {
-      return false;
-    }
-
-    UInt8 sector[512] = {};
-    BlockDevice::Request request {};
-
-    request.deviceId = _volume->_device.id;
-    request.lba = lba;
-    request.count = 1;
-    request.buffer = sector;
-
-    if (BlockDevice::Read(request) != 0) {
-      return false;
-    }
-
-    for (UInt32 i = 0; i < 11; ++i) {
-      sector[offset + i] = shortName[i];
-    }
-
-    request.lba = lba;
-    request.buffer = sector;
-
-    return BlockDevice::Write(request) == 0;
-  }
-
-  bool Directory::IsDirectoryEmpty(UInt32 startCluster) {
+  bool Directory::IsEmpty(UInt32 startCluster) {
     bool end = false;
-    DirectoryRecord record {};
+    Record record {};
     UInt32 index = 0;
 
     for (;;) {
-      if (ReadDirectoryRecord(startCluster, index, record, end)) {
+      if (ReadRecord(startCluster, index, record, end)) {
         if (!IsDotRecord(record)) {
           return false;
         }
@@ -739,7 +668,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     return true;
   }
 
-  bool Directory::IsDotRecord(const DirectoryRecord& record) {
+  bool Directory::IsDotRecord(const Record& record) {
     if (record.name[0] != '.') {
       return false;
     }
@@ -858,7 +787,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     UInt32 entryOffset = 0;
 
     if (
-      !FindFreeDirectorySlot(
+      !FindFreeSlot(
         parentCluster,
         parentIsRoot,
         entryLBA,
@@ -879,7 +808,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     _volume->WriteUInt16(entryBytes, 26, static_cast<UInt16>(newCluster));
     _volume->WriteUInt32(entryBytes, 28, 0);
 
-    return WriteDirectoryEntry(entryLBA, entryOffset, entryBytes);
+    return WriteEntry(entryLBA, entryOffset, entryBytes);
   }
 
   bool Directory::CreateFile(
@@ -918,7 +847,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     UInt32 entryOffset = 0;
 
     if (
-      !FindFreeDirectorySlot(
+      !FindFreeSlot(
         parentCluster,
         parentIsRoot,
         entryLBA,
@@ -939,7 +868,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     _volume->WriteUInt16(entryBytes, 26, 0);
     _volume->WriteUInt32(entryBytes, 28, 0);
 
-    return WriteDirectoryEntry(entryLBA, entryOffset, entryBytes);
+    return WriteEntry(entryLBA, entryOffset, entryBytes);
   }
 
   bool Directory::RemoveEntry(
@@ -947,7 +876,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     bool parentIsRoot,
     CString name
   ) {
-    DirectoryRecord record {};
+    Record record {};
     UInt32 lba = 0;
     UInt32 offset = 0;
 
@@ -965,7 +894,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     }
 
     if ((record.attributes & 0x10) != 0) {
-      if (!IsDirectoryEmpty(record.startCluster)) {
+      if (!IsEmpty(record.startCluster)) {
         return false;
       }
     }
@@ -974,7 +903,24 @@ namespace Quantum::System::FileSystems::FAT12 {
       return false;
     }
 
-    return MarkEntryDeleted(lba, offset);
+    UInt8 sector[512] = {};
+    BlockDevice::Request request {};
+
+    request.deviceId = _volume->_device.id;
+    request.lba = lba;
+    request.count = 1;
+    request.buffer = sector;
+
+    if (BlockDevice::Read(request) != 0) {
+      return false;
+    }
+
+    sector[offset] = 0xE5;
+
+    request.lba = lba;
+    request.buffer = sector;
+
+    return BlockDevice::Write(request) == 0;
   }
 
   bool Directory::RenameEntry(
@@ -983,7 +929,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     CString name,
     CString newName
   ) {
-    DirectoryRecord record {};
+    Record record {};
     UInt32 lba = 0;
     UInt32 offset = 0;
 
@@ -1006,7 +952,26 @@ namespace Quantum::System::FileSystems::FAT12 {
       return false;
     }
 
-    return RenameDirectoryEntry(lba, offset, shortName);
+    UInt8 sector[512] = {};
+    BlockDevice::Request request {};
+
+    request.deviceId = _volume->_device.id;
+    request.lba = lba;
+    request.count = 1;
+    request.buffer = sector;
+
+    if (BlockDevice::Read(request) != 0) {
+      return false;
+    }
+
+    for (UInt32 i = 0; i < 11; ++i) {
+      sector[offset + i] = shortName[i];
+    }
+
+    request.lba = lba;
+    request.buffer = sector;
+
+    return BlockDevice::Write(request) == 0;
   }
 
   bool Directory::GetEntryInfo(
@@ -1016,7 +981,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     UInt8& outAttributes,
     UInt32& outSize
   ) {
-    DirectoryRecord record {};
+    Record record {};
     UInt32 lba = 0;
     UInt32 offset = 0;
 
@@ -1039,22 +1004,4 @@ namespace Quantum::System::FileSystems::FAT12 {
     return true;
   }
 
-  bool Directory::GetEntryLocation(
-    UInt32 parentCluster,
-    bool parentIsRoot,
-    CString name,
-    UInt32& outLBA,
-    UInt32& outOffset
-  ) {
-    DirectoryRecord record {};
-
-    return FindEntryLocation(
-      parentCluster,
-      parentIsRoot,
-      name,
-      record,
-      outLBA,
-      outOffset
-    );
-  }
 }

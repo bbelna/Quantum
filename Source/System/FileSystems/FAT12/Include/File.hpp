@@ -19,11 +19,11 @@ namespace Quantum::System::FileSystems::FAT12 {
   class File {
     public:
       /**
-       * Initializes the helper with a volume.
+       * Initializes with a volume.
        * @param volume
        *   Volume to access.
        */
-      void Init(Volume& volume);
+      void Initialize(Volume& volume);
 
       /**
        * Reads file data.
@@ -42,7 +42,7 @@ namespace Quantum::System::FileSystems::FAT12 {
        * @return
        *   True on success.
        */
-      bool ReadFile(
+      bool Read(
         UInt32 startCluster,
         UInt32 offset,
         UInt8* buffer,
@@ -70,7 +70,7 @@ namespace Quantum::System::FileSystems::FAT12 {
        * @return
        *   True on success.
        */
-      bool WriteFileData(
+      bool Write(
         UInt32& startCluster,
         UInt32 offset,
         const UInt8* buffer,

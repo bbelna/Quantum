@@ -15,11 +15,11 @@
 namespace Quantum::System::FileSystems::FAT12 {
   using BlockDevice = ABI::Devices::BlockDevice;
 
-  void File::Init(Volume& volume) {
+  void File::Initialize(Volume& volume) {
     _volume = &volume;
   }
 
-  bool File::ReadFile(
+  bool File::Read(
     UInt32 startCluster,
     UInt32 offset,
     UInt8* buffer,
@@ -129,7 +129,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     return true;
   }
 
-  bool File::WriteFileData(
+  bool File::Write(
     UInt32& startCluster,
     UInt32 offset,
     const UInt8* buffer,

@@ -15,15 +15,15 @@ namespace Quantum::System::FileSystems::FAT12 {
   using BlockDevice = ABI::Devices::BlockDevice;
   using FileSystem = ABI::FileSystem;
 
-  void Volume::Init() {
-    _fat.Init(*this);
-    _directory.Init(*this);
-    _file.Init(*this);
+  void Volume::Initialize() {
+    _fat.Initialize(*this);
+    _directory.Initialize(*this);
+    _file.Initialize(*this);
   }
 
   bool Volume::Load() {
     // ensure helper pointers are wired
-    Init();
+    Initialize();
 
     _valid = false;
 
@@ -137,9 +137,9 @@ namespace Quantum::System::FileSystems::FAT12 {
     FileSystem::DirectoryEntry& entry,
     bool& end
   ) {
-    Directory::DirectoryRecord record {};
+    Directory::Record record {};
 
-    if (!ReadRootRecord(index, record, end)) {
+    if (!_directory.ReadRootRecord(index, record, end)) {
       return false;
     }
 
@@ -152,9 +152,9 @@ namespace Quantum::System::FileSystems::FAT12 {
     FileSystem::DirectoryEntry& entry,
     bool& end
   ) {
-    Directory::DirectoryRecord record {};
+    Directory::Record record {};
 
-    if (!ReadDirectoryRecord(startCluster, index, record, end)) {
+    if (!_directory.ReadRecord(startCluster, index, record, end)) {
       return false;
     }
 
@@ -187,7 +187,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     UInt32& outRead,
     UInt32 fileSize
   ) {
-    return _file.ReadFile(
+    return _file.Read(
       startCluster,
       offset,
       buffer,
@@ -206,7 +206,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     UInt32 fileSize,
     UInt32& outSize
   ) {
-    return _file.WriteFileData(
+    return _file.Write(
       startCluster,
       offset,
       buffer,
@@ -253,10 +253,13 @@ namespace Quantum::System::FileSystems::FAT12 {
     UInt32& outLBA,
     UInt32& outOffset
   ) {
-    return _directory.GetEntryLocation(
+    Directory::Record record {};
+
+    return _directory.FindEntryLocation(
       parentCluster,
       parentIsRoot,
       name,
+      record,
       outLBA,
       outOffset
     );
@@ -268,7 +271,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     UInt16 startCluster,
     UInt32 sizeBytes
   ) {
-    return _directory.UpdateDirectoryEntry(
+    return _directory.UpdateEntry(
       lba,
       offset,
       startCluster,
@@ -310,11 +313,11 @@ namespace Quantum::System::FileSystems::FAT12 {
   }
 
   bool Volume::ReadFATEntry(UInt32 cluster, UInt32& nextCluster) {
-    return _fat.ReadFATEntry(cluster, nextCluster);
+    return _fat.ReadEntry(cluster, nextCluster);
   }
 
   bool Volume::WriteFATEntry(UInt32 cluster, UInt32 value) {
-    return _fat.WriteFATEntry(cluster, value);
+    return _fat.WriteEntry(cluster, value);
   }
 
   bool Volume::FindFreeCluster(UInt32& outCluster) {
@@ -326,11 +329,11 @@ namespace Quantum::System::FileSystems::FAT12 {
   }
 
   bool Volume::LoadFATCache() {
-    return _fat.LoadFATCache();
+    return _fat.LoadCache();
   }
 
   bool Volume::ReadFATEntryCached(UInt32 cluster, UInt32& nextCluster) const {
-    return _fat.ReadFATEntryCached(cluster, nextCluster);
+    return _fat.ReadEntryCached(cluster, nextCluster);
   }
 
   bool Volume::IsEndOfChain(UInt32 value) {
@@ -460,103 +463,20 @@ namespace Quantum::System::FileSystems::FAT12 {
     return left[index] == '\0' && right[index] == '\0';
   }
 
-  bool Volume::ReadRootRecord(
-    UInt32 index,
-    Directory::DirectoryRecord& record,
-    bool& end
-  ) {
-    return _directory.ReadRootRecord(index, record, end);
-  }
-
-  bool Volume::ReadDirectoryRecord(
-    UInt32 startCluster,
-    UInt32 index,
-    Directory::DirectoryRecord& record,
-    bool& end
-  ) {
-    return _directory.ReadDirectoryRecord(startCluster, index, record, end);
-  }
-
-  bool Volume::FindFreeDirectorySlot(
-    UInt32 parentCluster,
-    bool parentIsRoot,
-    UInt32& outLBA,
-    UInt32& outOffset
-  ) {
-    return _directory.FindFreeDirectorySlot(
-      parentCluster,
-      parentIsRoot,
-      outLBA,
-      outOffset
-    );
-  }
-
-  bool Volume::WriteDirectoryEntry(
-    UInt32 lba,
-    UInt32 offset,
-    const UInt8* entryBytes
-  ) {
-    return _directory.WriteDirectoryEntry(lba, offset, entryBytes);
-  }
-
-  bool Volume::FindEntryLocation(
-    UInt32 parentCluster,
-    bool parentIsRoot,
-    CString name,
-    Directory::DirectoryRecord& record,
-    UInt32& outLBA,
-    UInt32& outOffset
-  ) {
-    return _directory.FindEntryLocation(
-      parentCluster,
-      parentIsRoot,
-      name,
-      record,
-      outLBA,
-      outOffset
-    );
-  }
-
-  bool Volume::UpdateDirectoryEntry(
-    UInt32 lba,
-    UInt32 offset,
-    UInt16 startCluster,
-    UInt32 sizeBytes
-  ) {
-    return _directory.UpdateDirectoryEntry(
-      lba,
-      offset,
-      startCluster,
-      sizeBytes
-    );
-  }
-
-  bool Volume::MarkEntryDeleted(UInt32 lba, UInt32 offset) {
-    return _directory.MarkEntryDeleted(lba, offset);
-  }
-
-  bool Volume::RenameDirectoryEntry(
-    UInt32 lba,
-    UInt32 offset,
-    const UInt8* shortName
-  ) {
-    return _directory.RenameDirectoryEntry(lba, offset, shortName);
-  }
-
   bool Volume::FreeClusterChain(UInt32 startCluster) {
     return _fat.FreeClusterChain(startCluster);
   }
 
   bool Volume::IsDirectoryEmpty(UInt32 startCluster) {
-    return _directory.IsDirectoryEmpty(startCluster);
+    return _directory.IsEmpty(startCluster);
   }
 
-  bool Volume::IsDotRecord(const Directory::DirectoryRecord& record) {
+  bool Volume::IsDotRecord(const Directory::Record& record) {
     return Directory::IsDotRecord(record);
   }
 
   bool Volume::RecordToEntry(
-    const Directory::DirectoryRecord& record,
+    const Directory::Record& record,
     FileSystem::DirectoryEntry& entry
   ) {
     return Directory::RecordToEntry(record, entry);

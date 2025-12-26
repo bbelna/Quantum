@@ -25,7 +25,7 @@ namespace Quantum::System::FileSystems::FAT12 {
 
   void Service::InitializeVolume() {
     // ensure helpers are wired in freestanding runtime
-    _volumeStorage.Init();
+    _volumeStorage.Initialize();
     _volume = &_volumeStorage;
     _volume->Load();
   }
@@ -173,13 +173,13 @@ namespace Quantum::System::FileSystems::FAT12 {
 
     NormalizeSegment(normalized);
 
-    const char* cursor = normalized;
+    CString cursor = normalized;
 
     while (*cursor == '/' || *cursor == '\\') {
       ++cursor;
     }
 
-    const char* lastSegment = cursor;
+    CString lastSegment = cursor;
 
     while (*cursor != '\0') {
       if (*cursor == '/') {
@@ -194,7 +194,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     }
 
     UInt32 i = 0;
-    const char* nameCursor = lastSegment;
+    CString nameCursor = lastSegment;
 
     while (
       *nameCursor != '\0' &&
@@ -429,19 +429,19 @@ namespace Quantum::System::FileSystems::FAT12 {
 
             response.status = handle;
           } else {
-            UInt32 cluster = 0;
-            UInt32 lastCluster = 0;
-            UInt8 lastAttributes = 0;
-            UInt32 lastSize = 0;
-            const char* cursor = nullptr;
             bool isRoot = true;
             bool ok = true;
             bool sawSegment = false;
             bool endsWithSeparator = false;
-            UInt32 lastParentCluster = 0;
             bool lastParentIsRoot = true;
             char lastName[FileSystem::maxDirectoryLength] = {};
             char normalized[FileSystem::maxDirectoryLength] = {};
+            CString cursor = nullptr;
+            UInt8 lastAttributes = 0;
+            UInt32 cluster = 0;
+            UInt32 lastCluster = 0;
+            UInt32 lastSize = 0;
+            UInt32 lastParentCluster = 0;
 
             if (path) {
               UInt32 len = 0;

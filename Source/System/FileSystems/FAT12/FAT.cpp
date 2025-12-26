@@ -14,11 +14,11 @@
 namespace Quantum::System::FileSystems::FAT12 {
   using BlockDevice = ABI::Devices::BlockDevice;
 
-  void FAT::Init(Volume& volume) {
+  void FAT::Initialize(Volume& volume) {
     _volume = &volume;
   }
 
-  bool FAT::LoadFATCache() {
+  bool FAT::LoadCache() {
     if (!_volume || !_volume->_valid) {
       return false;
     }
@@ -53,12 +53,12 @@ namespace Quantum::System::FileSystems::FAT12 {
     return true;
   }
 
-  bool FAT::ReadFATEntry(UInt32 cluster, UInt32& nextCluster) {
+  bool FAT::ReadEntry(UInt32 cluster, UInt32& nextCluster) {
     if (!_volume || !_volume->_valid) {
       return false;
     }
 
-    if (ReadFATEntryCached(cluster, nextCluster)) {
+    if (ReadEntryCached(cluster, nextCluster)) {
       return true;
     }
 
@@ -121,7 +121,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     return true;
   }
 
-  bool FAT::ReadFATEntryCached(UInt32 cluster, UInt32& nextCluster) const {
+  bool FAT::ReadEntryCached(UInt32 cluster, UInt32& nextCluster) const {
     if (!_volume || !_volume->_fatCached || _volume->_fatCacheBytes == 0) {
       return false;
     }
@@ -146,7 +146,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     return true;
   }
 
-  bool FAT::WriteFATEntry(UInt32 cluster, UInt32 value) {
+  bool FAT::WriteEntry(UInt32 cluster, UInt32 value) {
     if (!_volume || !_volume->_valid) {
       return false;
     }
@@ -191,7 +191,6 @@ namespace Quantum::System::FileSystems::FAT12 {
         + fatIndex * _volume->_fatSectors
         + sectorOffset;
       UInt8 sector[512] = {};
-
       BlockDevice::Request request {};
 
       request.deviceId = _volume->_device.id;
@@ -283,11 +282,11 @@ namespace Quantum::System::FileSystems::FAT12 {
       UInt32 nextCluster = 0;
 
       if (_volume->_fatCached) {
-        if (!ReadFATEntryCached(cluster, nextCluster)) {
+        if (!ReadEntryCached(cluster, nextCluster)) {
           return false;
         }
       } else {
-        if (!ReadFATEntry(cluster, nextCluster)) {
+        if (!ReadEntry(cluster, nextCluster)) {
           return false;
         }
       }
@@ -304,11 +303,11 @@ namespace Quantum::System::FileSystems::FAT12 {
       UInt32 nextCluster = 0;
 
       if (_volume->_fatCached) {
-        if (!ReadFATEntryCached(cluster, nextCluster)) {
+        if (!ReadEntryCached(cluster, nextCluster)) {
           return false;
         }
       } else {
-        if (!ReadFATEntry(cluster, nextCluster)) {
+        if (!ReadEntry(cluster, nextCluster)) {
           return false;
         }
       }
@@ -341,11 +340,11 @@ namespace Quantum::System::FileSystems::FAT12 {
       UInt32 nextCluster = 0;
 
       if (_volume->_fatCached) {
-        if (!ReadFATEntryCached(cluster, nextCluster)) {
+        if (!ReadEntryCached(cluster, nextCluster)) {
           return false;
         }
       } else {
-        if (!ReadFATEntry(cluster, nextCluster)) {
+        if (!ReadEntry(cluster, nextCluster)) {
           return false;
         }
       }
@@ -369,11 +368,11 @@ namespace Quantum::System::FileSystems::FAT12 {
     for (;;) {
       UInt32 nextCluster = 0;
 
-      if (!ReadFATEntry(cluster, nextCluster)) {
+      if (!ReadEntry(cluster, nextCluster)) {
         return false;
       }
 
-      if (!WriteFATEntry(cluster, 0x000)) {
+      if (!WriteEntry(cluster, 0x000)) {
         return false;
       }
 

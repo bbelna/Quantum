@@ -19,18 +19,18 @@ namespace Quantum::System::FileSystems::FAT12 {
   class FAT {
     public:
       /**
-       * Initializes the helper with a volume.
+       * Initializes with a volume.
        * @param volume
        *   Volume to access.
        */
-      void Init(Volume& volume);
+      void Initialize(Volume& volume);
 
       /**
        * Loads the FAT into cache if possible.
        * @return
        *   True if the cache was loaded.
        */
-      bool LoadFATCache();
+      bool LoadCache();
 
       /**
        * Reads a FAT entry (cluster link).
@@ -41,7 +41,7 @@ namespace Quantum::System::FileSystems::FAT12 {
        * @return
        *   True on success.
        */
-      bool ReadFATEntry(UInt32 cluster, UInt32& nextCluster);
+      bool ReadEntry(UInt32 cluster, UInt32& nextCluster);
 
       /**
        * Reads a FAT entry from the cache.
@@ -52,7 +52,7 @@ namespace Quantum::System::FileSystems::FAT12 {
        * @return
        *   True on success.
        */
-      bool ReadFATEntryCached(UInt32 cluster, UInt32& nextCluster) const;
+      bool ReadEntryCached(UInt32 cluster, UInt32& nextCluster) const;
 
       /**
        * Writes a FAT entry.
@@ -63,7 +63,7 @@ namespace Quantum::System::FileSystems::FAT12 {
        * @return
        *   True on success.
        */
-      bool WriteFATEntry(UInt32 cluster, UInt32 value);
+      bool WriteEntry(UInt32 cluster, UInt32 value);
 
       /**
        * Finds a free cluster.
