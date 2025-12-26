@@ -2,7 +2,7 @@
 
 ## Our Pledge
 
-We as members, contributors, and maintainers of **Quantum** pledge to make
+We as members, contributors, and maintainers of Quantum pledge to make
 participation in our community a harassment-free experience for everyone,
 regardless of age, body size, visible or invisible disability, ethnicity, sex
 characteristics, gender identity and expression, level of experience, education,
@@ -59,8 +59,9 @@ not aligned with this Code of Conduct.
 If you experience or witness unacceptable behavior, you may report it in one of
 the following ways:
 
-- **Report directly** using the GitHub’s built-in reporting tools (recommended
-for serious or sensitive situations), or
+- **Report directly** using [GitHub’s built-in reporting tools](\
+https://docs.github.com/en/communities/maintaining-your-safety-on-github/\
+reporting-abuse-or-spam) (recommended for serious or sensitive situations), or
 - **Contact the project maintainer(s)** privately via the repository owner's
 email (bbelna@aol.com), or
 - **Open an issue** labeled `conduct` if you feel safe doing so.
