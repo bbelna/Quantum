@@ -1,5 +1,7 @@
 # Code of Conduct
 
+This document details Quantum's code of conduct.
+
 ## Our Pledge
 
 We as members, contributors, and maintainers of Quantum pledge to make
