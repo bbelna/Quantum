@@ -385,7 +385,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     Console::WriteLine("FAT12 service ready");
     InitializeVolumes();
 
-    #if defined(TEST)
+    #if defined(TEST) // TODO #18
     Tests::Run();
     #endif
 
@@ -434,7 +434,8 @@ namespace Quantum::System::FileSystems::FAT12 {
         )
       ) {
         UInt32 maxEntries = request.arg1;
-        UInt32 entryBytes = static_cast<UInt32>(sizeof(FileSystem::VolumeEntry));
+        UInt32 entryBytes
+          = static_cast<UInt32>(sizeof(FileSystem::VolumeEntry));
         UInt32 maxPayloadEntries = entryBytes == 0
           ? 0
           : (FileSystem::messageDataBytes / entryBytes);
@@ -602,7 +603,11 @@ namespace Quantum::System::FileSystems::FAT12 {
                 continue;
               }
 
-              if (segment[0] == '.' && segment[1] == '.' && segment[2] == '\0') {
+              if (
+                segment[0] == '.'
+                && segment[1] == '.'
+                && segment[2] == '\0'
+              ) {
                 if (isRoot) {
                   if (*cursor == '\0') {
                     lastCluster = 0;
@@ -618,8 +623,8 @@ namespace Quantum::System::FileSystems::FAT12 {
                   continue;
                 }
 
-                UInt32 upCluster = 0;
                 UInt8 upAttributes = 0;
+                UInt32 upCluster = 0;
                 UInt32 upSize = 0;
 
                 if (
@@ -654,11 +659,11 @@ namespace Quantum::System::FileSystems::FAT12 {
                 continue;
               }
 
-              UInt32 nextCluster = 0;
-              UInt8 attributes = 0;
-              UInt32 sizeBytes = 0;
               bool lastSegment = (*cursor == '\0');
               bool requireDirectory = lastSegment && hadSeparator;
+              UInt8 attributes = 0;
+              UInt32 nextCluster = 0;
+              UInt32 sizeBytes = 0;
 
               lastParentCluster = cluster;
               lastParentIsRoot = isRoot;
@@ -706,9 +711,9 @@ namespace Quantum::System::FileSystems::FAT12 {
 
             if (ok && sawSegment) {
               bool isDirectory = (lastAttributes & 0x10) != 0;
+              bool haveLocation = false;
               UInt32 entryLBA = 0;
               UInt32 entryOffset = 0;
-              bool haveLocation = false;
 
               if (
                 !(lastName[0] == '.' && lastName[1] == '\0')
@@ -1026,9 +1031,9 @@ namespace Quantum::System::FileSystems::FAT12 {
         Volume* volume = FindVolumeByHandle(request.arg0);
 
         if (volume) {
-          UInt32 parentCluster = 0;
           bool parentIsRoot = true;
           char name[FileSystem::maxDirectoryLength] = {};
+          UInt32 parentCluster = 0;
 
           if (
             ResolveParent(
@@ -1052,9 +1057,9 @@ namespace Quantum::System::FileSystems::FAT12 {
         Volume* volume = FindVolumeByHandle(request.arg0);
 
         if (volume) {
-          UInt32 parentCluster = 0;
           bool parentIsRoot = true;
           char name[FileSystem::maxDirectoryLength] = {};
+          UInt32 parentCluster = 0;
 
           if (
             ResolveParent(
@@ -1078,9 +1083,9 @@ namespace Quantum::System::FileSystems::FAT12 {
         Volume* volume = FindVolumeByHandle(request.arg0);
 
         if (volume) {
-          UInt32 parentCluster = 0;
           bool parentIsRoot = true;
           char name[FileSystem::maxDirectoryLength] = {};
+          UInt32 parentCluster = 0;
 
           if (
             ResolveParent(
@@ -1111,14 +1116,14 @@ namespace Quantum::System::FileSystems::FAT12 {
           }
 
           if (offset + 1 < request.dataLength) {
-            CString toPath
-              = reinterpret_cast<CString>(request.data + offset + 1);
-            UInt32 fromCluster = 0;
-            UInt32 toCluster = 0;
             bool fromIsRoot = true;
             bool toIsRoot = true;
             char fromName[FileSystem::maxDirectoryLength] = {};
             char toName[FileSystem::maxDirectoryLength] = {};
+            CString toPath
+              = reinterpret_cast<CString>(request.data + offset + 1);
+            UInt32 fromCluster = 0;
+            UInt32 toCluster = 0;
 
             if (
               ResolveParent(
@@ -1162,9 +1167,9 @@ namespace Quantum::System::FileSystems::FAT12 {
         if (!volume || !state || !state->inUse || state->isDirectory) {
           response.status = 0;
         } else {
+          bool validOrigin = true;
           UInt32 origin = request.arg2;
           UInt32 base = 0;
-          bool validOrigin = true;
 
           if (origin == 0) {
             base = 0;

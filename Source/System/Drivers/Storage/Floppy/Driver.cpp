@@ -1249,9 +1249,9 @@ namespace Quantum::System::Drivers::Storage::Floppy {
         continue;
       }
 
-      UInt32 sectorSize = 512;
       UInt8 sectorsPerTrack = _defaultSectorsPerTrack;
       UInt8 headCount = _defaultHeadCount;
+      UInt32 sectorSize = 512;
       UInt32 sectorCount = 0;
 
       if (
@@ -1306,7 +1306,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
 
     Console::WriteLine("Floppy driver bound to block device");
 
-    #if defined(TEST)
+    #if defined(TEST) // TODO #18
     Tests::Run();
     #endif
 

@@ -10,6 +10,7 @@
 #include <ABI/Devices/BlockDevice.hpp>
 #include <ABI/FileSystem.hpp>
 #include <ABI/Task.hpp>
+#include <Types.hpp>
 
 #include "Tests.hpp"
 #include "Volume.hpp"
@@ -26,6 +27,9 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
   static bool _skipLogged = false;
   static const char _lfnDir[] = "LONGDIRNAME";
   static const char _lfnFile[] = "LONGFILENAME.TXT";
+  static const char _testDir[] = "TESTDIR";
+  static const char _testFile[] = "TEST.TXT";
+  static const char _appendFile[] = "APPEND.TXT";
 
   static void WriteDec(UInt32 value) {
     char buffer[16] = {};
@@ -67,6 +71,193 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
       || entry.accessDate != 0
       || entry.writeDate != 0
       || entry.writeTime != 0;
+  }
+
+  static bool EnsureTestDirectory(
+    Volume& volume,
+    UInt32& outCluster,
+    UInt8& outAttributes,
+    UInt32& outSize
+  ) {
+    if (
+      !volume.FindEntry(
+        0,
+        true,
+        _testDir,
+        outCluster,
+        outAttributes,
+        outSize
+      )
+    ) {
+      if (!volume.CreateDirectory(0, true, _testDir)) {
+        return false;
+      }
+
+      if (
+        !volume.FindEntry(
+          0,
+          true,
+          _testDir,
+          outCluster,
+          outAttributes,
+          outSize
+        )
+      ) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  static bool EnsureTestFile(
+    Volume& volume,
+    UInt32 dirCluster,
+    CString name,
+    UInt32& outCluster,
+    UInt8& outAttributes,
+    UInt32& outSize,
+    UInt32& outEntryLBA,
+    UInt32& outEntryOffset
+  ) {
+    if (
+      !volume.FindEntry(
+        dirCluster,
+        false,
+        name,
+        outCluster,
+        outAttributes,
+        outSize
+      )
+    ) {
+      if (!volume.CreateFile(dirCluster, false, name)) {
+        return false;
+      }
+
+      if (
+        !volume.FindEntry(
+          dirCluster,
+          false,
+          name,
+          outCluster,
+          outAttributes,
+          outSize
+        )
+      ) {
+        return false;
+      }
+    }
+
+    if (
+      !volume.GetEntryLocation(
+        dirCluster,
+        false,
+        name,
+        outEntryLBA,
+        outEntryOffset
+      )
+    ) {
+      return false;
+    }
+
+    return true;
+  }
+
+  static bool WriteFileContents(
+    Volume& volume,
+    UInt32& startCluster,
+    UInt32 fileSize,
+    UInt32 entryLBA,
+    UInt32 entryOffset,
+    const UInt8* data,
+    UInt32 length,
+    UInt32& outSize
+  ) {
+    UInt32 written = 0;
+    UInt32 newSize = fileSize;
+
+    if (
+      !volume.WriteFileData(
+        startCluster,
+        0,
+        data,
+        length,
+        written,
+        fileSize,
+        newSize
+      )
+    ) {
+      return false;
+    }
+
+    if (written != length) {
+      return false;
+    }
+
+    if (
+      !volume.UpdateEntry(
+        entryLBA,
+        entryOffset,
+        static_cast<UInt16>(startCluster),
+        newSize
+      )
+    ) {
+      return false;
+    }
+
+    outSize = newSize;
+
+    return true;
+  }
+
+  static void CleanupTestEntries() {
+    Volume volume {};
+
+    if (!volume.Load()) {
+      return;
+    }
+
+    UInt8 dirAttributes = 0;
+    UInt32 dirCluster = 0;
+    UInt32 dirSize = 0;
+
+    if (
+      !volume.FindEntry(
+        0,
+        true,
+        _testDir,
+        dirCluster,
+        dirAttributes,
+        dirSize
+      )
+    ) {
+      return;
+    }
+
+    // remove test files first
+    volume.RemoveEntry(dirCluster, false, _testFile);
+    volume.RemoveEntry(dirCluster, false, _appendFile);
+
+    // remove directory if it is empty
+    volume.RemoveEntry(0, true, _testDir);
+
+    UInt8 lfnAttributes = 0;
+    UInt32 lfnCluster = 0;
+    UInt32 lfnSize = 0;
+
+    if (
+      volume.FindEntry(
+        0,
+        true,
+        _lfnDir,
+        lfnCluster,
+        lfnAttributes,
+        lfnSize
+      )
+    ) {
+      volume.RemoveEntry(lfnCluster, false, _lfnFile);
+      volume.RemoveEntry(0, true, _lfnDir);
+    }
   }
 
   static void LogHeader() {
@@ -244,18 +435,14 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     UInt32 sizeBytes = 0;
 
     if (
-      !volume.FindEntry(
-        0,
-        true,
-        "TESTDIR",
+      !EnsureTestDirectory(
+        volume,
         startCluster,
         attributes,
         sizeBytes
       )
     ) {
-      LogSkip("testdir missing");
-
-      return true;
+      return Assert(false, "testdir missing");
     }
 
     if ((attributes & 0x10) == 0) {
@@ -306,6 +493,25 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
       return true;
     }
 
+    UInt8 dirAttributes = 0;
+    UInt32 dirCluster = 0;
+    UInt32 dirSize = 0;
+
+    if (
+      !volume.FindEntry(
+        0,
+        true,
+        _lfnDir,
+        dirCluster,
+        dirAttributes,
+        dirSize
+      )
+    ) {
+      if (!volume.CreateDirectory(0, true, _lfnDir)) {
+        return Assert(false, "lfn dir create failed");
+      }
+    }
+
     bool found = false;
     FileSystem::DirectoryEntry entry {};
 
@@ -329,11 +535,7 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
       }
     }
 
-    if (!found) {
-      return Assert(false, "lfn dir missing");
-    }
-
-    return true;
+    return Assert(found, "lfn dir missing");
   }
 
   static bool TestLFNFile() {
@@ -365,11 +567,47 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
         dirSize
       )
     ) {
-      return Assert(false, "lfn dir missing");
+      if (!volume.CreateDirectory(0, true, _lfnDir)) {
+        return Assert(false, "lfn dir create failed");
+      }
+
+      if (
+        !volume.FindEntry(
+          0,
+          true,
+          _lfnDir,
+          dirCluster,
+          dirAttributes,
+          dirSize
+        )
+      ) {
+        return Assert(false, "lfn dir missing");
+      }
     }
 
     if ((dirAttributes & 0x10) == 0) {
       return Assert(false, "lfn dir not a directory");
+    }
+
+    UInt8 fileAttributes = 0;
+    UInt32 fileCluster = 0;
+    UInt32 fileSize = 0;
+    UInt32 entryLBA = 0;
+    UInt32 entryOffset = 0;
+
+    if (
+      !EnsureTestFile(
+        volume,
+        dirCluster,
+        _lfnFile,
+        fileCluster,
+        fileAttributes,
+        fileSize,
+        entryLBA,
+        entryOffset
+      )
+    ) {
+      return Assert(false, "lfn file missing");
     }
 
     FileSystem::DirectoryEntry entry {};
@@ -415,18 +653,14 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     UInt32 dirSize = 0;
 
     if (
-      !volume.FindEntry(
-        0,
-        true,
-        "TESTDIR",
+      !EnsureTestDirectory(
+        volume,
         dirCluster,
         dirAttributes,
         dirSize
       )
     ) {
-      LogSkip("testdir missing");
-
-      return true;
+      return Assert(false, "testdir missing");
     }
 
     if ((dirAttributes & 0x10) == 0) {
@@ -436,24 +670,43 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     UInt8 fileAttributes = 0;
     UInt32 fileCluster = 0;
     UInt32 fileSize = 0;
+    UInt32 entryLBA = 0;
+    UInt32 entryOffset = 0;
 
     if (
-      !volume.FindEntry(
+      !EnsureTestFile(
+        volume,
         dirCluster,
-        false,
-        "TEST.TXT",
+        _testFile,
         fileCluster,
         fileAttributes,
-        fileSize
+        fileSize,
+        entryLBA,
+        entryOffset
       )
     ) {
-      LogSkip("test.txt missing");
-
-      return true;
+      return Assert(false, "test.txt missing");
     }
 
     if ((fileAttributes & 0x10) != 0) {
       return Assert(false, "test.txt is a directory");
+    }
+
+    const char payload[] = "Quantum FAT12 test file.";
+
+    if (
+      !WriteFileContents(
+        volume,
+        fileCluster,
+        fileSize,
+        entryLBA,
+        entryOffset,
+        reinterpret_cast<const UInt8*>(payload),
+        static_cast<UInt32>(sizeof(payload) - 1),
+        fileSize
+      )
+    ) {
+      return Assert(false, "test.txt write failed");
     }
 
     UInt8 buffer[128] = {};
@@ -482,7 +735,17 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     Console::Write("  ");
     Console::WriteLine(reinterpret_cast<CString>(buffer));
 
-    return Assert(true, "test.txt read");
+    bool match = true;
+
+    for (UInt32 i = 0; payload[i] != '\0'; ++i) {
+      if (buffer[i] != static_cast<UInt8>(payload[i])) {
+        match = false;
+
+        break;
+      }
+    }
+
+    return Assert(match, "test.txt read");
   }
 
   static bool TestFileSeek() {
@@ -505,37 +768,52 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     UInt32 dirSize = 0;
 
     if (
-      !volume.FindEntry(
-        0,
-        true,
-        "TESTDIR",
+      !EnsureTestDirectory(
+        volume,
         dirCluster,
         dirAttributes,
         dirSize
       )
     ) {
-      LogSkip("testdir missing");
-
-      return true;
+      return Assert(false, "testdir missing");
     }
 
     UInt8 fileAttributes = 0;
     UInt32 fileCluster = 0;
     UInt32 fileSize = 0;
+    UInt32 entryLBA = 0;
+    UInt32 entryOffset = 0;
 
     if (
-      !volume.FindEntry(
+      !EnsureTestFile(
+        volume,
         dirCluster,
-        false,
-        "TEST.TXT",
+        _testFile,
         fileCluster,
         fileAttributes,
+        fileSize,
+        entryLBA,
+        entryOffset
+      )
+    ) {
+      return Assert(false, "test.txt missing");
+    }
+
+    const char payload[] = "Quantum FAT12 test file.";
+
+    if (
+      !WriteFileContents(
+        volume,
+        fileCluster,
+        fileSize,
+        entryLBA,
+        entryOffset,
+        reinterpret_cast<const UInt8*>(payload),
+        static_cast<UInt32>(sizeof(payload) - 1),
         fileSize
       )
     ) {
-      LogSkip("test.txt missing");
-
-      return true;
+      return Assert(false, "test.txt write failed");
     }
 
     char buffer[32] = {};
@@ -598,31 +876,14 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     UInt32 dirSize = 0;
 
     if (
-      !volume.FindEntry(
-        0,
-        true,
-        "TESTDIR",
+      !EnsureTestDirectory(
+        volume,
         dirCluster,
         dirAttributes,
         dirSize
       )
     ) {
-      if (!volume.CreateDirectory(0, true, "TESTDIR")) {
-        return Assert(false, "create testdir failed");
-      }
-
-      if (
-        !volume.FindEntry(
-          0,
-          true,
-          "TESTDIR",
-          dirCluster,
-          dirAttributes,
-          dirSize
-        )
-      ) {
-        return Assert(false, "testdir missing");
-      }
+      return Assert(false, "testdir missing");
     }
 
     if ((dirAttributes & 0x10) == 0) {
@@ -633,48 +894,22 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     UInt8 fileAttributes = 0;
     UInt32 fileCluster = 0;
     UInt32 fileSize = 0;
-
-    if (
-      !volume.FindEntry(
-        dirCluster,
-        false,
-        fileName,
-        fileCluster,
-        fileAttributes,
-        fileSize
-      )
-    ) {
-      if (!volume.CreateFile(dirCluster, false, fileName)) {
-        return Assert(false, "create append file failed");
-      }
-
-      if (
-        !volume.FindEntry(
-          dirCluster,
-          false,
-          fileName,
-          fileCluster,
-          fileAttributes,
-          fileSize
-        )
-      ) {
-        return Assert(false, "append file missing");
-      }
-    }
-
     UInt32 entryLBA = 0;
     UInt32 entryOffset = 0;
 
     if (
-      !volume.GetEntryLocation(
+      !EnsureTestFile(
+        volume,
         dirCluster,
-        false,
         fileName,
+        fileCluster,
+        fileAttributes,
+        fileSize,
         entryLBA,
         entryOffset
       )
     ) {
-      return Assert(false, "append entry location missing");
+      return Assert(false, "append file missing");
     }
 
     const char appendText[] = "Quantum FAT12 append.\n";
@@ -1310,6 +1545,8 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     RunTest("FAT12 rename", TestRename);
     RunTest("FAT12 remove", TestRemove);
     RunTest("FAT12 path normalization", TestPathNormalization);
+
+    CleanupTestEntries();
 
     LogFooter();
   }

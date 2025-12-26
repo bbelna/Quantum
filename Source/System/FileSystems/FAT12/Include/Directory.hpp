@@ -441,6 +441,83 @@ namespace Quantum::System::FileSystems::FAT12 {
         bool setAccess,
         bool setWrite
       );
+
+      /**
+       * Builds an 8.3 alias for long names.
+       * @param name
+       *   Long file name.
+       * @param outName
+       *   Receives 8.3 alias.
+       * @return
+       *   True on success.
+       */
+      static bool BuildShortAlias(CString name, UInt8* outName);
+
+      /**
+       * Finds a contiguous run of free directory slots.
+       * @param startCluster
+       *   Directory cluster.
+       * @param isRoot
+       *   True if root directory.
+       * @param count
+       *   Number of entries needed.
+       * @param outIndex
+       *   Receives starting entry index.
+       * @return
+       *   True on success.
+       */
+      bool FindFreeSlotRun(
+        UInt32 startCluster,
+        bool isRoot,
+        UInt32 count,
+        UInt32& outIndex
+      );
+
+      /**
+       * Computes the on-disk location for an entry index.
+       * @param parentCluster
+       *   Directory cluster.
+       * @param parentIsRoot
+       *   True if root directory.
+       * @param entryIndex
+       *   Entry index.
+       * @param outLBA
+       *   Receives entry LBA.
+       * @param outOffset
+       *   Receives entry offset.
+       * @return
+       *   True on success.
+       */
+      bool ComputeEntryLocation(
+        UInt32 parentCluster,
+        bool parentIsRoot,
+        UInt32 entryIndex,
+        UInt32& outLBA,
+        UInt32& outOffset
+      );
+
+      /**
+       * Writes LFN entries for a long name.
+       * @param parentCluster
+       *   Directory cluster.
+       * @param parentIsRoot
+       *   True if root directory.
+       * @param entryIndex
+       *   First entry index to use.
+       * @param name
+       *   Long file name.
+       * @param shortName
+       *   Short name bytes.
+       * @return
+       *   True on success.
+       */
+      bool WriteLFNEntries(
+        UInt32 parentCluster,
+        bool parentIsRoot,
+        UInt32 entryIndex,
+        CString name,
+        const UInt8* shortName
+      );
       /**
        * Writes a raw directory entry.
        * @param lba
