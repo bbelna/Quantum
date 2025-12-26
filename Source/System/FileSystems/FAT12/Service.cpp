@@ -981,9 +981,29 @@ namespace Quantum::System::FileSystems::FAT12 {
           response.status = 1;
         } else {
           FileSystem::FileInfo info {};
+          UInt8 attributes = 0;
+          bool haveEntry = false;
 
-          info.sizeBytes = state->fileSize;
-          info.attributes = state->attributes;
+          if (state->entryLBA != 0) {
+            haveEntry = volume->GetEntryInfoAt(
+              state->entryLBA,
+              state->entryOffset,
+              info,
+              attributes
+            );
+          }
+
+          if (!haveEntry) {
+            info.sizeBytes = state->fileSize;
+            info.attributes = state->attributes;
+            info.createTime = 0;
+            info.createDate = 0;
+            info.accessDate = 0;
+            info.writeTime = 0;
+            info.writeDate = 0;
+          } else {
+            state->attributes = attributes;
+          }
 
           UInt32 bytes
             = static_cast<UInt32>(sizeof(FileSystem::FileInfo));

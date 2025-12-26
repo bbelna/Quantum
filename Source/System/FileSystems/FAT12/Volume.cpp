@@ -252,17 +252,35 @@ namespace Quantum::System::FileSystems::FAT12 {
     FileSystem::FileInfo& outInfo,
     UInt8& outAttributes
   ) {
-    if (
-      !_directory.GetEntryInfo(
-        parentCluster,
-        parentIsRoot,
-        name,
-        outInfo,
-        outAttributes
-      )
-    ) {
+    return _directory.GetEntryInfo(
+      parentCluster,
+      parentIsRoot,
+      name,
+      outInfo,
+      outAttributes
+    );
+  }
+
+  bool Volume::GetEntryInfoAt(
+    UInt32 lba,
+    UInt32 offset,
+    FileSystem::FileInfo& outInfo,
+    UInt8& outAttributes
+  ) {
+    Directory::Record record {};
+
+    if (!_directory.ReadRecordAt(lba, offset, record)) {
       return false;
     }
+
+    outInfo.sizeBytes = record.sizeBytes;
+    outInfo.attributes = record.attributes;
+    outInfo.createTime = record.createTime;
+    outInfo.createDate = record.createDate;
+    outInfo.accessDate = record.accessDate;
+    outInfo.writeTime = record.writeTime;
+    outInfo.writeDate = record.writeDate;
+    outAttributes = record.attributes;
 
     return true;
   }

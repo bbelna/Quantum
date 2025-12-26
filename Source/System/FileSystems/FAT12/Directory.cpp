@@ -284,6 +284,55 @@ namespace Quantum::System::FileSystems::FAT12 {
     return false;
   }
 
+  bool Directory::ReadRecordAt(UInt32 lba, UInt32 offset, Record& record) {
+    if (!_volume || !_volume->_valid) {
+      return false;
+    }
+
+    UInt32 bytesPerSector = _volume->_info.sectorSize;
+
+    if (bytesPerSector != 512) {
+      // only support 512-byte sectors for now
+      return false;
+    }
+
+    if (offset > bytesPerSector - 32) {
+      return false;
+    }
+
+    UInt8 sector[512] = {};
+    BlockDevice::Request request {};
+
+    request.deviceId = _volume->_device.id;
+    request.lba = lba;
+    request.count = 1;
+    request.buffer = sector;
+
+    if (BlockDevice::Read(request) != 0) {
+      return false;
+    }
+
+    const UInt8* base = sector + offset;
+    UInt8 first = base[0];
+
+    if (first == 0x00 || first == 0xE5) {
+      return false;
+    }
+
+    UInt8 attributes = base[11];
+
+    if (attributes == 0x0F || (attributes & 0x08) != 0) {
+      return false;
+    }
+
+    LFNState lfn {};
+
+    ClearLFN(lfn);
+    PopulateRecord(_volume, base, lfn, record);
+
+    return true;
+  }
+
   bool Directory::RecordToEntry(
     const Record& record,
     FileSystem::DirectoryEntry& entry

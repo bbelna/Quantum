@@ -116,6 +116,19 @@ namespace Quantum::System::FileSystems::FAT12 {
       );
 
       /**
+       * Reads a directory record from a known location.
+       * @param lba
+       *   Entry sector LBA.
+       * @param offset
+       *   Entry offset within the sector.
+       * @param record
+       *   Output record.
+       * @return
+       *   True on success.
+       */
+      bool ReadRecordAt(UInt32 lba, UInt32 offset, Record& record);
+
+      /**
        * Converts a directory record into a directory entry.
        * @param record
        *   Record to convert.

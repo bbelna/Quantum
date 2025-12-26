@@ -126,6 +126,26 @@ namespace Quantum::System::FileSystems::FAT12 {
       );
 
       /**
+       * Retrieves entry info by location.
+       * @param lba
+       *   Entry LBA.
+       * @param offset
+       *   Entry offset.
+       * @param outInfo
+       *   Receives file info.
+       * @param outAttributes
+       *   Receives entry attributes.
+       * @return
+       *   True if the entry was read.
+       */
+      bool GetEntryInfoAt(
+        UInt32 lba,
+        UInt32 offset,
+        ABI::FileSystem::FileInfo& outInfo,
+        UInt8& outAttributes
+      );
+
+      /**
        * Finds a directory entry by name.
        * @param startCluster
        *   First cluster of the directory.
