@@ -10,5 +10,6 @@ This folder contains the system source code for Quantum.
 | `.\Boot\` | Bootloaders. |
 | `.\Coordinator\` | The system coordinator. |
 | `.\Drivers\` | Drivers. |
+| `.\FileSystems\` | File system services. |
 | `.\Kernel\` | The kernel. |
 | `.\User\` | User-mode system sources and startup glue. |

@@ -61,9 +61,9 @@ not aligned with this Code of Conduct.
 If you experience or witness unacceptable behavior, you may report it in one of
 the following ways:
 
-- **Report directly** using [GitHub’s built-in reporting tools](\
-https://docs.github.com/en/communities/maintaining-your-safety-on-github/\
-reporting-abuse-or-spam) (recommended for serious or sensitive situations), or
+- **Report directly** using
+[GitHub’s built-in reporting tools](https://docs.github.com/en/communities/maintaining-your-safety-on-github/reporting-abuse-or-spam)
+(recommended for serious or sensitive situations), or
 - **Contact the project maintainer(s)** privately via the repository owner's
 email (bbelna@aol.com), or
 - **Open an issue** labeled `conduct` if you feel safe doing so.
@@ -94,5 +94,5 @@ reviewed in good faith.
 
 ## Attribution
 
-This Code of Conduct is adapted from the **Contributor Covenant**, version 2.1:
-https://www.contributor-covenant.org/version/2/1/code_of_conduct.html
+This Code of Conduct is adapted from the
+[Contributor Covenant, version 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct.html).
