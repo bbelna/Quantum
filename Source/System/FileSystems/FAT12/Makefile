@@ -26,6 +26,9 @@ SERVICE_QX  := $(BUILD_DIR)/FileSystems/FAT12/fat12.qx
 
 FAT12_SRCS := \
 	$(FAT12_DIR)/Service.cpp \
+	$(FAT12_DIR)/FAT.cpp \
+	$(FAT12_DIR)/Directory.cpp \
+	$(FAT12_DIR)/File.cpp \
 	$(FAT12_DIR)/Volume.cpp \
 	$(FAT12_DIR)/Tests.cpp \
 	$(FAT12_DIR)/Main.cpp \

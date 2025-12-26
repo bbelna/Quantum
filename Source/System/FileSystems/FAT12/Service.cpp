@@ -13,6 +13,7 @@
 
 #include "Service.hpp"
 #include "Tests.hpp"
+#include "Volume.hpp"
 
 #define TEST // TODO #18
 
@@ -23,6 +24,8 @@ namespace Quantum::System::FileSystems::FAT12 {
   using Task = ABI::Task;
 
   void Service::InitializeVolume() {
+    // ensure helpers are wired in freestanding runtime
+    _volumeStorage.Init();
     _volume = &_volumeStorage;
     _volume->Load();
   }

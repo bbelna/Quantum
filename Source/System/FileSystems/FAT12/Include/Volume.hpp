@@ -13,12 +13,21 @@
 #include <ABI/Prelude.hpp>
 #include <Types.hpp>
 
+#include "Directory.hpp"
+#include "FAT.hpp"
+#include "File.hpp"
+
 namespace Quantum::System::FileSystems::FAT12 {
   /**
    * FAT12 volume state and geometry.
    */
   class Volume {
     public:
+      /**
+       * Initializes helpers for this volume instance.
+       */
+      void Init();
+
       /**
        * Loads the FAT12 volume metadata from disk.
        * @return
@@ -391,30 +400,9 @@ namespace Quantum::System::FileSystems::FAT12 {
       static bool IsEndOfChain(UInt32 value);
 
     private:
-      /**
-       * Raw FAT directory entry.
-       */
-      struct DirectoryRecord {
-        /**
-         * 8.3 name field.
-         */
-        UInt8 name[11];
-
-        /**
-         * Attribute flags.
-         */
-        UInt8 attributes;
-
-        /**
-         * First cluster index.
-         */
-        UInt16 startCluster;
-
-        /**
-         * Size in bytes.
-         */
-        UInt32 sizeBytes;
-      };
+      friend class FAT;
+      friend class Directory;
+      friend class File;
 
       /**
        * Boot sector LBA.
@@ -440,6 +428,21 @@ namespace Quantum::System::FileSystems::FAT12 {
        * Cached volume info.
        */
       ABI::FileSystem::VolumeInfo _info {};
+
+      /**
+       * FAT table helper.
+       */
+      FAT _fat;
+
+      /**
+       * Directory helper.
+       */
+      Directory _directory;
+
+      /**
+       * File helper.
+       */
+      File _file;
 
       /**
        * FAT region start LBA.
@@ -598,32 +601,6 @@ namespace Quantum::System::FileSystems::FAT12 {
       static bool MatchName(CString left, CString right);
 
       /**
-       * Formats a FAT 8.3 name into a display string.
-       * @param base
-       *   Pointer to the 11-byte name field.
-       * @param outName
-       *   Output name buffer.
-       * @param outBytes
-       *   Output buffer size in bytes.
-       */
-      static void FormatName(
-        const UInt8* base,
-        char* outName,
-        UInt32 outBytes
-      );
-
-      /**
-       * Builds an 8.3 name field.
-       * @param name
-       *   Input name string.
-       * @param outName
-       *   Output 11-byte name buffer.
-       * @return
-       *   True if the name was valid.
-       */
-      static bool BuildShortName(CString name, UInt8* outName);
-
-      /**
        * Reads a directory record from the root directory.
        * @param index
        *   Entry index within the root directory.
@@ -634,7 +611,11 @@ namespace Quantum::System::FileSystems::FAT12 {
        * @return
        *   True if a record was returned.
        */
-      bool ReadRootRecord(UInt32 index, DirectoryRecord& record, bool& end);
+      bool ReadRootRecord(
+        UInt32 index,
+        Directory::DirectoryRecord& record,
+        bool& end
+      );
 
       /**
        * Reads a directory record from a directory cluster chain.
@@ -652,7 +633,7 @@ namespace Quantum::System::FileSystems::FAT12 {
       bool ReadDirectoryRecord(
         UInt32 startCluster,
         UInt32 index,
-        DirectoryRecord& record,
+        Directory::DirectoryRecord& record,
         bool& end
       );
 
@@ -674,32 +655,6 @@ namespace Quantum::System::FileSystems::FAT12 {
         bool parentIsRoot,
         UInt32& outLBA,
         UInt32& outOffset
-      );
-
-      /**
-       * Computes the LBA and offset for a directory entry index.
-       * @param parentCluster
-       *   Parent directory cluster.
-       * @param parentIsRoot
-       *   True if the parent is root.
-       * @param index
-       *   Entry index within the directory.
-       * @param outLBA
-       *   Receives the LBA.
-       * @param outOffset
-       *   Receives the entry offset within the sector.
-       * @param end
-       *   True if the index is beyond the directory.
-       * @return
-       *   True if the location was computed.
-       */
-      bool GetDirectoryEntryLocation(
-        UInt32 parentCluster,
-        bool parentIsRoot,
-        UInt32 index,
-        UInt32& outLBA,
-        UInt32& outOffset,
-        bool& end
       );
 
       /**
@@ -740,7 +695,7 @@ namespace Quantum::System::FileSystems::FAT12 {
         UInt32 parentCluster,
         bool parentIsRoot,
         CString name,
-        DirectoryRecord& record,
+        Directory::DirectoryRecord& record,
         UInt32& outLBA,
         UInt32& outOffset
       );
@@ -818,7 +773,7 @@ namespace Quantum::System::FileSystems::FAT12 {
        * @return
        *   True if the record is a dot entry.
        */
-      static bool IsDotRecord(const DirectoryRecord& record);
+      static bool IsDotRecord(const Directory::DirectoryRecord& record);
 
       /**
        * Converts a directory record to a directory entry.
@@ -830,7 +785,7 @@ namespace Quantum::System::FileSystems::FAT12 {
        *   True if the entry is usable.
        */
       static bool RecordToEntry(
-        const DirectoryRecord& record,
+        const Directory::DirectoryRecord& record,
         ABI::FileSystem::DirectoryEntry& entry
       );
   };

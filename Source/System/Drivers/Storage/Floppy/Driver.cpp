@@ -1306,11 +1306,11 @@ namespace Quantum::System::Drivers::Storage::Floppy {
 
     Console::WriteLine("Floppy driver bound to block device");
 
-    SendReadySignal(1);
-
     #if defined(TEST)
     Tests::Run();
     #endif
+
+    SendReadySignal(1);
 
     for (;;) {
       IPC::Message& msg = _receiveMessage;
