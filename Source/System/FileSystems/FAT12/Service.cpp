@@ -16,8 +16,6 @@
 #include "Tests.hpp"
 #include "Volume.hpp"
 
-#define TEST // TODO #18
-
 namespace Quantum::System::FileSystems::FAT12 {
   using Console = ABI::Console;
   using BlockDevice = ABI::Devices::BlockDevice;
