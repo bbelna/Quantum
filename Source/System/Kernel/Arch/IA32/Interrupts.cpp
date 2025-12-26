@@ -8,7 +8,6 @@
 
 #include "Arch/IA32/CPU.hpp"
 #include "Arch/IA32/Exceptions.hpp"
-#include "Arch/IA32/Floppy.hpp"
 #include "Arch/IA32/IDT.hpp"
 #include "Arch/IA32/Interrupts.hpp"
 #include "Arch/IA32/PS2Keyboard.hpp"
@@ -24,7 +23,6 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
     Timer::Initialize();
     PS2Keyboard::Initialize();
-    Floppy::Initialize();
 
     CPU::EnableInterrupts();
   }

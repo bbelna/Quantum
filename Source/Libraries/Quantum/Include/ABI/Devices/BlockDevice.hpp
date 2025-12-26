@@ -255,6 +255,22 @@ namespace Quantum::ABI::Devices {
       }
 
       /**
+       * Registers a new block device with the kernel registry.
+       * @param info
+       *   Device info payload (id ignored).
+       * @return
+       *   Assigned device id on success, 0 on failure.
+       */
+      static UInt32 Register(const Info& info) {
+        return InvokeSystemCall(
+          SystemCall::Block_Register,
+          reinterpret_cast<UInt32>(&info),
+          0,
+          0
+        );
+      }
+
+      /**
        * Reads blocks from a device.
        * @param request
        *   Block I/O request descriptor.

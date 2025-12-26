@@ -19,7 +19,7 @@
 #include "UserMode.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using LogLevel = Logger::Level;
+  using LogLevel = Kernel::Logger::Level;
   using UserMode = Kernel::UserMode;
 
   void Task::AddToReadyQueue(Task::ControlBlock* task) {
@@ -108,10 +108,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       previousTask->context = currentContext;
 
       if (
-        previousTask->state == Task::State::Running &&
-        previousTask != _idleTask
+        previousTask->state == Task::State::Running
+        && previousTask != _idleTask
       ) {
         previousTask->state = Task::State::Ready;
+
         AddToReadyQueue(previousTask);
       }
     }
@@ -138,10 +139,10 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     }
 
     if (
-      previousTask &&
-      previousTask != _idleTask &&
-      previousTask->state == Task::State::Terminated &&
-      previousTask != nextTask
+      previousTask
+      && previousTask != _idleTask
+      && previousTask->state == Task::State::Terminated
+      && previousTask != nextTask
     ) {
       _pendingCleanup = previousTask;
     }
@@ -239,6 +240,10 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     );
     tcb->userEntryPoint = 0;
     tcb->userStackTop = 0;
+    tcb->userHeapBase = 0;
+    tcb->userHeapEnd = 0;
+    tcb->userHeapMappedEnd = 0;
+    tcb->userHeapLimit = 0;
     tcb->next = nullptr;
     tcb->allNext = nullptr;
 

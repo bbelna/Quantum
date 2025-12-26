@@ -8,10 +8,11 @@
 
 #include "Logger.hpp"
 #include "Helpers/CStringHelper.hpp"
+#include "Prelude.hpp"
 
 namespace Quantum::System::Kernel {
-  using CStringHelper = Helpers::CStringHelper;
-  using LogLevel = Logger::Level;
+  using CStringHelper = Kernel::Helpers::CStringHelper;
+  using LogLevel = Kernel::Logger::Level;
 
   void Logger::Initialize(
     LogLevel minimumLevel,

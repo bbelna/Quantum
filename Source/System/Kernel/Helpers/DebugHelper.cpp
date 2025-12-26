@@ -23,14 +23,14 @@ namespace Quantum::System::Kernel::Helpers {
       bool separator = (p[0] == '/' || p[0] == '\\');
 
       if (
-        separator &&
-        p[1] == 'S' &&
-        p[2] == 'o' &&
-        p[3] == 'u' &&
-        p[4] == 'r' &&
-        p[5] == 'c' &&
-        p[6] == 'e' &&
-        (p[7] == '/' || p[7] == '\\')
+        separator
+        && p[1] == 'S'
+        && p[2] == 'o'
+        && p[3] == 'u'
+        && p[4] == 'r'
+        && p[5] == 'c'
+        && p[6] == 'e'
+        && (p[7] == '/' || p[7] == '\\')
       ) {
         trimmed = p + 8;
       }
@@ -50,8 +50,8 @@ namespace Quantum::System::Kernel::Helpers {
     char lineBuffer[16] = {};
 
     if (
-      line > 0 &&
-      CStringHelper::ToCString(line, lineBuffer, sizeof(lineBuffer))
+      line > 0
+      && CStringHelper::ToCString(line, lineBuffer, sizeof(lineBuffer))
     ) {
       lineStr = lineBuffer;
     } else {
@@ -59,9 +59,11 @@ namespace Quantum::System::Kernel::Helpers {
     }
 
     static char info[256];
+
     for (Size i = 0; i < sizeof(info); ++i) {
       info[i] = '\0';
     }
+
     Size out = 0;
 
     auto append = [&](CString src) -> bool {

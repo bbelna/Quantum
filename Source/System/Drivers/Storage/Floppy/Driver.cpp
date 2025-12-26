@@ -7,11 +7,15 @@
  */
 
 #include <ABI/Console.hpp>
+#include <ABI/Coordinator.hpp>
 #include <ABI/Devices/BlockDevice.hpp>
 #include <ABI/IO.hpp>
+#include <ABI/IRQ.hpp>
+#include <ABI/IPC.hpp>
 #include <ABI/Task.hpp>
 
 #include "Driver.hpp"
+#include "Tests.hpp"
 
 namespace Quantum::System::Drivers::Storage::Floppy {
   using Console = ABI::Console;
@@ -21,6 +25,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
   bool Driver::WaitForFIFOReady(bool readPhase) {
     const UInt32 maxSpins = 100000;
 
+    // keep spinning until the controller is ready or we time out
     for (UInt32 i = 0; i < maxSpins; ++i) {
       UInt8 status = IO::In8(_mainStatusRegisterPort);
       bool ready = (status & _mainStatusRequestMask) != 0;
@@ -41,6 +46,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
   bool Driver::WaitForIOAccess() {
     const UInt32 maxSpins = 100000;
 
+    // keep spinning until we can access I/O or we time out
     for (UInt32 i = 0; i < maxSpins; ++i) {
       if (IO::Out8(_ioAccessProbePort, 0) == 0) {
         return true;
@@ -52,6 +58,13 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     }
 
     return false;
+  }
+
+  UInt8 Driver::ReadCMOS(UInt8 reg) {
+    // preserve NMI disable bit while selecting the register
+    IO::Out8(_cmosAddressPort, static_cast<UInt8>(reg | 0x80));
+
+    return IO::In8(_cmosDataPort);
   }
 
   bool Driver::WriteFIFOByte(UInt8 value) {
@@ -91,12 +104,14 @@ namespace Quantum::System::Drivers::Storage::Floppy {
   }
 
   bool Driver::ResetController() {
+    // pulse reset line
     IO::Out8(_digitalOutputRegisterPort, 0x00);
     IO::Out8(_digitalOutputRegisterPort, 0x0C);
 
     UInt8 st0 = 0;
     UInt8 cyl = 0;
 
+    // read interrupt status up to 4 times to clear any pending interrupts
     for (UInt32 i = 0; i < 4; ++i) {
       if (!SenseInterruptStatus(st0, cyl)) {
         return false;
@@ -139,7 +154,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     }
   }
 
-  static void WriteHexByte(UInt8 value) {
+  void Driver::WriteHexByte(UInt8 value) {
     const char digits[] = "0123456789ABCDEF";
     char out[5] = {};
 
@@ -152,7 +167,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     Console::Write(out);
   }
 
-  static void WriteDecUInt(UInt32 value) {
+  void Driver::WriteDecUInt(UInt32 value) {
     char buffer[16] = {};
     UInt32 idx = 0;
 
@@ -168,7 +183,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     }
   }
 
-  static void LogResultBytes(const UInt8* result) {
+  void Driver::LogResultBytes(const UInt8* result) {
     Console::Write("FDC result: ");
 
     for (UInt32 i = 0; i < 7; ++i) {
@@ -182,12 +197,12 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     Console::WriteLine("");
   }
 
-  static void LogReadFailure(CString message) {
+  void Driver::LogReadFailure(CString message) {
     Console::Write("FDC read failed: ");
     Console::WriteLine(message);
   }
 
-  static void LogCalibrateStatus(UInt32 attempt, UInt8 st0, UInt8 cyl) {
+  void Driver::LogCalibrateStatus(UInt32 attempt, UInt8 st0, UInt8 cyl) {
     Console::Write("FDC calibrate attempt ");
     WriteDecUInt(attempt);
     Console::Write(": st0=");
@@ -207,22 +222,20 @@ namespace Quantum::System::Drivers::Storage::Floppy {
   }
 
   bool Driver::IsIRQMessage(const IPC::Message& msg) {
-    if (msg.length < BlockDevice::messageHeaderBytes) {
+    if (msg.length < sizeof(ABI::IRQ::Message)) {
       return false;
     }
 
-    BlockDevice::Message header {};
+    ABI::IRQ::Message header {};
     UInt32 copyBytes = msg.length;
 
-    if (copyBytes > sizeof(BlockDevice::Message)) {
-      copyBytes = sizeof(BlockDevice::Message);
+    if (copyBytes > sizeof(ABI::IRQ::Message)) {
+      copyBytes = sizeof(ABI::IRQ::Message);
     }
 
     CopyMessageBytes(&header, msg.payload, copyBytes);
 
-    return
-      header.op == BlockDevice::Operation::Response &&
-      header.replyPortId == 0;
+    return header.op == 0 && header.irq == _irqLine;
   }
 
   void Driver::QueuePendingMessage(const IPC::Message& msg) {
@@ -246,14 +259,17 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       if (_portId != 0) {
         IPC::Message msg {};
 
-        if (IPC::Receive(_portId, msg) == 0) {
+        // poll the port so we can time out if no IRQ arrives
+        if (IPC::TryReceive(_portId, msg) == 0) {
           if (IsIRQMessage(msg)) {
             return true;
           }
 
           QueuePendingMessage(msg);
         }
-      } else if ((i & 0x3FF) == 0) {
+      }
+
+      if ((i & 0x3FF) == 0) {
         Task::Yield();
       }
     }
@@ -261,6 +277,135 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     Console::WriteLine("FDC IRQ timeout");
 
     return false;
+  }
+
+  void Driver::RegisterIRQRoute(UInt32 portId) {
+    UInt32 status = ABI::IRQ::Register(_irqLine, portId);
+
+    if (status != 0) {
+      Console::WriteLine("Floppy driver IRQ register failed");
+    }
+  }
+
+  void Driver::SendReadySignal(UInt8 deviceTypeId) {
+    ABI::Coordinator::ReadyMessage ready {};
+    IPC::Message msg {};
+
+    ready.deviceId = deviceTypeId;
+    ready.state = 1;
+
+    msg.length = sizeof(ready);
+
+    CopyBytes(msg.payload, &ready, msg.length);
+
+    IPC::Send(ABI::IPC::Ports::CoordinatorReady, msg);
+  }
+
+  bool Driver::GetDeviceInfo(
+    UInt32& deviceId,
+    BlockDevice::Info& info,
+    UInt8& driveIndex,
+    UInt32& sectorSize,
+    UInt32& sectorCount,
+    UInt8& sectorsPerTrack,
+    UInt8& headCount
+  ) {
+    if (_deviceCount == 0) {
+      return false;
+    }
+
+    deviceId = _deviceIds[0];
+    driveIndex = _deviceIndices[0];
+    sectorSize = _deviceSectorSizes[0];
+    sectorCount = _deviceSectorCounts[0];
+    sectorsPerTrack = _deviceSectorsPerTrack[0];
+    headCount = _deviceHeadCounts[0];
+
+    if (deviceId == 0) {
+      return false;
+    }
+
+    if (BlockDevice::GetInfo(deviceId, info) != 0) {
+      return false;
+    }
+
+    return true;
+  }
+
+  bool Driver::ReadToBuffer(
+    UInt8 driveIndex,
+    UInt32 lba,
+    UInt32 count,
+    UInt32 sectorSize,
+    UInt8 sectorsPerTrack,
+    UInt8 headCount,
+    void* outBuffer,
+    UInt32 bufferBytes
+  ) {
+    if (!outBuffer || sectorSize == 0 || count == 0) {
+      return false;
+    }
+
+    UInt32 bytes = count * sectorSize;
+
+    if (bufferBytes < bytes) {
+      return false;
+    }
+
+    if (!ReadSectors(
+      driveIndex,
+      lba,
+      count,
+      sectorSize,
+      sectorsPerTrack,
+      headCount
+    )) {
+      return false;
+    }
+
+    if (_dmaBufferVirtual == nullptr || _dmaBufferBytes < bytes) {
+      return false;
+    }
+
+    CopyBytes(outBuffer, _dmaBufferVirtual, bytes);
+
+    return true;
+  }
+
+  bool Driver::WriteFromBuffer(
+    UInt8 driveIndex,
+    UInt32 lba,
+    UInt32 count,
+    UInt32 sectorSize,
+    UInt8 sectorsPerTrack,
+    UInt8 headCount,
+    const void* buffer,
+    UInt32 bufferBytes
+  ) {
+    if (!buffer || sectorSize == 0 || count == 0) {
+      return false;
+    }
+
+    UInt32 bytes = count * sectorSize;
+
+    if (bufferBytes < bytes) {
+      return false;
+    }
+
+    if (_dmaBufferVirtual == nullptr || _dmaBufferBytes < bytes) {
+      return false;
+    }
+
+    CopyBytes(_dmaBufferVirtual, buffer, bytes);
+
+    return WriteSectors(
+      driveIndex,
+      lba,
+      count,
+      sectorSize,
+      sectorsPerTrack,
+      headCount
+    );
   }
 
   bool Driver::ProgramDMARead(UInt32 physicalAddress, UInt32 lengthBytes) {
@@ -504,7 +649,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     }
 
     UInt32 remaining = count;
-    UInt32 currentLba = lba;
+    UInt32 currentLBA = lba;
 
     SetDrive(driveIndex, true);
     WaitForMotorSpinUp();
@@ -537,7 +682,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       UInt8 head = 0;
       UInt8 sector = 0;
 
-      LBAToCHS(currentLba, sectorsPerTrack, headCount, cylinder, head, sector);
+      LBAToCHS(currentLBA, sectorsPerTrack, headCount, cylinder, head, sector);
 
       UInt32 totalLeft
         = static_cast<UInt32>((sectorsPerTrack * headCount)
@@ -577,7 +722,8 @@ namespace Quantum::System::Drivers::Storage::Floppy {
 
         _irqPendingCount = 0;
 
-        bool multiTrack = headCount > 1 && (sector + toRead - 1) > sectorsPerTrack;
+        bool multiTrack
+          = headCount > 1 && (sector + toRead - 1) > sectorsPerTrack;
         UInt8 command = multiTrack
           ? _commandReadDataMultiTrack
           : _commandReadData;
@@ -686,7 +832,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       }
 
       remaining -= toRead;
-      currentLba += toRead;
+      currentLBA += toRead;
     }
 
     return true;
@@ -745,14 +891,14 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     }
 
     UInt32 remaining = count;
-    UInt32 currentLba = lba;
+    UInt32 currentLBA = lba;
 
     while (remaining > 0) {
       UInt8 cylinder = 0;
       UInt8 head = 0;
       UInt8 sector = 0;
 
-      LBAToCHS(currentLba, sectorsPerTrack, headCount, cylinder, head, sector);
+      LBAToCHS(currentLBA, sectorsPerTrack, headCount, cylinder, head, sector);
 
       UInt32 totalLeft
         = static_cast<UInt32>((sectorsPerTrack * headCount)
@@ -792,7 +938,8 @@ namespace Quantum::System::Drivers::Storage::Floppy {
 
         _irqPendingCount = 0;
 
-        bool multiTrack = headCount > 1 && (sector + toWrite - 1) > sectorsPerTrack;
+        bool multiTrack
+          = headCount > 1 && (sector + toWrite - 1) > sectorsPerTrack;
         UInt8 command = multiTrack
           ? _commandWriteDataMultiTrack
           : _commandWriteData;
@@ -901,13 +1048,17 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       }
 
       remaining -= toWrite;
-      currentLba += toWrite;
+      currentLBA += toWrite;
     }
 
     return true;
   }
 
-  bool Driver::RegisterDevice(const BlockDevice::Info& info) {
+  bool Driver::RegisterDevice(
+    const BlockDevice::Info& info,
+    UInt8 sectorsPerTrack,
+    UInt8 headCount
+  ) {
     if (_deviceCount >= _maxDevices) {
       return false;
     }
@@ -928,9 +1079,15 @@ namespace Quantum::System::Drivers::Storage::Floppy {
 
     _deviceIds[_deviceCount] = deviceId;
     _deviceSectorSizes[_deviceCount] = sectorSize;
+
+    UInt8 spt = sectorsPerTrack != 0
+      ? sectorsPerTrack
+      : _defaultSectorsPerTrack;
+    UInt8 heads = headCount != 0 ? headCount : _defaultHeadCount;
+
     _deviceSectorCounts[_deviceCount] = info.sectorCount;
-    _deviceSectorsPerTrack[_deviceCount] = _defaultSectorsPerTrack;
-    _deviceHeadCounts[_deviceCount] = _defaultHeadCount;
+    _deviceSectorsPerTrack[_deviceCount] = spt;
+    _deviceHeadCounts[_deviceCount] = heads;
     _deviceIndices[_deviceCount] = driveIndex;
     _deviceCount++;
 
@@ -1005,8 +1162,8 @@ namespace Quantum::System::Drivers::Storage::Floppy {
     }
 
     if (
-      bytesPerSector < 128 ||
-      (bytesPerSector & (bytesPerSector - 1)) != 0
+      bytesPerSector < 128
+      || (bytesPerSector & (bytesPerSector - 1)) != 0
     ) {
       return false;
     }
@@ -1024,30 +1181,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
   }
 
   void Driver::Main() {
-    Console::WriteLine("Floppy driver starting (stub)");
-
-    UInt32 count = BlockDevice::GetCount();
-
-    _deviceCount = 0;
-
-    for (UInt32 i = 1; i <= count; ++i) {
-      BlockDevice::Info info {};
-
-      if (BlockDevice::GetInfo(i, info) != 0) {
-        continue;
-      }
-
-      if (info.type == BlockDevice::Type::Floppy) {
-        if (!RegisterDevice(info)) {
-          Console::WriteLine("Floppy driver skipping device");
-        }
-      }
-    }
-
-    if (_deviceCount == 0) {
-      Console::WriteLine("Floppy device not found");
-      Task::Exit(1);
-    }
+    Console::WriteLine("Floppy driver starting");
 
     UInt32 portId = IPC::CreatePort();
 
@@ -1058,9 +1192,13 @@ namespace Quantum::System::Drivers::Storage::Floppy {
 
     _portId = portId;
 
+    RegisterIRQRoute(portId);
+
     BlockDevice::DMABuffer dmaBuffer {};
 
-    if (BlockDevice::AllocateDMABuffer(_dmaBufferDefaultBytes, dmaBuffer) != 0) {
+    if (
+      BlockDevice::AllocateDMABuffer(_dmaBufferDefaultBytes, dmaBuffer) != 0
+    ) {
       Console::WriteLine("Floppy driver failed to allocate DMA buffer");
       Task::Exit(1);
     }
@@ -1073,17 +1211,15 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       _currentCylinder[i] = 0xFF;
     }
 
-    for (UInt32 i = 0; i < _deviceCount; ++i) {
-      if (BlockDevice::Bind(_deviceIds[i], portId) != 0) {
-        Console::WriteLine("Floppy driver failed to bind block device");
-        Task::Exit(1);
-      }
-    }
-
     if (!WaitForIOAccess()) {
       Console::WriteLine("Floppy driver I/O access timeout");
       Task::Exit(1);
     }
+
+    UInt8 cmosTypes = ReadCMOS(_cmosFloppyTypeRegister);
+    UInt8 typeA = static_cast<UInt8>((cmosTypes >> 4) & 0x0F);
+    UInt8 typeB = static_cast<UInt8>(cmosTypes & 0x0F);
+    bool cmosKnown = cmosTypes != 0;
 
     if (!ResetController()) {
       Console::WriteLine("Floppy controller reset failed");
@@ -1099,43 +1235,82 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       _initialized = true;
     }
 
-    Console::WriteLine("Floppy driver bound to block device");
+    if (!_initialized) {
+      Console::WriteLine("Floppy controller init failed");
+      Task::Exit(1);
+    }
 
-    if (_initialized) {
-      for (UInt32 i = 0; i < _deviceCount; ++i) {
-        UInt32 sectorSize = _deviceSectorSizes[i];
-        UInt8 sectorsPerTrack = _deviceSectorsPerTrack[i];
-        UInt8 headCount = _deviceHeadCounts[i];
-        UInt32 sectorCount = _deviceSectorCounts[i];
-        UInt8 driveIndex = _deviceIndices[i];
+    _deviceCount = 0;
 
-        if (
-          DetectGeometry(
-            driveIndex,
-            sectorSize,
-            sectorsPerTrack,
-            headCount,
-            sectorCount
-          )
-        ) {
-          _deviceSectorSizes[i] = sectorSize;
-          _deviceSectorsPerTrack[i] = sectorsPerTrack;
-          _deviceHeadCounts[i] = headCount;
-          _deviceSectorCounts[i] = sectorCount;
+    for (UInt8 driveIndex = 0; driveIndex < _maxDevices; ++driveIndex) {
+      UInt8 driveType = driveIndex == 0 ? typeA : typeB;
 
-          BlockDevice::Info updated {};
+      if (cmosKnown && driveType == 0) {
+        continue;
+      }
 
-          updated.id = _deviceIds[i];
-          updated.type = BlockDevice::Type::Floppy;
-          updated.sectorSize = sectorSize;
-          updated.sectorCount = sectorCount;
-          updated.flags = 0;
-          updated.deviceIndex = driveIndex;
+      UInt8 sectorsPerTrack = _defaultSectorsPerTrack;
+      UInt8 headCount = _defaultHeadCount;
+      UInt32 sectorSize = 512;
+      UInt32 sectorCount = 0;
 
-          BlockDevice::UpdateInfo(updated.id, updated);
-        }
+      if (
+        !DetectGeometry(
+          driveIndex,
+          sectorSize,
+          sectorsPerTrack,
+          headCount,
+          sectorCount
+        )
+      ) {
+        continue;
+      }
+
+      BlockDevice::Info info {};
+
+      info.id = 0;
+      info.type = BlockDevice::Type::Floppy;
+      info.sectorSize = sectorSize;
+      info.sectorCount = sectorCount;
+      info.flags = BlockDevice::flagRemovable;
+      info.deviceIndex = driveIndex;
+
+      UInt32 deviceId = BlockDevice::Register(info);
+
+      if (deviceId == 0) {
+        Console::WriteLine("Floppy device registration failed");
+
+        continue;
+      }
+
+      info.id = deviceId;
+
+      if (!RegisterDevice(info, sectorsPerTrack, headCount)) {
+        Console::WriteLine("Floppy driver skipping device");
+
+        continue;
       }
     }
+
+    if (_deviceCount == 0) {
+      Console::WriteLine("Floppy device not found");
+      Task::Exit(1);
+    }
+
+    for (UInt32 i = 0; i < _deviceCount; ++i) {
+      if (BlockDevice::Bind(_deviceIds[i], portId) != 0) {
+        Console::WriteLine("Floppy driver failed to bind block device");
+        Task::Exit(1);
+      }
+    }
+
+    Console::WriteLine("Floppy driver bound to block device");
+
+    #if defined(TEST) // TODO #18
+    Tests::Run();
+    #endif
+
+    SendReadySignal(1);
 
     for (;;) {
       IPC::Message& msg = _receiveMessage;
@@ -1157,6 +1332,12 @@ namespace Quantum::System::Drivers::Storage::Floppy {
         }
       }
 
+      if (IsIRQMessage(msg)) {
+        ++_irqPendingCount;
+
+        continue;
+      }
+
       if (msg.length < BlockDevice::messageHeaderBytes) {
         continue;
       }
@@ -1169,15 +1350,6 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       }
 
       CopyBytes(&request, msg.payload, copyBytes);
-
-      if (
-        request.op == BlockDevice::Operation::Response &&
-        request.replyPortId == 0
-      ) {
-        ++_irqPendingCount;
-
-        continue;
-      }
 
       if (request.replyPortId == 0) {
         continue;

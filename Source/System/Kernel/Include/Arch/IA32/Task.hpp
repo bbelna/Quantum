@@ -104,6 +104,26 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         UInt32 userStackTop;
 
         /**
+         * User-mode heap base address.
+         */
+        UInt32 userHeapBase;
+
+        /**
+         * Current user-mode heap end (break).
+         */
+        UInt32 userHeapEnd;
+
+        /**
+         * End of the mapped heap region.
+         */
+        UInt32 userHeapMappedEnd;
+
+        /**
+         * User-mode heap upper limit.
+         */
+        UInt32 userHeapLimit;
+
+        /**
          * Pointer to the next task in the scheduler queue.
          */
         ControlBlock* next;

@@ -8,6 +8,7 @@
 
 #include "Interrupts.hpp"
 #include "Logger.hpp"
+#include "Prelude.hpp"
 #include "Task.hpp"
 #include "Types.hpp"
 
@@ -16,7 +17,7 @@
 #endif
 
 namespace Quantum::System::Kernel {
-  using LogLevel = Logger::Level;
+  using LogLevel = Kernel::Logger::Level;
 
   #if defined(QUANTUM_ARCH_IA32)
   using ArchTask = Arch::IA32::Task;

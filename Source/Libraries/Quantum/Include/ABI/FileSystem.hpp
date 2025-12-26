@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "ABI/IPC.hpp"
 #include "ABI/SystemCall.hpp"
 #include "Types.hpp"
 
@@ -17,6 +18,106 @@ namespace Quantum::ABI {
    */
   class FileSystem {
     public:
+      /**
+       * File system operation identifiers.
+       */
+      enum class Operation : UInt32 {
+        /**
+         * Lists available volumes.
+         */
+        ListVolumes = 1,
+
+        /**
+         * Retrieves volume info by handle.
+         */
+        GetVolumeInfo = 2,
+
+        /**
+         * Sets a volume label.
+         */
+        SetVolumeLabel = 3,
+
+        /**
+         * Opens a volume by label.
+         */
+        OpenVolume = 4,
+
+        /**
+         * Closes a volume handle.
+         */
+        CloseVolume = 5,
+
+        /**
+         * Opens a file or directory relative to a volume.
+         */
+        Open = 6,
+
+        /**
+         * Closes a file handle.
+         */
+        Close = 7,
+
+        /**
+         * Reads from a file handle.
+         */
+        Read = 8,
+
+        /**
+         * Writes to a file handle.
+         */
+        Write = 9,
+
+        /**
+         * Seeks within a file handle.
+         */
+        Seek = 10,
+
+        /**
+         * Retrieves file info by handle.
+         */
+        Stat = 11,
+
+        /**
+         * Reads a directory entry from a directory handle.
+         */
+        ReadDirectory = 12,
+
+        /**
+         * Creates a directory.
+         */
+        CreateDirectory = 13,
+
+        /**
+         * Creates a file.
+         */
+        CreateFile = 14,
+
+        /**
+         * Removes a file or directory.
+         */
+        Remove = 15,
+
+        /**
+         * Renames a file or directory.
+         */
+        Rename = 16,
+
+        /**
+         * Registers a file system service.
+         */
+        RegisterService = 17
+      };
+
+      /**
+       * File system type identifiers.
+       */
+      enum class Type : UInt32 {
+        /**
+         * FAT12 file system.
+         */
+        FAT12 = 1
+      };
+
       /**
        * File handle.
        */
@@ -50,6 +151,31 @@ namespace Quantum::ABI {
          * File attribute flags.
          */
         UInt32 attributes;
+
+        /**
+         * FAT create time.
+         */
+        UInt16 createTime;
+
+        /**
+         * FAT create date.
+         */
+        UInt16 createDate;
+
+        /**
+         * FAT last access date.
+         */
+        UInt16 accessDate;
+
+        /**
+         * FAT last write time.
+         */
+        UInt16 writeTime;
+
+        /**
+         * FAT last write date.
+         */
+        UInt16 writeDate;
       };
 
       /**
@@ -62,7 +188,7 @@ namespace Quantum::ABI {
         char label[maxLabelLength];
 
         /**
-         * Filesystem type identifier.
+         * File system type identifier.
          */
         UInt32 fsType;
 
@@ -100,6 +226,102 @@ namespace Quantum::ABI {
          * Entry size in bytes.
          */
         UInt32 sizeBytes;
+
+        /**
+         * FAT create time.
+         */
+        UInt16 createTime;
+
+        /**
+         * FAT create date.
+         */
+        UInt16 createDate;
+
+        /**
+         * FAT last access date.
+         */
+        UInt16 accessDate;
+
+        /**
+         * FAT last write time.
+         */
+        UInt16 writeTime;
+
+        /**
+         * FAT last write date.
+         */
+        UInt16 writeDate;
+      };
+
+      /**
+       * Volume entry descriptor.
+       */
+      struct VolumeEntry {
+        /**
+         * Volume label (null-terminated).
+         */
+        char label[maxLabelLength];
+
+        /**
+         * File system type identifier.
+         */
+        UInt32 fsType;
+      };
+
+      /**
+       * IPC message header size for file system service messages.
+       */
+      static constexpr UInt32 messageHeaderBytes = 7 * sizeof(UInt32);
+
+      /**
+       * IPC message data bytes for file system service messages.
+       */
+      static constexpr UInt32 messageDataBytes
+        = IPC::maxPayloadBytes - messageHeaderBytes;
+
+      /**
+       * File system service IPC message.
+       */
+      struct ServiceMessage {
+        /**
+         * Operation identifier.
+         */
+        UInt32 op;
+
+        /**
+         * Status code (0 success, non-zero failure).
+         */
+        UInt32 status;
+
+        /**
+         * Reply port id for responses.
+         */
+        UInt32 replyPortId;
+
+        /**
+         * First argument.
+         */
+        UInt32 arg0;
+
+        /**
+         * Second argument.
+         */
+        UInt32 arg1;
+
+        /**
+         * Third argument.
+         */
+        UInt32 arg2;
+
+        /**
+         * Payload length in bytes.
+         */
+        UInt32 dataLength;
+
+        /**
+         * Payload data.
+         */
+        UInt8 data[messageDataBytes];
       };
 
       /**
@@ -112,12 +334,18 @@ namespace Quantum::ABI {
        *   Number of entries written, or 0 on failure.
        */
       static UInt32 ListVolumes(void* outEntries, UInt32 maxEntries) {
-        return InvokeSystemCall(
-          SystemCall::FileSystem_ListVolumes,
-          reinterpret_cast<UInt32>(outEntries),
-          maxEntries,
-          0
-        );
+        ServiceMessage request {};
+        ServiceMessage response {};
+        UInt32 outputBytes = maxEntries
+          * static_cast<UInt32>(sizeof(VolumeEntry));
+
+        request.op = static_cast<UInt32>(Operation::ListVolumes);
+        request.arg0 = 0;
+        request.arg1 = maxEntries;
+        request.arg2 = 0;
+        request.dataLength = 0;
+
+        return SendRequest(request, response, outEntries, outputBytes);
       }
 
       /**
@@ -130,11 +358,20 @@ namespace Quantum::ABI {
        *   0 on success, non-zero on failure.
        */
       static UInt32 GetVolumeInfo(VolumeHandle volume, VolumeInfo& outInfo) {
-        return InvokeSystemCall(
-          SystemCall::FileSystem_GetVolumeInfo,
-          volume,
-          reinterpret_cast<UInt32>(&outInfo),
-          0
+        ServiceMessage request {};
+        ServiceMessage response {};
+
+        request.op = static_cast<UInt32>(Operation::GetVolumeInfo);
+        request.arg0 = volume;
+        request.arg1 = 0;
+        request.arg2 = 0;
+        request.dataLength = 0;
+
+        return SendRequest(
+          request,
+          response,
+          &outInfo,
+          static_cast<UInt32>(sizeof(outInfo))
         );
       }
 
@@ -148,12 +385,16 @@ namespace Quantum::ABI {
        *   0 on success, non-zero on failure.
        */
       static UInt32 SetVolumeLabel(VolumeHandle volume, CString label) {
-        return InvokeSystemCall(
-          SystemCall::FileSystem_SetVolumeLabel,
-          volume,
-          reinterpret_cast<UInt32>(label),
-          0
-        );
+        ServiceMessage request {};
+        ServiceMessage response {};
+
+        request.op = static_cast<UInt32>(Operation::SetVolumeLabel);
+        request.arg0 = volume;
+        request.arg1 = 0;
+        request.arg2 = 0;
+        request.dataLength = CopyString(label, request.data, messageDataBytes);
+
+        return SendRequest(request, response, nullptr, 0);
       }
 
       /**
@@ -164,12 +405,16 @@ namespace Quantum::ABI {
        *   Volume handle, or 0 on failure.
        */
       static VolumeHandle OpenVolume(CString label) {
-        return InvokeSystemCall(
-          SystemCall::FileSystem_OpenVolume,
-          reinterpret_cast<UInt32>(label),
-          0,
-          0
-        );
+        ServiceMessage request {};
+        ServiceMessage response {};
+
+        request.op = static_cast<UInt32>(Operation::OpenVolume);
+        request.arg0 = 0;
+        request.arg1 = 0;
+        request.arg2 = 0;
+        request.dataLength = CopyString(label, request.data, messageDataBytes);
+
+        return SendRequest(request, response, nullptr, 0);
       }
 
       /**
@@ -180,12 +425,16 @@ namespace Quantum::ABI {
        *   0 on success, non-zero on failure.
        */
       static UInt32 CloseVolume(VolumeHandle volume) {
-        return InvokeSystemCall(
-          SystemCall::FileSystem_CloseVolume,
-          volume,
-          0,
-          0
-        );
+        ServiceMessage request {};
+        ServiceMessage response {};
+
+        request.op = static_cast<UInt32>(Operation::CloseVolume);
+        request.arg0 = volume;
+        request.arg1 = 0;
+        request.arg2 = 0;
+        request.dataLength = 0;
+
+        return SendRequest(request, response, nullptr, 0);
       }
 
       /**
@@ -200,12 +449,16 @@ namespace Quantum::ABI {
        *   File handle, or 0 on failure.
        */
       static Handle Open(VolumeHandle volume, CString path, UInt32 flags) {
-        return InvokeSystemCall(
-          SystemCall::FileSystem_Open,
-          volume,
-          reinterpret_cast<UInt32>(path),
-          flags
-        );
+        ServiceMessage request {};
+        ServiceMessage response {};
+
+        request.op = static_cast<UInt32>(Operation::Open);
+        request.arg0 = volume;
+        request.arg1 = flags;
+        request.arg2 = 0;
+        request.dataLength = CopyString(path, request.data, messageDataBytes);
+
+        return SendRequest(request, response, nullptr, 0);
       }
 
       /**
@@ -216,12 +469,16 @@ namespace Quantum::ABI {
        *   0 on success, non-zero on failure.
        */
       static UInt32 Close(Handle handle) {
-        return InvokeSystemCall(
-          SystemCall::FileSystem_Close,
-          handle,
-          0,
-          0
-        );
+        ServiceMessage request {};
+        ServiceMessage response {};
+
+        request.op = static_cast<UInt32>(Operation::Close);
+        request.arg0 = handle;
+        request.arg1 = 0;
+        request.arg2 = 0;
+        request.dataLength = 0;
+
+        return SendRequest(request, response, nullptr, 0);
       }
 
       /**
@@ -236,12 +493,16 @@ namespace Quantum::ABI {
        *   Number of bytes read, or 0 on failure.
        */
       static UInt32 Read(Handle handle, void* buffer, UInt32 length) {
-        return InvokeSystemCall(
-          SystemCall::FileSystem_Read,
-          handle,
-          reinterpret_cast<UInt32>(buffer),
-          length
-        );
+        ServiceMessage request {};
+        ServiceMessage response {};
+
+        request.op = static_cast<UInt32>(Operation::Read);
+        request.arg0 = handle;
+        request.arg1 = length;
+        request.arg2 = 0;
+        request.dataLength = 0;
+
+        return SendRequest(request, response, buffer, length);
       }
 
       /**
@@ -256,12 +517,21 @@ namespace Quantum::ABI {
        *   Number of bytes written, or 0 on failure.
        */
       static UInt32 Write(Handle handle, const void* buffer, UInt32 length) {
-        return InvokeSystemCall(
-          SystemCall::FileSystem_Write,
-          handle,
-          reinterpret_cast<UInt32>(buffer),
-          length
-        );
+        ServiceMessage request {};
+        ServiceMessage response {};
+
+        request.op = static_cast<UInt32>(Operation::Write);
+        request.arg0 = handle;
+        request.arg1 = length;
+        request.arg2 = 0;
+        request.dataLength = 0;
+
+        if (buffer && length <= messageDataBytes) {
+          CopyBytes(request.data, buffer, length);
+          request.dataLength = length;
+        }
+
+        return SendRequest(request, response, nullptr, 0);
       }
 
       /**
@@ -276,12 +546,16 @@ namespace Quantum::ABI {
        *   New offset, or 0 on failure.
        */
       static UInt32 Seek(Handle handle, UInt32 offset, UInt32 origin) {
-        return InvokeSystemCall(
-          SystemCall::FileSystem_Seek,
-          handle,
-          offset,
-          origin
-        );
+        ServiceMessage request {};
+        ServiceMessage response {};
+
+        request.op = static_cast<UInt32>(Operation::Seek);
+        request.arg0 = handle;
+        request.arg1 = offset;
+        request.arg2 = origin;
+        request.dataLength = 0;
+
+        return SendRequest(request, response, nullptr, 0);
       }
 
       /**
@@ -294,11 +568,20 @@ namespace Quantum::ABI {
        *   0 on success, non-zero on failure.
        */
       static UInt32 Stat(Handle handle, FileInfo& outInfo) {
-        return InvokeSystemCall(
-          SystemCall::FileSystem_Stat,
-          handle,
-          reinterpret_cast<UInt32>(&outInfo),
-          0
+        ServiceMessage request {};
+        ServiceMessage response {};
+
+        request.op = static_cast<UInt32>(Operation::Stat);
+        request.arg0 = handle;
+        request.arg1 = 0;
+        request.arg2 = 0;
+        request.dataLength = 0;
+
+        return SendRequest(
+          request,
+          response,
+          &outInfo,
+          static_cast<UInt32>(sizeof(outInfo))
         );
       }
 
@@ -312,11 +595,20 @@ namespace Quantum::ABI {
        *   0 on success, non-zero on failure.
        */
       static UInt32 ReadDirectory(Handle handle, DirectoryEntry& outEntry) {
-        return InvokeSystemCall(
-          SystemCall::FileSystem_ReadDirectory,
-          handle,
-          reinterpret_cast<UInt32>(&outEntry),
-          0
+        ServiceMessage request {};
+        ServiceMessage response {};
+
+        request.op = static_cast<UInt32>(Operation::ReadDirectory);
+        request.arg0 = handle;
+        request.arg1 = 0;
+        request.arg2 = 0;
+        request.dataLength = 0;
+
+        return SendRequest(
+          request,
+          response,
+          &outEntry,
+          static_cast<UInt32>(sizeof(outEntry))
         );
       }
 
@@ -330,12 +622,16 @@ namespace Quantum::ABI {
        *   0 on success, non-zero on failure.
        */
       static UInt32 CreateDirectory(VolumeHandle volume, CString path) {
-        return InvokeSystemCall(
-          SystemCall::FileSystem_CreateDirectory,
-          volume,
-          reinterpret_cast<UInt32>(path),
-          0
-        );
+        ServiceMessage request {};
+        ServiceMessage response {};
+
+        request.op = static_cast<UInt32>(Operation::CreateDirectory);
+        request.arg0 = volume;
+        request.arg1 = 0;
+        request.arg2 = 0;
+        request.dataLength = CopyString(path, request.data, messageDataBytes);
+
+        return SendRequest(request, response, nullptr, 0);
       }
 
       /**
@@ -348,12 +644,16 @@ namespace Quantum::ABI {
        *   0 on success, non-zero on failure.
        */
       static UInt32 CreateFile(VolumeHandle volume, CString path) {
-        return InvokeSystemCall(
-          SystemCall::FileSystem_CreateFile,
-          volume,
-          reinterpret_cast<UInt32>(path),
-          0
-        );
+        ServiceMessage request {};
+        ServiceMessage response {};
+
+        request.op = static_cast<UInt32>(Operation::CreateFile);
+        request.arg0 = volume;
+        request.arg1 = 0;
+        request.arg2 = 0;
+        request.dataLength = CopyString(path, request.data, messageDataBytes);
+
+        return SendRequest(request, response, nullptr, 0);
       }
 
       /**
@@ -366,12 +666,16 @@ namespace Quantum::ABI {
        *   0 on success, non-zero on failure.
        */
       static UInt32 Remove(VolumeHandle volume, CString path) {
-        return InvokeSystemCall(
-          SystemCall::FileSystem_Remove,
-          volume,
-          reinterpret_cast<UInt32>(path),
-          0
-        );
+        ServiceMessage request {};
+        ServiceMessage response {};
+
+        request.op = static_cast<UInt32>(Operation::Remove);
+        request.arg0 = volume;
+        request.arg1 = 0;
+        request.arg2 = 0;
+        request.dataLength = CopyString(path, request.data, messageDataBytes);
+
+        return SendRequest(request, response, nullptr, 0);
       }
 
       /**
@@ -390,12 +694,131 @@ namespace Quantum::ABI {
         CString fromPath,
         CString toPath
       ) {
-        return InvokeSystemCall(
-          SystemCall::FileSystem_Rename,
-          volume,
-          reinterpret_cast<UInt32>(fromPath),
-          reinterpret_cast<UInt32>(toPath)
-        );
+        ServiceMessage request {};
+        ServiceMessage response {};
+        UInt32 offset = 0;
+
+        request.op = static_cast<UInt32>(Operation::Rename);
+        request.arg0 = volume;
+        request.arg1 = 0;
+        request.arg2 = 0;
+        request.dataLength = 0;
+
+        offset = CopyString(fromPath, request.data, messageDataBytes);
+
+        if (offset > 0 && offset < messageDataBytes) {
+          UInt32 remaining = messageDataBytes - offset;
+
+          request.dataLength = offset
+            + CopyString(
+              toPath,
+              request.data + offset,
+              remaining
+            );
+        }
+
+        return SendRequest(request, response, nullptr, 0);
+      }
+
+      /**
+       * Registers a file system service with the kernel.
+       * @param type
+       *   File system type identifier.
+       * @param portId
+       *   IPC port owned by the service.
+       * @return
+       *   0 on success, non-zero on failure.
+       */
+      static UInt32 RegisterService(Type type, UInt32 portId) {
+        ServiceMessage request {};
+        ServiceMessage response {};
+
+        request.op = static_cast<UInt32>(Operation::RegisterService);
+        request.arg0 = static_cast<UInt32>(type);
+        request.arg1 = portId;
+        request.arg2 = 0;
+        request.dataLength = 0;
+
+        return SendRequest(request, response, nullptr, 0);
+      }
+
+    private:
+      static UInt32 CopyString(CString src, UInt8* dest, UInt32 maxBytes) {
+        if (!src || !dest || maxBytes == 0) {
+          return 0;
+        }
+
+        UInt32 length = 0;
+
+        while (length + 1 < maxBytes && src[length] != '\0') {
+          dest[length] = static_cast<UInt8>(src[length]);
+          ++length;
+        }
+
+        dest[length] = '\0';
+
+        return length + 1;
+      }
+
+      static void CopyBytes(void* dest, const void* src, UInt32 length) {
+        auto* d = reinterpret_cast<UInt8*>(dest);
+        auto* s = reinterpret_cast<const UInt8*>(src);
+
+        for (UInt32 i = 0; i < length; ++i) {
+          d[i] = s[i];
+        }
+      }
+
+      static UInt32 SendRequest(
+        ServiceMessage& request,
+        ServiceMessage& response,
+        void* output,
+        UInt32 outputBytes
+      ) {
+        UInt32 replyPortId = IPC::CreatePort();
+
+        if (replyPortId == 0) {
+          return 0;
+        }
+
+        request.replyPortId = replyPortId;
+
+        IPC::Message msg {};
+        UInt32 requestBytes = messageHeaderBytes + request.dataLength;
+
+        msg.length = requestBytes;
+
+        CopyBytes(msg.payload, &request, requestBytes);
+
+        if (IPC::Send(IPC::Ports::FileSystem, msg) != 0) {
+          return 0;
+        }
+
+        IPC::Message reply {};
+
+        if (IPC::Receive(replyPortId, reply) != 0) {
+          return 0;
+        }
+
+        UInt32 copyBytes = reply.length;
+
+        if (copyBytes > sizeof(response)) {
+          copyBytes = sizeof(response);
+        }
+
+        CopyBytes(&response, reply.payload, copyBytes);
+
+        if (output && outputBytes > 0 && response.dataLength > 0) {
+          UInt32 responseBytes = response.dataLength;
+
+          if (responseBytes > outputBytes) {
+            responseBytes = outputBytes;
+          }
+
+          CopyBytes(output, response.data, responseBytes);
+        }
+
+        return response.status;
       }
   };
 }

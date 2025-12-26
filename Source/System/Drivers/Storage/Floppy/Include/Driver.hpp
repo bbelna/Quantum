@@ -27,6 +27,99 @@ namespace Quantum::System::Drivers::Storage::Floppy {
        */
       static void Main();
 
+      /**
+       * Locates the first floppy device and returns its info.
+       * @param deviceId
+       *   Receives the block device id.
+       * @param info
+       *   Receives the block device info.
+       * @param driveIndex
+       *   Receives the drive index.
+       * @param sectorSize
+       *   Receives the sector size.
+       * @param sectorCount
+       *   Receives the sector count.
+       * @param sectorsPerTrack
+       *   Receives the sectors per track.
+       * @param headCount
+       *   Receives the head count.
+       * @return
+       *   True if a device was found; false otherwise.
+       */
+      static bool GetDeviceInfo(
+        UInt32& deviceId,
+        BlockDevice::Info& info,
+        UInt8& driveIndex,
+        UInt32& sectorSize,
+        UInt32& sectorCount,
+        UInt8& sectorsPerTrack,
+        UInt8& headCount
+      );
+
+      /**
+       * Reads sectors directly via the controller.
+       * @param driveIndex
+       *   Target drive index.
+       * @param lba
+       *   Starting logical block address.
+       * @param count
+       *   Number of sectors to read.
+       * @param sectorSize
+       *   Sector size in bytes.
+       * @param sectorsPerTrack
+       *   Sectors per track.
+       * @param headCount
+       *   Head count.
+       * @param outBuffer
+       *   Destination buffer.
+       * @param bufferBytes
+       *   Size of the destination buffer in bytes.
+       * @return
+       *   True on success; false otherwise.
+       */
+      static bool ReadToBuffer(
+        UInt8 driveIndex,
+        UInt32 lba,
+        UInt32 count,
+        UInt32 sectorSize,
+        UInt8 sectorsPerTrack,
+        UInt8 headCount,
+        void* outBuffer,
+        UInt32 bufferBytes
+      );
+
+      /**
+       * Writes sectors directly via the controller.
+       * @param driveIndex
+       *   Target drive index.
+       * @param lba
+       *   Starting logical block address.
+       * @param count
+       *   Number of sectors to write.
+       * @param sectorSize
+       *   Sector size in bytes.
+       * @param sectorsPerTrack
+       *   Sectors per track.
+       * @param headCount
+       *   Head count.
+       * @param buffer
+       *   Source buffer.
+       * @param bufferBytes
+       *   Size of the source buffer in bytes.
+       * @return
+       *   True on success; false otherwise.
+       */
+      static bool WriteFromBuffer(
+        UInt8 driveIndex,
+        UInt32 lba,
+        UInt32 count,
+        UInt32 sectorSize,
+        UInt8 sectorsPerTrack,
+        UInt8 headCount,
+        const void* buffer,
+        UInt32 bufferBytes
+      );
+
     private:
       /**
        * Floppy digital output register port.
@@ -77,6 +170,21 @@ namespace Quantum::System::Drivers::Storage::Floppy {
        * I/O access probe port (POST delay register).
        */
       static constexpr UInt16 _ioAccessProbePort = 0x80;
+
+      /**
+       * CMOS address register port.
+       */
+      static constexpr UInt16 _cmosAddressPort = 0x70;
+
+      /**
+       * CMOS data register port.
+       */
+      static constexpr UInt16 _cmosDataPort = 0x71;
+
+      /**
+       * CMOS floppy drive type register.
+       */
+      static constexpr UInt8 _cmosFloppyTypeRegister = 0x10;
 
       /**
        * Main status request/ready bit mask.
@@ -132,6 +240,11 @@ namespace Quantum::System::Drivers::Storage::Floppy {
        * Write data command with multi-track enabled.
        */
       static constexpr UInt8 _commandWriteDataMultiTrack = 0xC5 | 0x80;
+
+      /**
+       * IRQ line for the floppy controller.
+       */
+      static constexpr UInt32 _irqLine = 6;
 
       /**
        * Recalibrate command.
@@ -298,6 +411,15 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       static bool WaitForFIFOReady(bool readPhase);
 
       /**
+       * Reads a CMOS register.
+       * @param reg
+       *   CMOS register index.
+       * @return
+       *   Register value.
+       */
+      static UInt8 ReadCMOS(UInt8 reg);
+
+      /**
        * Waits for the kernel to grant port I/O access.
        * @return
        *   True once I/O access is available; false on timeout.
@@ -400,6 +522,18 @@ namespace Quantum::System::Drivers::Storage::Floppy {
        * Waits for a floppy IRQ to be delivered.
        */
       static bool WaitForIRQ();
+
+      /**
+       * Registers the IRQ route with the coordinator.
+       */
+      static void RegisterIRQRoute(UInt32 portId);
+
+      /**
+       * Sends a readiness signal to the coordinator.
+       * @param deviceTypeId
+       *   Device type identifier.
+       */
+      static void SendReadySignal(UInt8 deviceTypeId);
 
       /**
        * Programs the DMA controller for a floppy read.
@@ -554,12 +688,20 @@ namespace Quantum::System::Drivers::Storage::Floppy {
 
       /**
        * Registers a floppy device mapping.
-        * @param info
+       * @param info
        *   Block device info for the floppy.
+       * @param sectorsPerTrack
+       *   Detected sectors per track.
+       * @param headCount
+       *   Detected head count.
        * @return
        *   True if the device was recorded; false otherwise.
        */
-      static bool RegisterDevice(const BlockDevice::Info& info);
+      static bool RegisterDevice(
+        const BlockDevice::Info& info,
+        UInt8 sectorsPerTrack,
+        UInt8 headCount
+      );
 
       /**
        * Resolves a device id to its drive index and sector size.
@@ -580,5 +722,44 @@ namespace Quantum::System::Drivers::Storage::Floppy {
         UInt8& sectorsPerTrack,
         UInt8& headCount
       );
+
+      /**
+       * Writes a hexadecimal byte to the console.
+       * @param value
+       *   Byte value to write.
+       */
+      static void WriteHexByte(UInt8 value);
+
+      /**
+       * Writes a decimal unsigned integer to the console.
+       * @param value
+       *   Unsigned integer value to write.
+       */
+      static void WriteDecUInt(UInt32 value);
+
+      /**
+       * Logs result bytes from the controller for debugging.
+       * @param result
+       *   Result byte array.
+       */
+      static void LogResultBytes(const UInt8* result);
+
+      /**
+       * Logs a read failure message.
+       * @param message
+       *   Failure message.
+       */
+      static void LogReadFailure(CString message);
+
+      /**
+       * Logs the status of a calibrate attempt.
+       * @param attempt
+       *   Attempt number.
+       * @param st0
+       *   ST0 status byte.
+       * @param cyl
+       *   Current cylinder.
+       */
+      static void LogCalibrateStatus(UInt32 attempt, UInt8 st0, UInt8 cyl);
   };
 }

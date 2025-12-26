@@ -77,6 +77,29 @@ namespace Quantum::System::Kernel {
       );
 
       /**
+       * Attempts to receive a message without blocking.
+       * @param portId
+       *   Port to receive from.
+       * @param outSenderId
+       *   Receives the sender task id.
+       * @param outBuffer
+       *   Buffer to copy payload into.
+       * @param bufferCapacity
+       *   Capacity of outBuffer in bytes.
+       * @param outLength
+       *   Receives the payload length.
+       * @return
+       *   True on success; false if no message or invalid arguments/port.
+       */
+      static bool TryReceive(
+        UInt32 portId,
+        UInt32& outSenderId,
+        void* outBuffer,
+        UInt32 bufferCapacity,
+        UInt32& outLength
+      );
+
+      /**
        * Destroys an IPC port and frees its slot.
        * @param portId
        *   Port to destroy.

@@ -19,8 +19,8 @@
 #include "Types.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using LogLevel = Logger::Level;
-  using AlignHelper = Helpers::AlignHelper;
+  using LogLevel = Kernel::Logger::Level;
+  using AlignHelper = Kernel::Helpers::AlignHelper;
 
   alignas(Memory::_pageSize)
   UInt32 Memory::_pageDirectory[Memory::_pageDirectoryEntries];
@@ -446,9 +446,9 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         }
 
         if (
-          _initBundleEndPage > _initBundleStartPage &&
-          pageIndex >= _initBundleStartPage &&
-          pageIndex < _initBundleEndPage
+          _initBundleEndPage > _initBundleStartPage
+          && pageIndex >= _initBundleStartPage
+          && pageIndex < _initBundleEndPage
         ) {
           SetPageUsed(pageIndex);
           ++_usedPages;

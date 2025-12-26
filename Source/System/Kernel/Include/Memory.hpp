@@ -77,6 +77,8 @@ namespace Quantum::System::Kernel {
 
       /**
        * Allocates one 4 KB page of physical memory.
+       * @param zero
+       *   Whether to zero the page contents.
        * @return
        *   Pointer to the allocated page (identity mapped).
        */
@@ -84,6 +86,8 @@ namespace Quantum::System::Kernel {
 
       /**
        * Returns the physical address of the kernel page directory.
+       * @return
+       *   Physical address of the kernel page directory.
        */
       static UInt32 GetKernelPageDirectoryPhysical();
 
@@ -110,16 +114,32 @@ namespace Quantum::System::Kernel {
 
       /**
        * Creates a new address space and returns its page directory physical.
+       * @return
+       *   Physical address of the created page directory.
        */
       static UInt32 CreateAddressSpace();
 
       /**
-       * Destroys an address space created with CreateAddressSpace.
+       * Destroys an address space created with `CreateAddressSpace`.
+       * @param pageDirectoryPhysical
+       *   Physical address of the page directory to destroy.
        */
       static void DestroyAddressSpace(UInt32 pageDirectoryPhysical);
 
       /**
        * Maps a virtual page in the specified address space.
+       * @param pageDirectoryPhysical
+       *   Physical address of the page directory.
+       * @param virtualAddress
+       *   Virtual address of the page to map.
+       * @param physicalAddress
+       *   Physical address of the page to map.
+       * @param writable
+       *   Whether the page should be writable.
+       * @param user
+       *   Whether the page should be user accessible.
+       * @param global
+       *   Whether the mapping should be marked global.
        */
       static void MapPageInAddressSpace(
         UInt32 pageDirectoryPhysical,
@@ -132,6 +152,8 @@ namespace Quantum::System::Kernel {
 
       /**
        * Activates the given address space for the current CPU.
+       * @param pageDirectoryPhysical
+       *   Physical address of the page directory to activate.
        */
       static void ActivateAddressSpace(UInt32 pageDirectoryPhysical);
 
@@ -290,7 +312,8 @@ namespace Quantum::System::Kernel {
       /**
        * Free lists for each fixed-size bin.
        */
-      inline static FreeBlock* _binFreeLists[_binCount] = { nullptr, nullptr, nullptr, nullptr };
+      inline static FreeBlock* _binFreeLists[_binCount]
+        = { nullptr, nullptr, nullptr, nullptr };
 
       /**
        * Writes the canary for a free block at the end of its payload.

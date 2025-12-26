@@ -11,15 +11,17 @@
 #include "InitBundle.hpp"
 #include "Logger.hpp"
 #include "Memory.hpp"
+#include "Prelude.hpp"
 #include "Task.hpp"
 #include "Types.hpp"
 #include "UserMode.hpp"
 
 namespace Quantum::System::Kernel {
-  using AlignHelper = Helpers::AlignHelper;
+  using AlignHelper = Kernel::Helpers::AlignHelper;
   using BundleHeader = ABI::InitBundle::Header;
   using BundleEntry = ABI::InitBundle::Entry;
-  using LogLevel = Logger::Level;
+  using BundleEntryType = ABI::InitBundle::EntryType;
+  using LogLevel = Kernel::Logger::Level;
 
   void InitBundle::MapInitBundle() {
     BootInfo::InitBundleInfo initBundle {};
@@ -172,7 +174,7 @@ namespace Quantum::System::Kernel {
     }
 
     for (UInt32 i = 0; i < entryCount; ++i) {
-      if (entries[i].type == 1) {
+      if (entries[i].type == BundleEntryType::Init) {
         return &entries[i];
       }
     }
@@ -528,6 +530,19 @@ namespace Quantum::System::Kernel {
       Memory::DestroyAddressSpace(addressSpace);
 
       return 0;
+    }
+
+    // initialize per-task heap bounds
+    UInt32 heapBase = AlignHelper::Up(_userProgramBase + imageBytes, pageSize);
+    UInt32 heapLimit = stackBase;
+
+    if (heapBase < heapLimit) {
+      task->userHeapBase = heapBase;
+      task->userHeapEnd = heapBase;
+      task->userHeapMappedEnd = heapBase;
+      task->userHeapLimit = heapLimit;
+    } else {
+      Logger::Write(LogLevel::Warning, "SpawnTask: no space for user heap");
     }
 
     return task->id;

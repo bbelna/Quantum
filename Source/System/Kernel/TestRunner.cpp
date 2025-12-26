@@ -7,12 +7,13 @@
  */
 
 #include "Logger.hpp"
+#include "Prelude.hpp"
 #include "Task.hpp"
 #include "Testing.hpp"
 #include "TestRunner.hpp"
 
 namespace Quantum::System::Kernel {
-  using LogLevel = Logger::Level;
+  using LogLevel = Kernel::Logger::Level;
 
   void TestRunner::Run() {
     Testing::RegisterBuiltins();

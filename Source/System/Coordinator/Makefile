@@ -24,18 +24,32 @@ OBJCOPY32 ?= x86_64-linux-gnu-objcopy
 COORD_ELF := $(BUILD_DIR)/Coordinator/Coordinator.elf
 COORD_QX  := $(BUILD_DIR)/Coordinator/Coordinator.qx
 
+COORD_SRCS := \
+	$(COORD_DIR)/Application.cpp \
+	$(COORD_DIR)/Main.cpp \
+	$(COORD_DIR)/IRQ.cpp \
+	$(COORD_DIR)/FileSystem.cpp \
+	$(USER_RUNTIME)/CRT0.cpp \
+	$(USER_RUNTIME)/Memory.cpp \
+	$(USER_RUNTIME)/Heap.cpp
+
+COORD_HDRS := \
+	$(COORD_DIR)/Include/Application.hpp \
+	$(COORD_DIR)/Include/IRQ.hpp \
+	$(COORD_DIR)/Include/FileSystem.hpp
+
 .PHONY: all clean coordinator
 
 all: coordinator
 
 coordinator: $(COORD_QX)
 
-$(COORD_ELF): $(COORD_DIR)/Application.cpp $(COORD_DIR)/Main.cpp $(COORD_DIR)/Testing.cpp $(COORD_DIR)/Tests/FloppyTests.cpp $(USER_RUNTIME)/CRT0.cpp $(COORD_DIR)/Include/Application.hpp $(COORD_DIR)/Include/Testing.hpp $(COORD_DIR)/Include/Tests/FloppyTests.hpp $(COORD_DIR)/Link.ld
+$(COORD_ELF): $(COORD_SRCS) $(COORD_HDRS) $(COORD_DIR)/Link.ld
 	@mkdir -p $(dir $@)
 	$(CC32) $(CFLAGS32) -m32 -ffreestanding -nostdlib -static -Wl,--no-pie \
 		-I$(LIBQ_INCLUDE) -I$(COORD_INCLUDE) \
 		-T $(COORD_DIR)/Link.ld \
-		$(COORD_DIR)/Application.cpp $(COORD_DIR)/Main.cpp $(COORD_DIR)/Testing.cpp $(COORD_DIR)/Tests/FloppyTests.cpp $(USER_RUNTIME)/CRT0.cpp -o $@
+		$(COORD_SRCS) -o $@
 	@echo "[OK] Linked Coordinator.elf -> $@"
 
 $(COORD_QX): $(COORD_ELF)

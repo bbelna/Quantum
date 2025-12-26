@@ -19,7 +19,7 @@
 
 namespace Quantum::System::Kernel::Devices {
   using IPC = Kernel::IPC;
-  using LogLevel = Logger::Level;
+  using LogLevel = Kernel::Logger::Level;
   using Memory = Kernel::Memory;
   using Task = Kernel::Task;
 
@@ -30,6 +30,12 @@ namespace Quantum::System::Kernel::Devices {
   void BlockDevice::Initialize() {
     _deviceCount = 0;
     _nextDeviceId = 1;
+
+    for (UInt32 i = 0; i < _maxDevices; ++i) {
+      _devices[i] = nullptr;
+      _deviceStorage[i].info.id = 0;
+      _deviceStorage[i].portId = 0;
+    }
   }
 
   void BlockDevice::NotifyIRQ(Type type) {
@@ -48,9 +54,9 @@ namespace Quantum::System::Kernel::Devices {
       Device* device = _devices[i];
 
       if (
-        !device ||
-        device->portId == 0 ||
-        device->info.type != type
+        !device
+        || device->portId == 0
+        || device->info.type != type
       ) {
         continue;
       }
@@ -135,9 +141,65 @@ namespace Quantum::System::Kernel::Devices {
     return id;
   }
 
+  UInt32 BlockDevice::RegisterUser(const BlockDevice::Info& info) {
+    if (_deviceCount >= _maxDevices) {
+      return 0;
+    }
+
+    if (
+      info.type == Type::Unknown
+      || info.sectorSize == 0
+      || info.sectorCount == 0
+    ) {
+      return 0;
+    }
+
+    for (UInt32 i = 0; i < _deviceCount; ++i) {
+      Device* device = _devices[i];
+
+      if (!device) {
+        continue;
+      }
+
+      if (
+        device->info.type == info.type
+        && device->info.deviceIndex == info.deviceIndex
+      ) {
+        return 0;
+      }
+    }
+
+    Device* storage = nullptr;
+
+    for (UInt32 i = 0; i < _maxDevices; ++i) {
+      if (_deviceStorage[i].info.id == 0) {
+        storage = &_deviceStorage[i];
+
+        break;
+      }
+    }
+
+    if (!storage) {
+      return 0;
+    }
+
+    UInt32 id = _nextDeviceId++;
+
+    storage->info = info;
+    storage->info.id = id;
+    storage->info.flags &= ~flagReady;
+    storage->portId = 0;
+
+    _devices[_deviceCount++] = storage;
+
+    return id;
+  }
+
   bool BlockDevice::Unregister(UInt32 deviceId) {
     for (UInt32 i = 0; i < _deviceCount; ++i) {
       if (_devices[i] && _devices[i]->info.id == deviceId) {
+        _devices[i]->info.id = 0;
+        _devices[i]->portId = 0;
         _devices[i] = _devices[_deviceCount - 1];
         _devices[_deviceCount - 1] = nullptr;
         _deviceCount--;

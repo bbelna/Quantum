@@ -11,9 +11,10 @@
 #include "Arch/IA32/Interrupts.hpp"
 #include "Arch/IA32/PIC.hpp"
 #include "Logger.hpp"
+#include "Prelude.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using LogLevel = Logger::Level;
+  using LogLevel = Kernel::Logger::Level;
 
   extern "C" void ISR0();
   extern "C" void ISR1();

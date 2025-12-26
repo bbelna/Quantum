@@ -11,9 +11,10 @@
 #include "Arch/IA32/UserMode.hpp"
 #include "Helpers/AlignHelper.hpp"
 #include "Types.hpp"
+#include "Prelude.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using AlignHelper = Helpers::AlignHelper;
+  using AlignHelper = Kernel::Helpers::AlignHelper;
 
   void UserMode::Enter(UInt32 entryPoint, UInt32 userStackTop) {
     const UInt32 userData = TSS::userDataSelector;

@@ -20,23 +20,83 @@ namespace Quantum::ABI {
        * INIT.BND header layout.
        */
       struct Header {
+        /**
+         * Bundle magic bytes.
+         */
         char magic[8];
+
+        /**
+         * Bundle version.
+         */
         UInt16 version;
+
+        /**
+         * Number of entries in the bundle.
+         */
         UInt16 entryCount;
+
+        /**
+         * Offset to the entry table from the bundle base.
+         */
         UInt32 tableOffset;
+
+        /**
+         * Reserved bytes.
+         */
         UInt8 reserved[8];
+      };
+
+      /**
+       * INIT.BND entry types.
+       */
+      enum class EntryType : UInt8 {
+        Init = 1,
+        Driver = 2,
+        Service = 3
       };
 
       /**
        * INIT.BND entry table layout.
        */
       struct Entry {
+        /**
+         * Entry name (null-terminated if shorter than 32 bytes).
+         */
         char name[32];
-        UInt8 type;
+
+        /**
+         * Entry type.
+         */
+        EntryType type;
+
+        /**
+         * Entry flags.
+         */
         UInt8 flags;
-        UInt8 reserved[2];
+
+        /**
+         * Device type identifier (0 if not device-bound).
+         */
+        UInt8 device;
+
+        /**
+         * Device dependency mask (bitset of required devices).
+         */
+        UInt8 dependsMask;
+
+        /**
+         * Entry offset in bytes from bundle base.
+         */
         UInt32 offset;
+
+        /**
+         * Entry size in bytes.
+         */
         UInt32 size;
+
+        /**
+         * Entry checksum.
+         */
         UInt32 checksum;
       };
 

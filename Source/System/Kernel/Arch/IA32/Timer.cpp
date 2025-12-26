@@ -17,7 +17,7 @@
 #include "Types.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using LogLevel = Logger::Level;
+  using LogLevel = Kernel::Logger::Level;
 
   Interrupts::Context* Timer::TimerHandler(Interrupts::Context& context) {
     ++_tickCount;

@@ -23,6 +23,26 @@ namespace Quantum::ABI {
       static constexpr UInt32 maxPayloadBytes = 1024;
 
       /**
+       * Coordinator port identifiers.
+       */
+      struct Ports {
+        /**
+         * IRQ routing control port.
+         */
+        static constexpr UInt32 IRQ = 1;
+
+        /**
+         * File system broker port.
+         */
+        static constexpr UInt32 FileSystem = 2;
+
+        /**
+         * Coordinator readiness port.
+         */
+        static constexpr UInt32 CoordinatorReady = 3;
+      };
+
+      /**
        * IPC message layout.
        */
       struct Message {
@@ -56,7 +76,7 @@ namespace Quantum::ABI {
        * @param portId
        *   Target port.
        * @param message
-       *   Message to send; Length must be <= MaxPayloadBytes.
+       *   Message to send; length must be <= `maxPayloadBytes`.
        * @return
        *   0 on success, non-zero on failure.
        */
@@ -87,6 +107,27 @@ namespace Quantum::ABI {
       ) {
         return InvokeSystemCall(
           SystemCall::IPC_Receive,
+          portId,
+          reinterpret_cast<UInt32>(&outMessage),
+          0
+        );
+      }
+
+      /**
+       * Attempts to receive a message without blocking.
+       * @param portId
+       *   Port to receive from.
+       * @param outMessage
+       *   Receives the message contents.
+       * @return
+       *   0 on success, non-zero when no message or on failure.
+       */
+      static UInt32 TryReceive(
+        UInt32 portId,
+        Message& outMessage
+      ) {
+        return InvokeSystemCall(
+          SystemCall::IPC_TryReceive,
           portId,
           reinterpret_cast<UInt32>(&outMessage),
           0

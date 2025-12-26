@@ -27,8 +27,8 @@ void Main(UInt32 bootInfoPhysicalAddress) {
 
   BootInfo::Initialize(bootInfoPhysicalAddress);
   Memory::Initialize(bootInfoPhysicalAddress);
-  DeviceManager::Initialize();
   Interrupts::Initialize();
+  DeviceManager::Initialize();
   Task::Initialize();
   InitBundle::Initialize();
 

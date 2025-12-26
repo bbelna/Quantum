@@ -7,20 +7,24 @@
  */
 
 #include <ABI/Console.hpp>
-#include <ABI/Devices/BlockDevice.hpp>
+#include <ABI/Coordinator.hpp>
 #include <ABI/InitBundle.hpp>
 #include <ABI/IO.hpp>
+#include <ABI/IPC.hpp>
 #include <ABI/Prelude.hpp>
 #include <ABI/Task.hpp>
 
 #include "Application.hpp"
-#include "Testing.hpp"
+#include "FileSystem.hpp"
+#include "IRQ.hpp"
 
 namespace Quantum::System::Coordinator {
   using Console = ABI::Console;
-  using BlockDevice = ABI::Devices::BlockDevice;
   using IO = ABI::IO;
+  using IPC = ABI::IPC;
   using Task = ABI::Task;
+  using FileSystem = Coordinator::FileSystem;
+  using IRQ = Coordinator::IRQ;
 
   bool Application::HasMagic(const BundleHeader& header) {
     const char expected[8] = { 'I','N','I','T','B','N','D','\0' };
@@ -65,9 +69,10 @@ namespace Quantum::System::Coordinator {
     return false;
   }
 
-  void Application::SpawnEntry(const BundleEntry& entry) {
-    if (entry.type == 1) {
-      return;
+  bool Application::SpawnEntry(const BundleEntry& entry) {
+    // don't respawn coordinator
+    if (entry.type == InitBundle::EntryType::Init) {
+      return false;
     }
 
     UInt32 taskId = InitBundle::Spawn(entry.name);
@@ -75,60 +80,112 @@ namespace Quantum::System::Coordinator {
     if (taskId == 0) {
       Console::WriteLine("Failed to spawn INIT.BND entry");
 
-      return;
+      return false;
     }
 
-    if (EntryNameEquals(entry, "floppy")) {
-      if (!_floppyPresent) {
-        Console::WriteLine("Floppy device not detected; skipping driver");
-
-        return;
-      }
-
+    // grant I/O access to drivers
+    if (entry.type == InitBundle::EntryType::Driver) {
       UInt32 grant = IO::GrantIOAccess(taskId);
 
       if (grant == 0) {
-        Console::WriteLine("Floppy driver granted I/O access");
+        Console::Write("Granted I/O access to ");
+        Console::WriteLine(entry.name);
       } else {
-        Console::WriteLine("Failed to grant I/O access to floppy driver");
+        Console::Write("Failed to grant I/O access to ");
+        Console::WriteLine(entry.name);
       }
     }
+
+    return true;
+  }
+
+  UInt8 Application::DeviceMaskFromId(UInt8 deviceId) {
+    if (deviceId == 0 || deviceId > 8) {
+      return 0;
+    }
+
+    return static_cast<UInt8>(1u << (deviceId - 1));
+  }
+
+  UInt8 Application::ReadCMOS(UInt8 reg) {
+    IO::Out8(0x70, static_cast<UInt8>(reg | 0x80));
+
+    return IO::In8(0x71);
   }
 
   bool Application::HasFloppyDevice() {
-    UInt32 count = BlockDevice::GetCount();
-    bool found = false;
+    UInt8 types = ReadCMOS(0x10);
+    UInt8 typeA = static_cast<UInt8>((types >> 4) & 0x0F);
+    UInt8 typeB = static_cast<UInt8>(types & 0x0F);
 
-    _floppyDeviceId = 0;
+    if (types == 0) {
+      return true;
+    }
 
-    for (UInt32 i = 1; i <= count; ++i) {
-      BlockDevice::Info info {};
+    return typeA != 0 || typeB != 0;
+  }
 
-      if (BlockDevice::GetInfo(i, info) != 0) {
+  UInt8 Application::DetectDevices() {
+    UInt8 detected = 0;
+
+    if (HasFloppyDevice()) {
+      detected |= DeviceMaskFromId(
+        static_cast<UInt8>(DeviceType::Floppy)
+      );
+    }
+
+    return detected;
+  }
+
+  void Application::ProcessReadyMessages() {
+    if (_readyPortId == 0) {
+      return;
+    }
+
+    for (;;) {
+      IPC::Message msg {};
+
+      if (IPC::TryReceive(_readyPortId, msg) != 0) {
+        break;
+      }
+
+      if (msg.length < sizeof(ABI::Coordinator::ReadyMessage)) {
         continue;
       }
 
-      if (info.type == BlockDevice::Type::Floppy) {
-        found = true;
-        _floppyDeviceId = info.id;
+      ABI::Coordinator::ReadyMessage ready {};
 
-        break;
+      for (UInt32 i = 0; i < sizeof(ready); ++i) {
+        reinterpret_cast<UInt8*>(&ready)[i] = msg.payload[i];
+      }
+
+      if (ready.state == 0) {
+        continue;
+      }
+
+      UInt8 mask = DeviceMaskFromId(static_cast<UInt8>(ready.deviceId));
+
+      if (mask != 0) {
+        _readyDevices |= mask;
       }
     }
-
-    if (found) {
-      Console::WriteLine("Floppy device detected");
-    } else {
-      Console::WriteLine("Floppy device not detected");
-    }
-
-    return found;
   }
 
   void Application::Main() {
+    #if defined(DEBUG)
     Console::WriteLine("Coordinator initialized");
+    #endif
 
-    _floppyPresent = HasFloppyDevice();
+    IRQ::Initialize();
+    FileSystem::Initialize();
+
+    _readyPortId = IPC::CreatePort();
+
+    if (_readyPortId == 0) {
+      Console::WriteLine("Coordinator: failed to create readiness port");
+    } else if (_readyPortId != IPC::Ports::CoordinatorReady) {
+      Console::WriteLine("Coordinator: readiness port id mismatch");
+    }
 
     InitBundle::Info info {};
 
@@ -162,13 +219,29 @@ namespace Quantum::System::Coordinator {
       Task::Exit(1);
     }
 
+    #if defined(DEBUG)
     Console::WriteLine("INIT entries:");
+    #endif
 
     const BundleEntry* entries
       = reinterpret_cast<const BundleEntry*>(base + tableOffset);
 
+    if (entryCount > _maxBundleEntries) {
+      Console::WriteLine("INIT.BND entry count capped");
+
+      entryCount = _maxBundleEntries;
+    }
+
+    _detectedDevices = DetectDevices();
+    _spawnedDevices = 0;
+    _readyDevices = 0;
+
+    bool spawned[_maxBundleEntries] = {};
+
     for (UInt32 i = 0; i < entryCount; ++i) {
       const BundleEntry& entry = entries[i];
+
+      #if defined(DEBUG)
       UInt32 nameLen = EntryNameLength(entry);
 
       if (nameLen > 0) {
@@ -192,13 +265,90 @@ namespace Quantum::System::Coordinator {
       } else {
         Console::WriteLine("  (unnamed)");
       }
+      #endif
 
-      SpawnEntry(entry);
+      if (entry.type == InitBundle::EntryType::Init) {
+        continue;
+      }
+
+      UInt8 deviceMask = DeviceMaskFromId(entry.device);
+
+      if (deviceMask != 0 && (_detectedDevices & deviceMask) == 0) {
+        if ((entry.flags & 0x01) != 0) {
+          Console::WriteLine("Required device missing; entry skipped");
+        }
+
+        spawned[i] = true;
+
+        continue;
+      }
+
+      if (entry.dependsMask != 0) {
+        continue;
+      }
+
+      if (SpawnEntry(entry) && deviceMask != 0) {
+        _spawnedDevices |= deviceMask;
+      }
+
+      spawned[i] = true;
     }
 
-    Testing::RegisterBuiltins();
-    Testing::RunAll();
+    for (;;) {
+      ProcessReadyMessages();
+      bool progressed = false;
 
-    Task::Exit(0);
+      for (UInt32 i = 0; i < entryCount; ++i) {
+        const BundleEntry& entry = entries[i];
+
+        if (spawned[i]) {
+          continue;
+        }
+
+        if (entry.type == InitBundle::EntryType::Init) {
+          spawned[i] = true;
+
+          continue;
+        }
+
+        if (entry.dependsMask == 0) {
+          spawned[i] = true;
+
+          continue;
+        }
+
+        UInt8 deviceMask = DeviceMaskFromId(entry.device);
+
+        if (deviceMask != 0 && (_detectedDevices & deviceMask) == 0) {
+          if ((entry.flags & 0x01) != 0) {
+            Console::WriteLine("Required device missing; entry skipped");
+          }
+
+          spawned[i] = true;
+
+          continue;
+        }
+
+        if ((entry.dependsMask & _readyDevices) != entry.dependsMask) {
+          continue;
+        }
+
+        if (SpawnEntry(entry)) {
+          if (deviceMask != 0) {
+            _spawnedDevices |= deviceMask;
+          }
+
+          spawned[i] = true;
+          progressed = true;
+        }
+      }
+
+      if (!progressed) {
+        Task::Yield();
+      }
+
+      IRQ::ProcessPending();
+      FileSystem::ProcessPending();
+    }
   }
 }

@@ -18,7 +18,6 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     public:
       /**
        * Remaps the PIC to the given vector offsets and preserves masks.
-       * Commonly offset1=0x20 (IRQ0) and offset2=0x28 (IRQ8).
        * @param offset1
        *   Vector offset for master PIC.
        * @param offset2
