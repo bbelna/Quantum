@@ -578,6 +578,175 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     return Assert(match, "seek read");
   }
 
+  static bool TestFileWriteAppend() {
+    if (!WaitForFloppyReady()) {
+      LogSkip("floppy not ready");
+
+      return true;
+    }
+
+    Volume volume {};
+
+    if (!volume.Load()) {
+      LogSkip("no FAT12 volume");
+
+      return true;
+    }
+
+    UInt8 dirAttributes = 0;
+    UInt32 dirCluster = 0;
+    UInt32 dirSize = 0;
+
+    if (
+      !volume.FindEntry(
+        0,
+        true,
+        "TESTDIR",
+        dirCluster,
+        dirAttributes,
+        dirSize
+      )
+    ) {
+      if (!volume.CreateDirectory(0, true, "TESTDIR")) {
+        return Assert(false, "create testdir failed");
+      }
+
+      if (
+        !volume.FindEntry(
+          0,
+          true,
+          "TESTDIR",
+          dirCluster,
+          dirAttributes,
+          dirSize
+        )
+      ) {
+        return Assert(false, "testdir missing");
+      }
+    }
+
+    if ((dirAttributes & 0x10) == 0) {
+      return Assert(false, "testdir not a directory");
+    }
+
+    const char fileName[] = "APPEND.TXT";
+    UInt8 fileAttributes = 0;
+    UInt32 fileCluster = 0;
+    UInt32 fileSize = 0;
+
+    if (
+      !volume.FindEntry(
+        dirCluster,
+        false,
+        fileName,
+        fileCluster,
+        fileAttributes,
+        fileSize
+      )
+    ) {
+      if (!volume.CreateFile(dirCluster, false, fileName)) {
+        return Assert(false, "create append file failed");
+      }
+
+      if (
+        !volume.FindEntry(
+          dirCluster,
+          false,
+          fileName,
+          fileCluster,
+          fileAttributes,
+          fileSize
+        )
+      ) {
+        return Assert(false, "append file missing");
+      }
+    }
+
+    UInt32 entryLBA = 0;
+    UInt32 entryOffset = 0;
+
+    if (
+      !volume.GetEntryLocation(
+        dirCluster,
+        false,
+        fileName,
+        entryLBA,
+        entryOffset
+      )
+    ) {
+      return Assert(false, "append entry location missing");
+    }
+
+    const char appendText[] = "Quantum FAT12 append.\n";
+    const UInt32 appendLength = sizeof(appendText) - 1;
+    UInt32 written = 0;
+    UInt32 newSize = 0;
+    UInt32 startCluster = fileCluster;
+
+    if (
+      !volume.WriteFileData(
+        startCluster,
+        fileSize,
+        reinterpret_cast<const UInt8*>(appendText),
+        appendLength,
+        written,
+        fileSize,
+        newSize
+      )
+    ) {
+      return Assert(false, "append write failed");
+    }
+
+    if (written != appendLength) {
+      return Assert(false, "append write short");
+    }
+
+    if (
+      !volume.UpdateEntry(
+        entryLBA,
+        entryOffset,
+        static_cast<UInt16>(startCluster),
+        newSize
+      )
+    ) {
+      return Assert(false, "append update failed");
+    }
+
+    char verify[32] = {};
+    UInt32 read = 0;
+
+    if (
+      !volume.ReadFile(
+        startCluster,
+        fileSize,
+        reinterpret_cast<UInt8*>(verify),
+        appendLength,
+        read,
+        newSize
+      )
+    ) {
+      return Assert(false, "append read failed");
+    }
+
+    if (read != appendLength) {
+      return Assert(false, "append read short");
+    }
+
+    verify[appendLength] = '\0';
+
+    bool match = true;
+
+    for (UInt32 i = 0; i < appendLength; ++i) {
+      if (verify[i] != appendText[i]) {
+        match = false;
+
+        break;
+      }
+    }
+
+    return Assert(match, "append verify");
+  }
+
   static bool TestCreateDirectory() {
     if (!WaitForFloppyReady()) {
       LogSkip("floppy not ready");
@@ -1134,6 +1303,7 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
     RunTest("FAT12 LFN file", TestLFNFile);
     RunTest("FAT12 TEST.TXT read", TestFileRead);
     RunTest("FAT12 TEST.TXT seek", TestFileSeek);
+    RunTest("FAT12 append write", TestFileWriteAppend);
     RunTest("FAT12 create directory", TestCreateDirectory);
     RunTest("FAT12 create file", TestCreateFile);
     RunTest("FAT12 stat", TestStat);
