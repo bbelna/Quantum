@@ -2,8 +2,8 @@
  * Quantum
  * (c) 2025 Brandon Belna - MIT License
  *
- * System/Kernel/Include/Arch/IA32/SystemCall.hpp
- * IA32 system call initialization.
+ * System/Kernel/Include/Arch/IA32/SystemCalls.hpp
+ * IA32 system call handling.
  */
 
 #pragma once
@@ -14,9 +14,9 @@
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   /**
-   * IA32 system call initialization.
+   * IA32 system call handling.
    */
-  class SystemCall {
+  class SystemCalls {
     public:
       /**
        * System call vector number.

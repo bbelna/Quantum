@@ -2,8 +2,8 @@
  * Quantum
  * (c) 2025 Brandon Belna - MIT License
  *
- * System/Kernel/Handlers/SystemCallHandler.cpp
- * System call handler.
+ * System/Kernel/Arch/IA32/SystemCalls.cpp
+ * IA32 system call handling.
  */
 
 #include <ABI/Devices/BlockDevice.hpp>
@@ -12,9 +12,12 @@
 #include <ABI/Prelude.hpp>
 #include <ABI/SystemCall.hpp>
 
+#include "Arch/IA32/IDT.hpp"
+#include "Arch/IA32/IO.hpp"
+#include "Arch/IA32/Interrupts.hpp"
+#include "Arch/IA32/SystemCalls.hpp"
 #include "Console.hpp"
 #include "Devices/BlockDevice.hpp"
-#include "Handlers/SystemCallHandler.hpp"
 #include "InitBundle.hpp"
 #include "Interrupts.hpp"
 #include "IPC.hpp"
@@ -23,13 +26,9 @@
 #include "Memory.hpp"
 #include "Prelude.hpp"
 #include "Task.hpp"
+#include "Types.hpp"
 
-#if defined(QUANTUM_ARCH_IA32)
-#include "Arch/IA32/IO.hpp"
-#endif
-
-// TODO: refactor into arch code
-namespace Quantum::System::Kernel::Handlers {
+namespace Quantum::System::Kernel::Arch::IA32 {
   using BlockDevice = Kernel::Devices::BlockDevice;
   using Console = Kernel::Console;
   using DMABuffer = ABI::Devices::BlockDevice::DMABuffer;
@@ -39,34 +38,35 @@ namespace Quantum::System::Kernel::Handlers {
   using LogLevel = Kernel::Logger::Level;
   using Memory = Kernel::Memory;
   using SystemCall = ABI::SystemCall;
-  using Task = Kernel::Task;
   using IRQ = Kernel::IRQ;
 
-  Interrupts::Context* SystemCallHandler::Handle(Interrupts::Context& context) {
-    SystemCall id = static_cast<SystemCall>(context.eax);
+  extern "C" void SYSCALL80();
+
+  Interrupts::Context* SystemCalls::OnSystemCall(Interrupts::Context& context) {
+        SystemCall id = static_cast<SystemCall>(context.eax);
 
     switch (id) {
       case SystemCall::Task_Exit: {
-        Task::Exit();
+        Kernel::Task::Exit();
 
         break;
       }
 
       case SystemCall::Task_Yield: {
-        Task::Yield();
+        Kernel::Task::Yield();
 
         break;
       }
 
       case SystemCall::Task_GrantIOAccess: {
-        if (!Task::IsCurrentTaskCoordinator()) {
+        if (!Kernel::Task::IsCurrentTaskCoordinator()) {
           context.eax = 1;
 
           break;
         }
 
         UInt32 targetId = context.ebx;
-        bool ok = Task::GrantIOAccess(targetId);
+        bool ok = Kernel::Task::GrantIOAccess(targetId);
 
         context.eax = ok ? 0 : 1;
 
@@ -109,7 +109,7 @@ namespace Quantum::System::Kernel::Handlers {
       }
 
       case SystemCall::InitBundle_SpawnTask: {
-        if (!Task::IsCurrentTaskCoordinator()) {
+        if (!Kernel::Task::IsCurrentTaskCoordinator()) {
           context.eax = 0;
 
           break;
@@ -210,7 +210,7 @@ namespace Quantum::System::Kernel::Handlers {
       }
 
       case SystemCall::IO_In8: {
-        if (!Task::HasIOAccess()) {
+        if (!Kernel::Task::HasIOAccess()) {
           context.eax = 1;
 
           break;
@@ -218,17 +218,13 @@ namespace Quantum::System::Kernel::Handlers {
 
         UInt16 port = static_cast<UInt16>(context.ebx);
 
-        #if defined(QUANTUM_ARCH_IA32)
         context.eax = Arch::IA32::IO::In8(port);
-        #else
-        context.eax = 1;
-        #endif
 
         break;
       }
 
       case SystemCall::IO_In16: {
-        if (!Task::HasIOAccess()) {
+        if (!Kernel::Task::HasIOAccess()) {
           context.eax = 1;
 
           break;
@@ -236,17 +232,13 @@ namespace Quantum::System::Kernel::Handlers {
 
         UInt16 port = static_cast<UInt16>(context.ebx);
 
-        #if defined(QUANTUM_ARCH_IA32)
         context.eax = Arch::IA32::IO::In16(port);
-        #else
-        context.eax = 1;
-        #endif
 
         break;
       }
 
       case SystemCall::IO_In32: {
-        if (!Task::HasIOAccess()) {
+        if (!Kernel::Task::HasIOAccess()) {
           context.eax = 1;
 
           break;
@@ -254,17 +246,13 @@ namespace Quantum::System::Kernel::Handlers {
 
         UInt16 port = static_cast<UInt16>(context.ebx);
 
-        #if defined(QUANTUM_ARCH_IA32)
         context.eax = Arch::IA32::IO::In32(port);
-        #else
-        context.eax = 1;
-        #endif
 
         break;
       }
 
       case SystemCall::IO_Out8: {
-        if (!Task::HasIOAccess()) {
+        if (!Kernel::Task::HasIOAccess()) {
           context.eax = 1;
 
           break;
@@ -273,18 +261,15 @@ namespace Quantum::System::Kernel::Handlers {
         UInt16 port = static_cast<UInt16>(context.ebx);
         UInt8 value = static_cast<UInt8>(context.ecx);
 
-        #if defined(QUANTUM_ARCH_IA32)
-        Arch::IA32::IO::Out8(port, value);
+        IO::Out8(port, value);
+
         context.eax = 0;
-        #else
-        context.eax = 1;
-        #endif
 
         break;
       }
 
       case SystemCall::IO_Out16: {
-        if (!Task::HasIOAccess()) {
+        if (!Kernel::Task::HasIOAccess()) {
           context.eax = 1;
 
           break;
@@ -293,18 +278,15 @@ namespace Quantum::System::Kernel::Handlers {
         UInt16 port = static_cast<UInt16>(context.ebx);
         UInt16 value = static_cast<UInt16>(context.ecx);
 
-        #if defined(QUANTUM_ARCH_IA32)
-        Arch::IA32::IO::Out16(port, value);
+        IO::Out16(port, value);
+
         context.eax = 0;
-        #else
-        context.eax = 1;
-        #endif
 
         break;
       }
 
       case SystemCall::IO_Out32: {
-        if (!Task::HasIOAccess()) {
+        if (!Kernel::Task::HasIOAccess()) {
           context.eax = 1;
 
           break;
@@ -313,12 +295,9 @@ namespace Quantum::System::Kernel::Handlers {
         UInt16 port = static_cast<UInt16>(context.ebx);
         UInt32 value = context.ecx;
 
-        #if defined(QUANTUM_ARCH_IA32)
-        Arch::IA32::IO::Out32(port, value);
+        IO::Out32(port, value);
+
         context.eax = 0;
-        #else
-        context.eax = 1;
-        #endif
 
         break;
       }
@@ -452,7 +431,7 @@ namespace Quantum::System::Kernel::Handlers {
       }
 
       case SystemCall::IRQ_Register: {
-        if (!Task::IsCurrentTaskCoordinator()) {
+        if (!Kernel::Task::IsCurrentTaskCoordinator()) {
           context.eax = 1;
 
           break;
@@ -468,7 +447,7 @@ namespace Quantum::System::Kernel::Handlers {
       }
 
       case SystemCall::IRQ_Unregister: {
-        if (!Task::IsCurrentTaskCoordinator()) {
+        if (!Kernel::Task::IsCurrentTaskCoordinator()) {
           context.eax = 1;
 
           break;
@@ -483,7 +462,7 @@ namespace Quantum::System::Kernel::Handlers {
       }
 
       case SystemCall::IRQ_Enable: {
-        if (!Task::IsCurrentTaskCoordinator()) {
+        if (!Kernel::Task::IsCurrentTaskCoordinator()) {
           context.eax = 1;
 
           break;
@@ -498,7 +477,7 @@ namespace Quantum::System::Kernel::Handlers {
       }
 
       case SystemCall::IRQ_Disable: {
-        if (!Task::IsCurrentTaskCoordinator()) {
+        if (!Kernel::Task::IsCurrentTaskCoordinator()) {
           context.eax = 1;
 
           break;
@@ -515,7 +494,7 @@ namespace Quantum::System::Kernel::Handlers {
       case SystemCall::Memory_ExpandHeap: {
         constexpr UInt32 pageSize = 4096;
         UInt32 sizeBytes = context.ebx;
-        Task::ControlBlock* tcb = Task::GetCurrent();
+        Kernel::Task::ControlBlock* tcb = Kernel::Task::GetCurrent();
 
         if (!tcb || tcb->userHeapLimit == 0) {
           context.eax = 0;
@@ -552,9 +531,13 @@ namespace Quantum::System::Kernel::Handlers {
         UInt32 mappedProgress = mappedEnd;
 
         if (newMappedEnd > mappedEnd) {
-          UInt32 addressSpace = Task::GetCurrentAddressSpace();
+          UInt32 addressSpace = Kernel::Task::GetCurrentAddressSpace();
 
-          for (UInt32 vaddr = mappedEnd; vaddr < newMappedEnd; vaddr += pageSize) {
+          for (
+            UInt32 vaddr = mappedEnd;
+            vaddr < newMappedEnd;
+            vaddr += pageSize
+          ) {
             void* phys = Memory::AllocatePage(true);
 
             if (!phys) {
@@ -598,5 +581,10 @@ namespace Quantum::System::Kernel::Handlers {
     }
 
     return &context;
+  }
+
+  void SystemCalls::Initialize() {
+    IDT::SetGate(vector, SYSCALL80, 0xEE);
+    Interrupts::RegisterHandler(vector, OnSystemCall);
   }
 }
