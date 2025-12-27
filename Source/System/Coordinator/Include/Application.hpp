@@ -12,7 +12,7 @@
 #include <Types.hpp>
 
 namespace Quantum::System::Coordinator {
-  using InitBundle = ABI::InitBundle;
+  using ABI::InitBundle;
 
   class Application {
     public:

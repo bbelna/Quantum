@@ -13,6 +13,7 @@
 
 namespace Quantum::System::Kernel {
   using ::Quantum::Format;
+
   using LogLevel = Kernel::Logger::Level;
 
   void Logger::Initialize(

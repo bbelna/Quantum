@@ -14,10 +14,11 @@
 #include "Task.hpp"
 
 namespace Quantum::System::Kernel::Devices {
-  using IPC = Kernel::IPC;
+  using Kernel::IPC;
+  using Kernel::Memory;
+  using Kernel::Task;
+
   using LogLevel = Kernel::Logger::Level;
-  using Memory = Kernel::Memory;
-  using Task = Kernel::Task;
 
   void BlockDevices::Initialize() {
     _deviceCount = 0;

@@ -14,8 +14,8 @@
 #include <Types.hpp>
 
 namespace Quantum::System::Drivers::Storage::Floppy {
-  using BlockDevices = ABI::Devices::BlockDevices;
-  using IPC = ABI::IPC;
+  using ABI::Devices::BlockDevices;
+  using ABI::IPC;
 
   /**
    * Floppy driver.

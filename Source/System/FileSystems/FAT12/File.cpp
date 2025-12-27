@@ -13,7 +13,7 @@
 #include "Volume.hpp"
 
 namespace Quantum::System::FileSystems::FAT12 {
-  using BlockDevices = ABI::Devices::BlockDevices;
+  using ABI::Devices::BlockDevices;
 
   void File::Initialize(Volume& volume) {
     _volume = &volume;

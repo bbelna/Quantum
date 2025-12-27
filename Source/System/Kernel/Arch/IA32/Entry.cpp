@@ -22,13 +22,14 @@
 #include "Panic.hpp"
 #include "Prelude.hpp"
 
+using Kernel::Console;
+using Kernel::Logger;
+using KernelIA32::Bootstrap;
+using KernelIA32::CPU;
+using KernelIA32::TSS;
+
 using BootInfoRaw = KernelIA32::BootInfo::Raw;
-using Bootstrap = KernelIA32::Bootstrap;
-using Console = Kernel::Console;
-using CPU = KernelIA32::CPU;
-using Logger = Kernel::Logger;
 using LogLevel = Kernel::Logger::Level;
-using TSS = KernelIA32::TSS;
 using Writer = Kernel::Logger::Writer;
 
 /**

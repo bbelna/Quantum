@@ -14,9 +14,9 @@
 #include "Tests.hpp"
 
 namespace Quantum::System::Drivers::Storage::Floppy::Tests {
-  using Console = ABI::Console;
-  using BlockDevices = ABI::Devices::BlockDevices;
-  using Task = ABI::Task;
+  using ABI::Console;
+  using ABI::Devices::BlockDevices;
+  using ABI::Task;
 
   static UInt32 _testsPassed = 0;
   static UInt32 _testsFailed = 0;

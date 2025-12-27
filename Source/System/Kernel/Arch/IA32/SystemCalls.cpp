@@ -29,16 +29,17 @@
 #include "Task.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using BlockDevices = Kernel::Devices::BlockDevices;
-  using Console = Kernel::Console;
+  using ABI::InitBundle;
+  using ABI::IPC;
+  using ABI::SystemCall;
+  using Kernel::Console;
+  using Kernel::Devices::BlockDevices;
+  using Kernel::IRQ;
+  using Kernel::Logger;
+  using Kernel::Memory;
+
   using DMABuffer = ABI::Devices::BlockDevices::DMABuffer;
-  using InitBundle = ABI::InitBundle;
-  using IPC = ABI::IPC;
-  using Logger = Kernel::Logger;
   using LogLevel = Kernel::Logger::Level;
-  using Memory = Kernel::Memory;
-  using SystemCall = ABI::SystemCall;
-  using IRQ = Kernel::IRQ;
 
   extern "C" void SYSCALL80();
 

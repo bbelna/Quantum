@@ -12,8 +12,8 @@
 #include "Volume.hpp"
 
 namespace Quantum::System::FileSystems::FAT12 {
-  using BlockDevices = ABI::Devices::BlockDevices;
-  using FileSystem = ABI::FileSystem;
+  using ABI::Devices::BlockDevices;
+  using ABI::FileSystem;
 
   void Volume::Initialize() {
     _fat.Initialize(*this);

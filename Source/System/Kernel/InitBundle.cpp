@@ -19,6 +19,7 @@
 
 namespace Quantum::System::Kernel {
   using ::Quantum::AlignUp;
+
   using BundleHeader = ABI::InitBundle::Header;
   using BundleEntry = ABI::InitBundle::Entry;
   using BundleEntryType = ABI::InitBundle::EntryType;

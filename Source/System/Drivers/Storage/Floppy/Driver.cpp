@@ -18,9 +18,9 @@
 #include "Tests.hpp"
 
 namespace Quantum::System::Drivers::Storage::Floppy {
-  using Console = ABI::Console;
-  using IO = ABI::IO;
-  using Task = ABI::Task;
+  using ABI::Console;
+  using ABI::IO;
+  using ABI::Task;
 
   bool Driver::WaitForFIFOReady(bool readPhase) {
     const UInt32 maxSpins = 100000;

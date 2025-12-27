@@ -18,6 +18,7 @@
 namespace Quantum::System::Kernel {
   using ::Quantum::AlignDown;
   using ::Quantum::AlignUp;
+
   using LogLevel = Kernel::Logger::Level;
 
   UInt32 Memory::_heapStartVirtualAddress = Arch::Memory::kernelHeapBase;

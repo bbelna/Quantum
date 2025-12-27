@@ -14,9 +14,9 @@
 #include "IRQ.hpp"
 
 namespace Quantum::System::Coordinator {
-  using Console = ABI::Console;
-  using IPC = ABI::IPC;
-  using Task = ABI::Task;
+  using ABI::Console;
+  using ABI::IPC;
+  using ABI::Task;
 
   void IRQ::Initialize() {
     if (_portId != 0) {

@@ -20,8 +20,9 @@
 #include "UserMode.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
+  using Kernel::UserMode;
+
   using LogLevel = Kernel::Logger::Level;
-  using UserMode = Kernel::UserMode;
 
   void Task::AddToReadyQueue(Task::ControlBlock* task) {
     task->state = Task::State::Ready;

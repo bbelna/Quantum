@@ -10,7 +10,6 @@
 
 #include <Types.hpp>
 
-#include "Logger.hpp"
 #include "Prelude.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
@@ -19,8 +18,6 @@ namespace Quantum::System::Kernel::Arch::IA32 {
    */
   class VGAConsole {
     public:
-      using Writer = Logger::Writer;
-
       /**
        * Initializes the console driver.
        */

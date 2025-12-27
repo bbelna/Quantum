@@ -14,8 +14,8 @@
 #include "Task.hpp"
 
 namespace Quantum::System::Kernel {
-  using IPC = Kernel::IPC;
-  using Task = Kernel::Task;
+  using Kernel::IPC;
+  using Kernel::Task;
 
   bool IRQ::Register(UInt32 irq, UInt32 portId) {
     if (irq >= _maxIRQs || portId == 0) {

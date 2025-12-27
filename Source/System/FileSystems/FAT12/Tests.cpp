@@ -16,10 +16,10 @@
 #include "Volume.hpp"
 
 namespace Quantum::System::FileSystems::FAT12::Tests {
-  using Console = ABI::Console;
-  using BlockDevices = ABI::Devices::BlockDevices;
-  using FileSystem = ABI::FileSystem;
-  using Task = ABI::Task;
+  using ABI::Console;
+  using ABI::Devices::BlockDevices;
+  using ABI::FileSystem;
+  using ABI::Task;
 
   static UInt32 _testsPassed = 0;
   static UInt32 _testsFailed = 0;

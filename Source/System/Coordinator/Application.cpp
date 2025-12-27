@@ -19,12 +19,12 @@
 #include "IRQ.hpp"
 
 namespace Quantum::System::Coordinator {
-  using Console = ABI::Console;
-  using IO = ABI::IO;
-  using IPC = ABI::IPC;
-  using Task = ABI::Task;
-  using FileSystem = Coordinator::FileSystem;
-  using IRQ = Coordinator::IRQ;
+  using ABI::Console;
+  using ABI::IO;
+  using ABI::IPC;
+  using ABI::Task;
+  using Coordinator::IRQ;
+  using Coordinator::FileSystem;
 
   bool Application::HasMagic(const BundleHeader& header) {
     const char expected[8] = { 'I','N','I','T','B','N','D','\0' };

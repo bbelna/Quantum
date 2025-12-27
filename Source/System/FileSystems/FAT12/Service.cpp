@@ -17,11 +17,11 @@
 #include "Volume.hpp"
 
 namespace Quantum::System::FileSystems::FAT12 {
-  using Console = ABI::Console;
-  using BlockDevices = ABI::Devices::BlockDevices;
-  using FileSystem = ABI::FileSystem;
-  using IPC = ABI::IPC;
-  using Task = ABI::Task;
+  using ABI::Console;
+  using ABI::Devices::BlockDevices;
+  using ABI::FileSystem;
+  using ABI::IPC;
+  using ABI::Task;
 
   void Service::InitializeVolumes() {
     _volumesHead = nullptr;
