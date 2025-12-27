@@ -11,6 +11,9 @@
 #include <Types.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
+  /**
+   * IA32 boot info handling.
+   */
   class BootInfo {
     public:
       /**

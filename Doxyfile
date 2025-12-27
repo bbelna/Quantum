@@ -1,0 +1,61 @@
+#---------------------------------------------------------------------------
+# Project
+#---------------------------------------------------------------------------
+
+PROJECT_NAME           = "Quantum"
+PROJECT_BRIEF          = "Clean, from-scratch C++ operating system focused on clarity, coherence, and deliberate design."
+# PROJECT_NUMBER       = "0.0.0"
+
+OUTPUT_DIRECTORY       = Documentation
+CREATE_SUBDIRS         = YES
+
+#---------------------------------------------------------------------------
+# Input
+#---------------------------------------------------------------------------
+
+# document source code
+INPUT                  = Source
+RECURSIVE              = YES
+FILE_PATTERNS          = *.hpp *.h *.cpp *.c *.inl *.inc *.ipp *.tpp *.S *.asm \
+                         *.md
+
+# ignore build artifacts and generated output
+EXCLUDE                = Build Documentation .git
+
+#---------------------------------------------------------------------------
+# Extraction / formatting
+#---------------------------------------------------------------------------
+
+EXTRACT_ALL            = NO
+EXTRACT_STATIC         = YES
+EXTRACT_PRIVATE        = NO
+
+JAVADOC_AUTOBRIEF      = YES
+MULTILINE_CPP_IS_BRIEF = YES
+# EXTRACT_ALL          = YES
+
+#---------------------------------------------------------------------------
+# Source browsing
+#---------------------------------------------------------------------------
+
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+REFERENCED_BY_RELATION = YES
+REFERENCES_RELATION    = YES
+
+#---------------------------------------------------------------------------
+# Output formats
+#---------------------------------------------------------------------------
+
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+
+GENERATE_LATEX         = NO
+
+#---------------------------------------------------------------------------
+# Warnings
+#---------------------------------------------------------------------------
+
+WARN_IF_UNDOCUMENTED   = YES
+WARN_NO_PARAMDOC       = YES
+WARN_AS_ERROR          = NO
