@@ -2,8 +2,8 @@
  * @file System/Kernel/Include/Arch/IA32/PS2Keyboard.hpp
  * @brief IA32 PS/2 keyboard driver.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #pragma once

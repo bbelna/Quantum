@@ -1,17 +1,18 @@
 # Quantum Kernel
-(c) 2025-2026 The Quantum OS Project - MIT License
+
+© 2025-2026 The Quantum OS Project - GPL 2.0 License
 
 ## Overview
+
 This folder contains the implementation of Quantum's kernel.
 
 ## Structure
+
 | Directory | Description |
 | ----------- | ----------- |
 | `.\` | Core arch-agnostic sources. |
 | `.\Arch\` | Arch-specific sources. |
-| `.\Devices\` | The device manager and device interfaces. |
-| `.\Handlers\` | Event handlers. |
-| `.\Helpers\` | Generic helper classes. |
-| `.\Include\` | Kernel header files. |
-| `.\Runtime\` | C++ runtime code. |
+| `.\Devices\` | Device handlers. |
+| `.\Include\` | Header files. |
+| `.\Runtime\` | C++ runtime support. |
 | `.\Tests\` | Test cases. |

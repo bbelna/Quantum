@@ -2,8 +2,8 @@
  * @file System/Kernel/Arch/IA32/Task.cpp
  * @brief IA32 task context and control structures.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #include <Types.hpp>
@@ -13,6 +13,7 @@
 #include "Arch/IA32/Task.hpp"
 #include "Arch/IA32/TSS.hpp"
 #include "CPU.hpp"
+#include "Heap.hpp"
 #include "Logger.hpp"
 #include "Memory.hpp"
 #include "Panic.hpp"
@@ -97,8 +98,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
       RemoveFromAllTasks(_pendingCleanup);
 
-      Kernel::Memory::Free(_pendingCleanup->stackBase);
-      Kernel::Memory::Free(_pendingCleanup);
+      Kernel::Heap::Free(_pendingCleanup->stackBase);
+      Kernel::Heap::Free(_pendingCleanup);
       Memory::DestroyAddressSpace(cleanupSpace);
 
       _pendingCleanup = nullptr;
@@ -211,7 +212,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   ) {
     // allocate the task control block
     Task::ControlBlock* tcb = static_cast<Task::ControlBlock*>(
-      Kernel::Memory::Allocate(sizeof(Task::ControlBlock))
+      Kernel::Heap::Allocate(sizeof(Task::ControlBlock))
     );
 
     if (tcb == nullptr) {
@@ -221,11 +222,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     }
 
     // allocate the kernel stack
-    void* stack = Kernel::Memory::Allocate(stackSize);
+    void* stack = Kernel::Heap::Allocate(stackSize);
 
     if (stack == nullptr) {
       Logger::Write(LogLevel::Error, "Failed to allocate task stack");
-      Kernel::Memory::Free(tcb);
+      Kernel::Heap::Free(tcb);
 
       return nullptr;
     }

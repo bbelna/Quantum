@@ -4,8 +4,8 @@
 ; File: System/Boot/IA32/Console.inc
 ; Brief: IA32 BIOS console routines.
 ; Author: Brandon Belna <bbelna@aol.com>
-; Copyright: (c) 2025-2026 The Quantum OS Project
-; License: MIT License
+; Copyright: © 2025-2026 The Quantum OS Project
+; License: GPL 2.0
 ;-------------------------------------------------------------------------------
 
 ; ------------------------------------------------------------------------------

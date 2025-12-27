@@ -4,8 +4,8 @@
 ; File: System/Boot/IA32/Floppy/Stage1.asm
 ; Brief: Stage 1 bootloader for 1.44MB floppy and HDD.
 ; Author: Brandon Belna <bbelna@aol.com>
-; Copyright: (c) 2025-2026 The Quantum OS Project
-; License: MIT License
+; Copyright: © 2025-2026 The Quantum OS Project
+; License: GPL 2.0
 ;-------------------------------------------------------------------------------
 
 [BITS 16]

@@ -2,8 +2,8 @@
  * @file System/Kernel/Include/Arch/IA32/PIC.hpp
  * @brief IA32 Programmable Interrupt Controller (PIC) driver.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #pragma once

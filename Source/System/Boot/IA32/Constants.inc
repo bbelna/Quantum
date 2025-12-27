@@ -4,8 +4,8 @@
 ; File: System/Boot/IA32/Constants.inc
 ; Brief: IA32 common bootloader constants.
 ; Author: Brandon Belna <bbelna@aol.com>
-; Copyright: (c) 2025-2026 The Quantum OS Project
-; License: MIT License
+; Copyright: © 2025-2026 The Quantum OS Project
+; License: GPL 2.0
 ;-------------------------------------------------------------------------------
 
 ; Stack setup (in real mode): place stack at 0x7C00 for Stage 1

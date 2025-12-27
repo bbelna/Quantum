@@ -1,10 +1,13 @@
 ## Quantum Bootloaders
-(c) 2025-2026 The Quantum OS Project - MIT License
+
+© 2025-2026 The Quantum OS Project - GPL 2.0 License
 
 ## Overview
+
 This folder contains bootloader implementations separated by architecture.
 
 ## Specification
+
 **TODO:** Add more detail regarding how bootloaders work, especially how the
 bootloader needs to pass information to the kernel.
 

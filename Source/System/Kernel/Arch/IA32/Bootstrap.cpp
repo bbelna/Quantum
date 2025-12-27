@@ -2,8 +2,8 @@
  * @file System/Kernel/Arch/IA32/Bootstrap.cpp
  * @brief IA32 bootstrap code.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #include <Types.hpp>
