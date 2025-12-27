@@ -6,10 +6,11 @@
  * SPDX-License-Identifier: MIT
  */
 
+#include <Types.hpp>
+
 #include "Arch/IA32/CPU.hpp"
 #include "Logger.hpp"
 #include "Prelude.hpp"
-#include "Types.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   using LogLevel = Kernel::Logger::Level;

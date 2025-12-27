@@ -6,8 +6,9 @@
  * SPDX-License-Identifier: MIT
  */
 
+#include <Types.hpp>
+
 #include "Arch/IA32/BootInfo.hpp"
-#include "Types.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   void BootInfo::Initialize(UInt32 bootInfoPhysicalAddress) {

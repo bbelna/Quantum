@@ -10,8 +10,7 @@
 
 #include <ABI/InitBundle.hpp>
 #include <ABI/Prelude.hpp>
-
-#include "Types.hpp"
+#include <Types.hpp>
 
 namespace Quantum::System::Kernel {
   /**

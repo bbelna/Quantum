@@ -7,11 +7,11 @@
  */
 
 #include <Align.hpp>
+#include <Types.hpp>
 
 #include "Arch/IA32/Memory.hpp"
 #include "Arch/IA32/TSS.hpp"
 #include "Arch/IA32/UserMode.hpp"
-#include "Types.hpp"
 #include "Prelude.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {

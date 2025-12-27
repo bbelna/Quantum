@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "Types.hpp"
+#include <Types.hpp>
 
 #define TEST_ASSERT(cond, msg) \
   ::Quantum::System::Kernel::Testing::Assert((cond), (msg), __FILE__, __LINE__)

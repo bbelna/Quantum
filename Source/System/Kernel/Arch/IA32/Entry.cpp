@@ -6,6 +6,8 @@
  * SPDX-License-Identifier: MIT
  */
 
+#include <Types.hpp>
+
 #include "Arch/IA32/BootInfo.hpp"
 #include "Arch/IA32/Bootstrap.hpp"
 #include "Arch/IA32/CPU.hpp"
@@ -19,7 +21,6 @@
 #include "Memory.hpp"
 #include "Panic.hpp"
 #include "Prelude.hpp"
-#include "Types.hpp"
 
 using BootInfoRaw = KernelIA32::BootInfo::Raw;
 using Bootstrap = KernelIA32::Bootstrap;

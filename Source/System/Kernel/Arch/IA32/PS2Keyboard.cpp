@@ -1,17 +1,19 @@
 /**
  * @file System/Kernel/Arch/IA32/PS2Keyboard.cpp
- * @brief IA32 PS/2 keyboard driver.
+ * @brief IA32 PS/2 keyboard driver. This will be removed with the
+ *        implementation of KeyboardDevice.
  * @author Brandon Belna <bbelna@aol.com>
  * @copyright (c) 2025-2026 The Quantum OS Project
  * SPDX-License-Identifier: MIT
  */
+
+#include <Types.hpp>
 
 #include "Arch/IA32/Interrupts.hpp"
 #include "Arch/IA32/IO.hpp"
 #include "Arch/IA32/PIC.hpp"
 #include "Arch/IA32/PS2Keyboard.hpp"
 #include "Interrupts.hpp"
-#include "Types.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   void PS2Keyboard::Enqueue(char ch) {

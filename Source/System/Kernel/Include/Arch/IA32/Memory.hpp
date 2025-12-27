@@ -19,26 +19,6 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   class Memory {
     public:
       /**
-       * State of the physical allocator.
-       */
-      struct PhysicalAllocatorState {
-        /**
-         * Total pages managed by the allocator.
-         */
-        UInt32 totalPages;
-
-        /**
-         * Pages currently marked used.
-         */
-        UInt32 usedPages;
-
-        /**
-         * Pages currently available.
-         */
-        UInt32 freePages;
-      };
-
-      /**
        * Base virtual address where the kernel will be mapped in the
        * higher-half. Identity mappings remain available for now to ease the
        * transition.
@@ -265,13 +245,6 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       static UInt32 GetPageTableEntry(UInt32 virtualAddress);
 
       /**
-       * Retrieves the state of the physical allocator.
-       * @return
-       *   State of the physical allocator.
-       */
-      static PhysicalAllocatorState GetPhysicalAllocatorState();
-
-      /**
        * Handles a page fault.
        * @param context
        *   Interrupt context at the time of the fault.
@@ -287,6 +260,27 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         UInt32 faultAddress,
         UInt32 errorCode
       );
+
+      /**
+       * Returns the total number of pages managed by the physical allocator.
+       * @return
+       *   Total number of pages.
+       */
+      static UInt32 GetPhysicalAllocatorTotalPages();
+
+      /**
+       * Returns the number of pages currently marked used by the allocator.
+       * @return
+       *   Number of used pages.
+       */
+      static UInt32 GetPhysicalAllocatorUsedPages();
+
+      /**
+       * Returns the number of pages currently free in the allocator.
+       * @return
+       *   Number of free pages.
+       */
+      static UInt32 GetPhysicalAllocatorFreePages();
 
     private:
       /**

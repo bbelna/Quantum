@@ -28,9 +28,9 @@ namespace Quantum::System::Kernel {
    */
   [[noreturn]]
   void Panic(
-    String message,
-    String file = nullptr,
+    CString message,
+    CString file = nullptr,
     UInt32 line = -1,
-    String function = nullptr
+    CString function = nullptr
   );
 }

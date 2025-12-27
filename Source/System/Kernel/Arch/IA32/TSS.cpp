@@ -6,9 +6,10 @@
  * SPDX-License-Identifier: MIT
  */
 
+#include <Types.hpp>
+
 #include "Arch/IA32/TSS.hpp"
 #include "Arch/IA32/GDT.hpp"
-#include "Types.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   alignas(16) UInt8 TSS::_ring0Stack[4096];

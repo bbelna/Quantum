@@ -6,26 +6,18 @@
  * SPDX-License-Identifier: MIT
  */
 
+#include "Arch/Memory.hpp"
 #include "Devices/BlockDevice.hpp"
 #include "IPC.hpp"
 #include "Logger.hpp"
 #include "Memory.hpp"
 #include "Task.hpp"
 
-#if defined(QUANTUM_ARCH_IA32)
-#include "Arch/IA32/Memory.hpp"
-#include "Arch/IA32/Prelude.hpp"
-#endif
-
 namespace Quantum::System::Kernel::Devices {
   using IPC = Kernel::IPC;
   using LogLevel = Kernel::Logger::Level;
   using Memory = Kernel::Memory;
   using Task = Kernel::Task;
-
-  #if defined(QUANTUM_ARCH_IA32)
-  using ArchMemory = KernelIA32::Memory;
-  #endif
 
   void BlockDevice::Initialize() {
     _deviceCount = 0;
@@ -73,24 +65,16 @@ namespace Quantum::System::Kernel::Devices {
     UInt32& outVirtual,
     UInt32& outSize
   ) {
-    #if !defined(QUANTUM_ARCH_IA32)
-    (void)sizeBytes;
-    (void)outPhysical;
-    (void)outVirtual;
-    (void)outSize;
-
-    return false;
-    #else
     if (sizeBytes == 0) {
       return false;
     }
 
-    if (sizeBytes > ArchMemory::pageSize) {
+    if (sizeBytes > Arch::Memory::pageSize) {
       return false;
     }
 
     if (_dmaBufferPhysical == 0) {
-      void* page = ArchMemory::AllocatePageBelow(
+      void* page = Arch::Memory::AllocatePageBelow(
         _dmaMaxPhysicalAddress,
         true,
         0x10000
@@ -101,7 +85,7 @@ namespace Quantum::System::Kernel::Devices {
       }
 
       _dmaBufferPhysical = reinterpret_cast<UInt32>(page);
-      _dmaBufferBytes = ArchMemory::pageSize;
+      _dmaBufferBytes = Arch::Memory::pageSize;
     }
 
     UInt32 directory = Task::GetCurrentAddressSpace();
@@ -124,7 +108,6 @@ namespace Quantum::System::Kernel::Devices {
     outSize = _dmaBufferBytes;
 
     return true;
-    #endif
   }
 
   UInt32 BlockDevice::Register(BlockDevice::Device* device) {

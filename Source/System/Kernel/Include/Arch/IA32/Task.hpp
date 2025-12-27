@@ -193,13 +193,13 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       static ControlBlock* GetCurrent();
 
       /**
-       * Finds a task by id.
+       * Finds a task by id in the global task list.
        * @param id
        *   Task identifier to locate.
        * @return
-       *   Pointer to the task control block, or nullptr if not found.
+       *   Pointer to the task control block, or `nullptr` if not found.
        */
-      static ControlBlock* Find(UInt32 id);
+      static ControlBlock* FindById(UInt32 id);
 
       /**
        * Sets the address space for the current task.
@@ -326,15 +326,6 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        *   Pointer to the task to remove.
        */
       static void RemoveFromAllTasks(ControlBlock* task);
-
-      /**
-       * Finds a task by id in the global task list.
-       * @param id
-       *   Task identifier to locate.
-       * @return
-       *   Pointer to the task control block, or `nullptr` if not found.
-       */
-      static ControlBlock* FindTaskById(UInt32 id);
 
       /**
        * Picks the next task to run and returns its saved context pointer.

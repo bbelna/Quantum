@@ -6,12 +6,13 @@
  * SPDX-License-Identifier: MIT
  */
 
+#include <Types.hpp>
+
 #include "Logger.hpp"
 #include "Testing.hpp"
 #include "Tests/MemoryTests.hpp"
 #include "Tests/TaskTests.hpp"
 #include "Tests/UserModeTests.hpp"
-#include "Types.hpp"
 
 namespace Quantum::System::Kernel {
   using LogLevel = Logger::Level;

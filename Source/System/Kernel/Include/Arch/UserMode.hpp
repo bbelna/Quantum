@@ -1,6 +1,6 @@
 /**
- * @file System/Kernel/Include/Arch/Memory.hpp
- * @brief Architecture-specific memory wrapper.
+ * @file System/Kernel/Include/Arch/UserMode.hpp
+ * @brief Architecture-specific user mode wrapper.
  * @author Brandon Belna <bbelna@aol.com>
  * @copyright (c) 2025-2026 The Quantum OS Project
  * SPDX-License-Identifier: MIT
@@ -10,15 +10,15 @@
 
 #if defined(QUANTUM_ARCH_AMD64)
 #else
-#include "Arch/IA32/Memory.hpp"
 #include "Arch/IA32/Prelude.hpp"
+#include "Arch/IA32/UserMode.hpp"
 
-using ArchMemory = KernelIA32::Memory;
+using ArchUserMode = KernelIA32::UserMode;
 #endif
 
 namespace Quantum::System::Kernel::Arch {
   /**
-   * Alias for the architecture-specific memory implementation.
+   * Alias for the architecture-specific user mode implementation.
    */
-  using Memory = ArchMemory;
+  using UserMode = ArchUserMode;
 }

@@ -15,10 +15,10 @@
 
 namespace Quantum::System::Kernel {
   void Panic(
-    String message,
-    String file,
+    CString message,
+    CString file,
     UInt32 line,
-    String function
+    CString function
   ) {
     using namespace ::Quantum;
 

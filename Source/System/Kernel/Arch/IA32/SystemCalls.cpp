@@ -11,6 +11,7 @@
 #include <ABI/IPC.hpp>
 #include <ABI/Prelude.hpp>
 #include <ABI/SystemCall.hpp>
+#include <Types.hpp>
 
 #include "Arch/IA32/IDT.hpp"
 #include "Arch/IA32/IO.hpp"
@@ -26,7 +27,6 @@
 #include "Memory.hpp"
 #include "Prelude.hpp"
 #include "Task.hpp"
-#include "Types.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   using BlockDevice = Kernel::Devices::BlockDevice;
@@ -210,7 +210,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::IO_In8: {
-        if (!Kernel::Task::HasIOAccess()) {
+        if (!Kernel::Task::CurrentTaskHasIOAccess()) {
           context.eax = 1;
 
           break;
@@ -224,7 +224,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::IO_In16: {
-        if (!Kernel::Task::HasIOAccess()) {
+        if (!Kernel::Task::CurrentTaskHasIOAccess()) {
           context.eax = 1;
 
           break;
@@ -238,7 +238,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::IO_In32: {
-        if (!Kernel::Task::HasIOAccess()) {
+        if (!Kernel::Task::CurrentTaskHasIOAccess()) {
           context.eax = 1;
 
           break;
@@ -252,7 +252,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::IO_Out8: {
-        if (!Kernel::Task::HasIOAccess()) {
+        if (!Kernel::Task::CurrentTaskHasIOAccess()) {
           context.eax = 1;
 
           break;
@@ -269,7 +269,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::IO_Out16: {
-        if (!Kernel::Task::HasIOAccess()) {
+        if (!Kernel::Task::CurrentTaskHasIOAccess()) {
           context.eax = 1;
 
           break;
@@ -286,7 +286,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::IO_Out32: {
-        if (!Kernel::Task::HasIOAccess()) {
+        if (!Kernel::Task::CurrentTaskHasIOAccess()) {
           context.eax = 1;
 
           break;

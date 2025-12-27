@@ -7,12 +7,17 @@
  */
 
 #include <CString.hpp>
+#include <Types.hpp>
 
 #include "Console.hpp"
 #include "CPU.hpp"
-#include "Types.hpp"
 #include "Prelude.hpp"
 
+// NOTE: This way of doing arch-independence was removed as part of #25,
+// however, we are keeping this here for now since the TextDisplayDevice
+// abstraction is what ultimately will replace this code and it is not yet
+// implemented. It would be a waste of time to implement an arch wrapper
+// for console output when it is going to be removed soon anyway.
 #if defined(QUANTUM_ARCH_IA32)
 #include "Arch/IA32/VGAConsole.hpp"
 

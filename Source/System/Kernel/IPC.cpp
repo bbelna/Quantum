@@ -6,9 +6,10 @@
  * SPDX-License-Identifier: MIT
  */
 
+#include <Types.hpp>
+
 #include "IPC.hpp"
 #include "Task.hpp"
-#include "Types.hpp"
 
 namespace Quantum::System::Kernel {
   IPC::Port* IPC::FindPort(UInt32 id) {

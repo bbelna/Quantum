@@ -7,36 +7,21 @@
  */
 
 #include <Align.hpp>
+#include <Types.hpp>
 
+#include "Arch/Memory.hpp"
 #include "Logger.hpp"
 #include "Memory.hpp"
 #include "Panic.hpp"
 #include "Prelude.hpp"
-#include "Types.hpp"
-
-#if defined(QUANTUM_ARCH_IA32)
-#include "Arch/IA32/CPU.hpp"
-#include "Arch/IA32/Memory.hpp"
-#endif
 
 namespace Quantum::System::Kernel {
-  using LogLevel = Kernel::Logger::Level;
   using ::Quantum::AlignDown;
   using ::Quantum::AlignUp;
+  using LogLevel = Kernel::Logger::Level;
 
-  #if defined(QUANTUM_ARCH_IA32)
-  using ArchPhysicalAllocatorState = Arch::IA32::Memory::PhysicalAllocatorState;
-  using ArchMemory = Arch::IA32::Memory;
-  using ArchCPU = Arch::IA32::CPU;
-  #endif
-
-  #if defined(QUANTUM_ARCH_IA32)
-  UInt32 Memory::_heapStartVirtualAddress = ArchMemory::kernelHeapBase;
-  UInt32 Memory::_heapRegionBytes = ArchMemory::kernelHeapBytes;
-  #else
-  UInt32 Memory::_heapStartVirtualAddress = 0x00400000;
-  UInt32 Memory::_heapRegionBytes = 0;
-  #endif
+  UInt32 Memory::_heapStartVirtualAddress = Arch::Memory::kernelHeapBase;
+  UInt32 Memory::_heapRegionBytes = Arch::Memory::kernelHeapBytes;
 
   void Memory::SetFreeBlockCanary(Memory::FreeBlock* block) {
     if (block->size < sizeof(UInt32)) {
@@ -52,7 +37,6 @@ namespace Quantum::System::Kernel {
   }
 
   UInt8* Memory::MapNextHeapPage() {
-    #if defined(QUANTUM_ARCH_IA32)
     UInt32 heapLimit = _heapStartVirtualAddress + _heapRegionBytes;
     UInt32 nextEnd = reinterpret_cast<UInt32>(_heapMappedEnd)
       + _heapPageSize
@@ -61,12 +45,11 @@ namespace Quantum::System::Kernel {
     if (nextEnd > heapLimit) {
       PANIC("Kernel heap region exhausted");
     }
-    #endif
 
     UInt8* pageStart = _heapMappedEnd;
-    void* physicalPageAddress = ArchMemory::AllocatePage(true);
+    void* physicalPageAddress = Arch::Memory::AllocatePage(true);
 
-    ArchMemory::MapPage(
+    Arch::Memory::MapPage(
       reinterpret_cast<UInt32>(_heapMappedEnd),
       reinterpret_cast<UInt32>(physicalPageAddress),
       true,
@@ -181,7 +164,7 @@ namespace Quantum::System::Kernel {
     for (UInt32 i = 0; i < pagesToReclaim; ++i) {
       UInt32 virtualPage
         = reinterpret_cast<UInt32>(reclaimStart) + i * _heapPageSize;
-      UInt32 pageTableEntry = ArchMemory::GetPageTableEntry(virtualPage);
+      UInt32 pageTableEntry = Arch::Memory::GetPageTableEntry(virtualPage);
 
       if ((pageTableEntry & 0x1) == 0) {
         continue;
@@ -189,10 +172,10 @@ namespace Quantum::System::Kernel {
 
       UInt32 physical = pageTableEntry & ~0xFFFu;
 
-      ArchMemory::UnmapPage(virtualPage);
+      Arch::Memory::UnmapPage(virtualPage);
 
       if (physical) {
-        ArchMemory::FreePage(reinterpret_cast<void*>(physical));
+        Arch::Memory::FreePage(reinterpret_cast<void*>(physical));
       }
 
       if (_heapMappedBytes >= _heapPageSize) {
@@ -410,24 +393,25 @@ namespace Quantum::System::Kernel {
   }
 
   void Memory::Initialize(UInt32 bootInfoPhysicalAddress) {
-    ArchMemory::InitializePaging(bootInfoPhysicalAddress);
+    Arch::Memory::InitializePaging(bootInfoPhysicalAddress);
 
-    ArchPhysicalAllocatorState physicalState
-      = ArchMemory::GetPhysicalAllocatorState();
     UInt64 totalBytes
-      = static_cast<UInt64>(physicalState.totalPages) * _heapPageSize;
+      = static_cast<UInt64>(Arch::Memory::GetPhysicalAllocatorTotalPages())
+      * _heapPageSize;
     UInt64 usedBytes
-      = static_cast<UInt64>(physicalState.usedPages) * _heapPageSize;
+      = static_cast<UInt64>(Arch::Memory::GetPhysicalAllocatorUsedPages())
+      * _heapPageSize;
     UInt64 freeBytes
-      = static_cast<UInt64>(physicalState.freePages) * _heapPageSize;
+      = static_cast<UInt64>(Arch::Memory::GetPhysicalAllocatorFreePages())
+      * _heapPageSize;
 
     Logger::WriteFormatted(
       LogLevel::Debug,
       "Physical allocator: pages total=%p used=%p free=%p bytes total=%p "
         "used=%p free=%p",
-      physicalState.totalPages,
-      physicalState.usedPages,
-      physicalState.freePages,
+      Arch::Memory::GetPhysicalAllocatorTotalPages(),
+      Arch::Memory::GetPhysicalAllocatorUsedPages(),
+      Arch::Memory::GetPhysicalAllocatorFreePages(),
       totalBytes,
       usedBytes,
       freeBytes
@@ -436,15 +420,11 @@ namespace Quantum::System::Kernel {
   }
 
   void* Memory::AllocatePage(bool zero) {
-    return ArchMemory::AllocatePage(zero);
+    return Arch::Memory::AllocatePage(zero);
   }
 
   UInt32 Memory::GetKernelPageDirectoryPhysical() {
-    #if defined(QUANTUM_ARCH_IA32)
-    return ArchMemory::GetKernelPageDirectoryPhysical();
-    #else
-    return 0;
-    #endif
+    return Arch::Memory::GetKernelPageDirectoryPhysical();
   }
 
   void Memory::MapPage(
@@ -454,7 +434,7 @@ namespace Quantum::System::Kernel {
     bool user,
     bool global
   ) {
-    ArchMemory::MapPage(
+    Arch::Memory::MapPage(
       virtualAddress,
       physicalAddress,
       writable,
@@ -464,19 +444,11 @@ namespace Quantum::System::Kernel {
   }
 
   UInt32 Memory::CreateAddressSpace() {
-    #if defined(QUANTUM_ARCH_IA32)
-    return ArchMemory::CreateAddressSpace();
-    #else
-    return 0;
-    #endif
+    return Arch::Memory::CreateAddressSpace();
   }
 
   void Memory::DestroyAddressSpace(UInt32 pageDirectoryPhysical) {
-    #if defined(QUANTUM_ARCH_IA32)
-    ArchMemory::DestroyAddressSpace(pageDirectoryPhysical);
-    #else
-    (void)pageDirectoryPhysical;
-    #endif
+    Arch::Memory::DestroyAddressSpace(pageDirectoryPhysical);
   }
 
   void Memory::MapPageInAddressSpace(
@@ -487,8 +459,7 @@ namespace Quantum::System::Kernel {
     bool user,
     bool global
   ) {
-    #if defined(QUANTUM_ARCH_IA32)
-    ArchMemory::MapPageInAddressSpace(
+    Arch::Memory::MapPageInAddressSpace(
       pageDirectoryPhysical,
       virtualAddress,
       physicalAddress,
@@ -496,22 +467,10 @@ namespace Quantum::System::Kernel {
       user,
       global
     );
-    #else
-    (void)pageDirectoryPhysical;
-    (void)virtualAddress;
-    (void)physicalAddress;
-    (void)writable;
-    (void)user;
-    (void)global;
-    #endif
   }
 
   void Memory::ActivateAddressSpace(UInt32 pageDirectoryPhysical) {
-    #if defined(QUANTUM_ARCH_IA32)
-    ArchMemory::ActivateAddressSpace(pageDirectoryPhysical);
-    #else
-    (void)pageDirectoryPhysical;
-    #endif
+    Arch::Memory::ActivateAddressSpace(pageDirectoryPhysical);
   }
 
   void* Memory::Allocate(Size size) {
@@ -572,7 +531,8 @@ namespace Quantum::System::Kernel {
       }
 
       UInt32 totalBytes = pagesToMap * _heapPageSize;
-      Memory::FreeBlock* block = reinterpret_cast<Memory::FreeBlock*>(firstPage);
+      Memory::FreeBlock* block
+        = reinterpret_cast<Memory::FreeBlock*>(firstPage);
 
       block->size = totalBytes - sizeof(Memory::FreeBlock);
       block->next = nullptr;
@@ -685,7 +645,7 @@ namespace Quantum::System::Kernel {
   }
 
   void Memory::FreePage(void* page) {
-    ArchMemory::FreePage(page);
+    Arch::Memory::FreePage(page);
   }
 
   void Memory::Free(void* pointer) {
@@ -704,7 +664,8 @@ namespace Quantum::System::Kernel {
       bytePointer - sizeof(Memory::FreeBlock)
     );
     UInt8* blockBytes = reinterpret_cast<UInt8*>(block);
-    UInt8* payload = reinterpret_cast<UInt8*>(block) + sizeof(Memory::FreeBlock);
+    UInt8* payload
+      = reinterpret_cast<UInt8*>(block) + sizeof(Memory::FreeBlock);
 
     // if the pointer is not at the block payload start, it may be an aligned
     // allocation; verify metadata before using it

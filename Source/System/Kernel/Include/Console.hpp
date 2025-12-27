@@ -8,8 +8,9 @@
 
 #pragma once
 
+#include <Types.hpp>
+
 #include "Logger.hpp"
-#include "Types.hpp"
 
 namespace Quantum::System::Kernel {
   /**

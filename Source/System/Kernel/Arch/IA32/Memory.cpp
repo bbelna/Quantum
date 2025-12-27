@@ -7,6 +7,7 @@
  */
 
 #include <Align.hpp>
+#include <Types.hpp>
 
 #include "Arch/IA32/BootInfo.hpp"
 #include "Arch/IA32/CPU.hpp"
@@ -17,7 +18,6 @@
 #include "Panic.hpp"
 #include "Prelude.hpp"
 #include "Task.hpp"
-#include "Types.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   using LogLevel = Kernel::Logger::Level;
@@ -924,14 +924,16 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     return table[tableIndex];
   }
 
-  Memory::PhysicalAllocatorState Memory::GetPhysicalAllocatorState() {
-    Memory::PhysicalAllocatorState state {};
+  UInt32 Memory::GetPhysicalAllocatorTotalPages() {
+    return _pageCount;
+  }
 
-    state.totalPages = _pageCount;
-    state.usedPages = _usedPages;
-    state.freePages = _pageCount - _usedPages;
+  UInt32 Memory::GetPhysicalAllocatorUsedPages() {
+    return _usedPages;
+  }
 
-    return state;
+  UInt32 Memory::GetPhysicalAllocatorFreePages() {
+    return _pageCount - _usedPages;
   }
 
   bool Memory::HandlePageFault(

@@ -8,7 +8,8 @@
 
 #pragma once
 
-#if defined(QUANTUM_ARCH_IA32)
+#if defined(QUANTUM_ARCH_AMD64)
+#else
 #include "Arch/IA32/CPU.hpp"
 #include "Arch/IA32/Prelude.hpp"
 

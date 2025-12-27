@@ -7,6 +7,7 @@
  */
 
 #include <Align.hpp>
+#include <Types.hpp>
 
 #include "BootInfo.hpp"
 #include "InitBundle.hpp"
@@ -14,7 +15,6 @@
 #include "Memory.hpp"
 #include "Prelude.hpp"
 #include "Task.hpp"
-#include "Types.hpp"
 #include "UserMode.hpp"
 
 namespace Quantum::System::Kernel {

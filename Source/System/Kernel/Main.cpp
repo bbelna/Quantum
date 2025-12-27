@@ -6,6 +6,8 @@
  * SPDX-License-Identifier: MIT
  */
 
+#include <Types.hpp>
+
 #include "BootInfo.hpp"
 #include "DeviceManager.hpp"
 #include "InitBundle.hpp"
@@ -15,7 +17,6 @@
 #include "Prelude.hpp"
 #include "Task.hpp"
 #include "TestRunner.hpp"
-#include "Types.hpp"
 
 namespace Quantum::System::Kernel {
   void Main(UInt32 bootInfoPhysicalAddress) {
