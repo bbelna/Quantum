@@ -12,10 +12,10 @@
 #include "Arch/IA32/Memory.hpp"
 #include "Arch/IA32/Task.hpp"
 #include "Arch/IA32/TSS.hpp"
+#include "AddressSpace.hpp"
 #include "CPU.hpp"
 #include "Heap.hpp"
 #include "Logger.hpp"
-#include "Memory.hpp"
 #include "Panic.hpp"
 #include "Prelude.hpp"
 #include "UserMode.hpp"
@@ -100,7 +100,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
       Kernel::Heap::Free(_pendingCleanup->stackBase);
       Kernel::Heap::Free(_pendingCleanup);
-      Memory::DestroyAddressSpace(cleanupSpace);
+      AddressSpace::Destroy(cleanupSpace);
 
       _pendingCleanup = nullptr;
     }
@@ -134,7 +134,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     UInt32 nextSpace = nextTask->pageDirectoryPhysical;
 
     if (nextSpace != 0 && nextSpace != previousSpace) {
-      Memory::ActivateAddressSpace(nextSpace);
+      AddressSpace::Activate(nextSpace);
     }
 
     if (nextTask->kernelStackTop != 0) {
@@ -234,7 +234,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     // initialize TCB fields
     tcb->id = _nextTaskId++;
     tcb->caps = 0;
-    tcb->pageDirectoryPhysical = Memory::GetKernelPageDirectoryPhysical();
+    tcb->pageDirectoryPhysical
+      = AddressSpace::GetKernelPageDirectoryPhysical();
     tcb->state = Task::State::Ready;
     tcb->stackBase = stack;
     tcb->stackSize = stackSize;

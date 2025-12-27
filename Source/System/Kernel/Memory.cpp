@@ -12,6 +12,7 @@
 #include "Heap.hpp"
 #include "Logger.hpp"
 #include "Memory.hpp"
+#include "PhysicalAllocator.hpp"
 
 namespace Quantum::System::Kernel {
   using LogLevel = Kernel::Logger::Level;
@@ -19,24 +20,23 @@ namespace Quantum::System::Kernel {
   void Memory::Initialize(UInt32 bootInfoPhysicalAddress) {
     Arch::Memory::InitializePaging(bootInfoPhysicalAddress);
 
-    UInt32 heapPageSize = Heap::GetPageSize();
     UInt64 totalBytes
-      = static_cast<UInt64>(Arch::Memory::GetPhysicalAllocatorTotalPages())
-      * heapPageSize;
+      = static_cast<UInt64>(PhysicalAllocator::GetTotalPages())
+      * PhysicalAllocator::pageSize;
     UInt64 usedBytes
-      = static_cast<UInt64>(Arch::Memory::GetPhysicalAllocatorUsedPages())
-      * heapPageSize;
+      = static_cast<UInt64>(PhysicalAllocator::GetUsedPages())
+      * PhysicalAllocator::pageSize;
     UInt64 freeBytes
-      = static_cast<UInt64>(Arch::Memory::GetPhysicalAllocatorFreePages())
-      * heapPageSize;
+      = static_cast<UInt64>(PhysicalAllocator::GetFreePages())
+      * PhysicalAllocator::pageSize;
 
     Logger::WriteFormatted(
       LogLevel::Debug,
       "Physical allocator: pages total=%p used=%p free=%p bytes total=%p "
         "used=%p free=%p",
-      Arch::Memory::GetPhysicalAllocatorTotalPages(),
-      Arch::Memory::GetPhysicalAllocatorUsedPages(),
-      Arch::Memory::GetPhysicalAllocatorFreePages(),
+      PhysicalAllocator::GetTotalPages(),
+      PhysicalAllocator::GetUsedPages(),
+      PhysicalAllocator::GetFreePages(),
       totalBytes,
       usedBytes,
       freeBytes
@@ -44,61 +44,4 @@ namespace Quantum::System::Kernel {
     Heap::DumpState();
   }
 
-  void* Memory::AllocatePage(bool zero) {
-    return Arch::Memory::AllocatePage(zero);
-  }
-
-  UInt32 Memory::GetKernelPageDirectoryPhysical() {
-    return Arch::Memory::GetKernelPageDirectoryPhysical();
-  }
-
-  void Memory::MapPage(
-    UInt32 virtualAddress,
-    UInt32 physicalAddress,
-    bool writable,
-    bool user,
-    bool global
-  ) {
-    Arch::Memory::MapPage(
-      virtualAddress,
-      physicalAddress,
-      writable,
-      user,
-      global
-    );
-  }
-
-  UInt32 Memory::CreateAddressSpace() {
-    return Arch::Memory::CreateAddressSpace();
-  }
-
-  void Memory::DestroyAddressSpace(UInt32 pageDirectoryPhysical) {
-    Arch::Memory::DestroyAddressSpace(pageDirectoryPhysical);
-  }
-
-  void Memory::MapPageInAddressSpace(
-    UInt32 pageDirectoryPhysical,
-    UInt32 virtualAddress,
-    UInt32 physicalAddress,
-    bool writable,
-    bool user,
-    bool global
-  ) {
-    Arch::Memory::MapPageInAddressSpace(
-      pageDirectoryPhysical,
-      virtualAddress,
-      physicalAddress,
-      writable,
-      user,
-      global
-    );
-  }
-
-  void Memory::ActivateAddressSpace(UInt32 pageDirectoryPhysical) {
-    Arch::Memory::ActivateAddressSpace(pageDirectoryPhysical);
-  }
-
-  void Memory::FreePage(void* page) {
-    Arch::Memory::FreePage(page);
-  }
 }

@@ -7,15 +7,15 @@
  */
 
 #include "Arch/Memory.hpp"
+#include "AddressSpace.hpp"
 #include "Devices/BlockDevices.hpp"
 #include "IPC.hpp"
 #include "Logger.hpp"
-#include "Memory.hpp"
 #include "Task.hpp"
 
 namespace Quantum::System::Kernel::Devices {
   using Kernel::IPC;
-  using Kernel::Memory;
+  using Kernel::AddressSpace;
   using Kernel::Task;
 
   using LogLevel = Kernel::Logger::Level;
@@ -95,7 +95,7 @@ namespace Quantum::System::Kernel::Devices {
       return false;
     }
 
-    Memory::MapPageInAddressSpace(
+    AddressSpace::MapPageInAddressSpace(
       directory,
       _dmaBufferVirtualBase,
       _dmaBufferPhysical,

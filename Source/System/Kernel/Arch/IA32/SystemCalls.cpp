@@ -17,6 +17,7 @@
 #include "Arch/IA32/IO.hpp"
 #include "Arch/IA32/Interrupts.hpp"
 #include "Arch/IA32/SystemCalls.hpp"
+#include "AddressSpace.hpp"
 #include "Console.hpp"
 #include "Devices/BlockDevices.hpp"
 #include "InitBundle.hpp"
@@ -24,7 +25,7 @@
 #include "IPC.hpp"
 #include "IRQ.hpp"
 #include "Logger.hpp"
-#include "Memory.hpp"
+#include "PhysicalAllocator.hpp"
 #include "Prelude.hpp"
 #include "Task.hpp"
 
@@ -36,7 +37,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   using Kernel::Devices::BlockDevices;
   using Kernel::IRQ;
   using Kernel::Logger;
-  using Kernel::Memory;
+  using Kernel::AddressSpace;
+  using Kernel::PhysicalAllocator;
 
   using DMABuffer = ABI::Devices::BlockDevices::DMABuffer;
   using LogLevel = Kernel::Logger::Level;
@@ -539,7 +541,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
             vaddr < newMappedEnd;
             vaddr += pageSize
           ) {
-            void* phys = Memory::AllocatePage(true);
+            void* phys = PhysicalAllocator::AllocatePage(true);
 
             if (!phys) {
               ok = false;
@@ -547,7 +549,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
               break;
             }
 
-            Memory::MapPageInAddressSpace(
+            AddressSpace::MapPageInAddressSpace(
               addressSpace,
               vaddr,
               reinterpret_cast<UInt32>(phys),

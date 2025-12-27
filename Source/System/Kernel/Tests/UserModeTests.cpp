@@ -6,7 +6,8 @@
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
-#include "Memory.hpp"
+#include "AddressSpace.hpp"
+#include "PhysicalAllocator.hpp"
 #include "Task.hpp"
 #include "Testing.hpp"
 #include "Tests/UserModeTests.hpp"
@@ -15,7 +16,7 @@ namespace Quantum::System::Kernel::Tests {
   bool UserModeTests::TestUserSyscallPath() {
     Task::DisablePreemption();
 
-    UInt32 addressSpace = Memory::CreateAddressSpace();
+    UInt32 addressSpace = AddressSpace::Create();
 
     if (addressSpace == 0) {
       Task::EnablePreemption();
@@ -25,10 +26,10 @@ namespace Quantum::System::Kernel::Tests {
       return false;
     }
 
-    void* codePage = Memory::AllocatePage(true);
+    void* codePage = PhysicalAllocator::AllocatePage(true);
 
     if (codePage == nullptr) {
-      Memory::DestroyAddressSpace(addressSpace);
+      AddressSpace::Destroy(addressSpace);
       Task::EnablePreemption();
 
       TEST_ASSERT(false, "Failed to allocate user program page");
@@ -45,7 +46,7 @@ namespace Quantum::System::Kernel::Tests {
       codeBytes[i] = _userTestProgram[i];
     }
 
-    Memory::MapPageInAddressSpace(
+    AddressSpace::MapPageInAddressSpace(
       addressSpace,
       _userProgramBase,
       reinterpret_cast<UInt32>(codePage),
@@ -54,10 +55,10 @@ namespace Quantum::System::Kernel::Tests {
       false
     );
 
-    void* stackPage = Memory::AllocatePage(true);
+    void* stackPage = PhysicalAllocator::AllocatePage(true);
 
     if (stackPage == nullptr) {
-      Memory::DestroyAddressSpace(addressSpace);
+      AddressSpace::Destroy(addressSpace);
       Task::EnablePreemption();
 
       TEST_ASSERT(false, "Failed to allocate user stack page");
@@ -65,7 +66,7 @@ namespace Quantum::System::Kernel::Tests {
       return false;
     }
 
-    Memory::MapPageInAddressSpace(
+    AddressSpace::MapPageInAddressSpace(
       addressSpace,
       stackBase,
       reinterpret_cast<UInt32>(stackPage),
@@ -81,7 +82,7 @@ namespace Quantum::System::Kernel::Tests {
     );
 
     if (tcb == nullptr) {
-      Memory::DestroyAddressSpace(addressSpace);
+      AddressSpace::Destroy(addressSpace);
       Task::EnablePreemption();
 
       TEST_ASSERT(false, "Failed to create user task");

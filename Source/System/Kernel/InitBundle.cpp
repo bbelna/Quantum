@@ -9,10 +9,11 @@
 #include <Align.hpp>
 #include <Types.hpp>
 
+#include "AddressSpace.hpp"
 #include "BootInfo.hpp"
 #include "InitBundle.hpp"
 #include "Logger.hpp"
-#include "Memory.hpp"
+#include "PhysicalAllocator.hpp"
 #include "Prelude.hpp"
 #include "Task.hpp"
 #include "UserMode.hpp"
@@ -48,8 +49,8 @@ namespace Quantum::System::Kernel {
       UInt32 phys = base + i * 4096;
       UInt32 virt = _initBundleVirtualBase + i * 4096;
 
-      Memory::MapPage(virt, phys, false, false, false);
-      Memory::MapPage(
+      AddressSpace::MapPage(virt, phys, false, false, false);
+      AddressSpace::MapPage(
         _initBundleUserBase + i * 4096,
         phys,
         false,
@@ -274,7 +275,7 @@ namespace Quantum::System::Kernel {
       }
     }
 
-    UInt32 addressSpace = Memory::CreateAddressSpace();
+    UInt32 addressSpace = AddressSpace::Create();
 
     if (addressSpace == 0) {
       Logger::Write(LogLevel::Warning, "Failed to create address space");
@@ -284,10 +285,10 @@ namespace Quantum::System::Kernel {
     UInt32 pages = AlignUp(imageBytes, pageSize) / pageSize;
 
     for (UInt32 i = 0; i < pages; ++i) {
-      void* phys = Memory::AllocatePage(true);
+      void* phys = PhysicalAllocator::AllocatePage(true);
       UInt32 vaddr = _userProgramBase + i * pageSize;
 
-      Memory::MapPageInAddressSpace(
+      AddressSpace::MapPageInAddressSpace(
         addressSpace,
         vaddr,
         reinterpret_cast<UInt32>(phys),
@@ -318,10 +319,10 @@ namespace Quantum::System::Kernel {
     UInt32 stackPages = stackBytes / pageSize;
 
     for (UInt32 i = 0; i < stackPages; ++i) {
-      void* phys = Memory::AllocatePage(true);
+      void* phys = PhysicalAllocator::AllocatePage(true);
       UInt32 vaddr = stackBase + i * pageSize;
 
-      Memory::MapPageInAddressSpace(
+      AddressSpace::MapPageInAddressSpace(
         addressSpace,
         vaddr,
         reinterpret_cast<UInt32>(phys),
@@ -333,7 +334,7 @@ namespace Quantum::System::Kernel {
 
     Task::SetCoordinatorId(Task::GetCurrentId());
     Task::SetCurrentAddressSpace(addressSpace);
-    Memory::ActivateAddressSpace(addressSpace);
+    AddressSpace::Activate(addressSpace);
     UserMode::Enter(
       _userProgramBase + entryOffset,
       _userStackTop
@@ -460,7 +461,7 @@ namespace Quantum::System::Kernel {
       return 0;
     }
 
-    UInt32 addressSpace = Memory::CreateAddressSpace();
+    UInt32 addressSpace = AddressSpace::Create();
 
     if (addressSpace == 0) {
       Logger::Write(
@@ -474,10 +475,10 @@ namespace Quantum::System::Kernel {
     UInt32 pages = AlignUp(imageBytes, pageSize) / pageSize;
 
     for (UInt32 i = 0; i < pages; ++i) {
-      void* phys = Memory::AllocatePage(true);
+      void* phys = PhysicalAllocator::AllocatePage(true);
       UInt32 vaddr = _userProgramBase + i * pageSize;
 
-      Memory::MapPageInAddressSpace(
+      AddressSpace::MapPageInAddressSpace(
         addressSpace,
         vaddr,
         reinterpret_cast<UInt32>(phys),
@@ -508,10 +509,10 @@ namespace Quantum::System::Kernel {
     UInt32 stackPages = stackBytes / pageSize;
 
     for (UInt32 i = 0; i < stackPages; ++i) {
-      void* phys = Memory::AllocatePage(true);
+      void* phys = PhysicalAllocator::AllocatePage(true);
       UInt32 vaddr = stackBase + i * pageSize;
 
-      Memory::MapPageInAddressSpace(
+      AddressSpace::MapPageInAddressSpace(
         addressSpace,
         vaddr,
         reinterpret_cast<UInt32>(phys),
@@ -529,7 +530,7 @@ namespace Quantum::System::Kernel {
 
     if (!task) {
       Logger::Write(LogLevel::Warning, "SpawnTask: failed to create task");
-      Memory::DestroyAddressSpace(addressSpace);
+      AddressSpace::Destroy(addressSpace);
 
       return 0;
     }
