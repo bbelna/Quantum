@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * Libraries/Quantum/Include/ABI/Devices/BlockDevice.hpp
- * Block device syscall wrappers.
+ * @file Libraries/Quantum/Include/ABI/Devices/BlockDevice.hpp
+ * @brief Block device syscall wrappers.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once

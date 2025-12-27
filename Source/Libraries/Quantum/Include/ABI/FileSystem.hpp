@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * Libraries/Quantum/Include/ABI/FileSystem.hpp
- * File system syscall wrappers.
+ * @file Libraries/Quantum/Include/ABI/FileSystem.hpp
+ * @brief File system syscall wrappers.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once
