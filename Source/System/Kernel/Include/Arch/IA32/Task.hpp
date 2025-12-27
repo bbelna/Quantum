@@ -137,7 +137,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       /**
        * Capability flags.
        */
-      static constexpr UInt32 CapabilityIo = 1u << 0;
+      static constexpr UInt32 CapabilityIO = 1u << 0;
 
       /**
        * Initializes the IA32 task subsystem.
@@ -233,6 +233,22 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        *   Updated task context to switch to.
        */
       static Context* Tick(Context& context);
+
+      /**
+       * Grants I/O access capability to the specified task.
+       * @param taskId
+       *   Task identifier to grant I/O access.
+       * @return
+       *   True if the capability was granted, false otherwise.
+       */
+      static bool GrantIOAccess(UInt32 taskId);
+
+      /**
+       * Checks if the current task has I/O access capability.
+       * @return
+       *   True if the current task has I/O access, false otherwise.
+       */
+      static bool CurrentTaskHasIOAccess();
 
     private:
       /**

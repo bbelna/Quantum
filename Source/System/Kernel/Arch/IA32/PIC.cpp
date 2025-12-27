@@ -48,28 +48,39 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
   void PIC::Mask(UInt8 irq) {
     UInt16 port = (irq < 8) ? _pic1Data : _pic2Data;
+
     if (irq >= 8) {
       irq -= 8;
     }
 
     UInt8 mask = IO::In8(port);
+
     mask |= static_cast<UInt8>(1 << irq);
-    IO::Out8(port, mask);
-  }
 
-  void PIC::Unmask(UInt8 irq) {
-    UInt16 port = (irq < 8) ? _pic1Data : _pic2Data;
-    if (irq >= 8) {
-      irq -= 8;
-    }
-
-    UInt8 mask = IO::In8(port);
-    mask &= static_cast<UInt8>(~(1 << irq));
     IO::Out8(port, mask);
   }
 
   void PIC::MaskAll() {
     IO::Out8(_pic1Data, 0xFF);
     IO::Out8(_pic2Data, 0xFF);
+  }
+
+  void PIC::Unmask(UInt8 irq) {
+    UInt16 port = (irq < 8) ? _pic1Data : _pic2Data;
+
+    if (irq >= 8) {
+      irq -= 8;
+    }
+
+    UInt8 mask = IO::In8(port);
+
+    mask &= static_cast<UInt8>(~(1 << irq));
+
+    IO::Out8(port, mask);
+  }
+
+  void PIC::UnmaskAll() {
+    IO::Out8(_pic1Data, 0x00);
+    IO::Out8(_pic2Data, 0x00);
   }
 }

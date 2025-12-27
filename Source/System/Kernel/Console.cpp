@@ -30,7 +30,7 @@ namespace Quantum::System::Kernel {
     return writerAdapter;
   }
 
-  void Console::WriterAdapter::Write(String message) {
+  void Console::WriterAdapter::Write(CString message) {
     if (!message) {
       return;
     }

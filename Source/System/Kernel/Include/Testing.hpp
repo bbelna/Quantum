@@ -8,7 +8,6 @@
 
 #pragma once
 
-#include "String.hpp"
 #include "Types.hpp"
 
 #define TEST_ASSERT(cond, msg) \

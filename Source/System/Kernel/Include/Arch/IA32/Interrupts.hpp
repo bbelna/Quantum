@@ -104,5 +104,36 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        *   The interrupt handler function.
        */
       static void RegisterHandler(UInt8 vector, Handler handler);
+
+      /**
+       * Sends an End Of Interrupt (EOI).
+       * @param irq
+       *   IRQ number (0-15) that just fired.
+       */
+      static void End(UInt8 irq);
+
+      /**
+       * Masks (disables) a specific IRQ line.
+       * @param irq
+       *   IRQ number (0-15) to mask.
+       */
+      static void Mask(UInt8 irq);
+
+      /**
+       * Masks all IRQ lines.
+       */
+      static void MaskAll();
+
+      /**
+       * Unmasks (enables) a specific IRQ line.
+       * @param irq
+       *   IRQ number (0-15) to unmask.
+       */
+      static void Unmask(UInt8 irq);
+
+      /**
+       * Unmasks all IRQ lines.
+       */
+      static void UnmaskAll();
   };
 }

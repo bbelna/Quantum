@@ -25,7 +25,7 @@ namespace Quantum::System::Kernel {
     _writerCount = writerCount;
   }
 
-  void Logger::Write(LogLevel level, String message) {
+  void Logger::Write(LogLevel level, CString message) {
     if (level < _minimumLevel) {
       return;
     }
@@ -35,7 +35,7 @@ namespace Quantum::System::Kernel {
     }
   }
 
-  void Logger::WriteFormatted(LogLevel level, String formattedMessage, ...) {
+  void Logger::WriteFormatted(LogLevel level, CString formattedMessage, ...) {
     VariableArgumentsList args;
 
     if (level >= _minimumLevel) {
@@ -47,14 +47,14 @@ namespace Quantum::System::Kernel {
       Format(
         buffer,
         bufferLength,
-        formattedMessage.Data(),
+        formattedMessage,
         args
       );
 
       VARIABLE_ARGUMENTS_END(args);
 
       for (Size i = 0; i < _writerCount; ++i) {
-        _writers[i]->Write(String(buffer));
+        _writers[i]->Write(buffer);
       }
     }
   }

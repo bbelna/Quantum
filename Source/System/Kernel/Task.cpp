@@ -98,15 +98,7 @@ namespace Quantum::System::Kernel {
 
   bool Task::GrantIOAccess(UInt32 taskId) {
     #if defined(QUANTUM_ARCH_IA32)
-    auto* tcb = ArchTask::Find(taskId);
-
-    if (!tcb) {
-      return false;
-    }
-
-    tcb->caps |= ArchTask::CapabilityIo;
-
-    return true;
+    return ArchTask::GrantIOAccess(taskId);
     #else
     (void)taskId;
 
@@ -116,9 +108,7 @@ namespace Quantum::System::Kernel {
 
   bool Task::HasIOAccess() {
     #if defined(QUANTUM_ARCH_IA32)
-    auto* tcb = ArchTask::GetCurrent();
-
-    return tcb && (tcb->caps & ArchTask::CapabilityIo) != 0;
+    return ArchTask::CurrentTaskHasIOAccess();
     #else
     return false;
     #endif

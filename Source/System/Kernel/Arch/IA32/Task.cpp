@@ -457,4 +457,22 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
     return Schedule(&context);
   }
+
+  bool Task::GrantIOAccess(UInt32 taskId) {
+    Task::ControlBlock* tcb = FindTaskById(taskId);
+
+    if (!tcb) {
+      return false;
+    }
+
+    tcb->caps |= CapabilityIO;
+
+    return true;
+  }
+
+  bool Task::CurrentTaskHasIOAccess() {
+    Task::ControlBlock* tcb = GetCurrent();
+
+    return tcb && (tcb->caps & CapabilityIO) != 0;
+  }
 }

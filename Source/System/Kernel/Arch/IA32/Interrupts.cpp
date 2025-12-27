@@ -10,6 +10,7 @@
 #include "Arch/IA32/Exceptions.hpp"
 #include "Arch/IA32/IDT.hpp"
 #include "Arch/IA32/Interrupts.hpp"
+#include "Arch/IA32/PIC.hpp"
 #include "Arch/IA32/PS2Keyboard.hpp"
 #include "Arch/IA32/SystemCalls.hpp"
 #include "Arch/IA32/Timer.hpp"
@@ -29,5 +30,25 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
   void Interrupts::RegisterHandler(UInt8 vector, Interrupts::Handler handler) {
     IDT::SetHandler(vector, handler);
+  }
+
+  void Interrupts::End(UInt8 irq) {
+    PIC::SendEOI(irq);
+  }
+
+  void Interrupts::Mask(UInt8 irq) {
+    PIC::Mask(irq);
+  }
+
+  void Interrupts::MaskAll() {
+    PIC::MaskAll();
+  }
+
+  void Interrupts::Unmask(UInt8 irq) {
+    PIC::Unmask(irq);
+  }
+
+  void Interrupts::UnmaskAll() {
+    PIC::UnmaskAll();
   }
 }

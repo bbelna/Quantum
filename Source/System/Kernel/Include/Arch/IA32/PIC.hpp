@@ -40,6 +40,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       static void Mask(UInt8 irq);
 
       /**
+       * Masks all IRQ lines on both PICs.
+       */
+      static void MaskAll();
+
+      /**
        * Unmasks (enables) a specific IRQ line.
        * @param irq
        *   IRQ number (0-15) to unmask.
@@ -47,9 +52,9 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       static void Unmask(UInt8 irq);
 
       /**
-       * Masks all IRQ lines on both PICs.
+       * Unmasks all IRQ lines on both PICs.
        */
-      static void MaskAll();
+      static void UnmaskAll();
 
     private:
       /**

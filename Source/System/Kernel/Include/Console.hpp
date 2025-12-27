@@ -82,7 +82,7 @@ namespace Quantum::System::Kernel {
            * @param message
            *   The message to write.
            */
-          void Write(String message) override;
+          void Write(CString message) override;
       };
 
       /**
