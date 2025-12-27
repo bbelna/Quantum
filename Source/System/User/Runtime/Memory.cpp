@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/User/Runtime/Memory.cpp
- * User-mode memory helpers.
+ * @file System/User/Runtime/Memory.cpp
+ * @brief User-mode memory functions.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #include <Types.hpp>

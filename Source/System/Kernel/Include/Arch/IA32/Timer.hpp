@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Include/Arch/IA32/Timer.hpp
- * IA32 PIT timer driver.
+ * @file System/Kernel/Include/Arch/IA32/Timer.hpp
+ * @brief IA32 PIT timer driver.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once

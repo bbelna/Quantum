@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Logger.cpp
- * Kernel logging and tracing interface.
+ * @file System/Kernel/Logger.cpp
+ * @brief Kernel logger.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #include <CString.hpp>

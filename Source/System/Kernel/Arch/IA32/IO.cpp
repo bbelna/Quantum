@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Arch/IA32/IO.cpp
- * IA32 port I/O primitives.
+ * @file System/Kernel/Arch/IA32/IO.cpp
+ * @brief IA32 port I/O operations.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #include "Arch/IA32/IO.hpp"
@@ -11,19 +11,25 @@
 namespace Quantum::System::Kernel::Arch::IA32 {
   UInt8 IO::In8(UInt16 port) {
     UInt8 value;
+
     asm volatile ("inb %1, %0" : "=a"(value) : "Nd"(port));
+
     return value;
   }
 
   UInt16 IO::In16(UInt16 port) {
     UInt16 value;
+
     asm volatile ("inw %1, %0" : "=a"(value) : "Nd"(port));
+
     return value;
   }
 
   UInt32 IO::In32(UInt16 port) {
     UInt32 value;
+
     asm volatile ("inl %1, %0" : "=a"(value) : "Nd"(port));
+
     return value;
   }
 

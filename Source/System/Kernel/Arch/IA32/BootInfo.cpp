@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Arch/IA32/BootInfo.cpp
- * IA32 boot info parsing and architecture-neutral accessors.
+ * @file System/Kernel/Arch/IA32/BootInfo.cpp
+ * @brief IA32 boot info handling.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #include "Arch/IA32/BootInfo.hpp"

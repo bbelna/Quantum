@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/User/Runtime/Heap.cpp
- * User-mode heap allocator.
+ * @file System/User/Runtime/Heap.cpp
+ * @brief User-mode heap implementation.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #include <ABI/SystemCall.hpp>

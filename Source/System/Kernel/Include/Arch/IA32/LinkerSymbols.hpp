@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Include/Arch/IA32/LinkerSymbols.hpp
- * IA32 linker symbols.
+ * @file System/Kernel/Include/Arch/IA32/LinkerSymbols.hpp
+ * @brief IA32 linker symbol declarations.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once

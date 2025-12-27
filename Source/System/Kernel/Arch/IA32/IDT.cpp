@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Arch/IA32/IDT.cpp
- * IA32 Interrupt Descriptor Table management.
+ * @file System/Kernel/Arch/IA32/IDT.cpp
+ * @brief IA32 Interrupt Descriptor Table (IDT) implementation.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #include "Arch/IA32/CPU.hpp"

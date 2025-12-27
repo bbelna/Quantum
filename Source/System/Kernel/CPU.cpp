@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/CPU.cpp
- * Architecture-agnostic CPU driver.
+ * @file System/Kernel/CPU.cpp
+ * @brief Architecture-agnostic CPU handling.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #include "CPU.hpp"

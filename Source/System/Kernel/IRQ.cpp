@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/IRQ.cpp
- * Kernel IRQ routing subsystem.
+ * @file System/Kernel/IRQ.cpp
+ * @brief IRQ handling and notification.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #include <ABI/IRQ.hpp>

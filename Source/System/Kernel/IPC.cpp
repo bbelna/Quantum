@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/IPC.cpp
- * Kernel IPC subsystem.
+ * @file System/Kernel/IPC.cpp
+ * @brief Inter-process communication (IPC) handling.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #include "IPC.hpp"

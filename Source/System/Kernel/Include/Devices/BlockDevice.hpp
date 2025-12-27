@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Include/Devices/BlockDevice.hpp
- * Kernel block device registry and interface.
+ * @file System/Kernel/Include/Devices/BlockDevice.hpp
+ * @brief Block device registry and I/O interface.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once

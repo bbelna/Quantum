@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Interrupts.cpp
- * Architecture-agnostic kernel interrupt subsystem.
+ * @file System/Kernel/Interrupts.cpp
+ * @brief Architecture-agnostic interrupt handling.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #include "Interrupts.hpp"

@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/UserMode.cpp
- * Kernel user-mode entry helpers.
+ * @file System/Kernel/UserMode.cpp
+ * @brief User mode transition handling.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #include "UserMode.hpp"

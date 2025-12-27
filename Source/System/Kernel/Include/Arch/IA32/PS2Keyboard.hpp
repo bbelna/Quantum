@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Include/Arch/IA32/PS2Keyboard.hpp
- * IA32 PS/2 keyboard driver.
+ * @file System/Kernel/Include/Arch/IA32/PS2Keyboard.hpp
+ * @brief IA32 PS/2 keyboard driver.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once

@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Include/Arch/IA32/IO.hpp
- * IA32 port I/O primitives.
+ * @file System/Kernel/Include/Arch/IA32/IO.hpp
+ * @brief IA32 port I/O operations.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once

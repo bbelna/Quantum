@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Include/Arch/IA32/VGAConsole.hpp
- * IA32 VGA text-mode console driver.
+ * @file System/Kernel/Include/Arch/IA32/VGAConsole.hpp
+ * @brief IA32 VGA text-mode console driver.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once

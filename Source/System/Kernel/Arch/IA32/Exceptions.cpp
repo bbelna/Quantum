@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Arch/IA32/Exceptions.cpp
- * IA32 exception handler registration.
+ * @file System/Kernel/Arch/IA32/Exceptions.cpp
+ * @brief IA32 exception handling.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #include "Arch/IA32/CPU.hpp"

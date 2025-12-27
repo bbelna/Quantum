@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Tests/TaskTests.cpp
- * Tasking tests.
+ * @file System/Kernel/Tests/TaskTests.cpp
+ * @brief Tasking-related kernel tests.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #include "Task.hpp"

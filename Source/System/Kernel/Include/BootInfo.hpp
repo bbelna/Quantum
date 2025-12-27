@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Include/BootInfo.hpp
- * Kernel boot info access helpers.
+ * @file System/Kernel/Include/BootInfo.hpp
+ * @brief Architecture-agnostic boot info handling.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once

@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Task.cpp
- * Architecture-agnostic task management.
+ * @file System/Kernel/Task.cpp
+ * @brief Architecture-agnostic task management.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #include "Interrupts.hpp"
