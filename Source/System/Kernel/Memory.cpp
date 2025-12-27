@@ -6,10 +6,11 @@
  * Architecture-agnostic memory manager.
  */
 
-#include "Helpers/AlignHelper.hpp"
+#include <Align.hpp>
+
 #include "Logger.hpp"
-#include "Macros.hpp"
 #include "Memory.hpp"
+#include "Panic.hpp"
 #include "Prelude.hpp"
 #include "Types.hpp"
 
@@ -20,7 +21,8 @@
 
 namespace Quantum::System::Kernel {
   using LogLevel = Kernel::Logger::Level;
-  using AlignHelper = Kernel::Helpers::AlignHelper;
+  using ::Quantum::AlignDown;
+  using ::Quantum::AlignUp;
 
   #if defined(QUANTUM_ARCH_IA32)
   using ArchPhysicalAllocatorState = Arch::IA32::Memory::PhysicalAllocatorState;
@@ -152,7 +154,7 @@ namespace Quantum::System::Kernel {
     }
 
     UInt8* reclaimStart = reinterpret_cast<UInt8*>(
-      AlignHelper::Up(
+      AlignUp(
         reinterpret_cast<UInt32>(blockPayload),
         _heapPageSize
       )
@@ -352,7 +354,7 @@ namespace Quantum::System::Kernel {
       return 0;
     }
 
-    return AlignHelper::Down(blockSize - sizeof(UInt32), 8);
+    return AlignDown(blockSize - sizeof(UInt32), 8);
   }
 
   void* Memory::AllocateFromBin(UInt32 binSize, UInt32 neededWithHeader) {
@@ -513,11 +515,11 @@ namespace Quantum::System::Kernel {
   }
 
   void* Memory::Allocate(Size size) {
-    UInt32 requested = AlignHelper::Up(static_cast<UInt32>(size), 8);
+    UInt32 requested = AlignUp(static_cast<UInt32>(size), 8);
     int binIndex = BinIndexForSize(requested);
     UInt32 binSize = (binIndex >= 0) ? _binSizes[binIndex] : requested;
     UInt32 payloadSize
-      = AlignHelper::Up(binSize + sizeof(UInt32), 8); // space for canary
+      = AlignUp(binSize + sizeof(UInt32), 8); // space for canary
     UInt32 needed = payloadSize + sizeof(Memory::FreeBlock);
     UInt32 pagesNeeded = (needed + _heapPageSize - 1) / _heapPageSize;
 

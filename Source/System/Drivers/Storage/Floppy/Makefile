@@ -10,6 +10,7 @@ ARCH ?= IA32
 
 DRIVER_DIR    := $(SRC_ROOT)/System/Drivers/Storage/Floppy
 USER_RUNTIME  := $(SRC_ROOT)/System/User/Runtime
+LIBQ_DIR      := $(SRC_ROOT)/Libraries/Quantum
 LIBQ_INCLUDE  := $(PROJECT_ROOT)/Source/Libraries/Quantum/Include
 FLOPPY_INCLUDE := $(DRIVER_DIR)/Include
 
@@ -23,6 +24,7 @@ OBJCOPY32 ?= x86_64-linux-gnu-objcopy
 
 DRIVER_ELF := $(BUILD_DIR)/Drivers/Storage/Floppy/Floppy.elf
 DRIVER_QX  := $(BUILD_DIR)/Drivers/Storage/Floppy/Floppy.qx
+LIBQ_LIB := $(BUILD_DIR)/Libraries/Quantum/libQuantum.a
 
 FLOPPY_SRCS := \
 	$(DRIVER_DIR)/Driver.cpp \
@@ -41,12 +43,16 @@ all: floppy
 
 floppy: $(DRIVER_QX)
 
-$(DRIVER_ELF): $(FLOPPY_SRCS) $(FLOPPY_HDRS) $(DRIVER_DIR)/Link.ld
+$(LIBQ_LIB):
+	$(MAKE) -C $(LIBQ_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) \
+		ARCH=$(ARCH) lib
+
+$(DRIVER_ELF): $(FLOPPY_SRCS) $(FLOPPY_HDRS) $(DRIVER_DIR)/Link.ld $(LIBQ_LIB)
 	@mkdir -p $(dir $@)
 	$(CC32) $(CFLAGS32) -m32 -ffreestanding -nostdlib -static -Wl,--no-pie \
 		-I$(LIBQ_INCLUDE) -I$(FLOPPY_INCLUDE) \
 		-T $(DRIVER_DIR)/Link.ld \
-		$(FLOPPY_SRCS) -o $@
+		$(FLOPPY_SRCS) $(LIBQ_LIB) -o $@
 	@echo "[OK] Linked Floppy.elf -> $@"
 
 $(DRIVER_QX): $(DRIVER_ELF)

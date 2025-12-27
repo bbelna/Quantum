@@ -6,9 +6,10 @@
  * Architecture-agnostic console driver.
  */
 
+#include <CString.hpp>
+
 #include "Console.hpp"
 #include "CPU.hpp"
-#include "Helpers/CStringHelper.hpp"
 #include "Types.hpp"
 #include "Prelude.hpp"
 
@@ -20,7 +21,8 @@ using ConsoleDriver = Arch::VGAConsole;
 #endif
 
 namespace Quantum::System::Kernel {
-  using CStringHelper = Kernel::Helpers::CStringHelper;
+  using ::Quantum::Length;
+  using ::Quantum::ToCString;
 
   Logger::Writer& Console::GetWriter() {
     static WriterAdapter writerAdapter;
@@ -100,7 +102,7 @@ namespace Quantum::System::Kernel {
         case 'd': {
           Int32 v = VARIABLE_ARGUMENTS(args, Int32);
 
-          WriteUnlocked(CStringHelper::ToCString(v));
+          WriteUnlocked(ToCString(v));
 
           break;
         }
@@ -154,7 +156,7 @@ namespace Quantum::System::Kernel {
       return;
     }
 
-    UInt32 length = static_cast<UInt32>(CStringHelper::Length(string));
+    UInt32 length = static_cast<UInt32>(Length(string));
 
     Write(string, length);
   }
@@ -178,7 +180,7 @@ namespace Quantum::System::Kernel {
       return;
     }
 
-    UInt32 length = static_cast<UInt32>(CStringHelper::Length(string));
+    UInt32 length = static_cast<UInt32>(Length(string));
 
     WriteLine(string, length);
   }
@@ -227,7 +229,7 @@ namespace Quantum::System::Kernel {
   void Console::WriteUnlocked(CString string) {
     WriteUnlocked(
       string,
-      static_cast<UInt32>(CStringHelper::Length(string))
+      static_cast<UInt32>(Length(string))
     );
   }
 }

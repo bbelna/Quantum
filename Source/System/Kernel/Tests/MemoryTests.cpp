@@ -6,7 +6,6 @@
  * Memory subsystem tests.
  */
 
-#include "Macros.hpp"
 #include "Memory.hpp"
 #include "Testing.hpp"
 #include "Tests/MemoryTests.hpp"

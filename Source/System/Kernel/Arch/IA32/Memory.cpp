@@ -6,21 +6,23 @@
  * IA32 paging and memory functions.
  */
 
+#include <Align.hpp>
+
 #include "Arch/IA32/BootInfo.hpp"
 #include "Arch/IA32/CPU.hpp"
 #include "Arch/IA32/Interrupts.hpp"
 #include "Arch/IA32/LinkerSymbols.hpp"
 #include "Arch/IA32/Memory.hpp"
-#include "Helpers/AlignHelper.hpp"
 #include "Logger.hpp"
-#include "Macros.hpp"
+#include "Panic.hpp"
 #include "Prelude.hpp"
 #include "Task.hpp"
 #include "Types.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   using LogLevel = Kernel::Logger::Level;
-  using AlignHelper = Kernel::Helpers::AlignHelper;
+  using ::Quantum::AlignDown;
+  using ::Quantum::AlignUp;
 
   alignas(Memory::_pageSize)
   UInt32 Memory::_pageDirectory[Memory::_pageDirectoryEntries];
@@ -198,12 +200,12 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       _managedBytes = _defaultManagedBytes;
     }
 
-    _managedBytes = AlignHelper::Up(_managedBytes, _pageSize);
+    _managedBytes = AlignUp(_managedBytes, _pageSize);
     _pageCount = _managedBytes / _pageSize;
 
-    UInt32 bitmapBytes = AlignHelper::Up((_pageCount + 7) / 8, 4);
+    UInt32 bitmapBytes = AlignUp((_pageCount + 7) / 8, 4);
     UInt32 bitmapPhysical
-      = AlignHelper::Up(reinterpret_cast<UInt32>(&__phys_bss_end), 4);
+      = AlignUp(reinterpret_cast<UInt32>(&__phys_bss_end), 4);
 
     if (bootInfo && bootInfo->initBundleSize > 0) {
       UInt32 bundleStart = bootInfo->initBundlePhysical;
@@ -211,7 +213,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       UInt32 bitmapEnd = bitmapPhysical + bitmapBytes;
 
       if (!(bitmapEnd <= bundleStart || bitmapPhysical >= bundleEnd)) {
-        bitmapPhysical = AlignHelper::Up(bundleEnd, 4);
+        bitmapPhysical = AlignUp(bundleEnd, 4);
       }
     }
 
@@ -270,7 +272,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     }
 
     // mark bitmap, kernel, page tables, boot info as used
-    UInt32 usedUntil = AlignHelper::Up(bitmapPhysical + bitmapBytes, _pageSize);
+    UInt32 usedUntil = AlignUp(bitmapPhysical + bitmapBytes, _pageSize);
     UInt32 usedPages = usedUntil / _pageSize;
 
     for (UInt32 i = 0; i < usedPages && i < _pageCount; ++i) {
@@ -307,11 +309,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         bootInfo->initBundleSize
       );
 
-      UInt32 bundleStart = AlignHelper::Down(
+      UInt32 bundleStart = AlignDown(
         bootInfo->initBundlePhysical,
         _pageSize
       );
-      UInt32 bundleEnd = AlignHelper::Up(
+      UInt32 bundleEnd = AlignUp(
         bootInfo->initBundlePhysical + bootInfo->initBundleSize,
         _pageSize
       );
@@ -337,7 +339,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     // reserve kernel image pages
     UInt32 kernelStart = reinterpret_cast<UInt32>(&__phys_start);
     UInt32 kernelEnd
-      = AlignHelper::Up(reinterpret_cast<UInt32>(&__phys_end), _pageSize);
+      = AlignUp(reinterpret_cast<UInt32>(&__phys_end), _pageSize);
     UInt32 kernelStartPage = kernelStart / _pageSize;
     UInt32 kernelEndPage = kernelEnd / _pageSize;
 
@@ -355,7 +357,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     UInt32 stackBottom = 0x80000;
     UInt32 stackTop = 0x90000;
     UInt32 stackStartPage = stackBottom / _pageSize;
-    UInt32 stackEndPage = AlignHelper::Up(stackTop, _pageSize) / _pageSize;
+    UInt32 stackEndPage = AlignUp(stackTop, _pageSize) / _pageSize;
 
     if (stackStartPage < _pageCount) {
       if (stackEndPage > _pageCount) {
@@ -833,7 +835,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     bool user,
     bool global
   ) {
-    UInt32 bytes = AlignHelper::Up(lengthBytes, _pageSize);
+    UInt32 bytes = AlignUp(lengthBytes, _pageSize);
     UInt32 count = bytes / _pageSize;
 
     for (UInt32 i = 0; i < count; ++i) {
@@ -848,7 +850,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   }
 
   void Memory::UnmapRange(UInt32 virtualAddress, UInt32 lengthBytes) {
-    UInt32 bytes = AlignHelper::Up(lengthBytes, _pageSize);
+    UInt32 bytes = AlignUp(lengthBytes, _pageSize);
     UInt32 count = bytes / _pageSize;
 
     for (UInt32 i = 0; i < count; ++i) {
@@ -860,8 +862,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     UInt32 physicalAddress,
     UInt32 lengthBytes
   ) {
-    UInt32 start = AlignHelper::Down(physicalAddress, _pageSize);
-    UInt32 end = AlignHelper::Up(physicalAddress + lengthBytes, _pageSize);
+    UInt32 start = AlignDown(physicalAddress, _pageSize);
+    UInt32 end = AlignUp(physicalAddress + lengthBytes, _pageSize);
     UInt32 startPage = start / _pageSize;
     UInt32 endPage = end / _pageSize;
 
@@ -882,8 +884,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     UInt32 physicalAddress,
     UInt32 lengthBytes
   ) {
-    UInt32 start = AlignHelper::Down(physicalAddress, _pageSize);
-    UInt32 end = AlignHelper::Up(physicalAddress + lengthBytes, _pageSize);
+    UInt32 start = AlignDown(physicalAddress, _pageSize);
+    UInt32 end = AlignUp(physicalAddress + lengthBytes, _pageSize);
     UInt32 startPage = start / _pageSize;
     UInt32 endPage = end / _pageSize;
 

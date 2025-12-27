@@ -6,15 +6,16 @@
  * IA32 user-mode entry helpers.
  */
 
+#include <Align.hpp>
+
 #include "Arch/IA32/Memory.hpp"
 #include "Arch/IA32/TSS.hpp"
 #include "Arch/IA32/UserMode.hpp"
-#include "Helpers/AlignHelper.hpp"
 #include "Types.hpp"
 #include "Prelude.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using AlignHelper = Kernel::Helpers::AlignHelper;
+  using ::Quantum::AlignUp;
 
   void UserMode::Enter(UInt32 entryPoint, UInt32 userStackTop) {
     const UInt32 userData = TSS::userDataSelector;
@@ -49,7 +50,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       return false;
     }
 
-    UInt32 alignedSize = AlignHelper::Up(sizeBytes, _pageSize);
+    UInt32 alignedSize = AlignUp(sizeBytes, _pageSize);
     UInt32 stackBase = userStackTop - alignedSize;
     UInt32 pages = alignedSize / _pageSize;
 

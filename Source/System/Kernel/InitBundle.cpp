@@ -6,8 +6,9 @@
  * INIT.BND handling and launch helpers.
  */
 
+#include <Align.hpp>
+
 #include "BootInfo.hpp"
-#include "Helpers/AlignHelper.hpp"
 #include "InitBundle.hpp"
 #include "Logger.hpp"
 #include "Memory.hpp"
@@ -17,7 +18,7 @@
 #include "UserMode.hpp"
 
 namespace Quantum::System::Kernel {
-  using AlignHelper = Kernel::Helpers::AlignHelper;
+  using ::Quantum::AlignUp;
   using BundleHeader = ABI::InitBundle::Header;
   using BundleEntry = ABI::InitBundle::Entry;
   using BundleEntryType = ABI::InitBundle::EntryType;
@@ -40,7 +41,7 @@ namespace Quantum::System::Kernel {
       size
     );
 
-    UInt32 pageCount = AlignHelper::Up(size, 4096) / 4096;
+    UInt32 pageCount = AlignUp(size, 4096) / 4096;
 
     for (UInt32 i = 0; i < pageCount; ++i) {
       UInt32 phys = base + i * 4096;
@@ -279,7 +280,7 @@ namespace Quantum::System::Kernel {
       Task::Exit();
     }
 
-    UInt32 pages = AlignHelper::Up(imageBytes, pageSize) / pageSize;
+    UInt32 pages = AlignUp(imageBytes, pageSize) / pageSize;
 
     for (UInt32 i = 0; i < pages; ++i) {
       void* phys = Memory::AllocatePage(true);
@@ -311,7 +312,7 @@ namespace Quantum::System::Kernel {
       }
     }
 
-    UInt32 stackBytes = AlignHelper::Up(_userStackSize, pageSize);
+    UInt32 stackBytes = AlignUp(_userStackSize, pageSize);
     UInt32 stackBase = _userStackTop - stackBytes;
     UInt32 stackPages = stackBytes / pageSize;
 
@@ -469,7 +470,7 @@ namespace Quantum::System::Kernel {
       return 0;
     }
 
-    UInt32 pages = AlignHelper::Up(imageBytes, pageSize) / pageSize;
+    UInt32 pages = AlignUp(imageBytes, pageSize) / pageSize;
 
     for (UInt32 i = 0; i < pages; ++i) {
       void* phys = Memory::AllocatePage(true);
@@ -501,7 +502,7 @@ namespace Quantum::System::Kernel {
       }
     }
 
-    UInt32 stackBytes = AlignHelper::Up(_userStackSize, pageSize);
+    UInt32 stackBytes = AlignUp(_userStackSize, pageSize);
     UInt32 stackBase = _userStackTop - stackBytes;
     UInt32 stackPages = stackBytes / pageSize;
 
@@ -533,7 +534,7 @@ namespace Quantum::System::Kernel {
     }
 
     // initialize per-task heap bounds
-    UInt32 heapBase = AlignHelper::Up(_userProgramBase + imageBytes, pageSize);
+    UInt32 heapBase = AlignUp(_userProgramBase + imageBytes, pageSize);
     UInt32 heapLimit = stackBase;
 
     if (heapBase < heapLimit) {
