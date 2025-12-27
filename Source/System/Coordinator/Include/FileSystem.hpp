@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Coordinator/Include/FileSystem.hpp
- * Coordinator file system broker.
+ * @file System/Coordinator/Include/Application.hpp
+ * @brief Coordinator file system broker.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once
