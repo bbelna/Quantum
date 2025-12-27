@@ -1,4 +1,4 @@
-# Quantum
+![Quantum](https://github.com/user-attachments/assets/3e6820fb-017b-4772-9876-fc5c6ebc042e)
 
 Quantum is a clean, from-scratch hobbyist C++ operating system focused on
 clarity, coherence, and deliberate design. Rather than re-implementing or
