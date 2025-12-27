@@ -9,10 +9,10 @@
 #include <Align.hpp>
 #include <Types.hpp>
 
+#include "Arch/IA32/AddressSpace.hpp"
+#include "Arch/IA32/PhysicalAllocator.hpp"
 #include "Arch/IA32/TSS.hpp"
 #include "Arch/IA32/UserMode.hpp"
-#include "AddressSpace.hpp"
-#include "PhysicalAllocator.hpp"
 #include "Prelude.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
@@ -56,12 +56,12 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     UInt32 pages = alignedSize / _pageSize;
 
     for (UInt32 i = 0; i < pages; ++i) {
-      void* phys = Kernel::PhysicalAllocator::AllocatePage(true);
+      UInt32 phys = PhysicalAllocator::AllocatePage(true);
       UInt32 vaddr = stackBase + i * _pageSize;
 
-      Kernel::AddressSpace::MapPage(
+      AddressSpace::MapPage(
         vaddr,
-        reinterpret_cast<UInt32>(phys),
+        phys,
         true,
         true,
         false

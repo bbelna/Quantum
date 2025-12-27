@@ -13,11 +13,12 @@
 #include <ABI/SystemCall.hpp>
 #include <Types.hpp>
 
+#include "Arch/AddressSpace.hpp"
 #include "Arch/IA32/IDT.hpp"
 #include "Arch/IA32/IO.hpp"
 #include "Arch/IA32/Interrupts.hpp"
 #include "Arch/IA32/SystemCalls.hpp"
-#include "AddressSpace.hpp"
+#include "Arch/IA32/PhysicalAllocator.hpp"
 #include "Console.hpp"
 #include "Devices/BlockDevices.hpp"
 #include "InitBundle.hpp"
@@ -25,7 +26,6 @@
 #include "IPC.hpp"
 #include "IRQ.hpp"
 #include "Logger.hpp"
-#include "PhysicalAllocator.hpp"
 #include "Prelude.hpp"
 #include "Task.hpp"
 
@@ -37,8 +37,6 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   using Kernel::Devices::BlockDevices;
   using Kernel::IRQ;
   using Kernel::Logger;
-  using Kernel::AddressSpace;
-  using Kernel::PhysicalAllocator;
 
   using DMABuffer = ABI::Devices::BlockDevices::DMABuffer;
   using LogLevel = Kernel::Logger::Level;
@@ -541,18 +539,18 @@ namespace Quantum::System::Kernel::Arch::IA32 {
             vaddr < newMappedEnd;
             vaddr += pageSize
           ) {
-            void* phys = PhysicalAllocator::AllocatePage(true);
+            UInt32 phys = PhysicalAllocator::AllocatePage(true);
 
-            if (!phys) {
+            if (phys == 0) {
               ok = false;
 
               break;
             }
 
-            AddressSpace::MapPageInAddressSpace(
+            Arch::AddressSpace::MapPage(
               addressSpace,
               vaddr,
-              reinterpret_cast<UInt32>(phys),
+              phys,
               true,
               true,
               false

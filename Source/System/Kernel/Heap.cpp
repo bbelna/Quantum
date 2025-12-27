@@ -9,7 +9,8 @@
 #include <Align.hpp>
 #include <Types.hpp>
 
-#include "Arch/Memory.hpp"
+#include "Arch/Paging.hpp"
+#include "Arch/PhysicalAllocator.hpp"
 #include "Heap.hpp"
 #include "Logger.hpp"
 #include "Panic.hpp"
@@ -21,8 +22,8 @@ namespace Quantum::System::Kernel {
 
   using LogLevel = Kernel::Logger::Level;
 
-  UInt32 Heap::_heapStartVirtualAddress = Arch::Memory::kernelHeapBase;
-  UInt32 Heap::_heapRegionBytes = Arch::Memory::kernelHeapBytes;
+  UInt32 Heap::_heapStartVirtualAddress = Arch::Paging::kernelHeapBase;
+  UInt32 Heap::_heapRegionBytes = Arch::Paging::kernelHeapBytes;
 
   void Heap::SetFreeBlockCanary(Heap::FreeBlock* block) {
     if (block->size < sizeof(UInt32)) {
@@ -48,11 +49,11 @@ namespace Quantum::System::Kernel {
     }
 
     UInt8* pageStart = _heapMappedEnd;
-    void* physicalPageAddress = Arch::Memory::AllocatePage(true);
+    UInt32 physicalPageAddress = Arch::PhysicalAllocator::AllocatePage(true);
 
-    Arch::Memory::MapPage(
+    Arch::Paging::MapPage(
       reinterpret_cast<UInt32>(_heapMappedEnd),
-      reinterpret_cast<UInt32>(physicalPageAddress),
+      physicalPageAddress,
       true,
       false,
       false
@@ -165,7 +166,7 @@ namespace Quantum::System::Kernel {
     for (UInt32 i = 0; i < pagesToReclaim; ++i) {
       UInt32 virtualPage
         = reinterpret_cast<UInt32>(reclaimStart) + i * _heapPageSize;
-      UInt32 pageTableEntry = Arch::Memory::GetPageTableEntry(virtualPage);
+      UInt32 pageTableEntry = Arch::Paging::GetPageTableEntry(virtualPage);
 
       if ((pageTableEntry & 0x1) == 0) {
         continue;
@@ -173,10 +174,10 @@ namespace Quantum::System::Kernel {
 
       UInt32 physical = pageTableEntry & ~0xFFFu;
 
-      Arch::Memory::UnmapPage(virtualPage);
+      Arch::Paging::UnmapPage(virtualPage);
 
       if (physical) {
-        Arch::Memory::FreePage(reinterpret_cast<void*>(physical));
+      Arch::PhysicalAllocator::FreePage(physical);
       }
 
       if (_heapMappedBytes >= _heapPageSize) {

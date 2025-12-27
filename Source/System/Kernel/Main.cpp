@@ -8,12 +8,15 @@
 
 #include <Types.hpp>
 
+#include "Arch/Paging.hpp"
+#include "Arch/PhysicalAllocator.hpp"
 #include "BootInfo.hpp"
 #include "DeviceManager.hpp"
+#include "Heap.hpp"
 #include "InitBundle.hpp"
 #include "Interrupts.hpp"
+#include "Logger.hpp"
 #include "Main.hpp"
-#include "Memory.hpp"
 #include "Prelude.hpp"
 #include "Task.hpp"
 #include "TestRunner.hpp"
@@ -21,11 +24,11 @@
 namespace Quantum::System::Kernel {
   void Main(UInt32 bootInfoPhysicalAddress) {
     BootInfo::Initialize(bootInfoPhysicalAddress);
-    Memory::Initialize(bootInfoPhysicalAddress);
+    Arch::Paging::Initialize(bootInfoPhysicalAddress);
     Interrupts::Initialize();
     DeviceManager::Initialize();
-    Task::Initialize();
     InitBundle::Initialize();
+    Task::Initialize();
 
     #ifdef KERNEL_TESTS
     // spawn test runner task and start scheduling

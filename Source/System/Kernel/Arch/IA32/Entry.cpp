@@ -18,7 +18,6 @@
 #include "Console.hpp"
 #include "Logger.hpp"
 #include "Main.hpp"
-#include "Memory.hpp"
 #include "Panic.hpp"
 #include "Prelude.hpp"
 
@@ -166,7 +165,7 @@ void InitializeLogging() {
 
   writerArray[0] = &Console::GetWriter();
 
-  Logger::Initialize(LogLevel::Info, writerArray, 1);
+  Logger::Initialize(LogLevel::Debug, writerArray, 1);
 
   Bootstrap::TraceBootInfo();
 }

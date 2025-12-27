@@ -8,11 +8,11 @@
 
 #include <Types.hpp>
 
+#include "Arch/IA32/AddressSpace.hpp"
 #include "Arch/IA32/CPU.hpp"
-#include "Arch/IA32/Memory.hpp"
+#include "Arch/IA32/Paging.hpp"
 #include "Arch/IA32/Task.hpp"
 #include "Arch/IA32/TSS.hpp"
-#include "AddressSpace.hpp"
 #include "CPU.hpp"
 #include "Heap.hpp"
 #include "Logger.hpp"
@@ -21,6 +21,7 @@
 #include "UserMode.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
+  using Kernel::Heap;
   using Kernel::UserMode;
 
   using LogLevel = Kernel::Logger::Level;
@@ -98,8 +99,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
       RemoveFromAllTasks(_pendingCleanup);
 
-      Kernel::Heap::Free(_pendingCleanup->stackBase);
-      Kernel::Heap::Free(_pendingCleanup);
+      Heap::Free(_pendingCleanup->stackBase);
+      Heap::Free(_pendingCleanup);
       AddressSpace::Destroy(cleanupSpace);
 
       _pendingCleanup = nullptr;
@@ -188,14 +189,14 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     Logger::WriteFormatted(
       LogLevel::Debug,
       "User map entry: PDE=%p PTE=%p",
-      Memory::GetPageDirectoryEntry(tcb->userEntryPoint),
-      Memory::GetPageTableEntry(tcb->userEntryPoint)
+      Paging::GetPageDirectoryEntry(tcb->userEntryPoint),
+      Paging::GetPageTableEntry(tcb->userEntryPoint)
     );
     Logger::WriteFormatted(
       LogLevel::Debug,
       "User map stack: PDE=%p PTE=%p",
-      Memory::GetPageDirectoryEntry(tcb->userStackTop - 4),
-      Memory::GetPageTableEntry(tcb->userStackTop - 4)
+      Paging::GetPageDirectoryEntry(tcb->userStackTop - 4),
+      Paging::GetPageTableEntry(tcb->userStackTop - 4)
     );
 
     UserMode::Enter(
@@ -212,7 +213,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   ) {
     // allocate the task control block
     Task::ControlBlock* tcb = static_cast<Task::ControlBlock*>(
-      Kernel::Heap::Allocate(sizeof(Task::ControlBlock))
+      Heap::Allocate(sizeof(Task::ControlBlock))
     );
 
     if (tcb == nullptr) {
@@ -222,11 +223,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     }
 
     // allocate the kernel stack
-    void* stack = Kernel::Heap::Allocate(stackSize);
+    void* stack = Heap::Allocate(stackSize);
 
     if (stack == nullptr) {
       Logger::Write(LogLevel::Error, "Failed to allocate task stack");
-      Kernel::Heap::Free(tcb);
+      Heap::Free(tcb);
 
       return nullptr;
     }
@@ -235,7 +236,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     tcb->id = _nextTaskId++;
     tcb->caps = 0;
     tcb->pageDirectoryPhysical
-      = AddressSpace::GetKernelPageDirectoryPhysical();
+      = Paging::GetKernelPageDirectoryPhysical();
     tcb->state = Task::State::Ready;
     tcb->stackBase = stack;
     tcb->stackSize = stackSize;

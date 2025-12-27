@@ -6,8 +6,8 @@
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
-#include "Arch/Memory.hpp"
-#include "AddressSpace.hpp"
+#include "Arch/AddressSpace.hpp"
+#include "Arch/PhysicalAllocator.hpp"
 #include "Devices/BlockDevices.hpp"
 #include "IPC.hpp"
 #include "Logger.hpp"
@@ -15,7 +15,6 @@
 
 namespace Quantum::System::Kernel::Devices {
   using Kernel::IPC;
-  using Kernel::AddressSpace;
   using Kernel::Task;
 
   using LogLevel = Kernel::Logger::Level;
@@ -70,23 +69,23 @@ namespace Quantum::System::Kernel::Devices {
       return false;
     }
 
-    if (sizeBytes > Arch::Memory::pageSize) {
+    if (sizeBytes > Arch::PhysicalAllocator::pageSize) {
       return false;
     }
 
     if (_dmaBufferPhysical == 0) {
-      void* page = Arch::Memory::AllocatePageBelow(
+      UInt32 page = Arch::PhysicalAllocator::AllocatePageBelow(
         _dmaMaxPhysicalAddress,
         true,
         0x10000
       );
 
-      if (!page) {
+      if (page == 0) {
         return false;
       }
 
-      _dmaBufferPhysical = reinterpret_cast<UInt32>(page);
-      _dmaBufferBytes = Arch::Memory::pageSize;
+      _dmaBufferPhysical = page;
+      _dmaBufferBytes = Arch::PhysicalAllocator::pageSize;
     }
 
     UInt32 directory = Task::GetCurrentAddressSpace();
@@ -95,7 +94,7 @@ namespace Quantum::System::Kernel::Devices {
       return false;
     }
 
-    AddressSpace::MapPageInAddressSpace(
+    Arch::AddressSpace::MapPage(
       directory,
       _dmaBufferVirtualBase,
       _dmaBufferPhysical,

@@ -6,8 +6,8 @@
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
-#include "AddressSpace.hpp"
-#include "PhysicalAllocator.hpp"
+#include "Arch/AddressSpace.hpp"
+#include "Arch/PhysicalAllocator.hpp"
 #include "Task.hpp"
 #include "Testing.hpp"
 #include "Tests/UserModeTests.hpp"
@@ -16,7 +16,7 @@ namespace Quantum::System::Kernel::Tests {
   bool UserModeTests::TestUserSyscallPath() {
     Task::DisablePreemption();
 
-    UInt32 addressSpace = AddressSpace::Create();
+    UInt32 addressSpace = Arch::AddressSpace::Create();
 
     if (addressSpace == 0) {
       Task::EnablePreemption();
@@ -26,10 +26,10 @@ namespace Quantum::System::Kernel::Tests {
       return false;
     }
 
-    void* codePage = PhysicalAllocator::AllocatePage(true);
+    UInt32 codePage = Arch::PhysicalAllocator::AllocatePage(true);
 
-    if (codePage == nullptr) {
-      AddressSpace::Destroy(addressSpace);
+    if (codePage == 0) {
+      Arch::AddressSpace::Destroy(addressSpace);
       Task::EnablePreemption();
 
       TEST_ASSERT(false, "Failed to allocate user program page");
@@ -37,7 +37,7 @@ namespace Quantum::System::Kernel::Tests {
       return false;
     }
 
-    UInt8* codeBytes = static_cast<UInt8*>(codePage);
+    UInt8* codeBytes = reinterpret_cast<UInt8*>(codePage);
     constexpr UInt32 stackBytes = _userStackSize;
     constexpr UInt32 stackBase = _userStackTop - stackBytes;
     const UInt32 programSize = static_cast<UInt32>(sizeof(_userTestProgram));
@@ -46,19 +46,19 @@ namespace Quantum::System::Kernel::Tests {
       codeBytes[i] = _userTestProgram[i];
     }
 
-    AddressSpace::MapPageInAddressSpace(
+    Arch::AddressSpace::MapPage(
       addressSpace,
       _userProgramBase,
-      reinterpret_cast<UInt32>(codePage),
+      codePage,
       false,
       true,
       false
     );
 
-    void* stackPage = PhysicalAllocator::AllocatePage(true);
+    UInt32 stackPage = Arch::PhysicalAllocator::AllocatePage(true);
 
-    if (stackPage == nullptr) {
-      AddressSpace::Destroy(addressSpace);
+    if (stackPage == 0) {
+      Arch::AddressSpace::Destroy(addressSpace);
       Task::EnablePreemption();
 
       TEST_ASSERT(false, "Failed to allocate user stack page");
@@ -66,10 +66,10 @@ namespace Quantum::System::Kernel::Tests {
       return false;
     }
 
-    AddressSpace::MapPageInAddressSpace(
+    Arch::AddressSpace::MapPage(
       addressSpace,
       stackBase,
-      reinterpret_cast<UInt32>(stackPage),
+      stackPage,
       true,
       true,
       false
@@ -82,7 +82,7 @@ namespace Quantum::System::Kernel::Tests {
     );
 
     if (tcb == nullptr) {
-      AddressSpace::Destroy(addressSpace);
+      Arch::AddressSpace::Destroy(addressSpace);
       Task::EnablePreemption();
 
       TEST_ASSERT(false, "Failed to create user task");
