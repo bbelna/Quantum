@@ -9,8 +9,17 @@
 #include <ABI/SystemCall.hpp>
 #include <Types.hpp>
 
+/**
+ * User mode application entry point.
+ * @return
+ *   Exit code.
+ */
 int Main();
 
+/**
+ * C runtime start function.
+ * Invokes the application entry point and exits via system call.
+ */
 extern "C" [[gnu::section(".text.start")]] [[noreturn]] void Start() {
   int code = Main();
 

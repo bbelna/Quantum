@@ -10,20 +10,61 @@
 #include <Types.hpp>
 
 namespace {
+  /**
+   * Heap block header structure.
+   */
   struct BlockHeader {
+    /**
+     * Size of the block's payload in bytes.
+     */
     UInt32 size;
+
+    /**
+     * Whether the block is free (1) or allocated (0).
+     */
     UInt32 free;
+
+    /**
+     * Pointer to the next block in the linked list.
+     */
     BlockHeader* next;
+
+    /**
+     * Padding for alignment.
+     */
     UInt32 padding;
   };
 
+  /**
+   * Head of the heap block linked list.
+   */
   BlockHeader* _heapHead = nullptr;
+
+  /**
+   * Tail of the heap block linked list.
+   */
   BlockHeader* _heapTail = nullptr;
 
+  /**
+   * Aligns a value up to the nearest multiple of align.
+   * @param value
+   *   The value to align.
+   * @param align
+   *   The alignment boundary.
+   * @return
+   *   The aligned value.
+   */
   UInt32 AlignUp(UInt32 value, UInt32 align) {
     return (value + align - 1) & ~(align - 1);
   }
 
+  /**
+   * Requests a new block from the kernel heap.
+   * @param size
+   *   Size of the block's payload in bytes.
+   * @return
+   *   Pointer to the new block header, or nullptr on failure.
+   */
   BlockHeader* RequestBlock(UInt32 size) {
     using Quantum::ABI::InvokeSystemCall;
     using Quantum::ABI::SystemCall;
@@ -56,6 +97,13 @@ namespace {
     return block;
   }
 
+  /**
+   * Splits a block if it's significantly larger than the requested size.
+   * @param block
+   *   Pointer to the block to split.
+   * @param size
+   *   Size of the requested payload in bytes.
+   */
   void SplitBlock(BlockHeader* block, UInt32 size) {
     UInt32 aligned = AlignUp(size, 8);
 
@@ -81,6 +129,11 @@ namespace {
     }
   }
 
+  /**
+   * Coalesces a free block with its next adjacent free block.
+   * @param block
+   *   Pointer to the block to coalesce.
+   */
   void Coalesce(BlockHeader* block) {
     if (!block || !block->next || block->next->free == 0) {
       return;
@@ -105,6 +158,13 @@ namespace {
   }
 }
 
+/**
+ * Allocates a block of memory of the given size.
+ * @param size
+ *   Size of the memory block to allocate in bytes.
+ * @return
+ *   Pointer to the allocated memory block, or `nullptr` on failure.
+ */
 extern "C" void* malloc(unsigned int size) {
   if (size == 0) {
     return nullptr;
@@ -132,6 +192,11 @@ extern "C" void* malloc(unsigned int size) {
   return block + 1;
 }
 
+/**
+ * Frees a previously allocated block of memory.
+ * @param ptr
+ *   Pointer to the memory block to free.
+ */
 extern "C" void free(void* ptr) {
   if (!ptr) {
     return;
@@ -140,29 +205,64 @@ extern "C" void free(void* ptr) {
   auto* block = reinterpret_cast<BlockHeader*>(ptr) - 1;
 
   block->free = 1;
+
   Coalesce(block);
 }
 
+/**
+ * C++ global `new` operator.
+ * @param size
+ *   Size of the memory block to allocate in bytes.
+ * @return
+ *   Pointer to the allocated memory block.
+ */
 void* operator new(unsigned int size) noexcept {
   return malloc(size);
 }
 
+/**
+ * C++ global `new[]` operator.
+ * @param size
+ *   Size of the memory block to allocate in bytes.
+ * @return
+ *   Pointer to the allocated memory block.
+ */
 void* operator new[](unsigned int size) noexcept {
   return malloc(size);
 }
 
+/**
+ * C++ global `delete` operator.
+ * @param ptr
+ *   Pointer to the memory block to free.
+ */
 void operator delete(void* ptr) noexcept {
   free(ptr);
 }
 
+/**
+ * C++ global `delete[]` operator.
+ * @param ptr
+ *   Pointer to the memory block to free.
+ */
 void operator delete[](void* ptr) noexcept {
   free(ptr);
 }
 
+/**
+ * C++ global `delete` operator with size.
+ * @param ptr
+ *   Pointer to the memory block to free.
+ */
 void operator delete(void* ptr, unsigned int /*size*/) noexcept {
   free(ptr);
 }
 
+/**
+ * C++ global `delete[]` operator with size.
+ * @param ptr
+ *   Pointer to the memory block to free.
+ */
 void operator delete[](void* ptr, unsigned int /*size*/) noexcept {
   free(ptr);
 }
