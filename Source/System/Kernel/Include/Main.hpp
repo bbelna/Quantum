@@ -10,9 +10,11 @@
 
 #include "Types.hpp"
 
-/**
- * Main kernel entry point.
- * @param bootInfoPhysicalAddress
- *   Physical address of the boot info block.
- */
-void Main(UInt32 bootInfoPhysicalAddress);
+namespace Quantum::System::Kernel {
+  /**
+   * Main kernel entry point.
+   * @param bootInfoPhysicalAddress
+   *   Physical address of the boot info block.
+   */
+  void Main(UInt32 bootInfoPhysicalAddress);
+}

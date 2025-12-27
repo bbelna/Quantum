@@ -11,7 +11,7 @@
 #include "Arch/IA32/Interrupts.hpp"
 #include "Arch/IA32/Memory.hpp"
 #include "Logger.hpp"
-#include "Macros.hpp"
+#include "Panic.hpp"
 #include "Prelude.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {

@@ -6,7 +6,6 @@
  * User-mode execution tests.
  */
 
-#include "Macros.hpp"
 #include "Memory.hpp"
 #include "Task.hpp"
 #include "Testing.hpp"

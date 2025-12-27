@@ -6,12 +6,13 @@
  * Kernel logging and tracing interface.
  */
 
+#include <CString.hpp>
+
 #include "Logger.hpp"
-#include "Helpers/CStringHelper.hpp"
 #include "Prelude.hpp"
 
 namespace Quantum::System::Kernel {
-  using CStringHelper = Kernel::Helpers::CStringHelper;
+  using ::Quantum::Format;
   using LogLevel = Kernel::Logger::Level;
 
   void Logger::Initialize(
@@ -43,7 +44,7 @@ namespace Quantum::System::Kernel {
 
       VARIABLE_ARGUMENTS_START(args, formattedMessage);
 
-      CStringHelper::Format(
+      Format(
         buffer,
         bufferLength,
         formattedMessage.Data(),

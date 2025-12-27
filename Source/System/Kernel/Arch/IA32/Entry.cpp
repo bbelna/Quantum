@@ -15,9 +15,9 @@
 #include "Arch/IA32/TSS.hpp"
 #include "Console.hpp"
 #include "Logger.hpp"
-#include "Macros.hpp"
 #include "Main.hpp"
 #include "Memory.hpp"
+#include "Panic.hpp"
 #include "Prelude.hpp"
 #include "Types.hpp"
 
@@ -121,7 +121,7 @@ extern "C" void Start(UInt32 bootInfoPhysicalAddress) {
 
   TSS::Initialize(0);
 
-  Main(bootInfoPhysicalAddress);
+  Kernel::Main(bootInfoPhysicalAddress);
 
   PANIC("Returned from Main()");
 }

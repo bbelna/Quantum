@@ -1,160 +1,155 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Include/Helpers/CStringHelper.hpp
- * C-string helper utilities.
+ * @file Libraries/Quantum/CString.cpp
+ * @brief C-string helper utilities.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
-#include "Helpers/CStringHelper.hpp"
+#include "CString.hpp"
 
-namespace Quantum::System::Kernel::Helpers {
-  bool CStringHelper::WriteIntToBuffer(
-    Int32 value,
-    CStringMutable buffer,
-    Size length
-  ) {
-    if (length == 0) {
-      return false;
+namespace Quantum {
+  namespace {
+    constexpr Size _bufferSize = 12;
+    char _staticBuffer[_bufferSize] = {};
+
+    bool WriteIntToBuffer(Int32 value, CStringMutable buffer, Size length) {
+      if (length == 0) {
+        return false;
+      }
+
+      // handle sign
+      bool negative = value < 0;
+      UInt32 magnitude = negative
+        ? static_cast<UInt32>(-static_cast<Int64>(value))
+        : static_cast<UInt32>(value);
+      char temp[_bufferSize] = {};
+      Size idx = 0;
+      Size out = 0;
+
+      do {
+        temp[idx++] = static_cast<char>('0' + (magnitude % 10));
+        magnitude /= 10;
+      } while (magnitude > 0 && idx < _bufferSize - 1);
+
+      // ensure buffer has space for sign + digits + null
+      Size needed = idx + (negative ? 1 : 0) + 1;
+
+      if (needed > length) {
+        return false;
+      }
+
+      if (negative) {
+        buffer[out++] = '-';
+      }
+
+      while (idx > 0) {
+        buffer[out++] = temp[--idx];
+      }
+
+      buffer[out] = '\0';
+
+      return true;
     }
 
-    // handle sign
-    bool negative = value < 0;
-    UInt32 magnitude = negative
-      ? static_cast<UInt32>(-static_cast<Int64>(value))
-      : static_cast<UInt32>(value);
-    char temp[_bufferSize] = {};
-    Size idx = 0;
-    Size out = 0;
+    bool AppendChar(CStringMutable buffer, Size length, Size& out, char c) {
+      if (!buffer || length == 0) {
+        return false;
+      } else if (out + 1 >= length) {
+        // no room for this char + null terminator
+        return false;
+      } else {
+        buffer[out++] = c;
 
-    do {
-      temp[idx++] = static_cast<char>('0' + (magnitude % 10));
-      magnitude /= 10;
-    } while (magnitude > 0 && idx < _bufferSize - 1);
-
-    // ensure buffer has space for sign + digits + null
-    Size needed = idx + (negative ? 1 : 0) + 1;
-
-    if (needed > length) {
-      return false;
+        return true;
+      }
     }
 
-    if (negative) {
-      buffer[out++] = '-';
+    bool AppendString(
+      CStringMutable buffer,
+      Size length,
+      Size& out,
+      CString str
+    ) {
+      if (!buffer || length == 0) {
+        return false;
+      }
+
+      if (!str) {
+        str = "(null)";
+      }
+
+      for (Size i = 0; str[i] != '\0'; ++i) {
+        if (!AppendChar(buffer, length, out, str[i])) {
+          return false;
+        }
+      }
+
+      return true;
     }
 
-    while (idx > 0) {
-      buffer[out++] = temp[--idx];
-    }
+    bool AppendUnsigned(
+      CStringMutable buffer,
+      Size length,
+      Size& out,
+      UInt32 value,
+      UInt32 base,
+      bool prefixHex
+    ) {
+      if (base < 2 || base > 16) {
+        return false;
+      }
 
-    buffer[out] = '\0';
+      char temp[16] = {};
+      Size idx = 0;
+      CString digits = "0123456789ABCDEF";
 
-    return true;
-  }
+      do {
+        temp[idx++] = digits[value % base];
+        value /= base;
+      } while (value > 0 && idx < sizeof(temp));
 
-  bool CStringHelper::AppendChar(
-    CStringMutable buffer,
-    Size length,
-    Size& out,
-    char c
-  ) {
-    if (!buffer || length == 0) {
-      return false;
-    } else if (out + 1 >= length) {
-      // no room for this char + null terminator
-      return false;
-    } else {
-      buffer[out++] = c;
+      if (prefixHex) {
+        if (!AppendString(buffer, length, out, "0x")) {
+          return false;
+        }
+      }
+
+      while (idx > 0) {
+        if (!AppendChar(buffer, length, out, temp[--idx])) {
+          return false;
+        }
+      }
 
       return true;
     }
   }
 
-  bool CStringHelper::AppendString(
-    CStringMutable buffer,
-    Size length,
-    Size& out,
-    CString str
-  ) {
-    if (!buffer || length == 0) {
-      return false;
-    }
-
-    if (!str) {
-      str = "(null)";
-    }
-
-    for (Size i = 0; str[i] != '\0'; ++i) {
-      if (!AppendChar(buffer, length, out, str[i])) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  bool CStringHelper::AppendUnsigned(
-    CStringMutable buffer,
-    Size length,
-    Size& out,
-    UInt32 value,
-    UInt32 base,
-    bool prefixHex
-  ) {
-    if (base < 2 || base > 16) {
-      return false;
-    }
-
-    char temp[16] = {};
-    Size idx = 0;
-    CString digits = "0123456789ABCDEF";
-
-    do {
-      temp[idx++] = digits[value % base];
-      value /= base;
-    } while (value > 0 && idx < sizeof(temp));
-
-    if (prefixHex) {
-      if (!AppendString(buffer, length, out, "0x")) {
-        return false;
-      }
-    }
-
-    while (idx > 0) {
-      if (!AppendChar(buffer, length, out, temp[--idx])) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  bool CStringHelper::ToCString(
-    Int32 value,
-    CStringMutable buffer,
-    Size length
-  ) {
+  bool ToCString(Int32 value, CStringMutable buffer, Size length) {
     return WriteIntToBuffer(value, buffer, length);
   }
 
-  char* CStringHelper::ToCString(Int32 value) {
+  char* ToCString(Int32 value) {
     WriteIntToBuffer(value, _staticBuffer, _bufferSize);
 
     return _staticBuffer;
   }
 
-  Size CStringHelper::Length(CString str) {
+  Size Length(CString str) {
     Size len = 0;
+
     if (!str) {
       return 0;
     }
+
     while (str[len] != '\0') {
       ++len;
     }
+
     return len;
   }
 
-  bool CStringHelper::Concat(
+  bool Concat(
     CString left,
     CString right,
     CStringMutable buffer,
@@ -195,11 +190,7 @@ namespace Quantum::System::Kernel::Helpers {
     return true;
   }
 
-  bool CStringHelper::Concat(
-    CString left,
-    CString right,
-    CStringMutable buffer
-  ) {
+  bool Concat(CString left, CString right, CStringMutable buffer) {
     if (!buffer) {
       return false;
     }
@@ -217,7 +208,7 @@ namespace Quantum::System::Kernel::Helpers {
     return Concat(left, right, buffer, total);
   }
 
-  bool CStringHelper::Format(
+  bool Format(
     CStringMutable buffer,
     Size length,
     CString format,
@@ -349,6 +340,7 @@ namespace Quantum::System::Kernel::Helpers {
     // always null-terminate
     if (out >= length) {
       buffer[length - 1] = '\0';
+
       return false;
     }
 

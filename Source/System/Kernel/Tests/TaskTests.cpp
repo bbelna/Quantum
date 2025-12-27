@@ -6,7 +6,6 @@
  * Tasking tests.
  */
 
-#include "Macros.hpp"
 #include "Task.hpp"
 #include "Testing.hpp"
 #include "Tests/TaskTests.hpp"

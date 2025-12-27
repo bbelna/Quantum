@@ -11,6 +11,9 @@
 #include "String.hpp"
 #include "Types.hpp"
 
+#define TEST_ASSERT(cond, msg) \
+  ::Quantum::System::Kernel::Testing::Assert((cond), (msg), __FILE__, __LINE__)
+
 namespace Quantum::System::Kernel {
   /**
    * Kernel test harness.

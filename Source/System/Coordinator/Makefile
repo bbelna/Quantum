@@ -10,6 +10,7 @@ ARCH ?= IA32
 
 COORD_DIR     := $(SRC_ROOT)/System/Coordinator
 USER_RUNTIME  := $(SRC_ROOT)/System/User/Runtime
+LIBQ_DIR      := $(SRC_ROOT)/Libraries/Quantum
 LIBQ_INCLUDE  := $(PROJECT_ROOT)/Source/Libraries/Quantum/Include
 COORD_INCLUDE := $(COORD_DIR)/Include
 
@@ -23,6 +24,7 @@ OBJCOPY32 ?= x86_64-linux-gnu-objcopy
 
 COORD_ELF := $(BUILD_DIR)/Coordinator/Coordinator.elf
 COORD_QX  := $(BUILD_DIR)/Coordinator/Coordinator.qx
+LIBQ_LIB := $(BUILD_DIR)/Libraries/Quantum/libQuantum.a
 
 COORD_SRCS := \
 	$(COORD_DIR)/Application.cpp \
@@ -44,12 +46,16 @@ all: coordinator
 
 coordinator: $(COORD_QX)
 
-$(COORD_ELF): $(COORD_SRCS) $(COORD_HDRS) $(COORD_DIR)/Link.ld
+$(LIBQ_LIB):
+	$(MAKE) -C $(LIBQ_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) \
+		ARCH=$(ARCH) lib
+
+$(COORD_ELF): $(COORD_SRCS) $(COORD_HDRS) $(COORD_DIR)/Link.ld $(LIBQ_LIB)
 	@mkdir -p $(dir $@)
 	$(CC32) $(CFLAGS32) -m32 -ffreestanding -nostdlib -static -Wl,--no-pie \
 		-I$(LIBQ_INCLUDE) -I$(COORD_INCLUDE) \
 		-T $(COORD_DIR)/Link.ld \
-		$(COORD_SRCS) -o $@
+		$(COORD_SRCS) $(LIBQ_LIB) -o $@
 	@echo "[OK] Linked Coordinator.elf -> $@"
 
 $(COORD_QX): $(COORD_ELF)

@@ -11,6 +11,7 @@ ARCH ?= IA32
 KERNEL_SRC_DIR := $(SRC_ROOT)/System/Kernel
 KERNEL_ARCH    := $(KERNEL_SRC_DIR)/Arch/$(ARCH)
 KERNEL_INCLUDE := $(KERNEL_SRC_DIR)/Include
+LIBQ_DIR       := $(SRC_ROOT)/Libraries/Quantum
 LIBQ_INCLUDE   := $(PROJECT_ROOT)/Source/Libraries/Quantum/Include
 
 ASM     ?= nasm
@@ -29,7 +30,6 @@ KER_COMMON_SRCS := \
 	$(wildcard $(KERNEL_SRC_DIR)/*.cpp) \
 	$(wildcard $(KERNEL_SRC_DIR)/Devices/*.cpp) \
 	$(wildcard $(KERNEL_SRC_DIR)/Handlers/*.cpp) \
-	$(wildcard $(KERNEL_SRC_DIR)/Helpers/*.cpp) \
 	$(wildcard $(KERNEL_SRC_DIR)/Runtime/*.cpp) \
 	$(wildcard $(KERNEL_SRC_DIR)/Tests/*.cpp)
 
@@ -54,12 +54,17 @@ KER_OBJS := \
 
 KER_ELF := $(KER_OBJ_DIR)/Kernel.elf
 KER_BIN := $(KER_OBJ_DIR)/Kernel.qx
+LIBQ_LIB := $(BUILD_DIR)/Libraries/Quantum/libQuantum.a
 
 .PHONY: all clean kernel
 
 all: kernel
 
 kernel: $(KER_BIN)
+
+$(LIBQ_LIB):
+	$(MAKE) -C $(LIBQ_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) \
+		ARCH=$(ARCH) lib
 
 $(KER_OBJ_DIR)/%.cpp.o: $(KERNEL_SRC_DIR)/%.cpp
 	@mkdir -p $(dir $@)
@@ -69,11 +74,11 @@ $(KER_OBJ_DIR)/%.asm.o: $(KERNEL_SRC_DIR)/%.asm
 	@mkdir -p $(dir $@)
 	$(ASM) -f elf32 $< -o $@
 
-$(KER_ELF): $(KER_OBJS) $(KERNEL_ARCH)/Link.ld
+$(KER_ELF): $(KER_OBJS) $(KERNEL_ARCH)/Link.ld $(LIBQ_LIB)
 	@mkdir -p $(dir $@)
 	$(CC32) $(CFLAGS32) -m32 -nostdlib -static -Wl,--no-pie \
 		-T $(KERNEL_ARCH)/Link.ld \
-		$(KER_OBJS) -o $@
+		$(KER_OBJS) $(LIBQ_LIB) -o $@
 	@echo "[OK] Linked Kernel.elf -> $@"
 
 $(KER_BIN): $(KER_ELF)
