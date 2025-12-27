@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Include/Task.hpp
- * Architecture-agnostic task/thread management interface.
+ * @file System/Kernel/Include/Task.hpp
+ * @brief Architecture-agnostic task management.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once

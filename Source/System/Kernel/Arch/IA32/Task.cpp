@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Arch/IA32/Task.cpp
- * IA32 task context and control structures.
+ * @file System/Kernel/Arch/IA32/Task.cpp
+ * @brief IA32 task context and control structures.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #include "Arch/IA32/CPU.hpp"

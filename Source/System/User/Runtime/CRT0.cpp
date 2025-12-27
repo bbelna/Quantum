@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/User/Runtime/CRT0.cpp
- * User-mode CRT entry point.
+ * @file System/User/Runtime/CRT0.cpp
+ * @brief C runtime entry point.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #include <ABI/SystemCall.hpp>

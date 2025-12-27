@@ -1,10 +1,12 @@
-;
+;-------------------------------------------------------------------------------
 ; Quantum
-; (c) 2025 Brandon Belna - MIT License
-;
-; System/Kernel/Arch/IA32/IDT.asm
-; Loads the IDT and provides ISR stubs.
-;
+;-------------------------------------------------------------------------------
+; File: System/Kernel/Arch/IA32/IDT.asm
+; Brief: Loads and defines the Interrupt Descriptor Table (IDT).
+; Author: Brandon Belna <bbelna@aol.com>
+; Copyright: (c) 2025-2026 The Quantum OS Project
+; License: MIT License
+;-------------------------------------------------------------------------------
 
 [BITS 32]
 

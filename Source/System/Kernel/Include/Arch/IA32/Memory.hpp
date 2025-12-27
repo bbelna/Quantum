@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Include/Arch/IA32/Memory.hpp
- * IA32 paging and memory functions.
+ * @file System/Kernel/Include/Arch/IA32/Memory.hpp
+ * @brief IA32 memory and paging management.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once

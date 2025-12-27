@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Arch/IA32/TSS.cpp
- * IA32 Task State Segment setup.
+ * @file System/Kernel/Arch/IA32/TSS.cpp
+ * @brief IA32 Task State Segment (TSS) implementation.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #include "Arch/IA32/TSS.hpp"

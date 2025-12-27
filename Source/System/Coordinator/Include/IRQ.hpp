@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Coordinator/Include/IRQ.hpp
- * Coordinator IRQ routing.
+ * @file System/Coordinator/Include/IRQ.hpp
+ * @brief Coordinator IRQ routing.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once

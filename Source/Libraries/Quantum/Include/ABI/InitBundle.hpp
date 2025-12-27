@@ -1,10 +1,11 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * Libraries/Quantum/Include/ABI/InitBundle.hpp
- * User-mode INIT.BND access helpers.
+ * @file Libraries/Quantum/Include/ABI/InitBundle.hpp
+ * @brief User-mode INIT.BND access helpers.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
+
 
 #pragma once
 

@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Coordinator/Coordinator.hpp
- * System coordinator entry declaration.
+ * @file System/Coordinator/Include/Application.hpp
+ * @brief System coordinator application.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once

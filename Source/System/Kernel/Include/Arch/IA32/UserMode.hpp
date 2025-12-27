@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Include/Arch/IA32/UserMode.hpp
- * IA32 user-mode entry helpers.
+ * @file System/Kernel/Include/Arch/IA32/UserMode.hpp
+ * @brief IA32 User mode entry and stack mapping.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once

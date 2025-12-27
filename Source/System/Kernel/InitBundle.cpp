@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/InitBundle.cpp
- * INIT.BND handling and launch helpers.
+ * @file System/Kernel/InitBundle.cpp
+ * @brief Init bundle handling.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #include <Align.hpp>

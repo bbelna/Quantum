@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/DeviceManager.cpp
- * Kernel device manager.
+ * @file System/Kernel/DeviceManager.cpp
+ * @brief Kernel device manager.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #include "DeviceManager.hpp"

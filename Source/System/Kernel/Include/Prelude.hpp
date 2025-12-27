@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Include/Prelude.hpp
- * Namespace aliases for kernel source files.
+ * @file System/Kernel/Include/Prelude.hpp
+ * @brief Kernel prelude header for common includes and namespace aliasing.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once

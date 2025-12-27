@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/FileSystems/FAT12/Directory.cpp
- * FAT12 directory helpers.
+ * @file System/FileSystems/FAT12/Directory.cpp
+ * @brief FAT12 file system directory helpers.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #include <ABI/Devices/BlockDevice.hpp>

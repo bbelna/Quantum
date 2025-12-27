@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Arch/IA32/Entry.cpp
- * IA32 kernel entry routines.
+ * @file System/Kernel/Arch/IA32/Entry.cpp
+ * @brief IA32 kernel entry.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #include "Arch/IA32/BootInfo.hpp"

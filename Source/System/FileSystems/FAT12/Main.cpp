@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/FileSystems/FAT12/Main.cpp
- * FAT12 service entry point.
+ * @file System/FileSystems/FAT12/Main.cpp
+ * @brief FAT12 file system service main entry point.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #include "Service.hpp"

@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Include/Arch/IA32/CPU.hpp
- * IA32 CPU control.
+ * @file System/Kernel/Include/Arch/IA32/CPU.hpp
+ * @brief IA32 CPU handling.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once

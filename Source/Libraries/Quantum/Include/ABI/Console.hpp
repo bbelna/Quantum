@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * Libraries/Quantum/Include/ABI/Console.hpp
- * User-mode console wrapper.
+ * @file Libraries/Quantum/Include/ABI/Console.hpp
+ * @brief User-mode console wrapper.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once

@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Include/Interrupts.hpp
- * Architecture-agnostic interrupt controller for registering handlers.
+ * @file System/Kernel/Include/Interrupts.hpp
+ * @brief Architecture-agnostic interrupt handling.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once

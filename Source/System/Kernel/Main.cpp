@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Main.cpp
- * Kernel main entry point.
+ * @file System/Kernel/Main.cpp
+ * @brief Kernel main entry point.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #include "BootInfo.hpp"

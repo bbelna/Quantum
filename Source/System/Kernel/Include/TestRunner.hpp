@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Include/TestRunner.hpp
- * Kernel test runner for running kernel tests.
+ * @file System/Kernel/Include/TestRunner.hpp
+ * @brief Kernel test runner task.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once

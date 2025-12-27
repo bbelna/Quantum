@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/Kernel/Include/Arch/IA32/BootInfo.hpp
- * IA32 boot info parsing and caching.
+ * @file System/Kernel/Include/Arch/IA32/BootInfo.hpp
+ * @brief IA32 boot info handling.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once
@@ -11,6 +11,9 @@
 #include <Types.hpp>
 
 namespace Quantum::System::Kernel::Arch::IA32 {
+  /**
+   * IA32 boot info handling.
+   */
   class BootInfo {
     public:
       /**
