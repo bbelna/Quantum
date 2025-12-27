@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/FileSystems/FAT12/Include/Service.hpp
- * FAT12 file system service.
+ * @file System/FileSystems/FAT12/Include/Service.hpp
+ * @brief FAT12 file system service.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once

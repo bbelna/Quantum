@@ -1,9 +1,9 @@
 /**
- * Quantum
- * (c) 2025 Brandon Belna - MIT License
- *
- * System/FileSystems/FAT12/Include/Volume.hpp
- * FAT12 volume description.
+ * @file System/FileSystems/FAT12/Include/Volume.hpp
+ * @brief FAT12 file system service volume handler.
+ * @author Brandon Belna <bbelna@aol.com>
+ * @copyright (c) 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once
