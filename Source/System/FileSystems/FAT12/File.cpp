@@ -6,14 +6,14 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include <ABI/Devices/BlockDevice.hpp>
+#include <ABI/Devices/BlockDevices.hpp>
 
 #include "FAT.hpp"
 #include "File.hpp"
 #include "Volume.hpp"
 
 namespace Quantum::System::FileSystems::FAT12 {
-  using BlockDevice = ABI::Devices::BlockDevice;
+  using BlockDevices = ABI::Devices::BlockDevices;
 
   void File::Initialize(Volume& volume) {
     _volume = &volume;
@@ -83,14 +83,14 @@ namespace Quantum::System::FileSystems::FAT12 {
         = _volume->_dataStartLBA
         + (cluster - 2) * _volume->_sectorsPerCluster
         + sectorOffset;
-      BlockDevice::Request request {};
+      BlockDevices::Request request {};
 
       request.deviceId = _volume->_device.id;
       request.lba = lba;
       request.count = 1;
       request.buffer = sector;
 
-      if (BlockDevice::Read(request) != 0) {
+      if (BlockDevices::Read(request) != 0) {
         return false;
       }
 
@@ -248,14 +248,14 @@ namespace Quantum::System::FileSystems::FAT12 {
         = _volume->_dataStartLBA
         + (currentCluster - 2) * _volume->_sectorsPerCluster
         + sectorOffset;
-      BlockDevice::Request request {};
+      BlockDevices::Request request {};
 
       request.deviceId = _volume->_device.id;
       request.lba = lba;
       request.count = 1;
       request.buffer = sector;
 
-      if (BlockDevice::Read(request) != 0) {
+      if (BlockDevices::Read(request) != 0) {
         return false;
       }
 
@@ -269,7 +269,7 @@ namespace Quantum::System::FileSystems::FAT12 {
       request.lba = lba;
       request.buffer = sector;
 
-      if (BlockDevice::Write(request) != 0) {
+      if (BlockDevices::Write(request) != 0) {
         return false;
       }
 

@@ -7,12 +7,12 @@
  */
 
 #include "DeviceManager.hpp"
-#include "Devices/BlockDevice.hpp"
+#include "Devices/BlockDevices.hpp"
 
 namespace Quantum::System::Kernel {
   void DeviceManager::Initialize() {
     using namespace Devices;
 
-    BlockDevice::Initialize();
+    BlockDevices::Initialize();
   }
 }

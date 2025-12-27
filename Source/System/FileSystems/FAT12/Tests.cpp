@@ -7,7 +7,7 @@
  */
 
 #include <ABI/Console.hpp>
-#include <ABI/Devices/BlockDevice.hpp>
+#include <ABI/Devices/BlockDevices.hpp>
 #include <ABI/FileSystem.hpp>
 #include <ABI/Task.hpp>
 #include <Types.hpp>
@@ -17,7 +17,7 @@
 
 namespace Quantum::System::FileSystems::FAT12::Tests {
   using Console = ABI::Console;
-  using BlockDevice = ABI::Devices::BlockDevice;
+  using BlockDevices = ABI::Devices::BlockDevices;
   using FileSystem = ABI::FileSystem;
   using Task = ABI::Task;
 
@@ -297,21 +297,21 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
 
   static bool WaitForFloppyReady() {
     for (UInt32 attempt = 0; attempt < 256; ++attempt) {
-      UInt32 count = BlockDevice::GetCount();
+      UInt32 count = BlockDevices::GetCount();
 
       for (UInt32 i = 1; i <= count; ++i) {
-        BlockDevice::Info info {};
+        BlockDevices::Info info {};
 
-        if (BlockDevice::GetInfo(i, info) != 0) {
+        if (BlockDevices::GetInfo(i, info) != 0) {
           continue;
         }
 
-        if (info.type != BlockDevice::Type::Floppy) {
+        if (info.type != BlockDevices::Type::Floppy) {
           continue;
         }
 
         if (
-          (info.flags & BlockDevice::flagReady) != 0
+          (info.flags & BlockDevices::flagReady) != 0
           && info.sectorSize != 0
           && info.sectorCount != 0
         ) {

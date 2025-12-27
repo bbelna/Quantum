@@ -7,7 +7,7 @@
  */
 
 #include <ABI/Console.hpp>
-#include <ABI/Devices/BlockDevice.hpp>
+#include <ABI/Devices/BlockDevices.hpp>
 #include <ABI/FileSystem.hpp>
 #include <ABI/IPC.hpp>
 #include <ABI/Task.hpp>
@@ -18,7 +18,7 @@
 
 namespace Quantum::System::FileSystems::FAT12 {
   using Console = ABI::Console;
-  using BlockDevice = ABI::Devices::BlockDevice;
+  using BlockDevices = ABI::Devices::BlockDevices;
   using FileSystem = ABI::FileSystem;
   using IPC = ABI::IPC;
   using Task = ABI::Task;
@@ -27,16 +27,16 @@ namespace Quantum::System::FileSystems::FAT12 {
     _volumesHead = nullptr;
     _volumeCount = 0;
 
-    UInt32 count = BlockDevice::GetCount();
+    UInt32 count = BlockDevices::GetCount();
 
     for (UInt32 i = 1; i <= count; ++i) {
-      BlockDevice::Info info {};
+      BlockDevices::Info info {};
 
-      if (BlockDevice::GetInfo(i, info) != 0) {
+      if (BlockDevices::GetInfo(i, info) != 0) {
         continue;
       }
 
-      if (info.type != BlockDevice::Type::Floppy) {
+      if (info.type != BlockDevices::Type::Floppy) {
         continue;
       }
 

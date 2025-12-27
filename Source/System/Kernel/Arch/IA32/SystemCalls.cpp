@@ -6,7 +6,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include <ABI/Devices/BlockDevice.hpp>
+#include <ABI/Devices/BlockDevices.hpp>
 #include <ABI/InitBundle.hpp>
 #include <ABI/IPC.hpp>
 #include <ABI/Prelude.hpp>
@@ -18,7 +18,7 @@
 #include "Arch/IA32/Interrupts.hpp"
 #include "Arch/IA32/SystemCalls.hpp"
 #include "Console.hpp"
-#include "Devices/BlockDevice.hpp"
+#include "Devices/BlockDevices.hpp"
 #include "InitBundle.hpp"
 #include "Interrupts.hpp"
 #include "IPC.hpp"
@@ -29,9 +29,9 @@
 #include "Task.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
-  using BlockDevice = Kernel::Devices::BlockDevice;
+  using BlockDevices = Kernel::Devices::BlockDevices;
   using Console = Kernel::Console;
-  using DMABuffer = ABI::Devices::BlockDevice::DMABuffer;
+  using DMABuffer = ABI::Devices::BlockDevices::DMABuffer;
   using InitBundle = ABI::InitBundle;
   using IPC = ABI::IPC;
   using Logger = Kernel::Logger;
@@ -303,15 +303,15 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::Block_GetCount: {
-        context.eax = BlockDevice::GetCount();
+        context.eax = BlockDevices::GetCount();
 
         break;
       }
 
       case SystemCall::Block_GetInfo: {
         UInt32 deviceId = context.ebx;
-        BlockDevice::Info* info
-          = reinterpret_cast<BlockDevice::Info*>(context.ecx);
+        BlockDevices::Info* info
+          = reinterpret_cast<BlockDevices::Info*>(context.ecx);
 
         if (!info) {
           context.eax = 1;
@@ -319,7 +319,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
           break;
         }
 
-        bool ok = BlockDevice::GetInfo(deviceId, *info);
+        bool ok = BlockDevices::GetInfo(deviceId, *info);
 
         context.eax = ok ? 0 : 1;
 
@@ -327,8 +327,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::Block_Register: {
-        BlockDevice::Info* info
-          = reinterpret_cast<BlockDevice::Info*>(context.ebx);
+        BlockDevices::Info* info
+          = reinterpret_cast<BlockDevices::Info*>(context.ebx);
 
         if (!info) {
           context.eax = 0;
@@ -336,15 +336,15 @@ namespace Quantum::System::Kernel::Arch::IA32 {
           break;
         }
 
-        context.eax = BlockDevice::RegisterUser(*info);
+        context.eax = BlockDevices::RegisterUser(*info);
 
         break;
       }
 
       case SystemCall::Block_UpdateInfo: {
         UInt32 deviceId = context.ebx;
-        BlockDevice::Info* info
-          = reinterpret_cast<BlockDevice::Info*>(context.ecx);
+        BlockDevices::Info* info
+          = reinterpret_cast<BlockDevices::Info*>(context.ecx);
 
         if (!info) {
           context.eax = 1;
@@ -352,7 +352,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
           break;
         }
 
-        bool ok = BlockDevice::UpdateInfo(deviceId, *info);
+        bool ok = BlockDevices::UpdateInfo(deviceId, *info);
 
         context.eax = ok ? 0 : 1;
 
@@ -360,8 +360,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::Block_Read: {
-        BlockDevice::Request* request
-          = reinterpret_cast<BlockDevice::Request*>(context.ebx);
+        BlockDevices::Request* request
+          = reinterpret_cast<BlockDevices::Request*>(context.ebx);
 
         if (!request) {
           context.eax = 1;
@@ -369,14 +369,14 @@ namespace Quantum::System::Kernel::Arch::IA32 {
           break;
         }
 
-        context.eax = BlockDevice::Read(*request) ? 0 : 1;
+        context.eax = BlockDevices::Read(*request) ? 0 : 1;
 
         break;
       }
 
       case SystemCall::Block_Write: {
-        BlockDevice::Request* request
-          = reinterpret_cast<BlockDevice::Request*>(context.ebx);
+        BlockDevices::Request* request
+          = reinterpret_cast<BlockDevices::Request*>(context.ebx);
 
         if (!request) {
           context.eax = 1;
@@ -384,7 +384,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
           break;
         }
 
-        context.eax = BlockDevice::Write(*request) ? 0 : 1;
+        context.eax = BlockDevices::Write(*request) ? 0 : 1;
 
         break;
       }
@@ -393,7 +393,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         UInt32 deviceId = context.ebx;
         UInt32 portId = context.ecx;
 
-        bool ok = BlockDevice::Bind(deviceId, portId);
+        bool ok = BlockDevices::Bind(deviceId, portId);
 
         context.eax = ok ? 0 : 1;
 
@@ -413,7 +413,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         UInt32 physical = 0;
         UInt32 virtualAddress = 0;
         UInt32 outSize = 0;
-        bool ok = BlockDevice::AllocateDMABuffer(
+        bool ok = BlockDevices::AllocateDMABuffer(
           sizeBytes,
           physical,
           virtualAddress,

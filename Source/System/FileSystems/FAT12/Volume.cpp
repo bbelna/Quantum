@@ -7,12 +7,12 @@
  */
 
 #include <ABI/Console.hpp>
-#include <ABI/Devices/BlockDevice.hpp>
+#include <ABI/Devices/BlockDevices.hpp>
 
 #include "Volume.hpp"
 
 namespace Quantum::System::FileSystems::FAT12 {
-  using BlockDevice = ABI::Devices::BlockDevice;
+  using BlockDevices = ABI::Devices::BlockDevices;
   using FileSystem = ABI::FileSystem;
 
   void Volume::Initialize() {
@@ -21,7 +21,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     _file.Initialize(*this);
   }
 
-  bool Volume::Load(const BlockDevice::Info& info) {
+  bool Volume::Load(const BlockDevices::Info& info) {
     // ensure helper pointers are wired
     Initialize();
 
@@ -101,7 +101,7 @@ namespace Quantum::System::FileSystems::FAT12 {
   }
 
   bool Volume::Load() {
-    BlockDevice::Info info {};
+    BlockDevices::Info info {};
 
     if (!GetFloppyInfo(info)) {
       return false;
@@ -384,27 +384,27 @@ namespace Quantum::System::FileSystems::FAT12 {
       return false;
     }
 
-    BlockDevice::Request request {};
+    BlockDevices::Request request {};
 
     request.deviceId = _device.id;
     request.lba = _bootSectorLBA;
     request.count = 1;
     request.buffer = buffer;
 
-    return BlockDevice::Read(request) == 0;
+    return BlockDevices::Read(request) == 0;
   }
 
-  bool Volume::GetFloppyInfo(BlockDevice::Info& outInfo) {
-    UInt32 count = BlockDevice::GetCount();
+  bool Volume::GetFloppyInfo(BlockDevices::Info& outInfo) {
+    UInt32 count = BlockDevices::GetCount();
 
     for (UInt32 i = 1; i <= count; ++i) {
-      BlockDevice::Info info {};
+      BlockDevices::Info info {};
 
-      if (BlockDevice::GetInfo(i, info) != 0) {
+      if (BlockDevices::GetInfo(i, info) != 0) {
         continue;
       }
 
-      if (info.type != BlockDevice::Type::Floppy) {
+      if (info.type != BlockDevices::Type::Floppy) {
         continue;
       }
 
@@ -417,7 +417,7 @@ namespace Quantum::System::FileSystems::FAT12 {
   }
 
   void Volume::BuildLabel(
-    const BlockDevice::Info& info,
+    const BlockDevices::Info& info,
     char* outLabel,
     UInt32 labelBytes
   ) {
@@ -431,7 +431,7 @@ namespace Quantum::System::FileSystems::FAT12 {
 
     char label = '?';
 
-    if (info.type == BlockDevice::Type::Floppy && info.deviceIndex < 26) {
+    if (info.type == BlockDevices::Type::Floppy && info.deviceIndex < 26) {
       label = static_cast<char>('A' + info.deviceIndex);
     }
 

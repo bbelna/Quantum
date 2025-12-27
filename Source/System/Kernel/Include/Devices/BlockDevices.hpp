@@ -1,5 +1,5 @@
 /**
- * @file System/Kernel/Include/Devices/BlockDevice.hpp
+ * @file System/Kernel/Include/Devices/BlockDevices.hpp
  * @brief Block device registry and I/O interface.
  * @author Brandon Belna <bbelna@aol.com>
  * @copyright (c) 2025-2026 The Quantum OS Project
@@ -16,7 +16,7 @@ namespace Quantum::System::Kernel::Devices {
   /**
    * Block device registry and I/O interface.
    */
-  class BlockDevice {
+  class BlockDevices {
     public:
       /**
        * Block I/O operation identifiers.
