@@ -1,5 +1,5 @@
 # Coordinator
-(c) Brandon Belna 2025 - MIT License
+(c) 2025-2026 The Quantum OS Project - MIT License
 
 ## Overview
 Coordinator is the first application loaded by the Quantum kernel and is

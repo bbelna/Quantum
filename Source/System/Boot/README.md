@@ -1,5 +1,5 @@
 ## Quantum Bootloaders
-(c) Brandon Belna 2025 - MIT License
+(c) 2025-2026 The Quantum OS Project - MIT License
 
 ## Overview
 This folder contains bootloader implementations separated by architecture.

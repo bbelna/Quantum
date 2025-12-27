@@ -1,5 +1,5 @@
 ## Quantum User System
-(c) Brandon Belna 2025 - MIT License
+(c) 2025-2026 The Quantum OS Project - MIT License
 
 ## Overview
 This folder contains user-mode system sources and startup glue that are not
