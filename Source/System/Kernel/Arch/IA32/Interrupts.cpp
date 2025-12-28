@@ -11,7 +11,6 @@
 #include "Arch/IA32/IDT.hpp"
 #include "Arch/IA32/Interrupts.hpp"
 #include "Arch/IA32/PIC.hpp"
-#include "Arch/IA32/PS2Keyboard.hpp"
 #include "Arch/IA32/SystemCalls.hpp"
 #include "Arch/IA32/Timer.hpp"
 
@@ -23,8 +22,6 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     SystemCalls::Initialize();
 
     Timer::Initialize();
-    PS2Keyboard::Initialize();
-
     CPU::EnableInterrupts();
   }
 
