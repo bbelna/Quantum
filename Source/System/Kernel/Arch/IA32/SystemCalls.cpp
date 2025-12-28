@@ -129,7 +129,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       case SystemCall::IPC_CreatePort: {
         UInt32 portId = Kernel::IPC::CreatePort();
 
-        context.eax = portId == 0 ? 1u : portId;
+        context.eax = portId;
 
         break;
       }
@@ -206,6 +206,15 @@ namespace Quantum::System::Kernel::Arch::IA32 {
           msg->senderId = sender;
           msg->length = length;
         }
+
+        context.eax = ok ? 0 : 1;
+
+        break;
+      }
+
+      case SystemCall::IPC_DestroyPort: {
+        UInt32 portId = context.ebx;
+        bool ok = Kernel::IPC::DestroyPort(portId);
 
         context.eax = ok ? 0 : 1;
 

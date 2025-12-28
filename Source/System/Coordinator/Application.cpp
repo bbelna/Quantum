@@ -190,7 +190,6 @@ namespace Quantum::System::Coordinator {
 
     IRQ::Initialize();
     FileSystem::Initialize();
-    Input::Initialize();
 
     _readyPortId = IPC::CreatePort();
 
@@ -199,6 +198,8 @@ namespace Quantum::System::Coordinator {
     } else if (_readyPortId != IPC::Ports::CoordinatorReady) {
       Console::WriteLine("Coordinator: readiness port id mismatch");
     }
+
+    Input::Initialize();
 
     InitBundle::Info info {};
 

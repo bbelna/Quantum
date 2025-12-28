@@ -2,7 +2,7 @@
  * @file Services/Drivers/Input/PS2/Keyboard/Include/Driver.hpp
  * @brief PS/2 keyboard driver.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright Ac 2025-2026 The Quantum OS Project
+ * @copyright © 2025-2026 The Quantum OS Project
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
@@ -38,6 +38,8 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
 
       /**
        * Sends a readiness message to the coordinator.
+       * @param deviceTypeId
+       *   Device type identifier.
        */
       static void SendReadySignal(UInt8 deviceTypeId);
 

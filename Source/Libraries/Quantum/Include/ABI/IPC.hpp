@@ -77,6 +77,17 @@ namespace Quantum::ABI {
       }
 
       /**
+       * Destroys an IPC port owned by the caller.
+       * @param portId
+       *   Port id to destroy.
+       * @return
+       *   0 on success, non-zero on failure.
+       */
+      static UInt32 DestroyPort(UInt32 portId) {
+        return InvokeSystemCall(SystemCall::IPC_DestroyPort, portId);
+      }
+
+      /**
        * Sends a message to a port.
        * @param portId
        *   Target port.

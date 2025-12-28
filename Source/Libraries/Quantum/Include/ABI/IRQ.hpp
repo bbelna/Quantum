@@ -73,6 +73,11 @@ namespace Quantum::ABI {
         }
 
         UInt32 replyPortId = IPC::CreatePort();
+
+        if (replyPortId == 0) {
+          return 1;
+        }
+
         Message request {};
         IPC::Message msg {};
 
@@ -88,10 +93,6 @@ namespace Quantum::ABI {
 
         IPC::Send(IPC::Ports::IRQ, msg);
 
-        if (replyPortId == 0) {
-          return 1;
-        }
-
         IPC::Message reply {};
 
         for (UInt32 i = 0; i < 1024; ++i) {
@@ -101,8 +102,12 @@ namespace Quantum::ABI {
 
               CopyBytes(&status, reply.payload, sizeof(status));
 
+              IPC::DestroyPort(replyPortId);
+
               return status;
             }
+
+            IPC::DestroyPort(replyPortId);
 
             return 1;
           }
@@ -111,6 +116,8 @@ namespace Quantum::ABI {
             Task::Yield();
           }
         }
+
+        IPC::DestroyPort(replyPortId);
 
         return 1;
       }

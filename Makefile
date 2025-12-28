@@ -23,6 +23,7 @@ COORD_DIR  := $(SRC_ROOT)/System/Coordinator
 FLOPPY_DIR := $(SRC_ROOT)/Services/Drivers/Storage/Floppy
 PS2KBD_DIR := $(SRC_ROOT)/Services/Drivers/Input/PS2/Keyboard
 FAT12_DIR  := $(SRC_ROOT)/Services/FileSystems/FAT12
+TESTSUITE_DIR := $(SRC_ROOT)/Applications/Diagnostics/TestSuite
 LIBQ_INCLUDE := $(PROJECT_ROOT)/Source/Libraries/Quantum/Include
 COORD_INCLUDE := $(COORD_DIR)/Include
 
@@ -79,9 +80,11 @@ fat12: $(FAT12_QX)
 
 ps2kbd: $(PS2KBD_QX)
 
+testsuite: $(TESTSUITE_QX)
+
 # Build INIT.BND if manifest is present
 .PHONY: init-bundle
-init-bundle: $(COORD_QX) $(FLOPPY_QX) $(FAT12_QX) $(PS2KBD_QX)
+init-bundle: $(COORD_QX) $(FLOPPY_QX) $(FAT12_QX) $(PS2KBD_QX) $(TESTSUITE_QX)
 ifeq ($(HAS_INIT_MANIFEST),)
 	@echo "INIT manifest not found ($(INIT_MANIFEST)); skipping bundle."
 else
@@ -106,6 +109,7 @@ COORD_QX := $(BUILD_DIR)/Coordinator/Coordinator.qx
 FLOPPY_QX := $(BUILD_DIR)/Drivers/Storage/Floppy/Floppy.qx
 PS2KBD_QX := $(BUILD_DIR)/Drivers/Input/PS2/Keyboard/Keyboard.qx
 FAT12_QX := $(BUILD_DIR)/FileSystems/FAT12/fat12.qx
+TESTSUITE_QX := $(BUILD_DIR)/Applications/Diagnostics/TestSuite/TestSuite.qx
 
 $(COORD_QX):
 	$(MAKE) -C $(COORD_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) \
@@ -123,8 +127,12 @@ $(FAT12_QX):
 	$(MAKE) -C $(FAT12_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) \
 		ARCH=$(ARCH) fat12
 
+$(TESTSUITE_QX):
+	$(MAKE) -C $(TESTSUITE_DIR) BUILD_DIR=$(BUILD_DIR) PROJECT_ROOT=$(PROJECT_ROOT) \
+		ARCH=$(ARCH) testsuite
+
 $(IMG): $(KER_BIN) $(BOOT_STAGE1_BIN) $(BOOT_STAGE2_BIN) $(COORD_QX) \
-	$(FLOPPY_QX) $(PS2KBD_QX) $(FAT12_QX) init-bundle
+	$(FLOPPY_QX) $(PS2KBD_QX) $(FAT12_QX) $(TESTSUITE_QX) init-bundle
 	@mkdir -p $(dir $@)
 	@echo "Creating blank 1.44 MB image: $@"
 	dd if=/dev/zero of=$@ bs=$(IMG_BS) count=$(IMG_SECTORS) conv=notrunc \

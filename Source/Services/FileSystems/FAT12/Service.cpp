@@ -7,13 +7,13 @@
  */
 
 #include <ABI/Console.hpp>
+#include <ABI/Coordinator.hpp>
 #include <ABI/Devices/BlockDevices.hpp>
 #include <ABI/FileSystem.hpp>
 #include <ABI/IPC.hpp>
 #include <ABI/Task.hpp>
 
 #include "Service.hpp"
-#include "Tests.hpp"
 #include "Volume.hpp"
 
 namespace Quantum::Services::FileSystems::FAT12 {
@@ -22,6 +22,24 @@ namespace Quantum::Services::FileSystems::FAT12 {
   using ABI::FileSystem;
   using ABI::IPC;
   using ABI::Task;
+
+  static constexpr UInt8 _deviceTypeId = 3;
+
+  void Service::SendReadySignal(UInt8 deviceTypeId) {
+    ABI::Coordinator::ReadyMessage ready {};
+    IPC::Message msg {};
+
+    ready.deviceId = deviceTypeId;
+    ready.state = 1;
+
+    msg.length = sizeof(ready);
+
+    for (UInt32 i = 0; i < msg.length; ++i) {
+      msg.payload[i] = reinterpret_cast<UInt8*>(&ready)[i];
+    }
+
+    IPC::Send(ABI::IPC::Ports::CoordinatorReady, msg);
+  }
 
   void Service::InitializeVolumes() {
     _volumesHead = nullptr;
@@ -274,9 +292,9 @@ namespace Quantum::Services::FileSystems::FAT12 {
     }
 
     name[i] = '\0';
-    cursor = path;
+    cursor = normalized;
 
-    while (*cursor == '/') {
+    while (*cursor == '/' || *cursor == '\\') {
       ++cursor;
     }
 
@@ -287,6 +305,7 @@ namespace Quantum::Services::FileSystems::FAT12 {
       while (
         *cursor != '\0' &&
         *cursor != '/' &&
+        *cursor != '\\' &&
         length + 1 < sizeof(segment)
       ) {
         segment[length++] = *cursor++;
@@ -294,7 +313,7 @@ namespace Quantum::Services::FileSystems::FAT12 {
 
       segment[length] = '\0';
 
-      while (*cursor == '/') {
+      while (*cursor == '/' || *cursor == '\\') {
         ++cursor;
       }
 
@@ -380,12 +399,9 @@ namespace Quantum::Services::FileSystems::FAT12 {
       Task::Exit(1);
     }
 
-    Console::WriteLine("FAT12 service ready");
     InitializeVolumes();
-
-    #if defined(TEST) // TODO #18
-    Tests::Run();
-    #endif
+    Console::WriteLine("FAT12 service ready");
+    SendReadySignal(_deviceTypeId);
 
     for (;;) {
       IPC::Message msg {};
@@ -500,10 +516,20 @@ namespace Quantum::Services::FileSystems::FAT12 {
           }
         }
       } else if (
+        request.op == static_cast<UInt32>(FileSystem::Operation::CloseVolume)
+      ) {
+        Volume* volume = FindVolumeByHandle(request.arg0);
+
+        if (volume) {
+          response.status = 0;
+        }
+      } else if (
         request.op == static_cast<UInt32>(FileSystem::Operation::Open)
       ) {
         CString path = reinterpret_cast<CString>(request.data);
         Volume* volume = FindVolumeByHandle(request.arg0);
+
+        response.status = 0;
 
         if (volume) {
           if (IsRootPath(path)) {
