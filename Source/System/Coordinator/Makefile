@@ -31,6 +31,7 @@ COORD_SRCS := \
 	$(COORD_DIR)/Main.cpp \
 	$(COORD_DIR)/IRQ.cpp \
 	$(COORD_DIR)/FileSystem.cpp \
+	$(COORD_DIR)/Input.cpp \
 	$(USER_RUNTIME)/CRT0.cpp \
 	$(USER_RUNTIME)/Memory.cpp \
 	$(USER_RUNTIME)/Heap.cpp
@@ -38,7 +39,8 @@ COORD_SRCS := \
 COORD_HDRS := \
 	$(COORD_DIR)/Include/Application.hpp \
 	$(COORD_DIR)/Include/IRQ.hpp \
-	$(COORD_DIR)/Include/FileSystem.hpp
+	$(COORD_DIR)/Include/FileSystem.hpp \
+	$(COORD_DIR)/Include/Input.hpp
 
 .PHONY: all clean coordinator
 

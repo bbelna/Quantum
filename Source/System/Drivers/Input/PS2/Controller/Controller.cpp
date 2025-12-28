@@ -52,7 +52,7 @@ namespace Quantum::System::Drivers::Input::PS2 {
   }
 
   bool Controller::Initialize() {
-    // Drain any pending output so subsequent reads are clean.
+    // drain any pending output so subsequent reads are clean
     if ((IO::In8(_statusPort) & _statusOutputFull) != 0) {
       (void)IO::In8(_dataPort);
     }

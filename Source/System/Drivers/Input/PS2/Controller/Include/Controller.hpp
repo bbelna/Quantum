@@ -76,11 +76,15 @@ namespace Quantum::System::Drivers::Input::PS2 {
 
       /**
        * Waits for data availability.
+       * @return
+       *   True if data is available; false on timeout.
        */
       static bool WaitForRead();
 
       /**
        * Waits for the controller input buffer to clear.
+       * @return
+       *   True if ready for write; false on timeout.
        */
       static bool WaitForWrite();
   };

@@ -40,6 +40,11 @@ namespace Quantum::ABI {
          * Coordinator readiness port.
          */
         static constexpr UInt32 CoordinatorReady = 3;
+
+        /**
+         * Input broker port.
+         */
+        static constexpr UInt32 Input = 4;
       };
 
       /**

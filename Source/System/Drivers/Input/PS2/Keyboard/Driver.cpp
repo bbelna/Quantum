@@ -130,11 +130,13 @@ namespace Quantum::System::Drivers::Input::PS2::Keyboard {
   void Driver::HandleScancode(UInt8 scancode) {
     if (scancode == 0xE0) {
       _extendedPrefix = true;
+
       return;
     }
 
     if (_extendedPrefix) {
       _extendedPrefix = false;
+
       return;
     }
 
@@ -143,48 +145,63 @@ namespace Quantum::System::Drivers::Input::PS2::Keyboard {
 
     if (scancode == shiftLeftMake || scancode == shiftRightMake) {
       _shiftActive = true;
+
       SendKeyEvent(code, InputDevices::EventType::KeyDown, 0, 0);
+
       return;
     }
 
     if (scancode == shiftLeftBreak || scancode == shiftRightBreak) {
       _shiftActive = false;
+
       SendKeyEvent(code, InputDevices::EventType::KeyUp, 0, 0);
+
       return;
     }
 
     if (scancode == ctrlMake) {
       _ctrlActive = true;
+
       SendKeyEvent(code, InputDevices::EventType::KeyDown, 0, 0);
+
       return;
     }
 
     if (scancode == ctrlBreak) {
       _ctrlActive = false;
+
       SendKeyEvent(code, InputDevices::EventType::KeyUp, 0, 0);
+
       return;
     }
 
     if (scancode == altMake) {
       _altActive = true;
+
       SendKeyEvent(code, InputDevices::EventType::KeyDown, 0, 0);
+
       return;
     }
 
     if (scancode == altBreak) {
       _altActive = false;
+
       SendKeyEvent(code, InputDevices::EventType::KeyUp, 0, 0);
+
       return;
     }
 
     if (scancode == capsMake) {
       _capsLock = !_capsLock;
+
       SendKeyEvent(code, InputDevices::EventType::KeyDown, 0, 0);
+
       return;
     }
 
     if (scancode == capsBreak) {
       SendKeyEvent(code, InputDevices::EventType::KeyUp, 0, 0);
+
       return;
     }
 
@@ -194,6 +211,7 @@ namespace Quantum::System::Drivers::Input::PS2::Keyboard {
 
     if (isBreak) {
       SendKeyEvent(code, InputDevices::EventType::KeyUp, 0, 0);
+
       return;
     }
 
@@ -202,6 +220,7 @@ namespace Quantum::System::Drivers::Input::PS2::Keyboard {
 
     if (base >= 'a' && base <= 'z') {
       bool upper = (_shiftActive ^ _capsLock);
+
       ch = upper ? static_cast<UInt8>(base - ('a' - 'A')) : base;
     } else if (_shiftActive) {
       ch = scancodeMapShift[code];
@@ -263,6 +282,7 @@ namespace Quantum::System::Drivers::Input::PS2::Keyboard {
 
       if (IPC::Receive(portId, msg) != 0) {
         Task::Yield();
+
         continue;
       }
 
