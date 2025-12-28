@@ -28,14 +28,10 @@ LIBQ_LIB := $(BUILD_DIR)/Libraries/Quantum/libQuantum.a
 
 FLOPPY_SRCS := \
 	$(DRIVER_DIR)/Driver.cpp \
-	$(DRIVER_DIR)/Tests.cpp \
 	$(DRIVER_DIR)/Main.cpp \
 	$(USER_RUNTIME)/CRT0.cpp \
 	$(USER_RUNTIME)/Memory.cpp \
 	$(USER_RUNTIME)/Heap.cpp
-
-FLOPPY_HDRS := \
-	$(DRIVER_DIR)/Include/Tests.hpp
 
 .PHONY: all clean floppy
 

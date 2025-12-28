@@ -15,7 +15,6 @@
 #include <ABI/Task.hpp>
 
 #include "Driver.hpp"
-#include "Tests.hpp"
 
 namespace Quantum::Services::Drivers::Storage::Floppy {
   using ABI::Console;
@@ -1305,11 +1304,6 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
     }
 
     Console::WriteLine("Floppy driver bound to block device");
-
-    #if defined(TEST) // TODO #18
-    Tests::Run();
-    #endif
-
     SendReadySignal(1);
 
     for (;;) {

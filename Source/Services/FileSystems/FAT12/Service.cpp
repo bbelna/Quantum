@@ -13,7 +13,6 @@
 #include <ABI/Task.hpp>
 
 #include "Service.hpp"
-#include "Tests.hpp"
 #include "Volume.hpp"
 
 namespace Quantum::Services::FileSystems::FAT12 {
@@ -382,10 +381,6 @@ namespace Quantum::Services::FileSystems::FAT12 {
 
     Console::WriteLine("FAT12 service ready");
     InitializeVolumes();
-
-    #if defined(TEST) // TODO #18
-    Tests::Run();
-    #endif
 
     for (;;) {
       IPC::Message msg {};
