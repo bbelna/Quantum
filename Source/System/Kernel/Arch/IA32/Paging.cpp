@@ -11,6 +11,7 @@
 
 #include "Arch/IA32/CPU.hpp"
 #include "Arch/IA32/LinkerSymbols.hpp"
+#include "Arch/IA32/MemoryMap.hpp"
 #include "Arch/IA32/Paging.hpp"
 #include "Arch/IA32/PhysicalAllocator.hpp"
 #include "Heap.hpp"
@@ -75,8 +76,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   }
 
   void Paging::EnsureKernelHeapTables() {
-    constexpr UInt32 heapBase = Paging::kernelHeapBase;
-    constexpr UInt32 heapBytes = Paging::kernelHeapBytes;
+    constexpr UInt32 heapBase = MemoryMap::kernelHeapBase;
+    constexpr UInt32 heapBytes = MemoryMap::kernelHeapBytes;
     UInt32 startIndex = heapBase >> 22;
     UInt32 endIndex = (heapBase + heapBytes - 1) >> 22;
 
@@ -128,7 +129,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
     for (UInt32 offset = 0; offset < kernelSizeBytes; offset += _pageSize) {
       UInt32 physicalAddress = kernelPhysicalStart + offset;
-      UInt32 virtualAddress = Paging::kernelVirtualBase + offset;
+      UInt32 virtualAddress = MemoryMap::kernelVirtualBase + offset;
 
       MapPage(virtualAddress, physicalAddress, true, false, true);
     }
@@ -141,7 +142,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         reinterpret_cast<UInt32>(_pageDirectory)
       );
 
-    _pageDirectory[Paging::recursiveSlot]
+    _pageDirectory[MemoryMap::recursiveSlot]
       = pageDirectoryPhysical | pagePresent | pageWrite;
 
     // load directory and enable paging,

@@ -25,14 +25,14 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
       /**
        * Destroys an address space created by Create.
-       * @param pageDirectoryPhysical
+       * @param pageDirectoryPhysicalAddress
        *   Physical address of the page directory to destroy.
        */
-      static void Destroy(UInt32 pageDirectoryPhysical);
+      static void Destroy(UInt32 pageDirectoryPhysicalAddress);
 
       /**
        * Maps a virtual page in the specified address space.
-       * @param pageDirectoryPhysical
+       * @param pageDirectoryPhysicalAddress
        *   Physical address of the target page directory.
        * @param virtualAddress
        *   Virtual address of the page to map.
@@ -46,7 +46,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        *   Whether the mapping should be marked global.
        */
       static void MapPage(
-        UInt32 pageDirectoryPhysical,
+        UInt32 pageDirectoryPhysicalAddress,
         UInt32 virtualAddress,
         UInt32 physicalAddress,
         bool writable = true,
@@ -56,9 +56,9 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
       /**
        * Activates the specified address space.
-       * @param pageDirectoryPhysical
+       * @param pageDirectoryPhysicalAddress
        *   Physical address of the page directory to activate.
        */
-      static void Activate(UInt32 pageDirectoryPhysical);
+      static void Activate(UInt32 pageDirectoryPhysicalAddress);
   };
 }

@@ -210,7 +210,10 @@ namespace Quantum::System::Kernel::Devices {
     return true;
   }
 
-  bool BlockDevices::UpdateInfo(UInt32 deviceId, const BlockDevices::Info& info) {
+  bool BlockDevices::UpdateInfo(
+    UInt32 deviceId,
+    const BlockDevices::Info& info
+  ) {
     BlockDevices::Device* device = Find(deviceId);
 
     if (!device) {

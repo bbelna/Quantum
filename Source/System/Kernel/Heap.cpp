@@ -9,6 +9,7 @@
 #include <Align.hpp>
 #include <Types.hpp>
 
+#include "Arch/MemoryMap.hpp"
 #include "Arch/Paging.hpp"
 #include "Arch/PhysicalAllocator.hpp"
 #include "Heap.hpp"
@@ -22,8 +23,8 @@ namespace Quantum::System::Kernel {
 
   using LogLevel = Kernel::Logger::Level;
 
-  UInt32 Heap::_heapStartVirtualAddress = Arch::Paging::kernelHeapBase;
-  UInt32 Heap::_heapRegionBytes = Arch::Paging::kernelHeapBytes;
+  UInt32 Heap::_heapStartVirtualAddress = Arch::MemoryMap::kernelHeapBase;
+  UInt32 Heap::_heapRegionBytes = Arch::MemoryMap::kernelHeapBytes;
 
   void Heap::SetFreeBlockCanary(Heap::FreeBlock* block) {
     if (block->size < sizeof(UInt32)) {

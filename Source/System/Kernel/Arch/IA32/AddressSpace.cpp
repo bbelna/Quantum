@@ -10,6 +10,7 @@
 
 #include "Arch/IA32/AddressSpace.hpp"
 #include "Arch/IA32/CPU.hpp"
+#include "Arch/IA32/MemoryMap.hpp"
 #include "Arch/IA32/Paging.hpp"
 #include "Arch/IA32/PhysicalAllocator.hpp"
 #include "Panic.hpp"
@@ -23,14 +24,14 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     }
 
     UInt32* directory = reinterpret_cast<UInt32*>(directoryPhysical);
-    UInt32 kernelStartIndex = Paging::kernelVirtualBase >> 22;
+    UInt32 kernelStartIndex = MemoryMap::kernelVirtualBase >> 22;
     const UInt32* kernelDirectory = Paging::GetKernelPageDirectoryEntries();
 
     for (UInt32 i = 0; i < 1024; ++i) {
       directory[i] = 0;
     }
 
-    for (UInt32 i = kernelStartIndex; i < Paging::recursiveSlot; ++i) {
+    for (UInt32 i = kernelStartIndex; i < MemoryMap::recursiveSlot; ++i) {
       directory[i] = kernelDirectory[i];
     }
 
@@ -59,24 +60,24 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       directory[i] = (destTablePhysical & ~0xFFFu) | (entry & 0xFFFu);
     }
 
-    directory[Paging::recursiveSlot]
+    directory[MemoryMap::recursiveSlot]
       = directoryPhysical | Paging::pagePresent | Paging::pageWrite;
 
     return directoryPhysical;
   }
 
-  void AddressSpace::Destroy(UInt32 pageDirectoryPhysical) {
+  void AddressSpace::Destroy(UInt32 pageDirectoryPhysicalAddress) {
     UInt32 kernelDirectory = Paging::GetKernelPageDirectoryPhysicalAddress();
 
     if (
-      pageDirectoryPhysical == 0
-      || pageDirectoryPhysical == kernelDirectory
+      pageDirectoryPhysicalAddress == 0
+      || pageDirectoryPhysicalAddress == kernelDirectory
     ) {
       return;
     }
 
-    UInt32* directory = reinterpret_cast<UInt32*>(pageDirectoryPhysical);
-    UInt32 kernelStartIndex = Paging::kernelVirtualBase >> 22;
+    UInt32* directory = reinterpret_cast<UInt32*>(pageDirectoryPhysicalAddress);
+    UInt32 kernelStartIndex = MemoryMap::kernelVirtualBase >> 22;
 
     for (UInt32 i = 0; i < kernelStartIndex; ++i) {
       UInt32 entry = directory[i];
@@ -109,22 +110,22 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       PhysicalAllocator::FreePage(tablePhysical);
     }
 
-    PhysicalAllocator::FreePage(pageDirectoryPhysical);
+    PhysicalAllocator::FreePage(pageDirectoryPhysicalAddress);
   }
 
   void AddressSpace::MapPage(
-    UInt32 pageDirectoryPhysical,
+    UInt32 pageDirectoryPhysicalAddress,
     UInt32 virtualAddress,
     UInt32 physicalAddress,
     bool writable,
     bool user,
     bool global
   ) {
-    if (pageDirectoryPhysical == 0) {
+    if (pageDirectoryPhysicalAddress == 0) {
       return;
     }
 
-    UInt32* directory = reinterpret_cast<UInt32*>(pageDirectoryPhysical);
+    UInt32* directory = reinterpret_cast<UInt32*>(pageDirectoryPhysicalAddress);
     UInt32 pageDirectoryIndex = (virtualAddress >> 22) & 0x3FF;
     UInt32 pageTableIndex = (virtualAddress >> 12) & 0x3FF;
     UInt32 entry = directory[pageDirectoryIndex];
@@ -155,16 +156,19 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       directory[pageDirectoryIndex] |= Paging::pageUser;
     }
 
-    if (pageDirectoryPhysical == Paging::GetKernelPageDirectoryPhysicalAddress()) {
+    if (
+      pageDirectoryPhysicalAddress
+        == Paging::GetKernelPageDirectoryPhysicalAddress()
+    ) {
       CPU::InvalidatePage(virtualAddress);
     }
   }
 
-  void AddressSpace::Activate(UInt32 pageDirectoryPhysical) {
-    if (pageDirectoryPhysical == 0) {
+  void AddressSpace::Activate(UInt32 pageDirectoryPhysicalAddress) {
+    if (pageDirectoryPhysicalAddress == 0) {
       return;
     }
 
-    CPU::LoadPageDirectory(pageDirectoryPhysical);
+    CPU::LoadPageDirectory(pageDirectoryPhysicalAddress);
   }
 }

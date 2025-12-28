@@ -11,6 +11,7 @@
 
 #include "Arch/IA32/BootInfo.hpp"
 #include "Arch/IA32/LinkerSymbols.hpp"
+#include "Arch/IA32/MemoryMap.hpp"
 #include "Arch/IA32/Paging.hpp"
 #include "Arch/IA32/PhysicalAllocator.hpp"
 #include "Logger.hpp"
@@ -31,7 +32,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     UInt32 kernelPhysicalBase = reinterpret_cast<UInt32>(&__phys_start);
     UInt32 kernelVirtualBase = reinterpret_cast<UInt32>(&__virt_start);
 
-    if (virtualAddress >= Paging::kernelVirtualBase) {
+    if (virtualAddress >= MemoryMap::kernelVirtualBase) {
       UInt32 offset = virtualAddress - kernelVirtualBase;
 
       return kernelPhysicalBase + offset;
