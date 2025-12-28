@@ -44,6 +44,12 @@ namespace Quantum::ABI {
     Block_AllocateDMABuffer = 705,
     Block_UpdateInfo = 706,
     Block_Register = 707,
+    Input_GetCount = 720,
+    Input_GetInfo = 721,
+    Input_Register = 722,
+    Input_UpdateInfo = 723,
+    Input_ReadEvent = 724,
+    Input_PushEvent = 725,
     Memory_ExpandHeap = 800
   };
 

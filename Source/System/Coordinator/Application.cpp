@@ -17,6 +17,7 @@
 #include "Application.hpp"
 #include "FileSystem.hpp"
 #include "IRQ.hpp"
+#include "Input.hpp"
 
 namespace Quantum::System::Coordinator {
   using ABI::Console;
@@ -25,6 +26,7 @@ namespace Quantum::System::Coordinator {
   using ABI::Task;
   using Coordinator::IRQ;
   using Coordinator::FileSystem;
+  using Coordinator::Input;
 
   bool Application::HasMagic(const BundleHeader& header) {
     const char expected[8] = { 'I','N','I','T','B','N','D','\0' };
@@ -125,12 +127,22 @@ namespace Quantum::System::Coordinator {
     return typeA != 0 || typeB != 0;
   }
 
+  bool Application::HasKeyboardDevice() {
+    return true;
+  }
+
   UInt8 Application::DetectDevices() {
     UInt8 detected = 0;
 
     if (HasFloppyDevice()) {
       detected |= DeviceMaskFromId(
         static_cast<UInt8>(DeviceType::Floppy)
+      );
+    }
+
+    if (HasKeyboardDevice()) {
+      detected |= DeviceMaskFromId(
+        static_cast<UInt8>(DeviceType::Keyboard)
       );
     }
 
@@ -178,6 +190,7 @@ namespace Quantum::System::Coordinator {
 
     IRQ::Initialize();
     FileSystem::Initialize();
+    Input::Initialize();
 
     _readyPortId = IPC::CreatePort();
 
@@ -349,6 +362,7 @@ namespace Quantum::System::Coordinator {
 
       IRQ::ProcessPending();
       FileSystem::ProcessPending();
+      Input::ProcessPending();
     }
   }
 }

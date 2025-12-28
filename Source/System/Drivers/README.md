@@ -1,4 +1,4 @@
-## Quantum Drivers
+# Quantum Drivers
 
 © 2025-2026 The Quantum OS Project - GPL 2.0 License
 
@@ -10,4 +10,5 @@ This folder contains drivers for Quantum.
 
 | Directory | Description |
 | ----------- | ----------- |
+| `.\Input\` | Input drivers. |
 | `.\Storage\` | Storage drivers. |

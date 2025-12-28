@@ -8,11 +8,13 @@
 
 #include "Devices/BlockDevices.hpp"
 #include "Devices/DeviceManager.hpp"
+#include "Devices/InputDevices.hpp"
 
 namespace Quantum::System::Kernel::Devices {
   void DeviceManager::Initialize() {
     using namespace Devices;
 
     BlockDevices::Initialize();
+    InputDevices::Initialize();
   }
 }

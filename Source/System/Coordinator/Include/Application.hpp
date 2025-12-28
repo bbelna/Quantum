@@ -28,7 +28,8 @@ namespace Quantum::System::Coordinator {
        */
       enum class DeviceType : UInt8 {
         None = 0,
-        Floppy = 1
+        Floppy = 1,
+        Keyboard = 2
       };
 
       /**
@@ -110,6 +111,13 @@ namespace Quantum::System::Coordinator {
        *   Detected device mask.
        */
       static UInt8 DetectDevices();
+
+      /**
+       * Detects whether a keyboard device is present.
+       * @return
+       *   True if a keyboard device is present; false otherwise.
+       */
+      static bool HasKeyboardDevice();
 
       /**
        * Returns the device mask for a device identifier.

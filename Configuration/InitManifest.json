@@ -13,6 +13,13 @@
     "path": "Build/Drivers/Storage/Floppy/Floppy.qx"
   },
   {
+    "name": "ps2-keyboard",
+    "type": "driver",
+    "device": "keyboard",
+    "required": false,
+    "path": "Build/Drivers/Input/PS2/Keyboard/Keyboard.qx"
+  },
+  {
     "name": "fat12",
     "type": "filesystem",
     "dependsOn": [

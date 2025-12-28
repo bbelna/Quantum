@@ -21,6 +21,7 @@
 #include "Arch/IA32/PhysicalAllocator.hpp"
 #include "Console.hpp"
 #include "Devices/BlockDevices.hpp"
+#include "Devices/InputDevices.hpp"
 #include "InitBundle.hpp"
 #include "Interrupts.hpp"
 #include "IPC.hpp"
@@ -35,6 +36,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   using ABI::SystemCall;
   using Kernel::Console;
   using Kernel::Devices::BlockDevices;
+  using Kernel::Devices::InputDevices;
   using Kernel::IRQ;
   using Kernel::Logger;
 
@@ -425,6 +427,99 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         buffer->virtualAddress
           = reinterpret_cast<void*>(virtualAddress);
         buffer->size = outSize;
+
+        context.eax = ok ? 0 : 1;
+
+        break;
+      }
+
+      case SystemCall::Input_GetCount: {
+        context.eax = InputDevices::GetCount();
+
+        break;
+      }
+
+      case SystemCall::Input_GetInfo: {
+        UInt32 deviceId = context.ebx;
+        InputDevices::Info* info
+          = reinterpret_cast<InputDevices::Info*>(context.ecx);
+
+        if (!info) {
+          context.eax = 1;
+
+          break;
+        }
+
+        bool ok = InputDevices::GetInfo(deviceId, *info);
+
+        context.eax = ok ? 0 : 1;
+
+        break;
+      }
+
+      case SystemCall::Input_Register: {
+        InputDevices::Info* info
+          = reinterpret_cast<InputDevices::Info*>(context.ebx);
+
+        if (!info) {
+          context.eax = 0;
+
+          break;
+        }
+
+        context.eax = InputDevices::RegisterUser(*info);
+
+        break;
+      }
+
+      case SystemCall::Input_UpdateInfo: {
+        UInt32 deviceId = context.ebx;
+        InputDevices::Info* info
+          = reinterpret_cast<InputDevices::Info*>(context.ecx);
+
+        if (!info) {
+          context.eax = 1;
+
+          break;
+        }
+
+        bool ok = InputDevices::UpdateInfo(deviceId, *info);
+
+        context.eax = ok ? 0 : 1;
+
+        break;
+      }
+
+      case SystemCall::Input_ReadEvent: {
+        UInt32 deviceId = context.ebx;
+        InputDevices::Event* event
+          = reinterpret_cast<InputDevices::Event*>(context.ecx);
+
+        if (!event) {
+          context.eax = 1;
+
+          break;
+        }
+
+        bool ok = InputDevices::ReadEvent(deviceId, *event);
+
+        context.eax = ok ? 0 : 1;
+
+        break;
+      }
+
+      case SystemCall::Input_PushEvent: {
+        UInt32 deviceId = context.ebx;
+        InputDevices::Event* event
+          = reinterpret_cast<InputDevices::Event*>(context.ecx);
+
+        if (!event) {
+          context.eax = 1;
+
+          break;
+        }
+
+        bool ok = InputDevices::PushEvent(deviceId, *event);
 
         context.eax = ok ? 0 : 1;
 
