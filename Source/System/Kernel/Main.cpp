@@ -10,7 +10,7 @@
 
 #include "Arch/Paging.hpp"
 #include "BootInfo.hpp"
-#include "DeviceManager.hpp"
+#include "Devices/DeviceManager.hpp"
 #include "InitBundle.hpp"
 #include "Interrupts.hpp"
 #include "Main.hpp"
@@ -20,8 +20,11 @@
 
 namespace Quantum::System::Kernel {
   void Main(UInt32 bootInfoPhysicalAddress) {
+    using Arch::Paging;
+    using Devices::DeviceManager;
+
     BootInfo::Initialize(bootInfoPhysicalAddress);
-    Arch::Paging::Initialize(bootInfoPhysicalAddress);
+    Paging::Initialize(bootInfoPhysicalAddress);
     Interrupts::Initialize();
     DeviceManager::Initialize();
     InitBundle::Initialize();

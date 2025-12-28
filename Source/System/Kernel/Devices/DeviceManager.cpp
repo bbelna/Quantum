@@ -1,15 +1,15 @@
 /**
- * @file System/Kernel/DeviceManager.cpp
+ * @file System/Kernel/Devices/DeviceManager.cpp
  * @brief Kernel device manager.
  * @author Brandon Belna <bbelna@aol.com>
  * @copyright © 2025-2026 The Quantum OS Project
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
-#include "DeviceManager.hpp"
 #include "Devices/BlockDevices.hpp"
+#include "Devices/DeviceManager.hpp"
 
-namespace Quantum::System::Kernel {
+namespace Quantum::System::Kernel::Devices {
   void DeviceManager::Initialize() {
     using namespace Devices;
 
