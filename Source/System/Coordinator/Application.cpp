@@ -127,12 +127,22 @@ namespace Quantum::System::Coordinator {
     return typeA != 0 || typeB != 0;
   }
 
+  bool Application::HasKeyboardDevice() {
+    return true;
+  }
+
   UInt8 Application::DetectDevices() {
     UInt8 detected = 0;
 
     if (HasFloppyDevice()) {
       detected |= DeviceMaskFromId(
         static_cast<UInt8>(DeviceType::Floppy)
+      );
+    }
+
+    if (HasKeyboardDevice()) {
+      detected |= DeviceMaskFromId(
+        static_cast<UInt8>(DeviceType::Keyboard)
       );
     }
 

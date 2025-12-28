@@ -7,6 +7,7 @@
  */
 
 #include <ABI/Console.hpp>
+#include <ABI/Coordinator.hpp>
 #include <ABI/Devices/InputDevices.hpp>
 #include <ABI/IO.hpp>
 #include <ABI/IPC.hpp>
@@ -64,6 +65,20 @@ namespace Quantum::System::Drivers::Input::PS2::Keyboard {
     if (status != 0) {
       Console::WriteLine("PS/2 keyboard IRQ register failed");
     }
+  }
+
+  void Driver::SendReadySignal(UInt8 deviceTypeId) {
+    ABI::Coordinator::ReadyMessage ready {};
+    IPC::Message msg {};
+
+    ready.deviceId = deviceTypeId;
+    ready.state = 1;
+
+    msg.length = sizeof(ready);
+
+    CopyBytes(msg.payload, &ready, msg.length);
+
+    IPC::Send(ABI::IPC::Ports::CoordinatorReady, msg);
   }
 
   bool Driver::IsIRQMessage(const IPC::Message& msg) {
@@ -276,6 +291,8 @@ namespace Quantum::System::Drivers::Input::PS2::Keyboard {
     }
 
     Console::WriteLine("PS/2 keyboard driver ready");
+
+    SendReadySignal(2);
 
     for (;;) {
       IPC::Message msg {};

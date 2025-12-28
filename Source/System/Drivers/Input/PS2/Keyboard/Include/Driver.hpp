@@ -37,6 +37,11 @@ namespace Quantum::System::Drivers::Input::PS2::Keyboard {
       static void RegisterIRQRoute(UInt32 portId);
 
       /**
+       * Sends a readiness message to the coordinator.
+       */
+      static void SendReadySignal(UInt8 deviceTypeId);
+
+      /**
        * Checks whether an IPC message is an IRQ notification.
        * @param msg
        *   IPC message to check.
