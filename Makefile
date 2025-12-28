@@ -20,9 +20,9 @@ BOOT_MEDIUM ?= Floppy
 BOOT_DIR   := $(SRC_ROOT)/System/Boot/$(ARCH)
 KERNEL_DIR := $(SRC_ROOT)/System/Kernel
 COORD_DIR  := $(SRC_ROOT)/System/Coordinator
-FLOPPY_DIR := $(SRC_ROOT)/System/Drivers/Storage/Floppy
-PS2KBD_DIR := $(SRC_ROOT)/System/Drivers/Input/PS2/Keyboard
-FAT12_DIR  := $(SRC_ROOT)/System/FileSystems/FAT12
+FLOPPY_DIR := $(SRC_ROOT)/Services/Drivers/Storage/Floppy
+PS2KBD_DIR := $(SRC_ROOT)/Services/Drivers/Input/PS2/Keyboard
+FAT12_DIR  := $(SRC_ROOT)/Services/FileSystems/FAT12
 LIBQ_INCLUDE := $(PROJECT_ROOT)/Source/Libraries/Quantum/Include
 COORD_INCLUDE := $(COORD_DIR)/Include
 

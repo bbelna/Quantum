@@ -11,4 +11,5 @@ This folder contains the source code for Quantum.
 | Directory | Description |
 | ----------- | ----------- |
 | `.\Libraries\` | User-mode application libraries. |
-| `.\System\` | System source code. |
+| `.\Services\` | System services. |
+| `.\System\` | The core system. |
