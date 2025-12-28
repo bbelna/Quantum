@@ -1,4 +1,6 @@
 build/*
 Build/*
+Build
 qemu.log
+.vscode
 .vscode/*
