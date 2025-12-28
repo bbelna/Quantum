@@ -159,7 +159,14 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * @return
        *   Physical address of the kernel page directory.
        */
-      static UInt32 GetKernelPageDirectoryPhysical();
+      static UInt32 GetKernelPageDirectoryPhysicalAddress();
+
+      /**
+       * Returns the physical address of the first page table.
+       * @return
+       *   Physical address of the first page table.
+       */
+      static UInt32 GetFirstPageTablePhysicalAddress();
 
       /**
        * Returns the kernel page directory entries.
@@ -229,7 +236,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * @return
        *   Pointer to the page-directory entries.
        */
-      static UInt32* GetPageDirectoryVirtual();
+      static UInt32* GetPageDirectoryVirtualAddress();
 
       /**
        * Returns a pointer to a page table entries array via the recursive
@@ -239,7 +246,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * @return
        *   Pointer to the page-table entries for that page directory entry.
        */
-      static UInt32* GetPageTableVirtual(UInt32 pageDirectoryIndex);
+      static UInt32* GetPageTableVirtualAddress(UInt32 pageDirectoryIndex);
 
       /**
        * Ensures a page table exists for a page directory entry index,
@@ -256,5 +263,10 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * spaces can share them.
        */
       static void EnsureKernelHeapTables();
+
+      /**
+       * Tracks whether paging is active (recursive mapping usable).
+       */
+      inline static bool _pagingActive = false;
   };
 }

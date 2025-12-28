@@ -23,10 +23,10 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
       /**
        * Initializes the physical allocator from the boot info map.
-       * @param bootInfoPhysicalAddress
-       *   Physical address of the boot info block.
+       * @param kernelBootInfoPhysicalAddress
+       *   Physical address of the boot info block provided to the kernel.
        */
-      static void Initialize(UInt32 bootInfoPhysicalAddress);
+      static void Initialize(UInt32 kernelBootInfoPhysicalAddress);
 
       /**
        * Allocates a single physical 4 KB page.
@@ -114,7 +114,9 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * @return
        *   Physical address corresponding to the loaded image.
        */
-      static UInt32 KernelVirtualToPhysical(UInt32 virtualAddress);
+      static UInt32 KernelVirtualAddressToPhysicalAddress(
+        UInt32 virtualAddress
+      );
 
     private:
       /**

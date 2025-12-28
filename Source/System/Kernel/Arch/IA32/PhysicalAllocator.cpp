@@ -23,7 +23,9 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
   using LogLevel = Kernel::Logger::Level;
 
-  UInt32 PhysicalAllocator::KernelVirtualToPhysical(UInt32 virtualAddress) {
+  UInt32 PhysicalAllocator::KernelVirtualAddressToPhysicalAddress(
+    UInt32 virtualAddress
+  ) {
     // all kernel segments are offset by kernelVirtualBase
     // compute delta at runtime
     UInt32 kernelPhysicalBase = reinterpret_cast<UInt32>(&__phys_start);
@@ -74,15 +76,18 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     return -1;
   }
 
-  void PhysicalAllocator::Initialize(UInt32 bootInfoPhysicalAddress) {
+  void PhysicalAllocator::Initialize(UInt32 kernelBootInfoPhysicalAddress) {
     const BootInfo::View* bootInfo = nullptr;
-    UInt32 bootInfoPhysical = BootInfo::GetPhysicalAddress();
+    UInt32 bootInfoPhysicalAddress = BootInfo::GetPhysicalAddress();
 
-    if (bootInfoPhysical == 0) {
-      bootInfoPhysical = bootInfoPhysicalAddress;
+    if (bootInfoPhysicalAddress == 0) {
+      bootInfoPhysicalAddress = kernelBootInfoPhysicalAddress;
     }
 
-    if (bootInfoPhysical >= pageSize && bootInfoPhysical < _managedBytes) {
+    if (
+      bootInfoPhysicalAddress >= pageSize
+      && bootInfoPhysicalAddress < _managedBytes
+    ) {
       bootInfo = BootInfo::Get();
     }
 
@@ -216,9 +221,12 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       SetPageUsed(i);
     }
 
-    UInt32 bootInfoPage = bootInfoPhysical / pageSize;
+    SetPageUsed(Paging::GetKernelPageDirectoryPhysicalAddress() / pageSize);
+    SetPageUsed(Paging::GetFirstPageTablePhysicalAddress() / pageSize);
+
+    UInt32 bootInfoPage = bootInfoPhysicalAddress / pageSize;
     UInt32 bootInfoEndPage
-      = (bootInfoPhysical + BootInfo::rawSize + pageSize - 1)
+      = (bootInfoPhysicalAddress + BootInfo::rawSize + pageSize - 1)
       / pageSize;
 
     if (bootInfoPage < _pageCount) {
@@ -313,6 +321,9 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       for (UInt32 i = 0; i < usedPages && i < _pageCount; ++i) {
         SetPageUsed(i);
       }
+
+      SetPageUsed(Paging::GetKernelPageDirectoryPhysicalAddress() / pageSize);
+      SetPageUsed(Paging::GetFirstPageTablePhysicalAddress() / pageSize);
 
       if (bootInfoPage < _pageCount) {
         for (

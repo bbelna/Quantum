@@ -10,6 +10,7 @@
 #include <Types.hpp>
 
 #include "Arch/AddressSpace.hpp"
+#include "Arch/Paging.hpp"
 #include "Arch/PhysicalAllocator.hpp"
 #include "BootInfo.hpp"
 #include "InitBundle.hpp"
@@ -49,8 +50,8 @@ namespace Quantum::System::Kernel {
       UInt32 phys = base + i * 4096;
       UInt32 virt = _initBundleVirtualBase + i * 4096;
 
-      Arch::AddressSpace::MapPage(virt, phys, false, false, false);
-      Arch::AddressSpace::MapPage(
+      Arch::Paging::MapPage(virt, phys, false, false, false);
+      Arch::Paging::MapPage(
         _initBundleUserBase + i * 4096,
         phys,
         false,

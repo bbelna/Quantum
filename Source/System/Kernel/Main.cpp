@@ -9,13 +9,10 @@
 #include <Types.hpp>
 
 #include "Arch/Paging.hpp"
-#include "Arch/PhysicalAllocator.hpp"
 #include "BootInfo.hpp"
 #include "DeviceManager.hpp"
-#include "Heap.hpp"
 #include "InitBundle.hpp"
 #include "Interrupts.hpp"
-#include "Logger.hpp"
 #include "Main.hpp"
 #include "Prelude.hpp"
 #include "Task.hpp"
@@ -30,14 +27,12 @@ namespace Quantum::System::Kernel {
     InitBundle::Initialize();
     Task::Initialize();
 
-    #ifdef KERNEL_TESTS
-    // spawn test runner task and start scheduling
+    #if defined(KERNEL_TESTS)
     Task::Create(TestRunner::Run, 4096);
     #else
     Task::Create(InitBundle::LaunchCoordinatorTask, 4096);
     #endif
 
-    // enter scheduler; if no tests are queued we fall back to idle
     Task::Yield();
   }
 }

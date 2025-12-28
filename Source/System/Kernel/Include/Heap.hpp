@@ -313,7 +313,5 @@ namespace Quantum::System::Kernel {
        *   Block being freed.
        */
       static void InsertIntoBinOrFreeList(FreeBlock* block);
-
-      Heap() = delete;
   };
 }

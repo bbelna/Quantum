@@ -236,7 +236,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     tcb->id = _nextTaskId++;
     tcb->caps = 0;
     tcb->pageDirectoryPhysical
-      = Paging::GetKernelPageDirectoryPhysical();
+      = Paging::GetKernelPageDirectoryPhysicalAddress();
     tcb->state = Task::State::Ready;
     tcb->stackBase = stack;
     tcb->stackSize = stackSize;

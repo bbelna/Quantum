@@ -66,7 +66,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   }
 
   void AddressSpace::Destroy(UInt32 pageDirectoryPhysical) {
-    UInt32 kernelDirectory = Paging::GetKernelPageDirectoryPhysical();
+    UInt32 kernelDirectory = Paging::GetKernelPageDirectoryPhysicalAddress();
 
     if (
       pageDirectoryPhysical == 0
@@ -155,7 +155,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       directory[pageDirectoryIndex] |= Paging::pageUser;
     }
 
-    if (pageDirectoryPhysical == Paging::GetKernelPageDirectoryPhysical()) {
+    if (pageDirectoryPhysical == Paging::GetKernelPageDirectoryPhysicalAddress()) {
       CPU::InvalidatePage(virtualAddress);
     }
   }

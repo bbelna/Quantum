@@ -165,7 +165,7 @@ void InitializeLogging() {
 
   writerArray[0] = &Console::GetWriter();
 
-  Logger::Initialize(LogLevel::Debug, writerArray, 1);
+  Logger::Initialize(LogLevel::Info, writerArray, 1);
 
   Bootstrap::TraceBootInfo();
 }

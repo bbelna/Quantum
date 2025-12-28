@@ -28,11 +28,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   alignas(Paging::_pageSize)
   UInt32 Paging::_firstPageTable[Paging::_pageTableEntries];
 
-  UInt32* Paging::GetPageDirectoryVirtual() {
+  UInt32* Paging::GetPageDirectoryVirtualAddress() {
     return reinterpret_cast<UInt32*>(_recursivePageDirectory);
   }
 
-  UInt32* Paging::GetPageTableVirtual(UInt32 pageDirectoryIndex) {
+  UInt32* Paging::GetPageTableVirtualAddress(UInt32 pageDirectoryIndex) {
     return reinterpret_cast<UInt32*>(
       _recursivePageTablesBase + pageDirectoryIndex * _pageSize
     );
@@ -52,7 +52,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     if (pageDirectoryIndex == 0) {
       // reuse the kernel's first page table (in .bss) for the first 4 MB
       table = _firstPageTable;
-      tablePhysical = PhysicalAllocator::KernelVirtualToPhysical(
+      tablePhysical = PhysicalAllocator::KernelVirtualAddressToPhysicalAddress(
         reinterpret_cast<UInt32>(_firstPageTable)
       );
     } else {
@@ -136,9 +136,10 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     EnsureKernelHeapTables();
 
     // install recursive mapping in the last PDE
-    UInt32 pageDirectoryPhysical = PhysicalAllocator::KernelVirtualToPhysical(
-      reinterpret_cast<UInt32>(_pageDirectory)
-    );
+    UInt32 pageDirectoryPhysical
+      = PhysicalAllocator::KernelVirtualAddressToPhysicalAddress(
+        reinterpret_cast<UInt32>(_pageDirectory)
+      );
 
     _pageDirectory[Paging::recursiveSlot]
       = pageDirectoryPhysical | pagePresent | pageWrite;
@@ -148,6 +149,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     CPU::LoadPageDirectory(pageDirectoryPhysical);
     CPU::EnablePaging();
     CPU::InvalidatePage(0);
+    _pagingActive = true;
   }
 
   void Paging::MapPage(
@@ -224,7 +226,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
   UInt32 Paging::GetPageDirectoryEntry(UInt32 virtualAddress) {
     UInt32 index = (virtualAddress >> 22) & 0x3FF;
-    UInt32* directory = GetPageDirectoryVirtual();
+    UInt32* directory = GetPageDirectoryVirtualAddress();
 
     return directory[index];
   }
@@ -237,14 +239,20 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     }
 
     UInt32 tableIndex = (virtualAddress >> 12) & 0x3FF;
-    UInt32* table = GetPageTableVirtual((virtualAddress >> 22) & 0x3FF);
+    UInt32* table = GetPageTableVirtualAddress((virtualAddress >> 22) & 0x3FF);
 
     return table[tableIndex];
   }
 
-  UInt32 Paging::GetKernelPageDirectoryPhysical() {
-    return PhysicalAllocator::KernelVirtualToPhysical(
+  UInt32 Paging::GetKernelPageDirectoryPhysicalAddress() {
+    return PhysicalAllocator::KernelVirtualAddressToPhysicalAddress(
       reinterpret_cast<UInt32>(_pageDirectory)
+    );
+  }
+
+  UInt32 Paging::GetFirstPageTablePhysicalAddress() {
+    return PhysicalAllocator::KernelVirtualAddressToPhysicalAddress(
+      reinterpret_cast<UInt32>(_firstPageTable)
     );
   }
 
