@@ -2,16 +2,17 @@
  * @file System/Kernel/Arch/IA32/UserMode.cpp
  * @brief IA32 User mode entry and stack mapping.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #include <Align.hpp>
+#include <Types.hpp>
 
-#include "Arch/IA32/Memory.hpp"
+#include "Arch/IA32/AddressSpace.hpp"
+#include "Arch/IA32/PhysicalAllocator.hpp"
 #include "Arch/IA32/TSS.hpp"
 #include "Arch/IA32/UserMode.hpp"
-#include "Types.hpp"
 #include "Prelude.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
@@ -55,10 +56,16 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     UInt32 pages = alignedSize / _pageSize;
 
     for (UInt32 i = 0; i < pages; ++i) {
-      void* phys = Memory::AllocatePage(true);
+      UInt32 phys = PhysicalAllocator::AllocatePage(true);
       UInt32 vaddr = stackBase + i * _pageSize;
 
-      Memory::MapPage(vaddr, reinterpret_cast<UInt32>(phys), true, true, false);
+      AddressSpace::MapPage(
+        vaddr,
+        phys,
+        true,
+        true,
+        false
+      );
     }
 
     return true;

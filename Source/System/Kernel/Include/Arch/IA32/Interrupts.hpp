@@ -2,8 +2,8 @@
  * @file System/Kernel/Include/Arch/IA32/Interrupts.hpp
  * @brief IA32 interrupt handling.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #pragma once
@@ -104,5 +104,36 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        *   The interrupt handler function.
        */
       static void RegisterHandler(UInt8 vector, Handler handler);
+
+      /**
+       * Sends an End Of Interrupt (EOI).
+       * @param irq
+       *   IRQ number (0-15) that just fired.
+       */
+      static void End(UInt8 irq);
+
+      /**
+       * Masks (disables) a specific IRQ line.
+       * @param irq
+       *   IRQ number (0-15) to mask.
+       */
+      static void Mask(UInt8 irq);
+
+      /**
+       * Masks all IRQ lines.
+       */
+      static void MaskAll();
+
+      /**
+       * Unmasks (enables) a specific IRQ line.
+       * @param irq
+       *   IRQ number (0-15) to unmask.
+       */
+      static void Unmask(UInt8 irq);
+
+      /**
+       * Unmasks all IRQ lines.
+       */
+      static void UnmaskAll();
   };
 }

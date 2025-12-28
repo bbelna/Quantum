@@ -2,8 +2,8 @@
  * @file System/Kernel/Include/Arch/IA32/Task.hpp
  * @brief IA32 task context and control structures.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #pragma once
@@ -137,7 +137,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       /**
        * Capability flags.
        */
-      static constexpr UInt32 CapabilityIo = 1u << 0;
+      static constexpr UInt32 CapabilityIO = 1u << 0;
 
       /**
        * Initializes the IA32 task subsystem.
@@ -193,13 +193,13 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       static ControlBlock* GetCurrent();
 
       /**
-       * Finds a task by id.
+       * Finds a task by id in the global task list.
        * @param id
        *   Task identifier to locate.
        * @return
-       *   Pointer to the task control block, or nullptr if not found.
+       *   Pointer to the task control block, or `nullptr` if not found.
        */
-      static ControlBlock* Find(UInt32 id);
+      static ControlBlock* FindById(UInt32 id);
 
       /**
        * Sets the address space for the current task.
@@ -233,6 +233,22 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        *   Updated task context to switch to.
        */
       static Context* Tick(Context& context);
+
+      /**
+       * Grants I/O access capability to the specified task.
+       * @param taskId
+       *   Task identifier to grant I/O access.
+       * @return
+       *   True if the capability was granted, false otherwise.
+       */
+      static bool GrantIOAccess(UInt32 taskId);
+
+      /**
+       * Checks if the current task has I/O access capability.
+       * @return
+       *   True if the current task has I/O access, false otherwise.
+       */
+      static bool CurrentTaskHasIOAccess();
 
     private:
       /**
@@ -310,15 +326,6 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        *   Pointer to the task to remove.
        */
       static void RemoveFromAllTasks(ControlBlock* task);
-
-      /**
-       * Finds a task by id in the global task list.
-       * @param id
-       *   Task identifier to locate.
-       * @return
-       *   Pointer to the task control block, or `nullptr` if not found.
-       */
-      static ControlBlock* FindTaskById(UInt32 id);
 
       /**
        * Picks the next task to run and returns its saved context pointer.

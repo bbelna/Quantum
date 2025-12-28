@@ -2,14 +2,13 @@
  * @file System/Kernel/Include/Testing.hpp
  * @brief Kernel testing framework.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #pragma once
 
-#include "String.hpp"
-#include "Types.hpp"
+#include <Types.hpp>
 
 #define TEST_ASSERT(cond, msg) \
   ::Quantum::System::Kernel::Testing::Assert((cond), (msg), __FILE__, __LINE__)

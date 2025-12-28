@@ -1,58 +1,44 @@
 /**
- * @file System/Kernel/Memory.cpp
- * @brief Kernel memory management.
+ * @file System/Kernel/Heap.cpp
+ * @brief Kernel heap allocator.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #include <Align.hpp>
+#include <Types.hpp>
 
+#include "Arch/Paging.hpp"
+#include "Arch/PhysicalAllocator.hpp"
+#include "Heap.hpp"
 #include "Logger.hpp"
-#include "Memory.hpp"
 #include "Panic.hpp"
 #include "Prelude.hpp"
-#include "Types.hpp"
-
-#if defined(QUANTUM_ARCH_IA32)
-#include "Arch/IA32/CPU.hpp"
-#include "Arch/IA32/Memory.hpp"
-#endif
 
 namespace Quantum::System::Kernel {
-  using LogLevel = Kernel::Logger::Level;
   using ::Quantum::AlignDown;
   using ::Quantum::AlignUp;
 
-  #if defined(QUANTUM_ARCH_IA32)
-  using ArchPhysicalAllocatorState = Arch::IA32::Memory::PhysicalAllocatorState;
-  using ArchMemory = Arch::IA32::Memory;
-  using ArchCPU = Arch::IA32::CPU;
-  #endif
+  using LogLevel = Kernel::Logger::Level;
 
-  #if defined(QUANTUM_ARCH_IA32)
-  UInt32 Memory::_heapStartVirtualAddress = ArchMemory::kernelHeapBase;
-  UInt32 Memory::_heapRegionBytes = ArchMemory::kernelHeapBytes;
-  #else
-  UInt32 Memory::_heapStartVirtualAddress = 0x00400000;
-  UInt32 Memory::_heapRegionBytes = 0;
-  #endif
+  UInt32 Heap::_heapStartVirtualAddress = Arch::Paging::kernelHeapBase;
+  UInt32 Heap::_heapRegionBytes = Arch::Paging::kernelHeapBytes;
 
-  void Memory::SetFreeBlockCanary(Memory::FreeBlock* block) {
+  void Heap::SetFreeBlockCanary(Heap::FreeBlock* block) {
     if (block->size < sizeof(UInt32)) {
       PANIC("Free block too small for canary");
     }
 
     UInt8* payload
-      = reinterpret_cast<UInt8*>(block) + sizeof(Memory::FreeBlock);
+      = reinterpret_cast<UInt8*>(block) + sizeof(Heap::FreeBlock);
     UInt32 usable = block->size - sizeof(UInt32);
     UInt32* canary = reinterpret_cast<UInt32*>(payload + usable);
 
     *canary = _canaryValue;
   }
 
-  UInt8* Memory::MapNextHeapPage() {
-    #if defined(QUANTUM_ARCH_IA32)
+  UInt8* Heap::MapNextHeapPage() {
     UInt32 heapLimit = _heapStartVirtualAddress + _heapRegionBytes;
     UInt32 nextEnd = reinterpret_cast<UInt32>(_heapMappedEnd)
       + _heapPageSize
@@ -61,14 +47,13 @@ namespace Quantum::System::Kernel {
     if (nextEnd > heapLimit) {
       PANIC("Kernel heap region exhausted");
     }
-    #endif
 
     UInt8* pageStart = _heapMappedEnd;
-    void* physicalPageAddress = ArchMemory::AllocatePage(true);
+    UInt32 physicalPageAddress = Arch::PhysicalAllocator::AllocatePage(true);
 
-    ArchMemory::MapPage(
+    Arch::Paging::MapPage(
       reinterpret_cast<UInt32>(_heapMappedEnd),
-      reinterpret_cast<UInt32>(physicalPageAddress),
+      physicalPageAddress,
       true,
       false,
       false
@@ -89,7 +74,7 @@ namespace Quantum::System::Kernel {
     return pageStart;
   }
 
-  void Memory::EnsureHeapInitialized() {
+  void Heap::EnsureHeapInitialized() {
     if (!_heapBase) {
       _heapBase = reinterpret_cast<UInt8*>(
         _heapStartVirtualAddress + _heapGuardPagesBefore * _heapPageSize
@@ -102,17 +87,17 @@ namespace Quantum::System::Kernel {
     }
   }
 
-  void Memory::CoalesceAdjacentFreeBlocks() {
-    Memory::FreeBlock* current = _freeList;
+  void Heap::CoalesceAdjacentFreeBlocks() {
+    Heap::FreeBlock* current = _freeList;
 
     while (current && current->next) {
       UInt8* currentEnd
         = reinterpret_cast<UInt8*>(current)
-        + sizeof(Memory::FreeBlock)
+        + sizeof(Heap::FreeBlock)
         + current->size;
 
       if (currentEnd == reinterpret_cast<UInt8*>(current->next)) {
-        current->size += sizeof(Memory::FreeBlock) + current->next->size;
+        current->size += sizeof(Heap::FreeBlock) + current->next->size;
         current->next = current->next->next;
       } else {
         current = current->next;
@@ -129,14 +114,14 @@ namespace Quantum::System::Kernel {
     }
   }
 
-  void Memory::ReclaimPageSpans() {
+  void Heap::ReclaimPageSpans() {
     if (!_freeList) {
       return;
     }
 
     // find the highest-addressed free block (end of heap)
-    Memory::FreeBlock* previous = nullptr;
-    Memory::FreeBlock* current = _freeList;
+    Heap::FreeBlock* previous = nullptr;
+    Heap::FreeBlock* current = _freeList;
 
     while (current->next) {
       previous = current;
@@ -144,7 +129,7 @@ namespace Quantum::System::Kernel {
     }
 
     UInt8* blockStart = reinterpret_cast<UInt8*>(current);
-    UInt8* blockPayload = blockStart + sizeof(Memory::FreeBlock);
+    UInt8* blockPayload = blockStart + sizeof(Heap::FreeBlock);
     UInt8* blockEnd = blockPayload + current->size;
     UInt8* heapEnd = _heapBase + _heapMappedBytes;
 
@@ -181,7 +166,7 @@ namespace Quantum::System::Kernel {
     for (UInt32 i = 0; i < pagesToReclaim; ++i) {
       UInt32 virtualPage
         = reinterpret_cast<UInt32>(reclaimStart) + i * _heapPageSize;
-      UInt32 pageTableEntry = ArchMemory::GetPageTableEntry(virtualPage);
+      UInt32 pageTableEntry = Arch::Paging::GetPageTableEntry(virtualPage);
 
       if ((pageTableEntry & 0x1) == 0) {
         continue;
@@ -189,10 +174,10 @@ namespace Quantum::System::Kernel {
 
       UInt32 physical = pageTableEntry & ~0xFFFu;
 
-      ArchMemory::UnmapPage(virtualPage);
+      Arch::Paging::UnmapPage(virtualPage);
 
       if (physical) {
-        ArchMemory::FreePage(reinterpret_cast<void*>(physical));
+      Arch::PhysicalAllocator::FreePage(physical);
       }
 
       if (_heapMappedBytes >= _heapPageSize) {
@@ -225,12 +210,12 @@ namespace Quantum::System::Kernel {
     }
   }
 
-  void Memory::InsertFreeBlockSorted(Memory::FreeBlock* block) {
+  void Heap::InsertFreeBlockSorted(Heap::FreeBlock* block) {
     if (!_freeList || block < _freeList) {
       block->next = _freeList;
       _freeList = block;
     } else {
-      Memory::FreeBlock* current = _freeList;
+      Heap::FreeBlock* current = _freeList;
 
       while (current->next && current->next < block) {
         current = current->next;
@@ -244,14 +229,14 @@ namespace Quantum::System::Kernel {
     ReclaimPageSpans();
   }
 
-  void* Memory::AllocateFromFreeList(UInt32 needed) {
-    Memory::FreeBlock* previous = nullptr;
-    Memory::FreeBlock* current = _freeList;
+  void* Heap::AllocateFromFreeList(UInt32 needed) {
+    Heap::FreeBlock* previous = nullptr;
+    Heap::FreeBlock* current = _freeList;
 
     while (current) {
       // sanity: block must fit within mapped heap
       UInt8* blockStart = reinterpret_cast<UInt8*>(current);
-      UInt8* blockEnd = blockStart + sizeof(Memory::FreeBlock) + current->size;
+      UInt8* blockEnd = blockStart + sizeof(Heap::FreeBlock) + current->size;
 
       if (
         blockStart < _heapBase
@@ -275,12 +260,12 @@ namespace Quantum::System::Kernel {
         // dump entire free list
         Logger::Write(LogLevel::Error, "Free list dump:");
 
-        Memory::FreeBlock* dump = _freeList;
+        Heap::FreeBlock* dump = _freeList;
         int count = 0;
         
         while (dump && count < 20) {
           UInt8* dumpStart = reinterpret_cast<UInt8*>(dump);
-          UInt8* dumpEnd = dumpStart + sizeof(Memory::FreeBlock) + dump->size;
+          UInt8* dumpEnd = dumpStart + sizeof(Heap::FreeBlock) + dump->size;
           
           Logger::WriteFormatted(
             LogLevel::Error,
@@ -299,20 +284,20 @@ namespace Quantum::System::Kernel {
         PANIC("Heap corruption detected");
       }
 
-      UInt32 total = current->size + sizeof(Memory::FreeBlock);
+      UInt32 total = current->size + sizeof(Heap::FreeBlock);
       if (total >= needed) {
         // split if enough space remains for another block
-        if (total >= needed + sizeof(Memory::FreeBlock) + 8) {
+        if (total >= needed + sizeof(Heap::FreeBlock) + 8) {
           UInt8* newBlockAddr = reinterpret_cast<UInt8*>(current) + needed;
-          Memory::FreeBlock* newBlock
-            = reinterpret_cast<Memory::FreeBlock*>(newBlockAddr);
+          Heap::FreeBlock* newBlock
+            = reinterpret_cast<Heap::FreeBlock*>(newBlockAddr);
 
-          newBlock->size = total - needed - sizeof(Memory::FreeBlock);
+          newBlock->size = total - needed - sizeof(Heap::FreeBlock);
           newBlock->next = current->next;
 
           SetFreeBlockCanary(newBlock);
 
-          current->size = needed - sizeof(Memory::FreeBlock);
+          current->size = needed - sizeof(Heap::FreeBlock);
           current->next = nullptr;
 
           if (previous) {
@@ -329,7 +314,7 @@ namespace Quantum::System::Kernel {
           }
         }
 
-        return reinterpret_cast<UInt8*>(current) + sizeof(Memory::FreeBlock);
+        return reinterpret_cast<UInt8*>(current) + sizeof(Heap::FreeBlock);
       }
 
       previous = current;
@@ -339,7 +324,7 @@ namespace Quantum::System::Kernel {
     return nullptr;
   }
 
-  int Memory::BinIndexForSize(UInt32 size) {
+  int Heap::BinIndexForSize(UInt32 size) {
     for (UInt32 i = 0; i < _binCount; ++i) {
       if (size <= _binSizes[i]) {
         return static_cast<int>(i);
@@ -349,7 +334,7 @@ namespace Quantum::System::Kernel {
     return -1;
   }
 
-  UInt32 Memory::PayloadSizeFromBlock(UInt32 blockSize) {
+  UInt32 Heap::PayloadSizeFromBlock(UInt32 blockSize) {
     if (blockSize <= sizeof(UInt32)) {
       return 0;
     }
@@ -357,18 +342,18 @@ namespace Quantum::System::Kernel {
     return AlignDown(blockSize - sizeof(UInt32), 8);
   }
 
-  void* Memory::AllocateFromBin(UInt32 binSize, UInt32 neededWithHeader) {
+  void* Heap::AllocateFromBin(UInt32 binSize, UInt32 neededWithHeader) {
     int index = BinIndexForSize(binSize);
 
     if (index < 0) {
       return nullptr;
     } else {
       if (_binFreeLists[index]) {
-        Memory::FreeBlock* block = _binFreeLists[index];
+        Heap::FreeBlock* block = _binFreeLists[index];
 
         _binFreeLists[index] = block->next;
 
-        UInt32 totalBytes = block->size + sizeof(Memory::FreeBlock);
+        UInt32 totalBytes = block->size + sizeof(Heap::FreeBlock);
 
         if (totalBytes < neededWithHeader) {
           Logger::WriteFormatted(
@@ -385,7 +370,7 @@ namespace Quantum::System::Kernel {
           return AllocateFromFreeList(neededWithHeader);
         }
 
-        return reinterpret_cast<UInt8*>(block) + sizeof(Memory::FreeBlock);
+        return reinterpret_cast<UInt8*>(block) + sizeof(Heap::FreeBlock);
       }
 
       // fallback to general free list
@@ -395,7 +380,7 @@ namespace Quantum::System::Kernel {
     }
   }
 
-  void Memory::InsertIntoBinOrFreeList(Memory::FreeBlock* block) {
+  void Heap::InsertIntoBinOrFreeList(Heap::FreeBlock* block) {
     UInt32 payloadSize = PayloadSizeFromBlock(block->size);
     int index = (payloadSize > 0) ? BinIndexForSize(payloadSize) : -1;
 
@@ -409,118 +394,13 @@ namespace Quantum::System::Kernel {
     }
   }
 
-  void Memory::Initialize(UInt32 bootInfoPhysicalAddress) {
-    ArchMemory::InitializePaging(bootInfoPhysicalAddress);
-
-    ArchPhysicalAllocatorState physicalState
-      = ArchMemory::GetPhysicalAllocatorState();
-    UInt64 totalBytes
-      = static_cast<UInt64>(physicalState.totalPages) * _heapPageSize;
-    UInt64 usedBytes
-      = static_cast<UInt64>(physicalState.usedPages) * _heapPageSize;
-    UInt64 freeBytes
-      = static_cast<UInt64>(physicalState.freePages) * _heapPageSize;
-
-    Logger::WriteFormatted(
-      LogLevel::Debug,
-      "Physical allocator: pages total=%p used=%p free=%p bytes total=%p "
-        "used=%p free=%p",
-      physicalState.totalPages,
-      physicalState.usedPages,
-      physicalState.freePages,
-      totalBytes,
-      usedBytes,
-      freeBytes
-    );
-    DumpState();
-  }
-
-  void* Memory::AllocatePage(bool zero) {
-    return ArchMemory::AllocatePage(zero);
-  }
-
-  UInt32 Memory::GetKernelPageDirectoryPhysical() {
-    #if defined(QUANTUM_ARCH_IA32)
-    return ArchMemory::GetKernelPageDirectoryPhysical();
-    #else
-    return 0;
-    #endif
-  }
-
-  void Memory::MapPage(
-    UInt32 virtualAddress,
-    UInt32 physicalAddress,
-    bool writable,
-    bool user,
-    bool global
-  ) {
-    ArchMemory::MapPage(
-      virtualAddress,
-      physicalAddress,
-      writable,
-      user,
-      global
-    );
-  }
-
-  UInt32 Memory::CreateAddressSpace() {
-    #if defined(QUANTUM_ARCH_IA32)
-    return ArchMemory::CreateAddressSpace();
-    #else
-    return 0;
-    #endif
-  }
-
-  void Memory::DestroyAddressSpace(UInt32 pageDirectoryPhysical) {
-    #if defined(QUANTUM_ARCH_IA32)
-    ArchMemory::DestroyAddressSpace(pageDirectoryPhysical);
-    #else
-    (void)pageDirectoryPhysical;
-    #endif
-  }
-
-  void Memory::MapPageInAddressSpace(
-    UInt32 pageDirectoryPhysical,
-    UInt32 virtualAddress,
-    UInt32 physicalAddress,
-    bool writable,
-    bool user,
-    bool global
-  ) {
-    #if defined(QUANTUM_ARCH_IA32)
-    ArchMemory::MapPageInAddressSpace(
-      pageDirectoryPhysical,
-      virtualAddress,
-      physicalAddress,
-      writable,
-      user,
-      global
-    );
-    #else
-    (void)pageDirectoryPhysical;
-    (void)virtualAddress;
-    (void)physicalAddress;
-    (void)writable;
-    (void)user;
-    (void)global;
-    #endif
-  }
-
-  void Memory::ActivateAddressSpace(UInt32 pageDirectoryPhysical) {
-    #if defined(QUANTUM_ARCH_IA32)
-    ArchMemory::ActivateAddressSpace(pageDirectoryPhysical);
-    #else
-    (void)pageDirectoryPhysical;
-    #endif
-  }
-
-  void* Memory::Allocate(Size size) {
+  void* Heap::Allocate(Size size) {
     UInt32 requested = AlignUp(static_cast<UInt32>(size), 8);
     int binIndex = BinIndexForSize(requested);
     UInt32 binSize = (binIndex >= 0) ? _binSizes[binIndex] : requested;
     UInt32 payloadSize
       = AlignUp(binSize + sizeof(UInt32), 8); // space for canary
-    UInt32 needed = payloadSize + sizeof(Memory::FreeBlock);
+    UInt32 needed = payloadSize + sizeof(Heap::FreeBlock);
     UInt32 pagesNeeded = (needed + _heapPageSize - 1) / _heapPageSize;
 
     if (pagesNeeded > _requiredTailPages) {
@@ -572,9 +452,10 @@ namespace Quantum::System::Kernel {
       }
 
       UInt32 totalBytes = pagesToMap * _heapPageSize;
-      Memory::FreeBlock* block = reinterpret_cast<Memory::FreeBlock*>(firstPage);
+      Heap::FreeBlock* block
+        = reinterpret_cast<Heap::FreeBlock*>(firstPage);
 
-      block->size = totalBytes - sizeof(Memory::FreeBlock);
+      block->size = totalBytes - sizeof(Heap::FreeBlock);
       block->next = nullptr;
 
       SetFreeBlockCanary(block);
@@ -583,8 +464,8 @@ namespace Quantum::System::Kernel {
 
     if (pointer) {
       UInt8* payload = reinterpret_cast<UInt8*>(pointer);
-      Memory::FreeBlock* blk = reinterpret_cast<Memory::FreeBlock*>(
-        payload - sizeof(Memory::FreeBlock)
+      Heap::FreeBlock* blk = reinterpret_cast<Heap::FreeBlock*>(
+        payload - sizeof(Heap::FreeBlock)
       );
 
       if (blk->size < sizeof(UInt32)) {
@@ -606,7 +487,7 @@ namespace Quantum::System::Kernel {
         LogLevel::Debug,
         "  ptr=%p block=%p usable=%p",
         payload,
-        reinterpret_cast<UInt8*>(payload) - sizeof(Memory::FreeBlock),
+        reinterpret_cast<UInt8*>(payload) - sizeof(Heap::FreeBlock),
         usable
       );
       Logger::WriteFormatted(
@@ -625,7 +506,7 @@ namespace Quantum::System::Kernel {
     return nullptr;
   }
 
-  void* Memory::AllocateAligned(Size size, Size alignment) {
+  void* Heap::AllocateAligned(Size size, Size alignment) {
     if (alignment <= 8) {
       return Allocate(size);
     }
@@ -635,23 +516,23 @@ namespace Quantum::System::Kernel {
     }
 
     UInt32 padding
-    = static_cast<UInt32>(alignment) + sizeof(Memory::AlignedMetadata);
+      = static_cast<UInt32>(alignment) + sizeof(Heap::AlignedMetadata);
     void* raw = Allocate(size + padding);
     UInt8* rawBytes = reinterpret_cast<UInt8*>(raw);
     UIntPtr rawAddress = reinterpret_cast<UIntPtr>(rawBytes);
     UIntPtr alignedAddress = (rawAddress + alignment - 1) & ~(alignment - 1);
-    Memory::AlignedMetadata* metadata
-      = reinterpret_cast<Memory::AlignedMetadata*>(alignedAddress) - 1;
+    Heap::AlignedMetadata* metadata
+      = reinterpret_cast<Heap::AlignedMetadata*>(alignedAddress) - 1;
 
     metadata->magic = _alignedMagic;
-    metadata->block = reinterpret_cast<Memory::FreeBlock*>(
-      rawBytes - sizeof(Memory::FreeBlock)
+    metadata->block = reinterpret_cast<Heap::FreeBlock*>(
+      rawBytes - sizeof(Heap::FreeBlock)
     );
     metadata->payloadOffset
       = static_cast<UInt32>(alignedAddress - (rawAddress));
 
     UInt8* alignedPayload = reinterpret_cast<UInt8*>(alignedAddress);
-    Memory::FreeBlock* block = metadata->block;
+    Heap::FreeBlock* block = metadata->block;
     UInt32 usable = block->size - metadata->payloadOffset;
 
     if (usable < sizeof(UInt32)) {
@@ -674,7 +555,7 @@ namespace Quantum::System::Kernel {
         "size=%p canary=%p",
       alignedPayload,
       block,
-      reinterpret_cast<UInt8*>(block) + sizeof(Memory::FreeBlock),
+      reinterpret_cast<UInt8*>(block) + sizeof(Heap::FreeBlock),
       metadata->payloadOffset,
       usable,
       block->size,
@@ -684,11 +565,7 @@ namespace Quantum::System::Kernel {
     return reinterpret_cast<void*>(alignedAddress);
   }
 
-  void Memory::FreePage(void* page) {
-    ArchMemory::FreePage(page);
-  }
-
-  void Memory::Free(void* pointer) {
+  void Heap::Free(void* pointer) {
     if (!pointer) return;
 
     UInt8* bytePointer = reinterpret_cast<UInt8*>(pointer);
@@ -700,20 +577,21 @@ namespace Quantum::System::Kernel {
       PANIC("Heap free: pointer out of range");
     }
 
-    Memory::FreeBlock* block = reinterpret_cast<Memory::FreeBlock*>(
-      bytePointer - sizeof(Memory::FreeBlock)
+    Heap::FreeBlock* block = reinterpret_cast<Heap::FreeBlock*>(
+      bytePointer - sizeof(Heap::FreeBlock)
     );
     UInt8* blockBytes = reinterpret_cast<UInt8*>(block);
-    UInt8* payload = reinterpret_cast<UInt8*>(block) + sizeof(Memory::FreeBlock);
+    UInt8* payload
+      = reinterpret_cast<UInt8*>(block) + sizeof(Heap::FreeBlock);
 
     // if the pointer is not at the block payload start, it may be an aligned
     // allocation; verify metadata before using it
     if (
       bytePointer != payload
-      && bytePointer >= _heapBase + sizeof(Memory::AlignedMetadata)
+      && bytePointer >= _heapBase + sizeof(Heap::AlignedMetadata)
     ) {
-      Memory::AlignedMetadata* metadata
-        = reinterpret_cast<Memory::AlignedMetadata*>(bytePointer) - 1;
+      Heap::AlignedMetadata* metadata
+        = reinterpret_cast<Heap::AlignedMetadata*>(bytePointer) - 1;
 
       if (metadata->magic == _alignedMagic) {
         UInt8* candidateBlockBytes
@@ -723,9 +601,9 @@ namespace Quantum::System::Kernel {
           candidateBlockBytes >= _heapBase
           && candidateBlockBytes < _heapBase + _heapMappedBytes
         ) {
-          Memory::FreeBlock* candidateBlock = metadata->block;
+          Heap::FreeBlock* candidateBlock = metadata->block;
           UInt8* candidatePayload
-            = candidateBlockBytes + sizeof(Memory::FreeBlock);
+            = candidateBlockBytes + sizeof(Heap::FreeBlock);
           UInt8* candidateAligned
             = candidatePayload + metadata->payloadOffset;
           UInt8* candidateEnd
@@ -814,12 +692,16 @@ namespace Quantum::System::Kernel {
     InsertIntoBinOrFreeList(block);
   }
 
-  Memory::HeapState Memory::GetHeapState() {
-    Memory::HeapState state {};
+  UInt32 Heap::GetPageSize() {
+    return _heapPageSize;
+  }
+
+  Heap::HeapState Heap::GetHeapState() {
+    Heap::HeapState state {};
 
     UInt32 freeBytes = 0;
     UInt32 blocks = 0;
-    Memory::FreeBlock* current = _freeList;
+    Heap::FreeBlock* current = _freeList;
 
     while (current) {
       freeBytes += current->size;
@@ -834,8 +716,8 @@ namespace Quantum::System::Kernel {
     return state;
   }
 
-  void Memory::DumpState() {
-    Memory::HeapState state = GetHeapState();
+  void Heap::DumpState() {
+    Heap::HeapState state = GetHeapState();
 
     Logger::WriteFormatted(
       LogLevel::Debug,
@@ -846,18 +728,18 @@ namespace Quantum::System::Kernel {
     );
   }
 
-  bool Memory::VerifyHeap() {
+  bool Heap::VerifyHeap() {
     EnsureHeapInitialized();
 
     bool ok = true;
 
     // verify free list ordering and bounds
-    Memory::FreeBlock* current = _freeList;
-    Memory::FreeBlock* last = nullptr;
+    Heap::FreeBlock* current = _freeList;
+    Heap::FreeBlock* last = nullptr;
 
     while (current) {
       UInt8* blockBytes = reinterpret_cast<UInt8*>(current);
-      UInt8* payload = blockBytes + sizeof(Memory::FreeBlock);
+      UInt8* payload = blockBytes + sizeof(Heap::FreeBlock);
       UInt8* blockEnd = payload + current->size;
 
       if (blockBytes < _heapBase || blockEnd > _heapBase + _heapMappedBytes) {
@@ -877,7 +759,7 @@ namespace Quantum::System::Kernel {
 
     while (current) {
       UInt8* payload
-        = reinterpret_cast<UInt8*>(current) + sizeof(Memory::FreeBlock);
+        = reinterpret_cast<UInt8*>(current) + sizeof(Heap::FreeBlock);
 
       if (current->size < sizeof(UInt32)) {
         Logger::Write(
@@ -916,7 +798,7 @@ namespace Quantum::System::Kernel {
 
     while (current && count < 20) {
       UInt8* blockStart = reinterpret_cast<UInt8*>(current);
-      UInt8* blockEnd = blockStart + sizeof(Memory::FreeBlock) + current->size;
+      UInt8* blockEnd = blockStart + sizeof(Heap::FreeBlock) + current->size;
 
       Logger::WriteFormatted(
         LogLevel::Debug,
@@ -942,7 +824,7 @@ namespace Quantum::System::Kernel {
     return ok;
   }
 
-  void Memory::ResetHeap() {
+  void Heap::ResetHeap() {
     EnsureHeapInitialized();
 
     // clear bin free lists
@@ -963,9 +845,9 @@ namespace Quantum::System::Kernel {
       mapped = _heapMappedBytes;
     }
 
-    Memory::FreeBlock* block = reinterpret_cast<Memory::FreeBlock*>(_heapBase);
+    Heap::FreeBlock* block = reinterpret_cast<Heap::FreeBlock*>(_heapBase);
 
-    block->size = mapped - sizeof(Memory::FreeBlock);
+    block->size = mapped - sizeof(Heap::FreeBlock);
     block->next = nullptr;
 
     SetFreeBlockCanary(block);

@@ -2,13 +2,14 @@
  * @file System/Kernel/IPC.cpp
  * @brief Inter-process communication (IPC) handling.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
+
+#include <Types.hpp>
 
 #include "IPC.hpp"
 #include "Task.hpp"
-#include "Types.hpp"
 
 namespace Quantum::System::Kernel {
   IPC::Port* IPC::FindPort(UInt32 id) {

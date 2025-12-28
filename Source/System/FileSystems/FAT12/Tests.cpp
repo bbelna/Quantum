@@ -2,12 +2,12 @@
  * @file System/FileSystems/FAT12/Tests.cpp
  * @brief FAT12 file system service tests.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #include <ABI/Console.hpp>
-#include <ABI/Devices/BlockDevice.hpp>
+#include <ABI/Devices/BlockDevices.hpp>
 #include <ABI/FileSystem.hpp>
 #include <ABI/Task.hpp>
 #include <Types.hpp>
@@ -16,10 +16,10 @@
 #include "Volume.hpp"
 
 namespace Quantum::System::FileSystems::FAT12::Tests {
-  using Console = ABI::Console;
-  using BlockDevice = ABI::Devices::BlockDevice;
-  using FileSystem = ABI::FileSystem;
-  using Task = ABI::Task;
+  using ABI::Console;
+  using ABI::Devices::BlockDevices;
+  using ABI::FileSystem;
+  using ABI::Task;
 
   static UInt32 _testsPassed = 0;
   static UInt32 _testsFailed = 0;
@@ -297,21 +297,21 @@ namespace Quantum::System::FileSystems::FAT12::Tests {
 
   static bool WaitForFloppyReady() {
     for (UInt32 attempt = 0; attempt < 256; ++attempt) {
-      UInt32 count = BlockDevice::GetCount();
+      UInt32 count = BlockDevices::GetCount();
 
       for (UInt32 i = 1; i <= count; ++i) {
-        BlockDevice::Info info {};
+        BlockDevices::Info info {};
 
-        if (BlockDevice::GetInfo(i, info) != 0) {
+        if (BlockDevices::GetInfo(i, info) != 0) {
           continue;
         }
 
-        if (info.type != BlockDevice::Type::Floppy) {
+        if (info.type != BlockDevices::Type::Floppy) {
           continue;
         }
 
         if (
-          (info.flags & BlockDevice::flagReady) != 0
+          (info.flags & BlockDevices::flagReady) != 0
           && info.sectorSize != 0
           && info.sectorCount != 0
         ) {

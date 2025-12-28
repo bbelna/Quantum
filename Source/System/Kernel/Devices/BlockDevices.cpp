@@ -1,33 +1,25 @@
 /**
- * @file System/Kernel/Devices/BlockDevice.cpp
+ * @file System/Kernel/Devices/BlockDevices.cpp
  * @brief Block device registry and I/O interface.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
-#include "Devices/BlockDevice.hpp"
+#include "Arch/AddressSpace.hpp"
+#include "Arch/PhysicalAllocator.hpp"
+#include "Devices/BlockDevices.hpp"
 #include "IPC.hpp"
 #include "Logger.hpp"
-#include "Memory.hpp"
 #include "Task.hpp"
 
-#if defined(QUANTUM_ARCH_IA32)
-#include "Arch/IA32/Memory.hpp"
-#include "Arch/IA32/Prelude.hpp"
-#endif
-
 namespace Quantum::System::Kernel::Devices {
-  using IPC = Kernel::IPC;
+  using Kernel::IPC;
+  using Kernel::Task;
+
   using LogLevel = Kernel::Logger::Level;
-  using Memory = Kernel::Memory;
-  using Task = Kernel::Task;
 
-  #if defined(QUANTUM_ARCH_IA32)
-  using ArchMemory = KernelIA32::Memory;
-  #endif
-
-  void BlockDevice::Initialize() {
+  void BlockDevices::Initialize() {
     _deviceCount = 0;
     _nextDeviceId = 1;
 
@@ -38,7 +30,7 @@ namespace Quantum::System::Kernel::Devices {
     }
   }
 
-  void BlockDevice::NotifyIRQ(Type type) {
+  void BlockDevices::NotifyIRQ(Type type) {
     Message msg {};
 
     msg.op = Operation::Response;
@@ -67,41 +59,33 @@ namespace Quantum::System::Kernel::Devices {
     }
   }
 
-  bool BlockDevice::AllocateDMABuffer(
+  bool BlockDevices::AllocateDMABuffer(
     UInt32 sizeBytes,
     UInt32& outPhysical,
     UInt32& outVirtual,
     UInt32& outSize
   ) {
-    #if !defined(QUANTUM_ARCH_IA32)
-    (void)sizeBytes;
-    (void)outPhysical;
-    (void)outVirtual;
-    (void)outSize;
-
-    return false;
-    #else
     if (sizeBytes == 0) {
       return false;
     }
 
-    if (sizeBytes > ArchMemory::pageSize) {
+    if (sizeBytes > Arch::PhysicalAllocator::pageSize) {
       return false;
     }
 
     if (_dmaBufferPhysical == 0) {
-      void* page = ArchMemory::AllocatePageBelow(
+      UInt32 page = Arch::PhysicalAllocator::AllocatePageBelow(
         _dmaMaxPhysicalAddress,
         true,
         0x10000
       );
 
-      if (!page) {
+      if (page == 0) {
         return false;
       }
 
-      _dmaBufferPhysical = reinterpret_cast<UInt32>(page);
-      _dmaBufferBytes = ArchMemory::pageSize;
+      _dmaBufferPhysical = page;
+      _dmaBufferBytes = Arch::PhysicalAllocator::pageSize;
     }
 
     UInt32 directory = Task::GetCurrentAddressSpace();
@@ -110,7 +94,7 @@ namespace Quantum::System::Kernel::Devices {
       return false;
     }
 
-    Memory::MapPageInAddressSpace(
+    Arch::AddressSpace::MapPage(
       directory,
       _dmaBufferVirtualBase,
       _dmaBufferPhysical,
@@ -124,10 +108,9 @@ namespace Quantum::System::Kernel::Devices {
     outSize = _dmaBufferBytes;
 
     return true;
-    #endif
   }
 
-  UInt32 BlockDevice::Register(BlockDevice::Device* device) {
+  UInt32 BlockDevices::Register(BlockDevices::Device* device) {
     if (!device || _deviceCount >= _maxDevices) {
       return 0;
     }
@@ -141,7 +124,7 @@ namespace Quantum::System::Kernel::Devices {
     return id;
   }
 
-  UInt32 BlockDevice::RegisterUser(const BlockDevice::Info& info) {
+  UInt32 BlockDevices::RegisterUser(const BlockDevices::Info& info) {
     if (_deviceCount >= _maxDevices) {
       return 0;
     }
@@ -195,7 +178,7 @@ namespace Quantum::System::Kernel::Devices {
     return id;
   }
 
-  bool BlockDevice::Unregister(UInt32 deviceId) {
+  bool BlockDevices::Unregister(UInt32 deviceId) {
     for (UInt32 i = 0; i < _deviceCount; ++i) {
       if (_devices[i] && _devices[i]->info.id == deviceId) {
         _devices[i]->info.id = 0;
@@ -211,12 +194,12 @@ namespace Quantum::System::Kernel::Devices {
     return false;
   }
 
-  UInt32 BlockDevice::GetCount() {
+  UInt32 BlockDevices::GetCount() {
     return _deviceCount;
   }
 
-  bool BlockDevice::GetInfo(UInt32 deviceId, BlockDevice::Info& outInfo) {
-    BlockDevice::Device* device = Find(deviceId);
+  bool BlockDevices::GetInfo(UInt32 deviceId, BlockDevices::Info& outInfo) {
+    BlockDevices::Device* device = Find(deviceId);
 
     if (!device) {
       return false;
@@ -227,8 +210,8 @@ namespace Quantum::System::Kernel::Devices {
     return true;
   }
 
-  bool BlockDevice::UpdateInfo(UInt32 deviceId, const BlockDevice::Info& info) {
-    BlockDevice::Device* device = Find(deviceId);
+  bool BlockDevices::UpdateInfo(UInt32 deviceId, const BlockDevices::Info& info) {
+    BlockDevices::Device* device = Find(deviceId);
 
     if (!device) {
       return false;
@@ -262,8 +245,8 @@ namespace Quantum::System::Kernel::Devices {
     return true;
   }
 
-  bool BlockDevice::Read(const BlockDevice::Request& request) {
-    BlockDevice::Device* device = Find(request.deviceId);
+  bool BlockDevices::Read(const BlockDevices::Request& request) {
+    BlockDevices::Device* device = Find(request.deviceId);
 
     if (!device) {
       return false;
@@ -319,8 +302,8 @@ namespace Quantum::System::Kernel::Devices {
     return false;
   }
 
-  bool BlockDevice::Write(const BlockDevice::Request& request) {
-    BlockDevice::Device* device = Find(request.deviceId);
+  bool BlockDevices::Write(const BlockDevices::Request& request) {
+    BlockDevices::Device* device = Find(request.deviceId);
 
     if (!device) {
       return false;
@@ -381,7 +364,7 @@ namespace Quantum::System::Kernel::Devices {
     return false;
   }
 
-  BlockDevice::Device* BlockDevice::Find(UInt32 deviceId) {
+  BlockDevices::Device* BlockDevices::Find(UInt32 deviceId) {
     for (UInt32 i = 0; i < _deviceCount; ++i) {
       if (_devices[i] && _devices[i]->info.id == deviceId) {
         return _devices[i];
@@ -391,9 +374,9 @@ namespace Quantum::System::Kernel::Devices {
     return nullptr;
   }
 
-  bool BlockDevice::ValidateRequest(
-    const BlockDevice::Device& device,
-    const BlockDevice::Request& request
+  bool BlockDevices::ValidateRequest(
+    const BlockDevices::Device& device,
+    const BlockDevices::Request& request
   ) {
     if (request.count == 0 || request.buffer == nullptr) {
       return false;
@@ -415,8 +398,8 @@ namespace Quantum::System::Kernel::Devices {
     return true;
   }
 
-  bool BlockDevice::Bind(UInt32 deviceId, UInt32 portId) {
-    BlockDevice::Device* device = Find(deviceId);
+  bool BlockDevices::Bind(UInt32 deviceId, UInt32 portId) {
+    BlockDevices::Device* device = Find(deviceId);
 
     if (!device || portId == 0) {
       return false;
@@ -438,9 +421,9 @@ namespace Quantum::System::Kernel::Devices {
     return true;
   }
 
-  bool BlockDevice::SendRequest(
-    BlockDevice::Device& device,
-    const BlockDevice::Request& request,
+  bool BlockDevices::SendRequest(
+    BlockDevices::Device& device,
+    const BlockDevices::Request& request,
     bool write
   ) {
     if (device.portId == 0) {
@@ -525,7 +508,7 @@ namespace Quantum::System::Kernel::Devices {
     return true;
   }
 
-  void BlockDevice::CopyBytes(void* dest, const void* src, UInt32 length) {
+  void BlockDevices::CopyBytes(void* dest, const void* src, UInt32 length) {
     auto* d = reinterpret_cast<UInt8*>(dest);
     auto* s = reinterpret_cast<const UInt8*>(src);
 

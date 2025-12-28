@@ -2,20 +2,20 @@
  * @file System/Drivers/Storage/Floppy/Include/Driver.hpp
  * @brief Floppy driver.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #pragma once
 
-#include <ABI/Devices/BlockDevice.hpp>
+#include <ABI/Devices/BlockDevices.hpp>
 #include <ABI/IPC.hpp>
 #include <ABI/Prelude.hpp>
 #include <Types.hpp>
 
 namespace Quantum::System::Drivers::Storage::Floppy {
-  using BlockDevice = ABI::Devices::BlockDevice;
-  using IPC = ABI::IPC;
+  using ABI::Devices::BlockDevices;
+  using ABI::IPC;
 
   /**
    * Floppy driver.
@@ -48,7 +48,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
        */
       static bool GetDeviceInfo(
         UInt32& deviceId,
-        BlockDevice::Info& info,
+        BlockDevices::Info& info,
         UInt8& driveIndex,
         UInt32& sectorSize,
         UInt32& sectorCount,
@@ -394,12 +394,12 @@ namespace Quantum::System::Drivers::Storage::Floppy {
       /**
        * Parsed block request message.
        */
-      inline static BlockDevice::Message _blockRequest {};
+      inline static BlockDevices::Message _blockRequest {};
 
       /**
        * Prepared block response message.
        */
-      inline static BlockDevice::Message _blockResponse {};
+      inline static BlockDevices::Message _blockResponse {};
 
       /**
        * Waits for the controller FIFO to enter the desired phase.
@@ -698,7 +698,7 @@ namespace Quantum::System::Drivers::Storage::Floppy {
        *   True if the device was recorded; false otherwise.
        */
       static bool RegisterDevice(
-        const BlockDevice::Info& info,
+        const BlockDevices::Info& info,
         UInt8 sectorsPerTrack,
         UInt8 headCount
       );

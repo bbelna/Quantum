@@ -7,8 +7,8 @@
 
 .DEFAULT_GOAL := default
 
-# Optional user overrides
--include Makefile.config.mk
+# Build configuration overrides
+-include Configuration/Makefile.config.mk
 
 PROJECT_ROOT := $(CURDIR)
 SRC_ROOT     := $(PROJECT_ROOT)/Source
@@ -55,7 +55,7 @@ IMG_BS      := 512
 FAT12_LABEL := QUANTUM
 
 # INIT bundle
-INIT_MANIFEST ?= $(PROJECT_ROOT)/InitManifest.json
+INIT_MANIFEST ?= $(PROJECT_ROOT)/Configuration/InitManifest.json
 INIT_BUNDLE   ?= $(BUILD_DIR)/INIT.BND
 BUNDLER       ?= python3 $(PROJECT_ROOT)/Tools/Bundle.py
 HAS_INIT_MANIFEST := $(wildcard $(INIT_MANIFEST))
@@ -73,6 +73,7 @@ kernel: $(KER_BIN)
 coordinator: $(COORD_QX)
 
 floppy: $(FLOPPY_QX)
+
 fat12: $(FAT12_QX)
 
 # Build INIT.BND if manifest is present

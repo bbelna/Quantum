@@ -2,8 +2,8 @@
  * @file System/Coordinator/Include/Application.hpp
  * @brief System coordinator application.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #pragma once
@@ -12,7 +12,7 @@
 #include <Types.hpp>
 
 namespace Quantum::System::Coordinator {
-  using InitBundle = ABI::InitBundle;
+  using ABI::InitBundle;
 
   class Application {
     public:

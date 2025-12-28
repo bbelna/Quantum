@@ -2,18 +2,16 @@
  * @file System/Kernel/Include/Task.hpp
  * @brief Architecture-agnostic task management.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #pragma once
 
-#include "Types.hpp"
-#include "Interrupts.hpp"
+#include <Types.hpp>
 
-#if defined(QUANTUM_ARCH_IA32)
-#include "Arch/IA32/Task.hpp"
-#endif
+#include "Arch/Task.hpp"
+#include "Interrupts.hpp"
 
 namespace Quantum::System::Kernel {
   /**
@@ -21,11 +19,7 @@ namespace Quantum::System::Kernel {
    */
   class Task {
     public:
-      #if defined(QUANTUM_ARCH_IA32)
-      using ControlBlock = Arch::IA32::Task::ControlBlock;
-      #else
-      using ControlBlock = void;
-      #endif
+      using ControlBlock = Arch::Task::ControlBlock;
 
       /**
        * Initializes the task subsystem and creates the idle task.
@@ -129,7 +123,7 @@ namespace Quantum::System::Kernel {
        * @return
        *   True if the current task has I/O access; false otherwise.
        */
-      static bool HasIOAccess();
+      static bool CurrentTaskHasIOAccess();
 
       /**
        * Enables preemptive multitasking via timer interrupts.

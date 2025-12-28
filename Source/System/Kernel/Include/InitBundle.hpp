@@ -2,16 +2,15 @@
  * @file System/Kernel/Include/InitBundle.hpp
  * @brief Init bundle handling.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #pragma once
 
 #include <ABI/InitBundle.hpp>
 #include <ABI/Prelude.hpp>
-
-#include "Types.hpp"
+#include <Types.hpp>
 
 namespace Quantum::System::Kernel {
   /**

@@ -2,8 +2,8 @@
  * @file System/Kernel/Include/Arch/IA32/PIC.hpp
  * @brief IA32 Programmable Interrupt Controller (PIC) driver.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #pragma once
@@ -40,6 +40,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       static void Mask(UInt8 irq);
 
       /**
+       * Masks all IRQ lines on both PICs.
+       */
+      static void MaskAll();
+
+      /**
        * Unmasks (enables) a specific IRQ line.
        * @param irq
        *   IRQ number (0-15) to unmask.
@@ -47,9 +52,9 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       static void Unmask(UInt8 irq);
 
       /**
-       * Masks all IRQ lines on both PICs.
+       * Unmasks all IRQ lines on both PICs.
        */
-      static void MaskAll();
+      static void UnmaskAll();
 
     private:
       /**

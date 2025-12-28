@@ -2,8 +2,8 @@
  * @file System/Kernel/Include/Arch/IA32/TSS.hpp
  * @brief IA32 Task State Segment (TSS) implementation.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #pragma once
@@ -20,32 +20,139 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * IA32 TSS structure.
        */
       struct [[gnu::packed]] Structure {
+        /**
+         * Previous TSS selector.
+         */
         UInt32 previousTSS;
+
+        /**
+         * Stack pointer for privilege level 0.
+         */
         UInt32 esp0;
+
+        /**
+         * Stack segment selector for privilege level 0.
+         */
         UInt32 ss0;
+
+        /**
+         * Stack pointer for privilege level 1.
+         */
         UInt32 esp1;
+
+        /**
+         * Stack segment selector for privilege level 1.
+         */
         UInt32 ss1;
+
+        /**
+         * Stack pointer for privilege level 2.
+         */
         UInt32 esp2;
+
+        /**
+         * Stack segment selector for privilege level 2.
+         */
         UInt32 ss2;
+
+        /**
+         * Control register CR3.
+         */
         UInt32 cr3;
+
+        /**
+         * Extended instruction pointer register.
+         */
         UInt32 eip;
+
+        /**
+         * EFLAGS register.
+         */
         UInt32 eflags;
+
+        /**
+         * Extended accumulator register.
+         */
         UInt32 eax;
+
+        /**
+         * Extended counter register.
+         */
         UInt32 ecx;
+
+        /**
+         * Extended data register.
+         */
         UInt32 edx;
+
+        /**
+         * Extended base register.
+         */
         UInt32 ebx;
+
+        /**
+         * Extended stack pointer register.
+         */
         UInt32 esp;
+
+        /**
+         * Extended base pointer register.
+         */
         UInt32 ebp;
+
+        /**
+         * Extended source index register.
+         */
         UInt32 esi;
+
+        /**
+         * Extended destination index register.
+         */
         UInt32 edi;
+
+        /**
+         * Extra segment selector.
+         */
         UInt32 es;
+
+        /**
+         * Code segment selector.
+         */
         UInt32 cs;
+
+        /**
+         * Stack segment selector.
+         */
         UInt32 ss;
+
+        /**
+         * Data segment selector.
+         */
         UInt32 ds;
+
+        /**
+         * FS segment register.
+         */
         UInt32 fs;
+
+        /**
+         * GS segment register.
+         */
         UInt32 gs;
+
+        /**
+         * Local descriptor table segment selector.
+         */
         UInt32 ldt;
+
+        /**
+         * Trap flag.
+         */
         UInt16 trap;
+
+        /**
+         * I/O map base address.
+         */
         UInt16 ioMapBase;
       };
 

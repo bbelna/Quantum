@@ -10,7 +10,7 @@ $ProjectPath = "D:\Development\Git\Quantum"
 $ProjectPathWSL = "/mnt/d/Development/Git/Quantum"
 $ImageWinPath   = $ProjectPath + "\Build\Quantum.img"
 $ImageWslPath   = "$ProjectPathWSL/Build/Quantum.img"
-$ManifestPath   = Join-Path $ProjectPath "InitManifest.json"
+$ManifestPath   = Join-Path $ProjectPath "Configuration\InitManifest.json"
 
 Write-Host "=== Building Quantum (WSL) ==="
 

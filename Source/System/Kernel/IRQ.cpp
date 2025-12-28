@@ -2,24 +2,20 @@
  * @file System/Kernel/IRQ.cpp
  * @brief IRQ handling and notification.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #include <ABI/IRQ.hpp>
 
+#include "Arch/Interrupts.hpp"
 #include "IRQ.hpp"
 #include "IPC.hpp"
 #include "Task.hpp"
 
-#if defined(QUANTUM_ARCH_IA32)
-#include "Arch/IA32/Interrupts.hpp"
-#include "Arch/IA32/PIC.hpp"
-#endif
-
 namespace Quantum::System::Kernel {
-  using IPC = Kernel::IPC;
-  using Task = Kernel::Task;
+  using Kernel::IPC;
+  using Kernel::Task;
 
   bool IRQ::Register(UInt32 irq, UInt32 portId) {
     if (irq >= _maxIRQs || portId == 0) {
@@ -40,12 +36,10 @@ namespace Quantum::System::Kernel {
 
     _irqPorts[irq] = portId;
 
-    #if defined(QUANTUM_ARCH_IA32)
     UInt8 vector = static_cast<UInt8>(32 + irq);
 
-    Arch::IA32::Interrupts::RegisterHandler(vector, HandleIRQ);
-    Arch::IA32::PIC::Unmask(static_cast<UInt8>(irq));
-    #endif
+    Arch::Interrupts::RegisterHandler(vector, HandleIRQ);
+    Arch::Interrupts::Unmask(static_cast<UInt8>(irq));
 
     return true;
   }
@@ -65,9 +59,7 @@ namespace Quantum::System::Kernel {
       return false;
     }
 
-    #if defined(QUANTUM_ARCH_IA32)
-    Arch::IA32::PIC::Unmask(static_cast<UInt8>(irq));
-    #endif
+    Arch::Interrupts::Unmask(static_cast<UInt8>(irq));
 
     return true;
   }
@@ -77,9 +69,7 @@ namespace Quantum::System::Kernel {
       return false;
     }
 
-    #if defined(QUANTUM_ARCH_IA32)
-    Arch::IA32::PIC::Mask(static_cast<UInt8>(irq));
-    #endif
+    Arch::Interrupts::Mask(static_cast<UInt8>(irq));
 
     return true;
   }
@@ -87,15 +77,11 @@ namespace Quantum::System::Kernel {
   Interrupts::Context* IRQ::HandleIRQ(Interrupts::Context& context) {
     UInt32 vector = context.vector;
 
-    #if defined(QUANTUM_ARCH_IA32)
     if (vector >= 32 && vector < 32 + _maxIRQs) {
       UInt32 irq = vector - 32;
 
       Notify(irq);
     }
-    #else
-    (void)vector;
-    #endif
 
     return &context;
   }

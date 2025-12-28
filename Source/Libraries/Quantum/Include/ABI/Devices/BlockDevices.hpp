@@ -1,9 +1,9 @@
 /**
- * @file Libraries/Quantum/Include/ABI/Devices/BlockDevice.hpp
+ * @file Libraries/Quantum/Include/ABI/Devices/BlockDevices.hpp
  * @brief Block device syscall wrappers.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #pragma once
@@ -16,7 +16,7 @@ namespace Quantum::ABI::Devices {
   /**
    * Block device syscall wrappers.
    */
-  class BlockDevice {
+  class BlockDevices {
     public:
       /**
        * Block I/O operation identifiers.

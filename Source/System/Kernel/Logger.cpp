@@ -2,8 +2,8 @@
  * @file System/Kernel/Logger.cpp
  * @brief Kernel logger.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #include <CString.hpp>
@@ -13,6 +13,7 @@
 
 namespace Quantum::System::Kernel {
   using ::Quantum::Format;
+
   using LogLevel = Kernel::Logger::Level;
 
   void Logger::Initialize(
@@ -25,7 +26,7 @@ namespace Quantum::System::Kernel {
     _writerCount = writerCount;
   }
 
-  void Logger::Write(LogLevel level, String message) {
+  void Logger::Write(LogLevel level, CString message) {
     if (level < _minimumLevel) {
       return;
     }
@@ -35,7 +36,7 @@ namespace Quantum::System::Kernel {
     }
   }
 
-  void Logger::WriteFormatted(LogLevel level, String formattedMessage, ...) {
+  void Logger::WriteFormatted(LogLevel level, CString formattedMessage, ...) {
     VariableArgumentsList args;
 
     if (level >= _minimumLevel) {
@@ -47,14 +48,14 @@ namespace Quantum::System::Kernel {
       Format(
         buffer,
         bufferLength,
-        formattedMessage.Data(),
+        formattedMessage,
         args
       );
 
       VARIABLE_ARGUMENTS_END(args);
 
       for (Size i = 0; i < _writerCount; ++i) {
-        _writers[i]->Write(String(buffer));
+        _writers[i]->Write(buffer);
       }
     }
   }

@@ -2,17 +2,22 @@
  * @file System/Kernel/Console.cpp
  * @brief Console output handling.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #include <CString.hpp>
+#include <Types.hpp>
 
 #include "Console.hpp"
 #include "CPU.hpp"
-#include "Types.hpp"
 #include "Prelude.hpp"
 
+// NOTE: This way of doing arch-independence was removed as part of #25,
+// however, we are keeping this here for now since the TextDisplayDevice
+// abstraction is what ultimately will replace this code and it is not yet
+// implemented. It would be a waste of time to implement an arch wrapper
+// for console output when it is going to be removed soon anyway.
 #if defined(QUANTUM_ARCH_IA32)
 #include "Arch/IA32/VGAConsole.hpp"
 
@@ -30,7 +35,7 @@ namespace Quantum::System::Kernel {
     return writerAdapter;
   }
 
-  void Console::WriterAdapter::Write(String message) {
+  void Console::WriterAdapter::Write(CString message) {
     if (!message) {
       return;
     }

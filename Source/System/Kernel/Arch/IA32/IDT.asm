@@ -4,8 +4,8 @@
 ; File: System/Kernel/Arch/IA32/IDT.asm
 ; Brief: Loads and defines the Interrupt Descriptor Table (IDT).
 ; Author: Brandon Belna <bbelna@aol.com>
-; Copyright: (c) 2025-2026 The Quantum OS Project
-; License: MIT License
+; Copyright: © 2025-2026 The Quantum OS Project
+; License: GPL 2.0
 ;-------------------------------------------------------------------------------
 
 [BITS 32]

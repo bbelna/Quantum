@@ -4,8 +4,8 @@
 ; File: System/Kernel/Arch/IA32/GDT.asm
 ; Brief: Defines a minimal GDT and its descriptor for 32-bit mode.
 ; Author: Brandon Belna <bbelna@aol.com>
-; Copyright: (c) 2025-2026 The Quantum OS Project
-; License: MIT License
+; Copyright: © 2025-2026 The Quantum OS Project
+; License: GPL 2.0
 ;-------------------------------------------------------------------------------
 
 BITS 32

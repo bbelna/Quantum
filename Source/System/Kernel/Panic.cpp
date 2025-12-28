@@ -2,8 +2,8 @@
  * @file System/Kernel/Panic.cpp
  * @brief Panic handling utilities.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #include <CString.hpp>
@@ -15,10 +15,10 @@
 
 namespace Quantum::System::Kernel {
   void Panic(
-    String message,
-    String file,
+    CString message,
+    CString file,
     UInt32 line,
-    String function
+    CString function
   ) {
     using namespace ::Quantum;
 

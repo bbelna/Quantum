@@ -2,8 +2,8 @@
  * @file System/Coordinator/FileSystem.cpp
  * @brief Coordinator file system broker.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #include <ABI/Console.hpp>
@@ -13,9 +13,9 @@
 #include "FileSystem.hpp"
 
 namespace Quantum::System::Coordinator {
-  using Console = ABI::Console;
-  using IPC = ABI::IPC;
-  using Task = ABI::Task;
+  using ABI::Console;
+  using ABI::IPC;
+  using ABI::Task;
 
   void FileSystem::Initialize() {
     if (_portId != 0) {

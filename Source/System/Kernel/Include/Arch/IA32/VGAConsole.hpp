@@ -2,16 +2,15 @@
  * @file System/Kernel/Include/Arch/IA32/VGAConsole.hpp
  * @brief IA32 VGA text-mode console driver.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #pragma once
 
-#include <Logger.hpp>
-#include <Prelude.hpp>
-#include <String.hpp>
 #include <Types.hpp>
+
+#include "Prelude.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   /**
@@ -19,8 +18,6 @@ namespace Quantum::System::Kernel::Arch::IA32 {
    */
   class VGAConsole {
     public:
-      using Writer = Logger::Writer;
-
       /**
        * Initializes the console driver.
        */

@@ -2,7 +2,7 @@
 
 This document details Quantum's security policy.
 
-Please note that Quantum is licensed under the MIT license, and as such, it is
+Please note that Quantum is licensed under the GPL 2.0, and as such, it is
 provided "as is" without warranty of any kind. See `COPYRIGHT.md` for more
 information.
 

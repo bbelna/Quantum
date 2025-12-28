@@ -2,21 +2,21 @@
  * @file System/Drivers/Storage/Floppy/Tests.cpp
  * @brief Floppy driver tests.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #include <ABI/Console.hpp>
-#include <ABI/Devices/BlockDevice.hpp>
+#include <ABI/Devices/BlockDevices.hpp>
 #include <ABI/Task.hpp>
 
 #include "Driver.hpp"
 #include "Tests.hpp"
 
 namespace Quantum::System::Drivers::Storage::Floppy::Tests {
-  using Console = ABI::Console;
-  using BlockDevice = ABI::Devices::BlockDevice;
-  using Task = ABI::Task;
+  using ABI::Console;
+  using ABI::Devices::BlockDevices;
+  using ABI::Task;
 
   static UInt32 _testsPassed = 0;
   static UInt32 _testsFailed = 0;
@@ -76,7 +76,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
 
   static bool PrepareFloppy(
     UInt32& deviceId,
-    BlockDevice::Info& info,
+    BlockDevices::Info& info,
     bool requireWrite,
     UInt8& driveIndex,
     UInt32& sectorSize,
@@ -98,7 +98,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
       return false;
     }
 
-    if (requireWrite && (info.flags & BlockDevice::flagReadOnly) != 0) {
+    if (requireWrite && (info.flags & BlockDevices::flagReadOnly) != 0) {
       LogSkip("read-only");
 
       return false;
@@ -109,7 +109,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
 
   static bool TestSingleSectorRead() {
     UInt32 deviceId = 0;
-    BlockDevice::Info info {};
+    BlockDevices::Info info {};
     UInt8 driveIndex = 0;
     UInt32 sectorSize = 0;
     UInt32 sectorCount = 0;
@@ -158,7 +158,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
 
   static bool TestMultiSectorRead() {
     UInt32 deviceId = 0;
-    BlockDevice::Info info {};
+    BlockDevices::Info info {};
     UInt8 driveIndex = 0;
     UInt32 sectorSize = 0;
     UInt32 sectorCount = 0;
@@ -207,7 +207,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
 
   static bool TestWriteReadback() {
     UInt32 deviceId = 0;
-    BlockDevice::Info info {};
+    BlockDevices::Info info {};
     UInt8 driveIndex = 0;
     UInt32 sectorSize = 0;
     UInt32 sectorCount = 0;
@@ -322,7 +322,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
 
   static bool TestMultiSectorWriteReadback() {
     UInt32 deviceId = 0;
-    BlockDevice::Info info {};
+    BlockDevices::Info info {};
     UInt8 driveIndex = 0;
     UInt32 sectorSize = 0;
     UInt32 sectorCountTotal = 0;
@@ -441,7 +441,7 @@ namespace Quantum::System::Drivers::Storage::Floppy::Tests {
 
   static bool TestCrossTrackWriteReadback() {
     UInt32 deviceId = 0;
-    BlockDevice::Info info {};
+    BlockDevices::Info info {};
     UInt8 driveIndex = 0;
     UInt32 sectorSize = 0;
     UInt32 sectorCountTotal = 0;

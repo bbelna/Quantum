@@ -2,16 +2,17 @@
  * @file System/Kernel/Testing.cpp
  * @brief Kernel testing framework.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
+
+#include <Types.hpp>
 
 #include "Logger.hpp"
 #include "Testing.hpp"
 #include "Tests/MemoryTests.hpp"
 #include "Tests/TaskTests.hpp"
 #include "Tests/UserModeTests.hpp"
-#include "Types.hpp"
 
 namespace Quantum::System::Kernel {
   using LogLevel = Logger::Level;

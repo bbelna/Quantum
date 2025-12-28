@@ -2,19 +2,19 @@
  * @file System/FileSystems/FAT12/Directory.cpp
  * @brief FAT12 file system directory helpers.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
-#include <ABI/Devices/BlockDevice.hpp>
+#include <ABI/Devices/BlockDevices.hpp>
 
 #include "Directory.hpp"
 #include "FAT.hpp"
 #include "Volume.hpp"
 
 namespace Quantum::System::FileSystems::FAT12 {
-  using BlockDevice = ABI::Devices::BlockDevice;
-  using FileSystem = ABI::FileSystem;
+  using ABI::Devices::BlockDevices;
+  using ABI::FileSystem;
 
   void Directory::Initialize(Volume& volume) {
     _volume = &volume;
@@ -58,14 +58,14 @@ namespace Quantum::System::FileSystems::FAT12 {
       }
 
       if (sectorIndex != currentSector) {
-        BlockDevice::Request request {};
+        BlockDevices::Request request {};
 
         request.deviceId = _volume->_device.id;
         request.lba = _volume->_rootDirectoryStartLBA + sectorIndex;
         request.count = 1;
         request.buffer = sector;
 
-        if (BlockDevice::Read(request) != 0) {
+        if (BlockDevices::Read(request) != 0) {
           return false;
         }
 
@@ -206,14 +206,14 @@ namespace Quantum::System::FileSystems::FAT12 {
         ++sectorIndex
       ) {
         UInt8 sector[512] = {};
-        BlockDevice::Request request {};
+        BlockDevices::Request request {};
 
         request.deviceId = _volume->_device.id;
         request.lba = baseLBA + sectorIndex;
         request.count = 1;
         request.buffer = sector;
 
-        if (BlockDevice::Read(request) != 0) {
+        if (BlockDevices::Read(request) != 0) {
           return false;
         }
 
@@ -301,14 +301,14 @@ namespace Quantum::System::FileSystems::FAT12 {
     }
 
     UInt8 sector[512] = {};
-    BlockDevice::Request request {};
+    BlockDevices::Request request {};
 
     request.deviceId = _volume->_device.id;
     request.lba = lba;
     request.count = 1;
     request.buffer = sector;
 
-    if (BlockDevice::Read(request) != 0) {
+    if (BlockDevices::Read(request) != 0) {
       return false;
     }
 
@@ -539,14 +539,14 @@ namespace Quantum::System::FileSystems::FAT12 {
         }
 
         if (sectorIndex != currentSector) {
-          BlockDevice::Request request {};
+          BlockDevices::Request request {};
 
           request.deviceId = _volume->_device.id;
           request.lba = _volume->_rootDirectoryStartLBA + sectorIndex;
           request.count = 1;
           request.buffer = sector;
 
-          if (BlockDevice::Read(request) != 0) {
+          if (BlockDevices::Read(request) != 0) {
             return false;
           }
 
@@ -614,14 +614,14 @@ namespace Quantum::System::FileSystems::FAT12 {
         ++sectorIndex
       ) {
         UInt8 sector[512] = {};
-        BlockDevice::Request request {};
+        BlockDevices::Request request {};
 
         request.deviceId = _volume->_device.id;
         request.lba = baseLBA + sectorIndex;
         request.count = 1;
         request.buffer = sector;
 
-        if (BlockDevice::Read(request) != 0) {
+        if (BlockDevices::Read(request) != 0) {
           return false;
         }
 
@@ -699,14 +699,14 @@ namespace Quantum::System::FileSystems::FAT12 {
     }
 
     UInt8 sector[512] = {};
-    BlockDevice::Request request {};
+    BlockDevices::Request request {};
 
     request.deviceId = _volume->_device.id;
     request.lba = lba;
     request.count = 1;
     request.buffer = sector;
 
-    if (BlockDevice::Read(request) != 0) {
+    if (BlockDevices::Read(request) != 0) {
       return false;
     }
 
@@ -718,7 +718,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     request.lba = lba;
     request.buffer = sector;
 
-    return BlockDevice::Write(request) == 0;
+    return BlockDevices::Write(request) == 0;
   }
 
   bool Directory::WriteEntry(
@@ -731,14 +731,14 @@ namespace Quantum::System::FileSystems::FAT12 {
     }
 
     UInt8 sector[512] = {};
-    BlockDevice::Request request {};
+    BlockDevices::Request request {};
 
     request.deviceId = _volume->_device.id;
     request.lba = lba;
     request.count = 1;
     request.buffer = sector;
 
-    if (BlockDevice::Read(request) != 0) {
+    if (BlockDevices::Read(request) != 0) {
       return false;
     }
 
@@ -749,7 +749,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     request.lba = lba;
     request.buffer = sector;
 
-    return BlockDevice::Write(request) == 0;
+    return BlockDevices::Write(request) == 0;
   }
 
   bool Directory::FindFreeSlot(
@@ -776,14 +776,14 @@ namespace Quantum::System::FileSystems::FAT12 {
 
       for (UInt32 sectorIndex = 0; sectorIndex < sectorCount; ++sectorIndex) {
         UInt8 sector[512] = {};
-        BlockDevice::Request request {};
+        BlockDevices::Request request {};
 
         request.deviceId = _volume->_device.id;
         request.lba = _volume->_rootDirectoryStartLBA + sectorIndex;
         request.count = 1;
         request.buffer = sector;
 
-        if (BlockDevice::Read(request) != 0) {
+        if (BlockDevices::Read(request) != 0) {
           return false;
         }
 
@@ -825,14 +825,14 @@ namespace Quantum::System::FileSystems::FAT12 {
         ++sectorIndex
       ) {
         UInt8 sector[512] = {};
-        BlockDevice::Request request {};
+        BlockDevices::Request request {};
 
         request.deviceId = _volume->_device.id;
         request.lba = baseLBA + sectorIndex;
         request.count = 1;
         request.buffer = sector;
 
-        if (BlockDevice::Read(request) != 0) {
+        if (BlockDevices::Read(request) != 0) {
           return false;
         }
 
@@ -960,14 +960,14 @@ namespace Quantum::System::FileSystems::FAT12 {
       = _volume->_dataStartLBA + (newCluster - 2) * _volume->_sectorsPerCluster;
 
     for (UInt32 s = 0; s < _volume->_sectorsPerCluster; ++s) {
-      BlockDevice::Request request {};
+      BlockDevices::Request request {};
 
       request.deviceId = _volume->_device.id;
       request.lba = clusterLBA + s;
       request.count = 1;
       request.buffer = zeroSector;
 
-      if (BlockDevice::Write(request) != 0) {
+      if (BlockDevices::Write(request) != 0) {
         return false;
       }
     }
@@ -1004,14 +1004,14 @@ namespace Quantum::System::FileSystems::FAT12 {
     );
     _volume->WriteUInt32(dirSector, 32 + 28, 0);
 
-    BlockDevice::Request request {};
+    BlockDevices::Request request {};
 
     request.deviceId = _volume->_device.id;
     request.lba = clusterLBA;
     request.count = 1;
     request.buffer = dirSector;
 
-    if (BlockDevice::Write(request) != 0) {
+    if (BlockDevices::Write(request) != 0) {
       return false;
     }
 
@@ -1234,14 +1234,14 @@ namespace Quantum::System::FileSystems::FAT12 {
     }
 
     UInt8 sector[512] = {};
-    BlockDevice::Request request {};
+    BlockDevices::Request request {};
 
     request.deviceId = _volume->_device.id;
     request.lba = lba;
     request.count = 1;
     request.buffer = sector;
 
-    if (BlockDevice::Read(request) != 0) {
+    if (BlockDevices::Read(request) != 0) {
       return false;
     }
 
@@ -1252,7 +1252,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     request.lba = lba;
     request.buffer = sector;
 
-    return BlockDevice::Write(request) == 0;
+    return BlockDevices::Write(request) == 0;
   }
 
   bool Directory::RenameEntry(
@@ -1285,14 +1285,14 @@ namespace Quantum::System::FileSystems::FAT12 {
     }
 
     UInt8 sector[512] = {};
-    BlockDevice::Request request {};
+    BlockDevices::Request request {};
 
     request.deviceId = _volume->_device.id;
     request.lba = lba;
     request.count = 1;
     request.buffer = sector;
 
-    if (BlockDevice::Read(request) != 0) {
+    if (BlockDevices::Read(request) != 0) {
       return false;
     }
 
@@ -1305,7 +1305,7 @@ namespace Quantum::System::FileSystems::FAT12 {
     request.lba = lba;
     request.buffer = sector;
 
-    return BlockDevice::Write(request) == 0;
+    return BlockDevices::Write(request) == 0;
   }
 
   bool Directory::GetEntryInfo(
@@ -1703,14 +1703,14 @@ namespace Quantum::System::FileSystems::FAT12 {
         }
 
         if (sectorIndex != currentSector) {
-          BlockDevice::Request request {};
+          BlockDevices::Request request {};
 
           request.deviceId = _volume->_device.id;
           request.lba = _volume->_rootDirectoryStartLBA + sectorIndex;
           request.count = 1;
           request.buffer = sector;
 
-          if (BlockDevice::Read(request) != 0) {
+          if (BlockDevices::Read(request) != 0) {
             return false;
           }
 
@@ -1758,14 +1758,14 @@ namespace Quantum::System::FileSystems::FAT12 {
         ++sectorIndex
       ) {
         UInt8 sector[512] = {};
-        BlockDevice::Request request {};
+        BlockDevices::Request request {};
 
         request.deviceId = _volume->_device.id;
         request.lba = baseLBA + sectorIndex;
         request.count = 1;
         request.buffer = sector;
 
-        if (BlockDevice::Read(request) != 0) {
+        if (BlockDevices::Read(request) != 0) {
           return false;
         }
 

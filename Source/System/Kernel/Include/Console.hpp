@@ -2,14 +2,15 @@
  * @file System/Kernel/Include/Console.hpp
  * @brief Console output handling.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #pragma once
 
+#include <Types.hpp>
+
 #include "Logger.hpp"
-#include "Types.hpp"
 
 namespace Quantum::System::Kernel {
   /**
@@ -82,7 +83,7 @@ namespace Quantum::System::Kernel {
            * @param message
            *   The message to write.
            */
-          void Write(String message) override;
+          void Write(CString message) override;
       };
 
       /**

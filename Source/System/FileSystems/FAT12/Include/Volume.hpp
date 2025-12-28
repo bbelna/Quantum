@@ -2,13 +2,13 @@
  * @file System/FileSystems/FAT12/Include/Volume.hpp
  * @brief FAT12 file system service volume handler.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #pragma once
 
-#include <ABI/Devices/BlockDevice.hpp>
+#include <ABI/Devices/BlockDevices.hpp>
 #include <ABI/FileSystem.hpp>
 #include <ABI/Prelude.hpp>
 #include <Types.hpp>
@@ -35,7 +35,7 @@ namespace Quantum::System::FileSystems::FAT12 {
        * @return
        *   True if the volume metadata loaded successfully.
        */
-      bool Load(const ABI::Devices::BlockDevice::Info& info);
+      bool Load(const ABI::Devices::BlockDevices::Info& info);
 
       /**
        * Loads the FAT12 volume metadata using the first floppy device.
@@ -451,7 +451,7 @@ namespace Quantum::System::FileSystems::FAT12 {
       /**
        * Backing block device info.
        */
-      ABI::Devices::BlockDevice::Info _device {};
+      ABI::Devices::BlockDevices::Info _device {};
 
       /**
        * Cached volume info.
@@ -561,7 +561,7 @@ namespace Quantum::System::FileSystems::FAT12 {
        * @return
        *   True if a floppy block device was found.
        */
-      bool GetFloppyInfo(ABI::Devices::BlockDevice::Info& outInfo);
+      bool GetFloppyInfo(ABI::Devices::BlockDevices::Info& outInfo);
 
       /**
        * Builds a volume label from the block device info.
@@ -573,7 +573,7 @@ namespace Quantum::System::FileSystems::FAT12 {
        *   Size of the label buffer.
        */
       static void BuildLabel(
-        const ABI::Devices::BlockDevice::Info& info,
+        const ABI::Devices::BlockDevices::Info& info,
         char* outLabel,
         UInt32 labelBytes
       );

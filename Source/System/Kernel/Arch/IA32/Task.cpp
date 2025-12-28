@@ -2,25 +2,29 @@
  * @file System/Kernel/Arch/IA32/Task.cpp
  * @brief IA32 task context and control structures.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
+#include <Types.hpp>
+
+#include "Arch/IA32/AddressSpace.hpp"
 #include "Arch/IA32/CPU.hpp"
-#include "Arch/IA32/Memory.hpp"
+#include "Arch/IA32/Paging.hpp"
 #include "Arch/IA32/Task.hpp"
 #include "Arch/IA32/TSS.hpp"
 #include "CPU.hpp"
+#include "Heap.hpp"
 #include "Logger.hpp"
-#include "Memory.hpp"
 #include "Panic.hpp"
 #include "Prelude.hpp"
-#include "Types.hpp"
 #include "UserMode.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
+  using Kernel::Heap;
+  using Kernel::UserMode;
+
   using LogLevel = Kernel::Logger::Level;
-  using UserMode = Kernel::UserMode;
 
   void Task::AddToReadyQueue(Task::ControlBlock* task) {
     task->state = Task::State::Ready;
@@ -75,7 +79,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     }
   }
 
-  Task::ControlBlock* Task::FindTaskById(UInt32 id) {
+  Task::ControlBlock* Task::FindById(UInt32 id) {
     Task::ControlBlock* current = _allTasksHead;
 
     while (current) {
@@ -95,9 +99,9 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
       RemoveFromAllTasks(_pendingCleanup);
 
-      Kernel::Memory::Free(_pendingCleanup->stackBase);
-      Kernel::Memory::Free(_pendingCleanup);
-      Memory::DestroyAddressSpace(cleanupSpace);
+      Heap::Free(_pendingCleanup->stackBase);
+      Heap::Free(_pendingCleanup);
+      AddressSpace::Destroy(cleanupSpace);
 
       _pendingCleanup = nullptr;
     }
@@ -131,7 +135,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     UInt32 nextSpace = nextTask->pageDirectoryPhysical;
 
     if (nextSpace != 0 && nextSpace != previousSpace) {
-      Memory::ActivateAddressSpace(nextSpace);
+      AddressSpace::Activate(nextSpace);
     }
 
     if (nextTask->kernelStackTop != 0) {
@@ -185,14 +189,14 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     Logger::WriteFormatted(
       LogLevel::Debug,
       "User map entry: PDE=%p PTE=%p",
-      Memory::GetPageDirectoryEntry(tcb->userEntryPoint),
-      Memory::GetPageTableEntry(tcb->userEntryPoint)
+      Paging::GetPageDirectoryEntry(tcb->userEntryPoint),
+      Paging::GetPageTableEntry(tcb->userEntryPoint)
     );
     Logger::WriteFormatted(
       LogLevel::Debug,
       "User map stack: PDE=%p PTE=%p",
-      Memory::GetPageDirectoryEntry(tcb->userStackTop - 4),
-      Memory::GetPageTableEntry(tcb->userStackTop - 4)
+      Paging::GetPageDirectoryEntry(tcb->userStackTop - 4),
+      Paging::GetPageTableEntry(tcb->userStackTop - 4)
     );
 
     UserMode::Enter(
@@ -209,7 +213,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   ) {
     // allocate the task control block
     Task::ControlBlock* tcb = static_cast<Task::ControlBlock*>(
-      Kernel::Memory::Allocate(sizeof(Task::ControlBlock))
+      Heap::Allocate(sizeof(Task::ControlBlock))
     );
 
     if (tcb == nullptr) {
@@ -219,11 +223,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     }
 
     // allocate the kernel stack
-    void* stack = Kernel::Memory::Allocate(stackSize);
+    void* stack = Heap::Allocate(stackSize);
 
     if (stack == nullptr) {
       Logger::Write(LogLevel::Error, "Failed to allocate task stack");
-      Kernel::Memory::Free(tcb);
+      Heap::Free(tcb);
 
       return nullptr;
     }
@@ -231,7 +235,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     // initialize TCB fields
     tcb->id = _nextTaskId++;
     tcb->caps = 0;
-    tcb->pageDirectoryPhysical = Memory::GetKernelPageDirectoryPhysical();
+    tcb->pageDirectoryPhysical
+      = Paging::GetKernelPageDirectoryPhysicalAddress();
     tcb->state = Task::State::Ready;
     tcb->stackBase = stack;
     tcb->stackSize = stackSize;
@@ -416,10 +421,6 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     return _currentTask;
   }
 
-  Task::ControlBlock* Task::Find(UInt32 id) {
-    return FindTaskById(id);
-  }
-
   void Task::SetCurrentAddressSpace(UInt32 pageDirectoryPhysical) {
     if (_currentTask == nullptr) {
       return;
@@ -456,5 +457,23 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     }
 
     return Schedule(&context);
+  }
+
+  bool Task::GrantIOAccess(UInt32 taskId) {
+    Task::ControlBlock* tcb = FindById(taskId);
+
+    if (!tcb) {
+      return false;
+    }
+
+    tcb->caps |= CapabilityIO;
+
+    return true;
+  }
+
+  bool Task::CurrentTaskHasIOAccess() {
+    Task::ControlBlock* tcb = GetCurrent();
+
+    return tcb && (tcb->caps & CapabilityIO) != 0;
   }
 }

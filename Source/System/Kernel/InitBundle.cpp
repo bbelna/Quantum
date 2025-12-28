@@ -2,23 +2,26 @@
  * @file System/Kernel/InitBundle.cpp
  * @brief Init bundle handling.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #include <Align.hpp>
+#include <Types.hpp>
 
+#include "Arch/AddressSpace.hpp"
+#include "Arch/Paging.hpp"
+#include "Arch/PhysicalAllocator.hpp"
 #include "BootInfo.hpp"
 #include "InitBundle.hpp"
 #include "Logger.hpp"
-#include "Memory.hpp"
 #include "Prelude.hpp"
 #include "Task.hpp"
-#include "Types.hpp"
 #include "UserMode.hpp"
 
 namespace Quantum::System::Kernel {
   using ::Quantum::AlignUp;
+
   using BundleHeader = ABI::InitBundle::Header;
   using BundleEntry = ABI::InitBundle::Entry;
   using BundleEntryType = ABI::InitBundle::EntryType;
@@ -47,8 +50,8 @@ namespace Quantum::System::Kernel {
       UInt32 phys = base + i * 4096;
       UInt32 virt = _initBundleVirtualBase + i * 4096;
 
-      Memory::MapPage(virt, phys, false, false, false);
-      Memory::MapPage(
+      Arch::Paging::MapPage(virt, phys, false, false, false);
+      Arch::Paging::MapPage(
         _initBundleUserBase + i * 4096,
         phys,
         false,
@@ -273,7 +276,7 @@ namespace Quantum::System::Kernel {
       }
     }
 
-    UInt32 addressSpace = Memory::CreateAddressSpace();
+    UInt32 addressSpace = Arch::AddressSpace::Create();
 
     if (addressSpace == 0) {
       Logger::Write(LogLevel::Warning, "Failed to create address space");
@@ -283,13 +286,13 @@ namespace Quantum::System::Kernel {
     UInt32 pages = AlignUp(imageBytes, pageSize) / pageSize;
 
     for (UInt32 i = 0; i < pages; ++i) {
-      void* phys = Memory::AllocatePage(true);
+      UInt32 phys = Arch::PhysicalAllocator::AllocatePage(true);
       UInt32 vaddr = _userProgramBase + i * pageSize;
 
-      Memory::MapPageInAddressSpace(
+      Arch::AddressSpace::MapPage(
         addressSpace,
         vaddr,
-        reinterpret_cast<UInt32>(phys),
+        phys,
         true,
         true,
         false
@@ -317,13 +320,13 @@ namespace Quantum::System::Kernel {
     UInt32 stackPages = stackBytes / pageSize;
 
     for (UInt32 i = 0; i < stackPages; ++i) {
-      void* phys = Memory::AllocatePage(true);
+      UInt32 phys = Arch::PhysicalAllocator::AllocatePage(true);
       UInt32 vaddr = stackBase + i * pageSize;
 
-      Memory::MapPageInAddressSpace(
+      Arch::AddressSpace::MapPage(
         addressSpace,
         vaddr,
-        reinterpret_cast<UInt32>(phys),
+        phys,
         true,
         true,
         false
@@ -332,7 +335,7 @@ namespace Quantum::System::Kernel {
 
     Task::SetCoordinatorId(Task::GetCurrentId());
     Task::SetCurrentAddressSpace(addressSpace);
-    Memory::ActivateAddressSpace(addressSpace);
+    Arch::AddressSpace::Activate(addressSpace);
     UserMode::Enter(
       _userProgramBase + entryOffset,
       _userStackTop
@@ -459,7 +462,7 @@ namespace Quantum::System::Kernel {
       return 0;
     }
 
-    UInt32 addressSpace = Memory::CreateAddressSpace();
+    UInt32 addressSpace = Arch::AddressSpace::Create();
 
     if (addressSpace == 0) {
       Logger::Write(
@@ -473,13 +476,13 @@ namespace Quantum::System::Kernel {
     UInt32 pages = AlignUp(imageBytes, pageSize) / pageSize;
 
     for (UInt32 i = 0; i < pages; ++i) {
-      void* phys = Memory::AllocatePage(true);
+      UInt32 phys = Arch::PhysicalAllocator::AllocatePage(true);
       UInt32 vaddr = _userProgramBase + i * pageSize;
 
-      Memory::MapPageInAddressSpace(
+      Arch::AddressSpace::MapPage(
         addressSpace,
         vaddr,
-        reinterpret_cast<UInt32>(phys),
+        phys,
         true,
         true,
         false
@@ -507,13 +510,13 @@ namespace Quantum::System::Kernel {
     UInt32 stackPages = stackBytes / pageSize;
 
     for (UInt32 i = 0; i < stackPages; ++i) {
-      void* phys = Memory::AllocatePage(true);
+      UInt32 phys = Arch::PhysicalAllocator::AllocatePage(true);
       UInt32 vaddr = stackBase + i * pageSize;
 
-      Memory::MapPageInAddressSpace(
+      Arch::AddressSpace::MapPage(
         addressSpace,
         vaddr,
-        reinterpret_cast<UInt32>(phys),
+        phys,
         true,
         true,
         false
@@ -528,7 +531,7 @@ namespace Quantum::System::Kernel {
 
     if (!task) {
       Logger::Write(LogLevel::Warning, "SpawnTask: failed to create task");
-      Memory::DestroyAddressSpace(addressSpace);
+      Arch::AddressSpace::Destroy(addressSpace);
 
       return 0;
     }

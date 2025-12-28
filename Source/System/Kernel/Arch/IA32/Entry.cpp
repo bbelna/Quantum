@@ -2,9 +2,11 @@
  * @file System/Kernel/Arch/IA32/Entry.cpp
  * @brief IA32 kernel entry.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
+
+#include <Types.hpp>
 
 #include "Arch/IA32/BootInfo.hpp"
 #include "Arch/IA32/Bootstrap.hpp"
@@ -16,18 +18,17 @@
 #include "Console.hpp"
 #include "Logger.hpp"
 #include "Main.hpp"
-#include "Memory.hpp"
 #include "Panic.hpp"
 #include "Prelude.hpp"
-#include "Types.hpp"
+
+using Kernel::Console;
+using Kernel::Logger;
+using KernelIA32::Bootstrap;
+using KernelIA32::CPU;
+using KernelIA32::TSS;
 
 using BootInfoRaw = KernelIA32::BootInfo::Raw;
-using Bootstrap = KernelIA32::Bootstrap;
-using Console = Kernel::Console;
-using CPU = KernelIA32::CPU;
-using Logger = Kernel::Logger;
 using LogLevel = Kernel::Logger::Level;
-using TSS = KernelIA32::TSS;
 using Writer = Kernel::Logger::Writer;
 
 /**

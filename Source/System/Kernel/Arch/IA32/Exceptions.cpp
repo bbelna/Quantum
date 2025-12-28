@@ -2,14 +2,14 @@
  * @file System/Kernel/Arch/IA32/Exceptions.cpp
  * @brief IA32 exception handling.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #include "Arch/IA32/CPU.hpp"
 #include "Arch/IA32/Exceptions.hpp"
 #include "Arch/IA32/Interrupts.hpp"
-#include "Arch/IA32/Memory.hpp"
+#include "Arch/IA32/Paging.hpp"
 #include "Logger.hpp"
 #include "Panic.hpp"
 #include "Prelude.hpp"
@@ -89,7 +89,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
     DumpContext(context, faultAddress);
 
-    bool handled = Memory::HandlePageFault(
+    bool handled = Paging::HandlePageFault(
       context,
       faultAddress,
       context.errorCode

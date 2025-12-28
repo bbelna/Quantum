@@ -2,14 +2,13 @@
  * @file System/Kernel/Include/Logger.hpp
  * @brief Kernel logger.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #pragma once
 
-#include "String.hpp"
-#include "Types.hpp"
+#include <Types.hpp>
 
 namespace Quantum::System::Kernel {
   /**
@@ -38,9 +37,9 @@ namespace Quantum::System::Kernel {
           /**
            * Writes a message.
            * @param message
-           *   The message.
+           *   The message to write.
            */
-          virtual void Write(String message);
+          virtual void Write(CString message);
 
           /**
            * Virtual destructor.
@@ -70,7 +69,7 @@ namespace Quantum::System::Kernel {
        * @param message
        *   The message to write.
        */
-      static void Write(Level level, String message);
+      static void Write(Level level, CString message);
 
       /**
        * Writes a formatted message to the kernel log.
@@ -81,7 +80,7 @@ namespace Quantum::System::Kernel {
        * @param ...
        *   Format arguments.
        */
-      static void WriteFormatted(Level level, String formattedMessage, ...);
+      static void WriteFormatted(Level level, CString formattedMessage, ...);
 
     private:
       /**

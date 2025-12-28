@@ -2,8 +2,8 @@
  * @file System/Coordinator/Application.cpp
  * @brief System coordinator application.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #include <ABI/Console.hpp>
@@ -19,12 +19,12 @@
 #include "IRQ.hpp"
 
 namespace Quantum::System::Coordinator {
-  using Console = ABI::Console;
-  using IO = ABI::IO;
-  using IPC = ABI::IPC;
-  using Task = ABI::Task;
-  using FileSystem = Coordinator::FileSystem;
-  using IRQ = Coordinator::IRQ;
+  using ABI::Console;
+  using ABI::IO;
+  using ABI::IPC;
+  using ABI::Task;
+  using Coordinator::IRQ;
+  using Coordinator::FileSystem;
 
   bool Application::HasMagic(const BundleHeader& header) {
     const char expected[8] = { 'I','N','I','T','B','N','D','\0' };

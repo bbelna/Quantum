@@ -2,8 +2,8 @@
  * @file System/Kernel/Include/Panic.hpp
  * @brief Panic handling utilities.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright (c) 2025-2026 The Quantum OS Project
- * SPDX-License-Identifier: MIT
+ * @copyright © 2025-2026 The Quantum OS Project
+ * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #pragma once
@@ -28,9 +28,9 @@ namespace Quantum::System::Kernel {
    */
   [[noreturn]]
   void Panic(
-    String message,
-    String file = nullptr,
+    CString message,
+    CString file = nullptr,
     UInt32 line = -1,
-    String function = nullptr
+    CString function = nullptr
   );
 }
