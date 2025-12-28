@@ -131,9 +131,12 @@ namespace Quantum::Applications::Diagnostics::TestSuite {
 }
 
 #define TEST_ASSERT(cond, msg) \
-  ::Quantum::Applications::Diagnostics::TestSuite::Testing::Assert( \
-    (cond), \
-    (msg), \
-    __FILE__, \
-    __LINE__ \
-  )
+  ((cond) ? true : ( \
+    ::Quantum::Applications::Diagnostics::TestSuite::Testing::Assert( \
+      false, \
+      (msg), \
+      __FILE__, \
+      __LINE__ \
+    ), \
+    false \
+  ))

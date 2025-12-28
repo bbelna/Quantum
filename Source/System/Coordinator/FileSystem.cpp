@@ -279,12 +279,16 @@ namespace Quantum::System::Coordinator {
           }
 
           if (IPC::Send(_services[i].portId, forward) != 0) {
+            IPC::DestroyPort(replyPort);
+
             continue;
           }
 
           IPC::Message serviceReply {};
 
           if (IPC::Receive(replyPort, serviceReply) != 0) {
+            IPC::DestroyPort(replyPort);
+
             continue;
           }
 
@@ -315,6 +319,8 @@ namespace Quantum::System::Coordinator {
             ++count;
             --remaining;
           }
+
+          IPC::DestroyPort(replyPort);
         }
 
         response.status = count;
@@ -354,12 +360,16 @@ namespace Quantum::System::Coordinator {
           }
 
           if (IPC::Send(_services[i].portId, forward) != 0) {
+            IPC::DestroyPort(replyPort);
+
             continue;
           }
 
           IPC::Message serviceReply {};
 
           if (IPC::Receive(replyPort, serviceReply) != 0) {
+            IPC::DestroyPort(replyPort);
+
             continue;
           }
 
@@ -385,10 +395,14 @@ namespace Quantum::System::Coordinator {
             response.status = handle;
             response.dataLength = 0;
 
+            IPC::DestroyPort(replyPort);
+
             sendReply();
 
             break;
           }
+
+          IPC::DestroyPort(replyPort);
         }
 
         if (response.status == 0) {
@@ -478,6 +492,8 @@ namespace Quantum::System::Coordinator {
       }
 
       if (IPC::Send(servicePort, forward) != 0) {
+        IPC::DestroyPort(replyPort);
+
         sendReply();
 
         continue;
@@ -486,6 +502,8 @@ namespace Quantum::System::Coordinator {
       IPC::Message serviceReply {};
 
       if (IPC::Receive(replyPort, serviceReply) != 0) {
+        IPC::DestroyPort(replyPort);
+
         sendReply();
 
         continue;
@@ -500,6 +518,8 @@ namespace Quantum::System::Coordinator {
       for (UInt32 i = 0; i < serviceBytes; ++i) {
         reinterpret_cast<UInt8*>(&response)[i] = serviceReply.payload[i];
       }
+
+      IPC::DestroyPort(replyPort);
 
       response.replyPortId = clientReplyPort;
 

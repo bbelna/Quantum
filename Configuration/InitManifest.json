@@ -20,6 +20,17 @@
     "path": "Build/Drivers/Input/PS2/Keyboard/Keyboard.qx"
   },
   {
+    "name": "testsuite",
+    "type": "service",
+    "dependsOn": [
+      "floppy",
+      "keyboard",
+      "fat12"
+    ],
+    "required": false,
+    "path": "Build/Applications/Diagnostics/TestSuite/TestSuite.qx"
+  },
+  {
     "name": "fat12",
     "type": "filesystem",
     "dependsOn": [

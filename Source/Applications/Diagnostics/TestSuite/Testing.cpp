@@ -7,6 +7,7 @@
  */
 
 #include <ABI/Console.hpp>
+#include <Debug.hpp>
 
 #include "Testing.hpp"
 #include "Tests/FAT12Tests.hpp"
@@ -61,13 +62,14 @@ namespace Quantum::Applications::Diagnostics::TestSuite {
     UInt32 line
   ) {
     if (!condition) {
-      Console::Write("TEST ASSERT FAILED: ");
-      Console::Write(message ? message : "unknown");
-      Console::Write(" (");
-      Console::Write(file ? file : "unknown");
-      Console::Write(":");
+      Console::WriteLine("TEST ASSERT FAILED :(");
+      Console::Write("  ");
+      Console::WriteLine(message ? message : "unknown");
+      Console::Write("  ");
+      Console::Write(file ? TrimSourceFile(file) : "unknown");
+      Console::Write(" : ");
       WriteDec(line);
-      Console::WriteLine(")");
+      Console::WriteLine("");
 
       _assertFailures++;
     }

@@ -81,6 +81,8 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
     if (Input::Subscribe(portId) != 0) {
       TEST_ASSERT(false, "input subscribe failed");
 
+      IPC::DestroyPort(portId);
+
       return false;
     }
 
@@ -89,29 +91,30 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
     bool received = false;
     Input::EventMessage payload {};
 
-    const UInt32 maxSpins = 200000;
-
-    for (UInt32 i = 0; i < maxSpins; ++i) {
+    for (;;) {
       IPC::Message msg {};
 
-      if (IPC::TryReceive(portId, msg) == 0) {
-        if (msg.length >= sizeof(Input::EventMessage)) {
-          CopyBytes(&payload, msg.payload, sizeof(Input::EventMessage));
+      if (IPC::Receive(portId, msg) != 0) {
+        Task::Yield();
 
-          if (payload.op == 0) {
-            received = true;
-
-            break;
-          }
-        }
+        continue;
       }
 
-      if ((i & 0x3FF) == 0) {
-        Task::Yield();
+      if (msg.length < sizeof(Input::EventMessage)) {
+        continue;
+      }
+
+      CopyBytes(&payload, msg.payload, sizeof(Input::EventMessage));
+
+      if (payload.op == 0) {
+        received = true;
+
+        break;
       }
     }
 
     Input::Unsubscribe(portId);
+    IPC::DestroyPort(portId);
 
     if (!received) {
       TEST_ASSERT(false, "no input event received");

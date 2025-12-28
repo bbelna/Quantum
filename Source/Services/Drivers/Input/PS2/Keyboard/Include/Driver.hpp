@@ -38,6 +38,8 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
 
       /**
        * Sends a readiness message to the coordinator.
+       * @param deviceTypeId
+       *   Device type identifier.
        */
       static void SendReadySignal(UInt8 deviceTypeId);
 

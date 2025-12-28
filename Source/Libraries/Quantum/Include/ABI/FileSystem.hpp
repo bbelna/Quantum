@@ -791,12 +791,16 @@ namespace Quantum::ABI {
         CopyBytes(msg.payload, &request, requestBytes);
 
         if (IPC::Send(IPC::Ports::FileSystem, msg) != 0) {
+          IPC::DestroyPort(replyPortId);
+
           return 0;
         }
 
         IPC::Message reply {};
 
         if (IPC::Receive(replyPortId, reply) != 0) {
+          IPC::DestroyPort(replyPortId);
+
           return 0;
         }
 
@@ -818,7 +822,11 @@ namespace Quantum::ABI {
           CopyBytes(output, response.data, responseBytes);
         }
 
-        return response.status;
+        UInt32 status = response.status;
+
+        IPC::DestroyPort(replyPortId);
+
+        return status;
       }
   };
 }

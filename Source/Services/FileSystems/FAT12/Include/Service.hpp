@@ -124,6 +124,13 @@ namespace Quantum::Services::FileSystems::FAT12 {
       static void InitializeVolumes();
 
       /**
+       * Sends a readiness message to the coordinator.
+       * @param deviceTypeId
+       *   Device type identifier.
+       */
+      static void SendReadySignal(UInt8 deviceTypeId);
+
+      /**
        * Finds a volume by handle.
        * @param handle
        *   Volume handle.

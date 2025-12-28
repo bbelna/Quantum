@@ -29,6 +29,7 @@ TYPE_MAP = {
 DEVICE_MAP = {
     "floppy": 1,
     "keyboard": 2,
+    "fat12": 3,
 }
 
 
