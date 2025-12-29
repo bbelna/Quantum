@@ -107,4 +107,24 @@ namespace Quantum::System::Kernel {
 
     IPC::Send(portId, Task::GetCurrentId(), &payload, sizeof(payload));
   }
+
+  IRQLineObject* IRQ::GetObject(UInt32 irq) {
+    if (irq >= _maxIRQs) {
+      return nullptr;
+    }
+
+    IRQLineObject* obj = _irqObjects[irq];
+
+    if (!obj) {
+      obj = KernelObject::CreateIRQLineObject(irq);
+
+      if (!obj) {
+        return nullptr;
+      }
+
+      _irqObjects[irq] = obj;
+    }
+
+    return obj;
+  }
 }

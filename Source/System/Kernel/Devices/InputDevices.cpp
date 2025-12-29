@@ -10,6 +10,7 @@
 #include "Task.hpp"
 
 namespace Quantum::System::Kernel::Devices {
+  using Kernel::KernelObject;
   using Kernel::Task;
 
   void InputDevices::Initialize() {
@@ -25,6 +26,7 @@ namespace Quantum::System::Kernel::Devices {
       _deviceStorage[i].ownerId = 0;
       _deviceStorage[i].head = 0;
       _deviceStorage[i].tail = 0;
+      _deviceStorage[i].object = nullptr;
     }
   }
 
@@ -40,6 +42,14 @@ namespace Quantum::System::Kernel::Devices {
     device->ownerId = 0;
     device->head = 0;
     device->tail = 0;
+    device->object = KernelObject::CreateInputDeviceObject(id);
+
+    if (!device->object) {
+      device->info.id = 0;
+
+      return 0;
+    }
+
     _devices[_deviceCount++] = device;
 
     return id;
@@ -91,6 +101,14 @@ namespace Quantum::System::Kernel::Devices {
     storage->ownerId = Task::GetCurrentId();
     storage->head = 0;
     storage->tail = 0;
+    storage->object = KernelObject::CreateInputDeviceObject(id);
+
+    if (!storage->object) {
+      storage->info.id = 0;
+
+      return 0;
+    }
+
     _devices[_deviceCount++] = storage;
 
     return id;
@@ -103,6 +121,11 @@ namespace Quantum::System::Kernel::Devices {
           if (_devices[i]->ownerId != Task::GetCurrentId()) {
             return false;
           }
+        }
+
+        if (_devices[i]->object) {
+          _devices[i]->object->Release();
+          _devices[i]->object = nullptr;
         }
 
         _devices[i]->info.id = 0;
@@ -223,5 +246,15 @@ namespace Quantum::System::Kernel::Devices {
     }
 
     return nullptr;
+  }
+
+  InputDeviceObject* InputDevices::GetObject(UInt32 deviceId) {
+    InputDevices::Device* device = Find(deviceId);
+
+    if (!device) {
+      return nullptr;
+    }
+
+    return device->object;
   }
 }

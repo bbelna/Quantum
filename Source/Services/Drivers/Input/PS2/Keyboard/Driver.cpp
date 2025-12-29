@@ -9,6 +9,7 @@
 #include <ABI/Console.hpp>
 #include <ABI/Coordinator.hpp>
 #include <ABI/Devices/InputDevices.hpp>
+#include <ABI/Handle.hpp>
 #include <ABI/IO.hpp>
 #include <ABI/IPC.hpp>
 #include <ABI/IRQ.hpp>
@@ -54,10 +55,23 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
   static constexpr UInt8 capsBreak = 0xBA;
 
   void Driver::RegisterIRQRoute(UInt32 portId) {
-    UInt32 status = ABI::IRQ::Register(_irqLine, portId);
+    ABI::IRQ::Handle handle = 0;
+    UInt32 status = ABI::IRQ::Register(_irqLine, portId, &handle);
 
     if (status != 0) {
       Console::WriteLine("PS/2 keyboard IRQ register failed");
+
+      if (handle != 0) {
+        ABI::Handle::Close(handle);
+      }
+
+      return;
+    }
+
+    _irqHandle = handle;
+
+    if (_irqHandle != 0) {
+      ABI::IRQ::Enable(_irqHandle);
     }
   }
 

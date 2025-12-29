@@ -7,6 +7,7 @@
  */
 
 #include <ABI/Console.hpp>
+#include <ABI/Handle.hpp>
 #include <ABI/IPC.hpp>
 #include <ABI/IRQ.hpp>
 #include <ABI/Task.hpp>
@@ -136,14 +137,36 @@ namespace Quantum::System::Coordinator {
         continue;
       }
 
-      UInt32 status = Register(request.irq, request.portId);
-
       IPC::Handle replyHandle = 0;
 
       if (request.replyPortId != 0) {
         replyHandle = IPC::OpenPort(request.replyPortId, IPC::RightSend);
       } else {
         replyHandle = TakePendingReply(msg.senderId);
+      }
+
+      ABI::IRQ::Handle irqHandle = ABI::IRQ::Open(
+        request.irq,
+        ABI::IRQ::RightRegister
+          | ABI::IRQ::RightUnregister
+          | ABI::IRQ::RightEnable
+          | ABI::IRQ::RightDisable
+      );
+      UInt32 status = 1;
+
+      if (irqHandle != 0) {
+        status = Register(irqHandle, request.portId);
+
+        if (status == 0 && replyHandle != 0) {
+          UInt32 rights = ABI::IRQ::RightRegister
+            | ABI::IRQ::RightUnregister
+            | ABI::IRQ::RightEnable
+            | ABI::IRQ::RightDisable;
+
+          IPC::SendHandle(replyHandle, irqHandle, rights);
+        }
+
+        ABI::Handle::Close(irqHandle);
       }
 
       if (replyHandle != 0) {

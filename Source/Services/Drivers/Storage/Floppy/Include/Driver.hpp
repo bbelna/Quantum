@@ -10,6 +10,7 @@
 
 #include <ABI/Devices/BlockDevices.hpp>
 #include <ABI/IPC.hpp>
+#include <ABI/IRQ.hpp>
 #include <ABI/Prelude.hpp>
 #include <Types.hpp>
 
@@ -370,6 +371,11 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
        * IPC handle for receiving messages.
        */
       inline static IPC::Handle _portHandle = 0;
+
+      /**
+       * IRQ handle granted by the coordinator.
+       */
+      inline static ABI::IRQ::Handle _irqHandle = 0;
 
       /**
        * Maximum number of queued non-IRQ messages while waiting.

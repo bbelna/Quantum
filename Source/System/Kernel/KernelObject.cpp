@@ -14,7 +14,7 @@
 void* operator new(Size /*size*/, void* place) noexcept;
 
 namespace Quantum::System::Kernel {
-  static void DefaultDestroy(KernelObject* obj) {
+  void KernelObject::DefaultDestroy(KernelObject* obj) {
     if (obj) {
       Heap::Free(obj);
     }
@@ -47,7 +47,7 @@ namespace Quantum::System::Kernel {
     }
   }
 
-  static void DestroyIPCPortObject(KernelObject* obj) {
+  void KernelObject::DestroyIPCPortObject(KernelObject* obj) {
     if (!obj) {
       return;
     }
@@ -55,13 +55,17 @@ namespace Quantum::System::Kernel {
     auto* portObj = static_cast<IPCPortObject*>(obj);
 
     portObj->~IPCPortObject();
+
     Heap::Free(portObj);
   }
 
   IPCPortObject::IPCPortObject(UInt32 port)
-  : KernelObject(KernelObject::Type::IPCPort, DestroyIPCPortObject),
-    portId(port) {
-  }
+    : KernelObject(
+      KernelObject::Type::IPCPort,
+      KernelObject::DestroyIPCPortObject
+    ),
+    portId(port)
+  {}
 
   IPCPortObject* KernelObject::CreateIPCPortObject(UInt32 portId) {
     void* memory = Heap::Allocate(sizeof(IPCPortObject));
@@ -71,5 +75,95 @@ namespace Quantum::System::Kernel {
     }
 
     return new (memory) IPCPortObject(portId);
+  }
+
+  void KernelObject::DestroyBlockDeviceObject(KernelObject* obj) {
+    if (!obj) {
+      return;
+    }
+
+    auto* deviceObj = static_cast<BlockDeviceObject*>(obj);
+
+    deviceObj->~BlockDeviceObject();
+
+    Heap::Free(deviceObj);
+  }
+
+  BlockDeviceObject::BlockDeviceObject(UInt32 device)
+    : KernelObject(
+      KernelObject::Type::BlockDevice,
+      KernelObject::DestroyBlockDeviceObject
+    ),
+    deviceId(device)
+  {}
+
+  BlockDeviceObject* KernelObject::CreateBlockDeviceObject(UInt32 deviceId) {
+    void* memory = Heap::Allocate(sizeof(BlockDeviceObject));
+
+    if (!memory) {
+      return nullptr;
+    }
+
+    return new (memory) BlockDeviceObject(deviceId);
+  }
+
+  void KernelObject::DestroyInputDeviceObject(KernelObject* obj) {
+    if (!obj) {
+      return;
+    }
+
+    auto* deviceObj = static_cast<InputDeviceObject*>(obj);
+
+    deviceObj->~InputDeviceObject();
+
+    Heap::Free(deviceObj);
+  }
+
+  InputDeviceObject::InputDeviceObject(UInt32 device)
+    : KernelObject(
+      KernelObject::Type::InputDevice,
+      KernelObject::DestroyInputDeviceObject
+    ),
+    deviceId(device)
+  {}
+
+  InputDeviceObject* KernelObject::CreateInputDeviceObject(UInt32 deviceId) {
+    void* memory = Heap::Allocate(sizeof(InputDeviceObject));
+
+    if (!memory) {
+      return nullptr;
+    }
+
+    return new (memory) InputDeviceObject(deviceId);
+  }
+
+  void KernelObject::DestroyIRQLineObject(KernelObject* obj) {
+    if (!obj) {
+      return;
+    }
+
+    auto* irqObj = static_cast<IRQLineObject*>(obj);
+
+    irqObj->~IRQLineObject();
+
+    Heap::Free(irqObj);
+  }
+
+  IRQLineObject::IRQLineObject(UInt32 irq)
+    : KernelObject(
+      KernelObject::Type::IRQLine,
+      KernelObject::DestroyIRQLineObject
+    ),
+    irqLine(irq)
+  {}
+
+  IRQLineObject* KernelObject::CreateIRQLineObject(UInt32 irq) {
+    void* memory = Heap::Allocate(sizeof(IRQLineObject));
+
+    if (!memory) {
+      return nullptr;
+    }
+
+    return new (memory) IRQLineObject(irq);
   }
 }

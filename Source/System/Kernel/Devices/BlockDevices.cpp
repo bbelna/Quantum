@@ -18,6 +18,7 @@
 namespace Quantum::System::Kernel::Devices {
   using ::Quantum::CopyBytes;
   using Kernel::IPC;
+  using Kernel::KernelObject;
   using Kernel::Task;
 
   using LogLevel = Kernel::Logger::Level;
@@ -30,6 +31,7 @@ namespace Quantum::System::Kernel::Devices {
       _devices[i] = nullptr;
       _deviceStorage[i].info.id = 0;
       _deviceStorage[i].portId = 0;
+      _deviceStorage[i].object = nullptr;
     }
   }
 
@@ -122,6 +124,14 @@ namespace Quantum::System::Kernel::Devices {
 
     device->info.id = id;
     device->portId = 0;
+    device->object = KernelObject::CreateBlockDeviceObject(id);
+
+    if (!device->object) {
+      device->info.id = 0;
+
+      return 0;
+    }
+
     _devices[_deviceCount++] = device;
 
     return id;
@@ -175,6 +185,13 @@ namespace Quantum::System::Kernel::Devices {
     storage->info.id = id;
     storage->info.flags &= ~flagReady;
     storage->portId = 0;
+    storage->object = KernelObject::CreateBlockDeviceObject(id);
+
+    if (!storage->object) {
+      storage->info.id = 0;
+
+      return 0;
+    }
 
     _devices[_deviceCount++] = storage;
 
@@ -184,6 +201,11 @@ namespace Quantum::System::Kernel::Devices {
   bool BlockDevices::Unregister(UInt32 deviceId) {
     for (UInt32 i = 0; i < _deviceCount; ++i) {
       if (_devices[i] && _devices[i]->info.id == deviceId) {
+        if (_devices[i]->object) {
+          _devices[i]->object->Release();
+          _devices[i]->object = nullptr;
+        }
+
         _devices[i]->info.id = 0;
         _devices[i]->portId = 0;
         _devices[i] = _devices[_deviceCount - 1];
@@ -378,6 +400,16 @@ namespace Quantum::System::Kernel::Devices {
     }
 
     return nullptr;
+  }
+
+  BlockDeviceObject* BlockDevices::GetObject(UInt32 deviceId) {
+    BlockDevices::Device* device = Find(deviceId);
+
+    if (!device) {
+      return nullptr;
+    }
+
+    return device->object;
   }
 
   bool BlockDevices::ValidateRequest(

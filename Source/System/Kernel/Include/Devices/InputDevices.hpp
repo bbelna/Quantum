@@ -10,6 +10,8 @@
 
 #include <Types.hpp>
 
+#include "KernelObject.hpp"
+
 namespace Quantum::System::Kernel::Devices {
   /**
    * Input device registry and event queue.
@@ -227,6 +229,15 @@ namespace Quantum::System::Kernel::Devices {
       static bool PushEvent(UInt32 deviceId, const Event& event);
 
       /**
+       * Retrieves the kernel object for a device.
+       * @param deviceId
+       *   Identifier of the device to query.
+       * @return
+       *   Kernel object pointer, or nullptr if not found.
+       */
+      static InputDeviceObject* GetObject(UInt32 deviceId);
+
+      /**
        * Registered device descriptor.
        */
       struct Device {
@@ -254,6 +265,11 @@ namespace Quantum::System::Kernel::Devices {
          * Event queue tail index.
          */
         UInt32 tail;
+
+        /**
+         * Kernel object for handle-based access.
+         */
+        InputDeviceObject* object;
       };
 
     private:

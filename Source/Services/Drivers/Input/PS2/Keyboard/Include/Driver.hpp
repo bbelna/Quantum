@@ -10,6 +10,7 @@
 
 #include <ABI/Devices/InputDevices.hpp>
 #include <ABI/IPC.hpp>
+#include <ABI/IRQ.hpp>
 #include <Types.hpp>
 
 namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
@@ -38,6 +39,11 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
        * IPC port identifier for IRQ delivery.
        */
       inline static UInt32 _portId = 0;
+
+      /**
+       * IRQ handle granted by the coordinator.
+       */
+      inline static ABI::IRQ::Handle _irqHandle = 0;
 
       /**
        * Indicates if Shift key is active.

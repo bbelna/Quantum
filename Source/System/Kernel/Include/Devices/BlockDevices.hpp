@@ -11,6 +11,7 @@
 #include <Types.hpp>
 
 #include "IPC.hpp"
+#include "KernelObject.hpp"
 
 namespace Quantum::System::Kernel::Devices {
   /**
@@ -126,6 +127,11 @@ namespace Quantum::System::Kernel::Devices {
          * IPC port bound to the device (0 if unbound).
          */
         UInt32 portId;
+
+        /**
+         * Kernel object for handle-based access.
+         */
+        BlockDeviceObject* object;
       };
 
       /**
@@ -315,6 +321,15 @@ namespace Quantum::System::Kernel::Devices {
        *   True on success; false on failure.
        */
       static bool Write(const Request& request);
+
+      /**
+       * Retrieves the kernel object for a device.
+       * @param deviceId
+       *   Identifier of the device to query.
+       * @return
+       *   Kernel object pointer, or nullptr if not found.
+       */
+      static BlockDeviceObject* GetObject(UInt32 deviceId);
 
     private:
       /**
