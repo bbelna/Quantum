@@ -7,6 +7,7 @@
  */
 
 #include <ABI/Devices/BlockDevices.hpp>
+#include <ABI/Handle.hpp>
 #include <ABI/InitBundle.hpp>
 #include <ABI/IPC.hpp>
 #include <ABI/Prelude.hpp>
@@ -346,7 +347,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
           break;
         }
 
-        IPCPortObject* portObject = KernelObject::CreateIPCPortObject(portId);
+        IPCPortObject* portObject = Kernel::IPC::GetPortObject(portId);
 
         if (!portObject) {
           context.eax = 0;
@@ -359,8 +360,6 @@ namespace Quantum::System::Kernel::Arch::IA32 {
           portObject,
           rights
         );
-
-        portObject->Release();
 
         context.eax = handle;
 
@@ -377,6 +376,117 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         }
 
         context.eax = ok ? 0 : 1;
+
+        break;
+      }
+
+      case SystemCall::IPC_SendHandle: {
+        UInt32 portId = 0;
+        UInt32 portOrHandle = context.ebx;
+        UInt32 handle = context.ecx;
+        UInt32 rights = context.edx;
+
+        if (!ResolveIPCHandle(portOrHandle, IPC::RightSend, portId)) {
+          context.eax = 1;
+
+          break;
+        }
+
+        Kernel::Task::ControlBlock* tcb = Kernel::Task::GetCurrent();
+
+        if (!tcb || !tcb->handleTable || !HandleTable::IsHandle(handle)) {
+          context.eax = 1;
+
+          break;
+        }
+
+        KernelObject::Type type = KernelObject::Type::None;
+        UInt32 entryRights = 0;
+
+        if (!tcb->handleTable->Query(handle, type, entryRights)) {
+          context.eax = 1;
+
+          break;
+        }
+
+        if (rights == 0) {
+          rights = entryRights;
+        } else if ((entryRights & rights) != rights) {
+          context.eax = 1;
+
+          break;
+        }
+
+        KernelObject* object = nullptr;
+
+        if (!tcb->handleTable->Resolve(handle, type, rights, object)) {
+          context.eax = 1;
+
+          break;
+        }
+
+        UInt32 sender = Kernel::Task::GetCurrentId();
+        bool ok = Kernel::IPC::SendHandle(portId, sender, object, rights);
+
+        context.eax = ok ? 0 : 1;
+
+        break;
+      }
+
+      case SystemCall::Handle_Close: {
+        UInt32 handle = context.ebx;
+        Kernel::Task::ControlBlock* tcb = Kernel::Task::GetCurrent();
+        bool ok = false;
+
+        if (tcb && tcb->handleTable && HandleTable::IsHandle(handle)) {
+          ok = tcb->handleTable->Close(handle);
+        }
+
+        context.eax = ok ? 0 : 1;
+
+        break;
+      }
+
+      case SystemCall::Handle_Dup: {
+        UInt32 handle = context.ebx;
+        UInt32 rights = context.ecx;
+        Kernel::Task::ControlBlock* tcb = Kernel::Task::GetCurrent();
+
+        if (!tcb || !tcb->handleTable || !HandleTable::IsHandle(handle)) {
+          context.eax = 0;
+
+          break;
+        }
+
+        context.eax = tcb->handleTable->Duplicate(handle, rights);
+
+        break;
+      }
+
+      case SystemCall::Handle_Query: {
+        UInt32 handle = context.ebx;
+        ABI::Handle::Info* info
+          = reinterpret_cast<ABI::Handle::Info*>(context.ecx);
+        Kernel::Task::ControlBlock* tcb = Kernel::Task::GetCurrent();
+
+        if (!tcb || !tcb->handleTable || !HandleTable::IsHandle(handle) || !info) {
+          context.eax = 1;
+
+          break;
+        }
+
+        KernelObject::Type type = KernelObject::Type::None;
+        UInt32 rights = 0;
+
+        if (!tcb->handleTable->Query(handle, type, rights)) {
+          context.eax = 1;
+
+          break;
+        }
+
+        info->type = static_cast<UInt32>(type);
+        info->rights = rights;
+        context.eax = 0;
 
         break;
       }

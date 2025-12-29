@@ -9,6 +9,7 @@
 #pragma once
 
 #include "ABI/SystemCall.hpp"
+#include "Bytes.hpp"
 #include "Types.hpp"
 
 namespace Quantum::ABI {
@@ -88,6 +89,53 @@ namespace Quantum::ABI {
       };
 
       /**
+       * IPC handle transfer payload.
+       */
+      struct HandleMessage {
+        UInt32 op;
+        UInt32 handle;
+      };
+
+      /**
+       * Handle transfer operation identifier.
+       */
+      static constexpr UInt32 HandleOp = 1;
+
+      /**
+       * Attempts to extract a handle transfer message.
+       * @param message
+       *   IPC message to inspect.
+       * @param outHandle
+       *   Receives the transferred handle on success.
+       * @return
+       *   True if the message is a handle transfer; false otherwise.
+       */
+      static bool TryGetHandleMessage(
+        const Message& message,
+        Handle& outHandle
+      ) {
+        if (message.length != sizeof(HandleMessage)) {
+          return false;
+        }
+
+        HandleMessage transfer {};
+
+        ::Quantum::CopyBytes(
+          &transfer,
+          message.payload,
+          sizeof(HandleMessage)
+        );
+
+        if (transfer.op != HandleOp) {
+          return false;
+        }
+
+        outHandle = transfer.handle;
+
+        return true;
+      }
+
+      /**
        * Creates a new IPC port owned by the caller.
        * @return
        *   Port id on success, 0 on failure.
@@ -149,6 +197,30 @@ namespace Quantum::ABI {
           portId,
           reinterpret_cast<UInt32>(&message),
           0
+        );
+      }
+
+      /**
+       * Sends a handle to a port (handle is duplicated to the receiver).
+       * @param portId
+       *   Target port id or handle.
+       * @param handle
+       *   Handle to transfer.
+       * @param rights
+       *   Rights mask (0 to keep original rights).
+       * @return
+       *   0 on success, non-zero on failure.
+       */
+      static UInt32 SendHandle(
+        UInt32 portId,
+        Handle handle,
+        UInt32 rights = 0
+      ) {
+        return InvokeSystemCall(
+          SystemCall::IPC_SendHandle,
+          portId,
+          handle,
+          rights
         );
       }
 

@@ -29,6 +29,7 @@ namespace Quantum::ABI {
     IPC_DestroyPort = 404,
     IPC_OpenPort = 405,
     IPC_CloseHandle = 406,
+    IPC_SendHandle = 407,
     IRQ_Register = 501,
     IRQ_Unregister = 502,
     IRQ_Enable = 503,
@@ -53,7 +54,10 @@ namespace Quantum::ABI {
     Input_UpdateInfo = 723,
     Input_ReadEvent = 724,
     Input_PushEvent = 725,
-    Memory_ExpandHeap = 800
+    Memory_ExpandHeap = 800,
+    Handle_Close = 810,
+    Handle_Dup = 811,
+    Handle_Query = 812
   };
 
   /**

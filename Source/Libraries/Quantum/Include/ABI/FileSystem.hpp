@@ -295,7 +295,7 @@ namespace Quantum::ABI {
         UInt32 status;
 
         /**
-         * Reply port id for responses.
+         * Reply port id for responses (0 when using handle transfer).
          */
         UInt32 replyPortId;
 
@@ -774,7 +774,7 @@ namespace Quantum::ABI {
           return 0;
         }
 
-        request.replyPortId = replyPortId;
+        request.replyPortId = 0;
 
         IPC::Message msg {};
         UInt32 requestBytes = messageHeaderBytes + request.dataLength;
@@ -785,7 +785,7 @@ namespace Quantum::ABI {
 
         IPC::Handle replyHandle = IPC::OpenPort(
           replyPortId,
-          IPC::RightReceive | IPC::RightManage
+          IPC::RightReceive | IPC::RightManage | IPC::RightSend
         );
 
         if (replyHandle == 0) {
@@ -805,8 +805,21 @@ namespace Quantum::ABI {
           return 0;
         }
 
+        if (IPC::SendHandle(
+          fsHandle,
+          replyHandle,
+          IPC::RightSend
+        ) != 0) {
+          IPC::CloseHandle(fsHandle);
+          IPC::DestroyPort(replyHandle);
+          IPC::CloseHandle(replyHandle);
+
+          return 0;
+        }
+
         if (IPC::Send(fsHandle, msg) != 0) {
           IPC::CloseHandle(fsHandle);
+          IPC::DestroyPort(replyHandle);
           IPC::CloseHandle(replyHandle);
 
           return 0;

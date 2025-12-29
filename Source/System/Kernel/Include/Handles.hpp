@@ -100,6 +100,34 @@ namespace Quantum::System::Kernel {
       bool Close(Handle handle);
 
       /**
+       * Duplicates a handle entry.
+       * @param handle
+       *   Handle to duplicate.
+       * @param rights
+       *   Rights mask (0 to keep original rights).
+       * @return
+       *   New handle on success; 0 on failure.
+       */
+      Handle Duplicate(Handle handle, UInt32 rights);
+
+      /**
+       * Queries a handle entry.
+       * @param handle
+       *   Handle to query.
+       * @param outType
+       *   Receives kernel object type.
+       * @param outRights
+       *   Receives rights mask.
+       * @return
+       *   True on success; false otherwise.
+       */
+      bool Query(
+        Handle handle,
+        KernelObject::Type& outType,
+        UInt32& outRights
+      ) const;
+
+      /**
        * Resolves a handle to an object id.
        * @param handle
        *   Handle to resolve.

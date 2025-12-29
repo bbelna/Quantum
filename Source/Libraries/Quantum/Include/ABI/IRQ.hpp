@@ -49,7 +49,7 @@ namespace Quantum::ABI {
         UInt32 portId;
 
         /**
-         * Reply port id for acknowledgements.
+         * Reply port id for acknowledgements (0 when using handle transfer).
          */
         UInt32 replyPortId;
 
@@ -92,7 +92,7 @@ namespace Quantum::ABI {
 
         IPC::Handle replyHandle = IPC::OpenPort(
           replyPortId,
-          IPC::RightReceive | IPC::RightManage
+          IPC::RightReceive | IPC::RightManage | IPC::RightSend
         );
 
         if (replyHandle == 0) {
@@ -108,12 +108,24 @@ namespace Quantum::ABI {
         request.op = static_cast<UInt32>(Operation::Register);
         request.irq = irq;
         request.portId = portId;
-        request.replyPortId = replyPortId;
+        request.replyPortId = 0;
         request.data = 0;
 
         msg.length = sizeof(request);
 
         ::Quantum::CopyBytes(msg.payload, &request, msg.length);
+
+        if (IPC::SendHandle(
+          irqHandle,
+          replyHandle,
+          IPC::RightSend
+        ) != 0) {
+          IPC::DestroyPort(replyHandle);
+          IPC::CloseHandle(replyHandle);
+          IPC::CloseHandle(irqHandle);
+
+          return 1;
+        }
 
         IPC::Send(irqHandle, msg);
 

@@ -148,6 +148,56 @@ namespace Quantum::System::Coordinator {
     }
   }
 
+  void FileSystem::StorePendingReply(UInt32 senderId, UInt32 handle) {
+    if (senderId == 0 || handle == 0) {
+      return;
+    }
+
+    for (UInt32 i = 0; i < _maxPendingReplies; ++i) {
+      if (_pendingReplies[i].inUse && _pendingReplies[i].senderId == senderId) {
+        if (_pendingReplies[i].handle != 0) {
+          IPC::CloseHandle(_pendingReplies[i].handle);
+        }
+
+        _pendingReplies[i].handle = handle;
+
+        return;
+      }
+    }
+
+    for (UInt32 i = 0; i < _maxPendingReplies; ++i) {
+      if (!_pendingReplies[i].inUse) {
+        _pendingReplies[i].inUse = true;
+        _pendingReplies[i].senderId = senderId;
+        _pendingReplies[i].handle = handle;
+
+        return;
+      }
+    }
+
+    IPC::CloseHandle(handle);
+  }
+
+  UInt32 FileSystem::TakePendingReply(UInt32 senderId) {
+    if (senderId == 0) {
+      return 0;
+    }
+
+    for (UInt32 i = 0; i < _maxPendingReplies; ++i) {
+      if (_pendingReplies[i].inUse && _pendingReplies[i].senderId == senderId) {
+        UInt32 handle = _pendingReplies[i].handle;
+
+        _pendingReplies[i].inUse = false;
+        _pendingReplies[i].senderId = 0;
+        _pendingReplies[i].handle = 0;
+
+        return handle;
+      }
+    }
+
+    return 0;
+  }
+
   void FileSystem::ProcessPending() {
     if (_portId == 0) {
       return;
@@ -160,6 +210,14 @@ namespace Quantum::System::Coordinator {
 
       if (IPC::TryReceive(receiveId, msg) != 0) {
         break;
+      }
+
+      IPC::Handle transferHandle = 0;
+
+      if (IPC::TryGetHandleMessage(msg, transferHandle)) {
+        StorePendingReply(msg.senderId, transferHandle);
+
+        continue;
       }
 
       if (msg.length < ABI::FileSystem::messageHeaderBytes) {
@@ -187,13 +245,21 @@ namespace Quantum::System::Coordinator {
           request.arg1
         );
 
+        IPC::Handle replyHandle = 0;
+
         if (request.replyPortId != 0) {
+          replyHandle = IPC::OpenPort(request.replyPortId, IPC::RightSend);
+        } else {
+          replyHandle = TakePendingReply(msg.senderId);
+        }
+
+        if (replyHandle != 0) {
           ABI::FileSystem::ServiceMessage response {};
           IPC::Message reply {};
 
           response.op = request.op;
           response.status = 0;
-          response.replyPortId = request.replyPortId;
+          response.replyPortId = 0;
           response.arg0 = 0;
           response.arg1 = 0;
           response.arg2 = 0;
@@ -205,15 +271,8 @@ namespace Quantum::System::Coordinator {
             reply.payload[i] = reinterpret_cast<UInt8*>(&response)[i];
           }
 
-          IPC::Handle replyHandle = IPC::OpenPort(
-            request.replyPortId,
-            IPC::RightSend
-          );
-
-          if (replyHandle != 0) {
-            IPC::Send(replyHandle, reply);
-            IPC::CloseHandle(replyHandle);
-          }
+          IPC::Send(replyHandle, reply);
+          IPC::CloseHandle(replyHandle);
         }
 
         continue;
@@ -221,9 +280,15 @@ namespace Quantum::System::Coordinator {
 
       ABI::FileSystem::Operation op
         = static_cast<ABI::FileSystem::Operation>(request.op);
-      UInt32 clientReplyPort = request.replyPortId;
+      IPC::Handle clientReplyHandle = 0;
 
-      if (clientReplyPort == 0) {
+      if (request.replyPortId != 0) {
+        clientReplyHandle = IPC::OpenPort(request.replyPortId, IPC::RightSend);
+      } else {
+        clientReplyHandle = TakePendingReply(msg.senderId);
+      }
+
+      if (clientReplyHandle == 0) {
         continue;
       }
 
@@ -231,7 +296,7 @@ namespace Quantum::System::Coordinator {
 
       response.op = request.op;
       response.status = 1;
-      response.replyPortId = clientReplyPort;
+      response.replyPortId = 0;
       response.arg0 = 0;
       response.arg1 = 0;
       response.arg2 = 0;
@@ -240,7 +305,6 @@ namespace Quantum::System::Coordinator {
       auto sendReply = [&]() {
         IPC::Message reply {};
 
-        response.replyPortId = clientReplyPort;
         reply.length
           = ABI::FileSystem::messageHeaderBytes + response.dataLength;
 
@@ -253,14 +317,10 @@ namespace Quantum::System::Coordinator {
           reply.payload[i] = reinterpret_cast<UInt8*>(&response)[i];
         }
 
-        IPC::Handle replyHandle = IPC::OpenPort(
-          clientReplyPort,
-          IPC::RightSend
-        );
-
-        if (replyHandle != 0) {
-          IPC::Send(replyHandle, reply);
-          IPC::CloseHandle(replyHandle);
+        if (clientReplyHandle != 0) {
+          IPC::Send(clientReplyHandle, reply);
+          IPC::CloseHandle(clientReplyHandle);
+          clientReplyHandle = 0;
         }
       };
 
@@ -284,15 +344,26 @@ namespace Quantum::System::Coordinator {
             continue;
           }
 
-          UInt32 replyPort = IPC::CreatePort();
+          UInt32 replyPortId = IPC::CreatePort();
 
-          if (replyPort == 0) {
+          if (replyPortId == 0) {
+            continue;
+          }
+
+          IPC::Handle replyHandle = IPC::OpenPort(
+            replyPortId,
+            IPC::RightReceive | IPC::RightManage | IPC::RightSend
+          );
+
+          if (replyHandle == 0) {
+            IPC::DestroyPort(replyPortId);
+
             continue;
           }
 
           ABI::FileSystem::ServiceMessage serviceRequest = request;
 
-          serviceRequest.replyPortId = replyPort;
+          serviceRequest.replyPortId = 0;
           serviceRequest.arg1 = remaining;
 
           IPC::Message forward {};
@@ -311,14 +382,28 @@ namespace Quantum::System::Coordinator {
           );
 
           if (serviceHandle == 0) {
-            IPC::DestroyPort(replyPort);
+            IPC::DestroyPort(replyHandle);
+            IPC::CloseHandle(replyHandle);
+
+            continue;
+          }
+
+          if (IPC::SendHandle(
+            serviceHandle,
+            replyHandle,
+            IPC::RightSend
+          ) != 0) {
+            IPC::CloseHandle(serviceHandle);
+            IPC::DestroyPort(replyHandle);
+            IPC::CloseHandle(replyHandle);
 
             continue;
           }
 
           if (IPC::Send(serviceHandle, forward) != 0) {
             IPC::CloseHandle(serviceHandle);
-            IPC::DestroyPort(replyPort);
+            IPC::DestroyPort(replyHandle);
+            IPC::CloseHandle(replyHandle);
 
             continue;
           }
@@ -327,8 +412,9 @@ namespace Quantum::System::Coordinator {
 
           IPC::Message serviceReply {};
 
-          if (IPC::Receive(replyPort, serviceReply) != 0) {
-            IPC::DestroyPort(replyPort);
+          if (IPC::Receive(replyHandle, serviceReply) != 0) {
+            IPC::DestroyPort(replyHandle);
+            IPC::CloseHandle(replyHandle);
 
             continue;
           }
@@ -361,7 +447,8 @@ namespace Quantum::System::Coordinator {
             --remaining;
           }
 
-          IPC::DestroyPort(replyPort);
+          IPC::DestroyPort(replyHandle);
+          IPC::CloseHandle(replyHandle);
         }
 
         response.status = count;
@@ -380,15 +467,26 @@ namespace Quantum::System::Coordinator {
             continue;
           }
 
-          UInt32 replyPort = IPC::CreatePort();
+          UInt32 replyPortId = IPC::CreatePort();
 
-          if (replyPort == 0) {
+          if (replyPortId == 0) {
+            continue;
+          }
+
+          IPC::Handle replyHandle = IPC::OpenPort(
+            replyPortId,
+            IPC::RightReceive | IPC::RightManage | IPC::RightSend
+          );
+
+          if (replyHandle == 0) {
+            IPC::DestroyPort(replyPortId);
+
             continue;
           }
 
           ABI::FileSystem::ServiceMessage serviceRequest = request;
 
-          serviceRequest.replyPortId = replyPort;
+          serviceRequest.replyPortId = 0;
 
           IPC::Message forward {};
 
@@ -406,14 +504,28 @@ namespace Quantum::System::Coordinator {
           );
 
           if (serviceHandle == 0) {
-            IPC::DestroyPort(replyPort);
+            IPC::DestroyPort(replyHandle);
+            IPC::CloseHandle(replyHandle);
+
+            continue;
+          }
+
+          if (IPC::SendHandle(
+            serviceHandle,
+            replyHandle,
+            IPC::RightSend
+          ) != 0) {
+            IPC::CloseHandle(serviceHandle);
+            IPC::DestroyPort(replyHandle);
+            IPC::CloseHandle(replyHandle);
 
             continue;
           }
 
           if (IPC::Send(serviceHandle, forward) != 0) {
             IPC::CloseHandle(serviceHandle);
-            IPC::DestroyPort(replyPort);
+            IPC::DestroyPort(replyHandle);
+            IPC::CloseHandle(replyHandle);
 
             continue;
           }
@@ -422,8 +534,9 @@ namespace Quantum::System::Coordinator {
 
           IPC::Message serviceReply {};
 
-          if (IPC::Receive(replyPort, serviceReply) != 0) {
-            IPC::DestroyPort(replyPort);
+          if (IPC::Receive(replyHandle, serviceReply) != 0) {
+            IPC::DestroyPort(replyHandle);
+            IPC::CloseHandle(replyHandle);
 
             continue;
           }
@@ -450,14 +563,16 @@ namespace Quantum::System::Coordinator {
             response.status = handle;
             response.dataLength = 0;
 
-            IPC::DestroyPort(replyPort);
+            IPC::DestroyPort(replyHandle);
+            IPC::CloseHandle(replyHandle);
 
             sendReply();
 
             break;
           }
 
-          IPC::DestroyPort(replyPort);
+          IPC::DestroyPort(replyHandle);
+          IPC::CloseHandle(replyHandle);
         }
 
         if (response.status == 0) {
@@ -521,9 +636,9 @@ namespace Quantum::System::Coordinator {
         continue;
       }
 
-      UInt32 replyPort = IPC::CreatePort();
+      UInt32 replyPortId = IPC::CreatePort();
 
-      if (replyPort == 0) {
+      if (replyPortId == 0) {
         sendReply();
 
         continue;
@@ -531,7 +646,7 @@ namespace Quantum::System::Coordinator {
 
       ABI::FileSystem::ServiceMessage serviceRequest = request;
 
-      serviceRequest.replyPortId = replyPort;
+      serviceRequest.replyPortId = 0;
 
       if (mapped) {
         serviceRequest.arg0 = serviceHandle;
@@ -547,12 +662,12 @@ namespace Quantum::System::Coordinator {
       }
 
       IPC::Handle replyHandle = IPC::OpenPort(
-        replyPort,
-        IPC::RightReceive | IPC::RightManage
+        replyPortId,
+        IPC::RightReceive | IPC::RightManage | IPC::RightSend
       );
 
       if (replyHandle == 0) {
-        IPC::DestroyPort(replyPort);
+        IPC::DestroyPort(replyPortId);
         sendReply();
 
         continue;
@@ -564,8 +679,22 @@ namespace Quantum::System::Coordinator {
       );
 
       if (serviceSendHandle == 0) {
+        IPC::DestroyPort(replyHandle);
         IPC::CloseHandle(replyHandle);
-        IPC::DestroyPort(replyPort);
+        sendReply();
+
+        continue;
+      }
+
+      if (IPC::SendHandle(
+        serviceSendHandle,
+        replyHandle,
+        IPC::RightSend
+      ) != 0) {
+        IPC::CloseHandle(serviceSendHandle);
+        IPC::DestroyPort(replyHandle);
+        IPC::CloseHandle(replyHandle);
+
         sendReply();
 
         continue;
@@ -573,8 +702,8 @@ namespace Quantum::System::Coordinator {
 
       if (IPC::Send(serviceSendHandle, forward) != 0) {
         IPC::CloseHandle(serviceSendHandle);
+        IPC::DestroyPort(replyHandle);
         IPC::CloseHandle(replyHandle);
-        IPC::DestroyPort(replyPort);
 
         sendReply();
 
@@ -588,7 +717,6 @@ namespace Quantum::System::Coordinator {
       if (IPC::Receive(replyHandle, serviceReply) != 0) {
         IPC::DestroyPort(replyHandle);
         IPC::CloseHandle(replyHandle);
-        IPC::DestroyPort(replyPort);
 
         sendReply();
 
@@ -607,9 +735,6 @@ namespace Quantum::System::Coordinator {
 
       IPC::DestroyPort(replyHandle);
       IPC::CloseHandle(replyHandle);
-      IPC::DestroyPort(replyPort);
-
-      response.replyPortId = clientReplyPort;
 
       if (op == ABI::FileSystem::Operation::Open) {
         if (response.status != 0) {

@@ -19,7 +19,6 @@ namespace Quantum::System::Kernel {
       _entries[i].object = nullptr;
       _entries[i].handle = 0;
     }
-
   }
 
   bool HandleTable::IsHandle(Handle value) {
@@ -92,6 +91,51 @@ namespace Quantum::System::Kernel {
     _entries[index].rights = 0;
     _entries[index].object = nullptr;
     _entries[index].handle = 0;
+
+    return true;
+  }
+
+  HandleTable::Handle HandleTable::Duplicate(Handle handle, UInt32 rights) {
+    UInt32 index = GetIndex(handle);
+
+    if (index >= maxHandles) {
+      return 0;
+    }
+
+    const Entry& entry = _entries[index];
+
+    if (!entry.inUse || entry.handle != handle) {
+      return 0;
+    }
+
+    UInt32 requested = rights == 0 ? entry.rights : rights;
+
+    if ((entry.rights & requested) != requested) {
+      return 0;
+    }
+
+    return Create(entry.type, entry.object, requested);
+  }
+
+  bool HandleTable::Query(
+    Handle handle,
+    KernelObject::Type& outType,
+    UInt32& outRights
+  ) const {
+    UInt32 index = GetIndex(handle);
+
+    if (index >= maxHandles) {
+      return false;
+    }
+
+    const Entry& entry = _entries[index];
+
+    if (!entry.inUse || entry.handle != handle) {
+      return false;
+    }
+
+    outType = entry.type;
+    outRights = entry.rights;
 
     return true;
   }
