@@ -25,6 +25,7 @@
 #include "InitBundle.hpp"
 #include "Interrupts.hpp"
 #include "IPC.hpp"
+#include "Handles.hpp"
 #include "IRQ.hpp"
 #include "Logger.hpp"
 #include "Prelude.hpp"
@@ -37,6 +38,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   using Kernel::Console;
   using Kernel::Devices::BlockDevices;
   using Kernel::Devices::InputDevices;
+  using Kernel::HandleTable;
   using Kernel::IRQ;
   using Kernel::Logger;
 
@@ -44,6 +46,31 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   using LogLevel = Kernel::Logger::Level;
 
   extern "C" void SYSCALL80();
+
+  static bool ResolveIPCHandle(
+    UInt32 portOrHandle,
+    UInt32 rights,
+    UInt32& outPortId
+  ) {
+    if (!HandleTable::IsHandle(portOrHandle)) {
+      outPortId = portOrHandle;
+
+      return true;
+    }
+
+    Kernel::Task::ControlBlock* tcb = Kernel::Task::GetCurrent();
+
+    if (!tcb || !tcb->handleTable) {
+      return false;
+    }
+
+    return tcb->handleTable->Resolve(
+      portOrHandle,
+      HandleTable::ObjectType::IpcPort,
+      rights,
+      outPortId
+    );
+  }
 
   Interrupts::Context* SystemCalls::OnSystemCall(Interrupts::Context& context) {
         SystemCall id = static_cast<SystemCall>(context.eax);
@@ -135,10 +162,17 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::IPC_Send: {
-        UInt32 portId = context.ebx;
+        UInt32 portId = 0;
+        UInt32 portOrHandle = context.ebx;
         IPC::Message* msg = reinterpret_cast<IPC::Message*>(context.ecx);
 
         if (!msg || msg->length == 0 || msg->length > IPC::maxPayloadBytes) {
+          context.eax = 1;
+
+          break;
+        }
+
+        if (!ResolveIPCHandle(portOrHandle, IPC::RightSend, portId)) {
           context.eax = 1;
 
           break;
@@ -153,10 +187,17 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::IPC_Receive: {
-        UInt32 portId = context.ebx;
+        UInt32 portId = 0;
+        UInt32 portOrHandle = context.ebx;
         IPC::Message* msg = reinterpret_cast<IPC::Message*>(context.ecx);
 
         if (!msg) {
+          context.eax = 1;
+
+          break;
+        }
+
+        if (!ResolveIPCHandle(portOrHandle, IPC::RightReceive, portId)) {
           context.eax = 1;
 
           break;
@@ -183,10 +224,17 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::IPC_TryReceive: {
-        UInt32 portId = context.ebx;
+        UInt32 portId = 0;
+        UInt32 portOrHandle = context.ebx;
         IPC::Message* msg = reinterpret_cast<IPC::Message*>(context.ecx);
 
         if (!msg) {
+          context.eax = 1;
+
+          break;
+        }
+
+        if (!ResolveIPCHandle(portOrHandle, IPC::RightReceive, portId)) {
           context.eax = 1;
 
           break;
@@ -213,8 +261,94 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::IPC_DestroyPort: {
+        UInt32 portId = 0;
+        UInt32 portOrHandle = context.ebx;
+        bool ok = false;
+
+        if (!ResolveIPCHandle(portOrHandle, IPC::RightManage, portId)) {
+          context.eax = 1;
+
+          break;
+        }
+
+        UInt32 ownerId = 0;
+
+        if (Kernel::IPC::GetPortOwner(portId, ownerId)) {
+          if (ownerId == Kernel::Task::GetCurrentId()) {
+            ok = Kernel::IPC::DestroyPort(portId);
+          }
+        }
+
+        context.eax = ok ? 0 : 1;
+
+        break;
+      }
+
+      case SystemCall::IPC_OpenPort: {
         UInt32 portId = context.ebx;
-        bool ok = Kernel::IPC::DestroyPort(portId);
+        UInt32 rights = context.ecx;
+
+        if (portId == 0) {
+          context.eax = 0;
+
+          break;
+        }
+
+        UInt32 ownerId = 0;
+
+        if (!Kernel::IPC::GetPortOwner(portId, ownerId)) {
+          context.eax = 0;
+
+          break;
+        }
+
+        Kernel::Task::ControlBlock* tcb = Kernel::Task::GetCurrent();
+
+        if (!tcb || !tcb->handleTable) {
+          context.eax = 0;
+
+          break;
+        }
+
+        UInt32 allowed = IPC::RightSend;
+
+        if (ownerId == Kernel::Task::GetCurrentId()) {
+          allowed |= IPC::RightReceive | IPC::RightManage;
+        }
+
+        if ((rights & ~allowed) != 0) {
+          context.eax = 0;
+
+          break;
+        }
+
+        rights &= allowed;
+
+        if (rights == 0) {
+          context.eax = 0;
+
+          break;
+        }
+
+        HandleTable::Handle handle = tcb->handleTable->Create(
+          HandleTable::ObjectType::IpcPort,
+          portId,
+          rights
+        );
+
+        context.eax = handle;
+
+        break;
+      }
+
+      case SystemCall::IPC_CloseHandle: {
+        UInt32 handle = context.ebx;
+        Kernel::Task::ControlBlock* tcb = Kernel::Task::GetCurrent();
+        bool ok = false;
+
+        if (tcb && tcb->handleTable && HandleTable::IsHandle(handle)) {
+          ok = tcb->handleTable->Close(handle);
+        }
 
         context.eax = ok ? 0 : 1;
 

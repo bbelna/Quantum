@@ -13,6 +13,10 @@
 
 #include "Interrupts.hpp"
 
+namespace Quantum::System::Kernel {
+  class HandleTable;
+}
+
 namespace Quantum::System::Kernel::Arch::IA32 {
   /**
    * Low-level task management for IA32.
@@ -132,6 +136,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
          * Pointer to the next task in the global task list.
          */
         ControlBlock* allNext;
+
+        /**
+         * Per-task handle table.
+         */
+        ::Quantum::System::Kernel::HandleTable* handleTable;
       };
 
       /**

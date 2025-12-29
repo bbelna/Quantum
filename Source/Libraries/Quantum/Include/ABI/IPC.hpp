@@ -18,6 +18,11 @@ namespace Quantum::ABI {
   class IPC {
     public:
       /**
+       * IPC handle type.
+       */
+      using Handle = UInt32;
+
+      /**
        * Maximum payload size for an IPC message.
        */
       static constexpr UInt32 maxPayloadBytes = 1024;
@@ -46,6 +51,13 @@ namespace Quantum::ABI {
          */
         static constexpr UInt32 Input = 4;
       };
+
+      /**
+       * IPC handle rights.
+       */
+      static constexpr UInt32 RightSend = 1u << 0;
+      static constexpr UInt32 RightReceive = 1u << 1;
+      static constexpr UInt32 RightManage = 1u << 2;
 
       /**
        * IPC message layout.
@@ -77,9 +89,33 @@ namespace Quantum::ABI {
       }
 
       /**
+       * Opens a handle to an existing port id.
+       * @param portId
+       *   Existing port identifier.
+       * @param rights
+       *   Rights mask (send/receive/manage).
+       * @return
+       *   Handle on success; 0 on failure.
+       */
+      static Handle OpenPort(UInt32 portId, UInt32 rights) {
+        return InvokeSystemCall(SystemCall::IPC_OpenPort, portId, rights, 0);
+      }
+
+      /**
+       * Closes a previously opened IPC handle.
+       * @param handle
+       *   Handle to close.
+       * @return
+       *   0 on success, non-zero on failure.
+       */
+      static UInt32 CloseHandle(Handle handle) {
+        return InvokeSystemCall(SystemCall::IPC_CloseHandle, handle, 0, 0);
+      }
+
+      /**
        * Destroys an IPC port owned by the caller.
        * @param portId
-       *   Port id to destroy.
+       *   Port id or handle to destroy.
        * @return
        *   0 on success, non-zero on failure.
        */
@@ -90,7 +126,7 @@ namespace Quantum::ABI {
       /**
        * Sends a message to a port.
        * @param portId
-       *   Target port.
+       *   Target port id or handle.
        * @param message
        *   Message to send; length must be <= `maxPayloadBytes`.
        * @return
@@ -111,7 +147,7 @@ namespace Quantum::ABI {
       /**
        * Receives a message from a port (blocking).
        * @param portId
-       *   Port to receive from.
+       *   Port id or handle to receive from.
        * @param outMessage
        *   Receives the message contents.
        * @return
@@ -132,7 +168,7 @@ namespace Quantum::ABI {
       /**
        * Attempts to receive a message without blocking.
        * @param portId
-       *   Port to receive from.
+       *   Port id or handle to receive from.
        * @param outMessage
        *   Receives the message contents.
        * @return

@@ -27,6 +27,8 @@ namespace Quantum::ABI {
     IPC_Receive = 402,
     IPC_TryReceive = 403,
     IPC_DestroyPort = 404,
+    IPC_OpenPort = 405,
+    IPC_CloseHandle = 406,
     IRQ_Register = 501,
     IRQ_Unregister = 502,
     IRQ_Enable = 503,

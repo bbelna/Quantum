@@ -396,16 +396,5 @@ namespace Quantum::System::Kernel::Devices {
         const Request& request,
         bool write
       );
-
-      /**
-       * Copies bytes between buffers.
-       * @param dest
-       *   Destination buffer.
-       * @param src
-       *   Source buffer.
-       * @param length
-       *   Number of bytes to copy.
-       */
-      static void CopyBytes(void* dest, const void* src, UInt32 length);
   };
 }

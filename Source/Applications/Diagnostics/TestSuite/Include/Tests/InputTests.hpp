@@ -35,17 +35,6 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
       static void LogSkip(CString reason);
 
       /**
-       * Copies bytes from source to destination.
-       * @param dest
-       *   Destination buffer.
-       * @param src
-       *   Source buffer.
-       * @param length
-       *   Number of bytes to copy.
-       */
-      static void CopyBytes(void* dest, const void* src, UInt32 length);
-
-      /**
        * Tests for the presence of a keyboard device.
        * @return
        *   True if a keyboard device is present.

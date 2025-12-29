@@ -470,17 +470,6 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
       static bool SendSpecifyCommand();
 
       /**
-       * Copies raw bytes into a destination buffer.
-       * @param dest
-       *   Destination buffer.
-       * @param src
-       *   Source buffer.
-       * @param length
-       *   Number of bytes to copy.
-       */
-      static void CopyBytes(void* dest, const void* src, UInt32 length);
-
-      /**
        * Copies bytes for IPC message parsing.
        * @param dest
        *   Destination buffer.

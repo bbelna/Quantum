@@ -13,10 +13,12 @@
 #include <ABI/IRQ.hpp>
 #include <ABI/IPC.hpp>
 #include <ABI/Task.hpp>
+#include <Bytes.hpp>
 
 #include "Driver.hpp"
 
 namespace Quantum::Services::Drivers::Storage::Floppy {
+  using ::Quantum::CopyBytes;
   using ABI::Console;
   using ABI::IO;
   using ABI::Task;
@@ -134,15 +136,6 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
     }
 
     return true;
-  }
-
-  void Driver::CopyBytes(void* dest, const void* src, UInt32 length) {
-    auto* d = reinterpret_cast<UInt8*>(dest);
-    auto* s = reinterpret_cast<const UInt8*>(src);
-
-    for (UInt32 i = 0; i < length; ++i) {
-      d[i] = s[i];
-    }
   }
 
   void Driver::FillBytes(void* dest, UInt8 value, UInt32 length) {

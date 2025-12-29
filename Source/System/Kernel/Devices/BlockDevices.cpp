@@ -6,6 +6,8 @@
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
+#include <Bytes.hpp>
+
 #include "Arch/AddressSpace.hpp"
 #include "Arch/PhysicalAllocator.hpp"
 #include "Devices/BlockDevices.hpp"
@@ -14,6 +16,7 @@
 #include "Task.hpp"
 
 namespace Quantum::System::Kernel::Devices {
+  using ::Quantum::CopyBytes;
   using Kernel::IPC;
   using Kernel::Task;
 
@@ -509,14 +512,5 @@ namespace Quantum::System::Kernel::Devices {
     }
 
     return true;
-  }
-
-  void BlockDevices::CopyBytes(void* dest, const void* src, UInt32 length) {
-    auto* d = reinterpret_cast<UInt8*>(dest);
-    auto* s = reinterpret_cast<const UInt8*>(src);
-
-    for (UInt32 i = 0; i < length; ++i) {
-      d[i] = s[i];
-    }
   }
 }

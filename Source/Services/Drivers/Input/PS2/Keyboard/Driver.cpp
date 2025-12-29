@@ -14,16 +14,19 @@
 #include <ABI/IRQ.hpp>
 #include <ABI/Prelude.hpp>
 #include <ABI/Task.hpp>
+#include <Bytes.hpp>
 
 #include "Controller.hpp"
 #include "Driver.hpp"
+#include "Prelude.hpp"
 
 namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
+  using ::Quantum::CopyBytes;
   using ABI::Console;
   using ABI::Devices::InputDevices;
   using ABI::IPC;
   using ABI::Task;
-  using Quantum::Services::Drivers::Input::PS2::Controller;
+  using PS2::Controller;
 
   static constexpr UInt8 scancodeMap[128] = {
     0,  27, '1','2','3','4','5','6','7','8','9','0','-','=', '\b',
@@ -49,15 +52,6 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
   static constexpr UInt8 altBreak = 0xB8;
   static constexpr UInt8 capsMake = 0x3A;
   static constexpr UInt8 capsBreak = 0xBA;
-
-  void Driver::CopyBytes(void* dest, const void* src, UInt32 length) {
-    auto* d = reinterpret_cast<UInt8*>(dest);
-    auto* s = reinterpret_cast<const UInt8*>(src);
-
-    for (UInt32 i = 0; i < length; ++i) {
-      d[i] = s[i];
-    }
-  }
 
   void Driver::RegisterIRQRoute(UInt32 portId) {
     UInt32 status = ABI::IRQ::Register(_irqLine, portId);

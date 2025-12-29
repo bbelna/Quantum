@@ -10,6 +10,7 @@
 
 #include "ABI/IPC.hpp"
 #include "ABI/Task.hpp"
+#include "Bytes.hpp"
 #include "Types.hpp"
 
 namespace Quantum::ABI {
@@ -89,7 +90,7 @@ namespace Quantum::ABI {
 
         msg.length = sizeof(request);
 
-        CopyBytes(msg.payload, &request, msg.length);
+        ::Quantum::CopyBytes(msg.payload, &request, msg.length);
 
         IPC::Send(IPC::Ports::IRQ, msg);
 
@@ -100,7 +101,7 @@ namespace Quantum::ABI {
             if (reply.length >= sizeof(UInt32)) {
               UInt32 status = 0;
 
-              CopyBytes(&status, reply.payload, sizeof(status));
+              ::Quantum::CopyBytes(&status, reply.payload, sizeof(status));
 
               IPC::DestroyPort(replyPortId);
 
@@ -120,19 +121,6 @@ namespace Quantum::ABI {
         IPC::DestroyPort(replyPortId);
 
         return 1;
-      }
-
-    private:
-      /**
-       * Copies bytes between buffers.
-       */
-      static void CopyBytes(void* dest, const void* src, UInt32 length) {
-        auto* d = reinterpret_cast<UInt8*>(dest);
-        auto* s = reinterpret_cast<const UInt8*>(src);
-
-        for (UInt32 i = 0; i < length; ++i) {
-          d[i] = s[i];
-        }
       }
   };
 }
