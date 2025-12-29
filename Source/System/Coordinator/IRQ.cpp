@@ -33,6 +33,15 @@ namespace Quantum::System::Coordinator {
     if (_portId != IPC::Ports::IRQ) {
       Console::WriteLine("Coordinator: IRQ port id mismatch");
     }
+
+    _portHandle = IPC::OpenPort(
+      _portId,
+      IPC::RightReceive | IPC::RightManage
+    );
+
+    if (_portHandle == 0) {
+      Console::WriteLine("Coordinator: failed to open IRQ port handle");
+    }
   }
 
   void IRQ::ProcessPending() {
@@ -40,10 +49,12 @@ namespace Quantum::System::Coordinator {
       return;
     }
 
+    UInt32 receiveId = _portHandle != 0 ? _portHandle : _portId;
+
     for (;;) {
       IPC::Message msg {};
 
-      if (IPC::TryReceive(_portId, msg) != 0) {
+      if (IPC::TryReceive(receiveId, msg) != 0) {
         break;
       }
 
@@ -78,7 +89,15 @@ namespace Quantum::System::Coordinator {
           reply.payload[i] = reinterpret_cast<UInt8*>(&payload)[i];
         }
 
-        IPC::Send(request.replyPortId, reply);
+        IPC::Handle replyHandle = IPC::OpenPort(
+          request.replyPortId,
+          IPC::RightSend
+        );
+
+        if (replyHandle != 0) {
+          IPC::Send(replyHandle, reply);
+          IPC::CloseHandle(replyHandle);
+        }
       }
     }
 

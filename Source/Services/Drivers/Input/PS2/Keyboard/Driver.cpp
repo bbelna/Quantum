@@ -72,7 +72,17 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
 
     CopyBytes(msg.payload, &ready, msg.length);
 
-    IPC::Send(ABI::IPC::Ports::CoordinatorReady, msg);
+    IPC::Handle readyHandle = IPC::OpenPort(
+      ABI::IPC::Ports::CoordinatorReady,
+      IPC::RightSend
+    );
+
+    if (readyHandle == 0) {
+      return;
+    }
+
+    IPC::Send(readyHandle, msg);
+    IPC::CloseHandle(readyHandle);
   }
 
   bool Driver::IsIRQMessage(const IPC::Message& msg) {
@@ -265,6 +275,17 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
 
     RegisterIRQRoute(portId);
 
+    IPC::Handle portHandle = IPC::OpenPort(
+      portId,
+      IPC::RightReceive | IPC::RightManage
+    );
+
+    if (portHandle == 0) {
+      Console::WriteLine("PS/2 keyboard failed to open IPC handle");
+      IPC::DestroyPort(portId);
+      Task::Exit(1);
+    }
+
     if (!Controller::Initialize()) {
       Console::WriteLine("PS/2 keyboard controller init failed");
       Task::Exit(1);
@@ -291,7 +312,7 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
     for (;;) {
       IPC::Message msg {};
 
-      if (IPC::Receive(portId, msg) != 0) {
+      if (IPC::Receive(portHandle, msg) != 0) {
         Task::Yield();
 
         continue;

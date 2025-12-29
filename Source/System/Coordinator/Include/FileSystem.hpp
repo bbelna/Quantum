@@ -52,6 +52,11 @@ namespace Quantum::System::Coordinator {
       inline static UInt32 _portId = 0;
 
       /**
+       * File system broker port handle.
+       */
+      inline static UInt32 _portHandle = 0;
+
+      /**
        * Registered file system services.
        */
       inline static Service _services[_maxServices] = {};

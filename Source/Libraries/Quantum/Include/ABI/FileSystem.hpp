@@ -783,16 +783,42 @@ namespace Quantum::ABI {
 
         ::Quantum::CopyBytes(msg.payload, &request, requestBytes);
 
-        if (IPC::Send(IPC::Ports::FileSystem, msg) != 0) {
+        IPC::Handle replyHandle = IPC::OpenPort(
+          replyPortId,
+          IPC::RightReceive | IPC::RightManage
+        );
+
+        if (replyHandle == 0) {
           IPC::DestroyPort(replyPortId);
 
           return 0;
         }
 
+        IPC::Handle fsHandle = IPC::OpenPort(
+          IPC::Ports::FileSystem,
+          IPC::RightSend
+        );
+
+        if (fsHandle == 0) {
+          IPC::CloseHandle(replyHandle);
+
+          return 0;
+        }
+
+        if (IPC::Send(fsHandle, msg) != 0) {
+          IPC::CloseHandle(fsHandle);
+          IPC::CloseHandle(replyHandle);
+
+          return 0;
+        }
+
+        IPC::CloseHandle(fsHandle);
+
         IPC::Message reply {};
 
-        if (IPC::Receive(replyPortId, reply) != 0) {
-          IPC::DestroyPort(replyPortId);
+        if (IPC::Receive(replyHandle, reply) != 0) {
+          IPC::DestroyPort(replyHandle);
+          IPC::CloseHandle(replyHandle);
 
           return 0;
         }
@@ -817,7 +843,8 @@ namespace Quantum::ABI {
 
         UInt32 status = response.status;
 
-        IPC::DestroyPort(replyPortId);
+        IPC::DestroyPort(replyHandle);
+        IPC::CloseHandle(replyHandle);
 
         return status;
       }

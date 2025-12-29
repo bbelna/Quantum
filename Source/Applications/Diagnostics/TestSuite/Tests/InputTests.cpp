@@ -71,10 +71,24 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
       return false;
     }
 
+    IPC::Handle portHandle = IPC::OpenPort(
+      portId,
+      IPC::RightReceive | IPC::RightManage
+    );
+
+    if (portHandle == 0) {
+      IPC::DestroyPort(portId);
+
+      TEST_ASSERT(false, "input port handle open failed");
+
+      return false;
+    }
+
     if (Input::Subscribe(portId) != 0) {
       TEST_ASSERT(false, "input subscribe failed");
 
-      IPC::DestroyPort(portId);
+      IPC::DestroyPort(portHandle);
+      IPC::CloseHandle(portHandle);
 
       return false;
     }
@@ -87,7 +101,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
     for (;;) {
       IPC::Message msg {};
 
-      if (IPC::Receive(portId, msg) != 0) {
+      if (IPC::Receive(portHandle, msg) != 0) {
         Task::Yield();
 
         continue;
@@ -107,7 +121,8 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
     }
 
     Input::Unsubscribe(portId);
-    IPC::DestroyPort(portId);
+    IPC::DestroyPort(portHandle);
+    IPC::CloseHandle(portHandle);
 
     if (!received) {
       TEST_ASSERT(false, "no input event received");

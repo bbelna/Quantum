@@ -2,13 +2,15 @@
  * @file System/Kernel/Include/Handles.hpp
  * @brief Kernel handle table for capability-style access.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright Ac 2025-2026 The Quantum OS Project
+ * @copyright © 2025-2026 The Quantum OS Project
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
 #pragma once
 
 #include <Types.hpp>
+
+#include "KernelObject.hpp"
 
 namespace Quantum::System::Kernel {
   /**
@@ -20,21 +22,6 @@ namespace Quantum::System::Kernel {
        * Handle value type.
        */
       using Handle = UInt32;
-
-      /**
-       * Handle entry object types.
-       */
-      enum class ObjectType : UInt32 {
-        /**
-         * No object.
-         */
-        None = 0,
-
-        /**
-         * IPC port object.
-         */
-        IpcPort = 1
-      };
 
       /**
        * Maximum number of handles per task.
@@ -56,9 +43,9 @@ namespace Quantum::System::Kernel {
         bool inUse;
 
         /**
-         * The object type.
+         * The kernel object type.
          */
-        ObjectType type;
+        KernelObject::Type type;
 
         /**
          * Access rights.
@@ -66,9 +53,9 @@ namespace Quantum::System::Kernel {
         UInt32 rights;
 
         /**
-         * The object id.
+         * The kernel object pointer.
          */
-        UInt32 objectId;
+        KernelObject* object;
 
         /**
          * The handle value.
@@ -89,15 +76,19 @@ namespace Quantum::System::Kernel {
       /**
        * Allocates a handle entry.
        * @param type
-       *   Object type.
-       * @param objectId
-       *   Object id.
+       *   Kernel object type.
+       * @param object
+       *   Kernel object pointer.
        * @param rights
        *   Access rights.
        * @return
        *   Handle on success; 0 on failure.
        */
-      Handle Create(ObjectType type, UInt32 objectId, UInt32 rights);
+      Handle Create(
+        KernelObject::Type type,
+        KernelObject* object,
+        UInt32 rights
+      );
 
       /**
        * Closes a handle entry.
@@ -113,19 +104,19 @@ namespace Quantum::System::Kernel {
        * @param handle
        *   Handle to resolve.
        * @param type
-       *   Expected object type.
+       *   Expected kernel object type.
        * @param rights
        *   Required access rights.
-       * @param outObjectId
-       *   Output object id.
+       * @param outObject
+       *   Output kernel object pointer.
        * @return
        *   True on success; false otherwise.
        */
       bool Resolve(
         Handle handle,
-        ObjectType type,
+        KernelObject::Type type,
         UInt32 rights,
-        UInt32& outObjectId
+        KernelObject*& outObject
       ) const;
 
     private:

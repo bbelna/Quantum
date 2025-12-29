@@ -154,10 +154,12 @@ namespace Quantum::System::Coordinator {
       return;
     }
 
+    UInt32 receiveId = _readyHandle != 0 ? _readyHandle : _readyPortId;
+
     for (;;) {
       IPC::Message msg {};
 
-      if (IPC::TryReceive(_readyPortId, msg) != 0) {
+      if (IPC::TryReceive(receiveId, msg) != 0) {
         break;
       }
 
@@ -197,6 +199,15 @@ namespace Quantum::System::Coordinator {
       Console::WriteLine("Coordinator: failed to create readiness port");
     } else if (_readyPortId != IPC::Ports::CoordinatorReady) {
       Console::WriteLine("Coordinator: readiness port id mismatch");
+    }
+
+    _readyHandle = IPC::OpenPort(
+      _readyPortId,
+      IPC::RightReceive | IPC::RightManage
+    );
+
+    if (_readyHandle == 0) {
+      Console::WriteLine("Coordinator: failed to open readiness port handle");
     }
 
     Input::Initialize();

@@ -53,10 +53,18 @@ namespace Quantum::ABI {
       };
 
       /**
-       * IPC handle rights.
+       * IPC send right flag.
        */
       static constexpr UInt32 RightSend = 1u << 0;
+
+      /**
+       * IPC receive right flag.
+       */
       static constexpr UInt32 RightReceive = 1u << 1;
+
+      /**
+       * IPC manage right flag.
+       */
       static constexpr UInt32 RightManage = 1u << 2;
 
       /**

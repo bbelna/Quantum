@@ -75,6 +75,15 @@ namespace Quantum::ABI {
           return 1;
         }
 
+        IPC::Handle inputHandle = IPC::OpenPort(
+          IPC::Ports::Input,
+          IPC::RightSend
+        );
+
+        if (inputHandle == 0) {
+          return 1;
+        }
+
         SubscribeMessage request {};
         IPC::Message msg {};
 
@@ -87,7 +96,11 @@ namespace Quantum::ABI {
           msg.payload[i] = reinterpret_cast<UInt8*>(&request)[i];
         }
 
-        return IPC::Send(IPC::Ports::Input, msg);
+        UInt32 status = IPC::Send(inputHandle, msg);
+
+        IPC::CloseHandle(inputHandle);
+
+        return status;
       }
 
       /**
@@ -99,6 +112,15 @@ namespace Quantum::ABI {
        */
       static UInt32 Unsubscribe(UInt32 portId) {
         if (portId == 0) {
+          return 1;
+        }
+
+        IPC::Handle inputHandle = IPC::OpenPort(
+          IPC::Ports::Input,
+          IPC::RightSend
+        );
+
+        if (inputHandle == 0) {
           return 1;
         }
 
@@ -114,7 +136,11 @@ namespace Quantum::ABI {
           msg.payload[i] = reinterpret_cast<UInt8*>(&request)[i];
         }
 
-        return IPC::Send(IPC::Ports::Input, msg);
+        UInt32 status = IPC::Send(inputHandle, msg);
+
+        IPC::CloseHandle(inputHandle);
+
+        return status;
       }
   };
 }

@@ -367,6 +367,11 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
       inline static UInt32 _portId = 0;
 
       /**
+       * IPC handle for receiving messages.
+       */
+      inline static IPC::Handle _portHandle = 0;
+
+      /**
        * Maximum number of queued non-IRQ messages while waiting.
        */
       static constexpr UInt32 _maxPendingMessages = 4;

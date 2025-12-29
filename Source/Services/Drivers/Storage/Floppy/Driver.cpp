@@ -252,7 +252,7 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
         IPC::Message msg {};
 
         // poll the port so we can time out if no IRQ arrives
-        if (IPC::TryReceive(_portId, msg) == 0) {
+        if (_portHandle != 0 && IPC::TryReceive(_portHandle, msg) == 0) {
           if (IsIRQMessage(msg)) {
             return true;
           }
@@ -290,7 +290,17 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
 
     CopyBytes(msg.payload, &ready, msg.length);
 
-    IPC::Send(ABI::IPC::Ports::CoordinatorReady, msg);
+    IPC::Handle readyHandle = IPC::OpenPort(
+      ABI::IPC::Ports::CoordinatorReady,
+      IPC::RightSend
+    );
+
+    if (readyHandle == 0) {
+      return;
+    }
+
+    IPC::Send(readyHandle, msg);
+    IPC::CloseHandle(readyHandle);
   }
 
   bool Driver::GetDeviceInfo(
@@ -1186,6 +1196,17 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
 
     RegisterIRQRoute(portId);
 
+    _portHandle = IPC::OpenPort(
+      portId,
+      IPC::RightReceive | IPC::RightManage
+    );
+
+    if (_portHandle == 0) {
+      Console::WriteLine("Floppy driver failed to open IPC handle");
+      IPC::DestroyPort(portId);
+      Task::Exit(1);
+    }
+
     BlockDevices::DMABuffer dmaBuffer {};
 
     if (
@@ -1311,7 +1332,7 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
 
         --_pendingCount;
       } else {
-        if (IPC::Receive(portId, msg) != 0) {
+        if (IPC::Receive(_portHandle, msg) != 0) {
           Task::Yield();
           UpdateMotorIdle();
 
@@ -1490,7 +1511,15 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
       }
 
       CopyBytes(reply.payload, &response, reply.length);
-      IPC::Send(request.replyPortId, reply);
+      IPC::Handle replyHandle = IPC::OpenPort(
+        request.replyPortId,
+        IPC::RightSend
+      );
+
+      if (replyHandle != 0) {
+        IPC::Send(replyHandle, reply);
+        IPC::CloseHandle(replyHandle);
+      }
     }
 
     Task::Exit(0);

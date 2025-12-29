@@ -32,6 +32,15 @@ namespace Quantum::System::Coordinator {
     if (_portId != IPC::Ports::FileSystem) {
       Console::WriteLine("Coordinator: file system port id mismatch");
     }
+
+    _portHandle = IPC::OpenPort(
+      _portId,
+      IPC::RightReceive | IPC::RightManage
+    );
+
+    if (_portHandle == 0) {
+      Console::WriteLine("Coordinator: failed to open file system port handle");
+    }
   }
 
   FileSystem::Service* FileSystem::FindFirstService() {
@@ -144,10 +153,12 @@ namespace Quantum::System::Coordinator {
       return;
     }
 
+    UInt32 receiveId = _portHandle != 0 ? _portHandle : _portId;
+
     for (;;) {
       IPC::Message msg {};
 
-      if (IPC::TryReceive(_portId, msg) != 0) {
+      if (IPC::TryReceive(receiveId, msg) != 0) {
         break;
       }
 
@@ -194,7 +205,15 @@ namespace Quantum::System::Coordinator {
             reply.payload[i] = reinterpret_cast<UInt8*>(&response)[i];
           }
 
-          IPC::Send(request.replyPortId, reply);
+          IPC::Handle replyHandle = IPC::OpenPort(
+            request.replyPortId,
+            IPC::RightSend
+          );
+
+          if (replyHandle != 0) {
+            IPC::Send(replyHandle, reply);
+            IPC::CloseHandle(replyHandle);
+          }
         }
 
         continue;
@@ -234,7 +253,15 @@ namespace Quantum::System::Coordinator {
           reply.payload[i] = reinterpret_cast<UInt8*>(&response)[i];
         }
 
-        IPC::Send(clientReplyPort, reply);
+        IPC::Handle replyHandle = IPC::OpenPort(
+          clientReplyPort,
+          IPC::RightSend
+        );
+
+        if (replyHandle != 0) {
+          IPC::Send(replyHandle, reply);
+          IPC::CloseHandle(replyHandle);
+        }
       };
 
       if (op == ABI::FileSystem::Operation::ListVolumes) {
@@ -278,11 +305,25 @@ namespace Quantum::System::Coordinator {
               = reinterpret_cast<UInt8*>(&serviceRequest)[j];
           }
 
-          if (IPC::Send(_services[i].portId, forward) != 0) {
+          IPC::Handle serviceHandle = IPC::OpenPort(
+            _services[i].portId,
+            IPC::RightSend
+          );
+
+          if (serviceHandle == 0) {
             IPC::DestroyPort(replyPort);
 
             continue;
           }
+
+          if (IPC::Send(serviceHandle, forward) != 0) {
+            IPC::CloseHandle(serviceHandle);
+            IPC::DestroyPort(replyPort);
+
+            continue;
+          }
+
+          IPC::CloseHandle(serviceHandle);
 
           IPC::Message serviceReply {};
 
@@ -359,11 +400,25 @@ namespace Quantum::System::Coordinator {
               = reinterpret_cast<UInt8*>(&serviceRequest)[j];
           }
 
-          if (IPC::Send(_services[i].portId, forward) != 0) {
+          IPC::Handle serviceHandle = IPC::OpenPort(
+            _services[i].portId,
+            IPC::RightSend
+          );
+
+          if (serviceHandle == 0) {
             IPC::DestroyPort(replyPort);
 
             continue;
           }
+
+          if (IPC::Send(serviceHandle, forward) != 0) {
+            IPC::CloseHandle(serviceHandle);
+            IPC::DestroyPort(replyPort);
+
+            continue;
+          }
+
+          IPC::CloseHandle(serviceHandle);
 
           IPC::Message serviceReply {};
 
@@ -491,7 +546,34 @@ namespace Quantum::System::Coordinator {
         forward.payload[i] = reinterpret_cast<UInt8*>(&serviceRequest)[i];
       }
 
-      if (IPC::Send(servicePort, forward) != 0) {
+      IPC::Handle replyHandle = IPC::OpenPort(
+        replyPort,
+        IPC::RightReceive | IPC::RightManage
+      );
+
+      if (replyHandle == 0) {
+        IPC::DestroyPort(replyPort);
+        sendReply();
+
+        continue;
+      }
+
+      IPC::Handle serviceSendHandle = IPC::OpenPort(
+        servicePort,
+        IPC::RightSend
+      );
+
+      if (serviceSendHandle == 0) {
+        IPC::CloseHandle(replyHandle);
+        IPC::DestroyPort(replyPort);
+        sendReply();
+
+        continue;
+      }
+
+      if (IPC::Send(serviceSendHandle, forward) != 0) {
+        IPC::CloseHandle(serviceSendHandle);
+        IPC::CloseHandle(replyHandle);
         IPC::DestroyPort(replyPort);
 
         sendReply();
@@ -499,9 +581,13 @@ namespace Quantum::System::Coordinator {
         continue;
       }
 
+      IPC::CloseHandle(serviceSendHandle);
+
       IPC::Message serviceReply {};
 
-      if (IPC::Receive(replyPort, serviceReply) != 0) {
+      if (IPC::Receive(replyHandle, serviceReply) != 0) {
+        IPC::DestroyPort(replyHandle);
+        IPC::CloseHandle(replyHandle);
         IPC::DestroyPort(replyPort);
 
         sendReply();
@@ -519,6 +605,8 @@ namespace Quantum::System::Coordinator {
         reinterpret_cast<UInt8*>(&response)[i] = serviceReply.payload[i];
       }
 
+      IPC::DestroyPort(replyHandle);
+      IPC::CloseHandle(replyHandle);
       IPC::DestroyPort(replyPort);
 
       response.replyPortId = clientReplyPort;

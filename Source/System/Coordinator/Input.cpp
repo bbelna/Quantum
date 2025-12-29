@@ -35,6 +35,15 @@ namespace Quantum::System::Coordinator {
     if (_portId != IPC::Ports::Input) {
       Console::WriteLine("Coordinator: input port id mismatch");
     }
+
+    _portHandle = IPC::OpenPort(
+      _portId,
+      IPC::RightReceive | IPC::RightManage
+    );
+
+    if (_portHandle == 0) {
+      Console::WriteLine("Coordinator: failed to open input port handle");
+    }
   }
 
   void Input::AddSubscriber(UInt32 portId) {
@@ -76,10 +85,12 @@ namespace Quantum::System::Coordinator {
       return;
     }
 
+    UInt32 receiveId = _portHandle != 0 ? _portHandle : _portId;
+
     for (;;) {
       IPC::Message msg {};
 
-      if (IPC::TryReceive(_portId, msg) != 0) {
+      if (IPC::TryReceive(receiveId, msg) != 0) {
         break;
       }
 
@@ -141,7 +152,17 @@ namespace Quantum::System::Coordinator {
             continue;
           }
 
-          IPC::Send(portId, message);
+          IPC::Handle subscriberHandle = IPC::OpenPort(
+            portId,
+            IPC::RightSend
+          );
+
+          if (subscriberHandle == 0) {
+            continue;
+          }
+
+          IPC::Send(subscriberHandle, message);
+          IPC::CloseHandle(subscriberHandle);
         }
       }
     }

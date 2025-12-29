@@ -79,6 +79,29 @@ namespace Quantum::ABI {
           return 1;
         }
 
+        IPC::Handle irqHandle = IPC::OpenPort(
+          IPC::Ports::IRQ,
+          IPC::RightSend
+        );
+
+        if (irqHandle == 0) {
+          IPC::DestroyPort(replyPortId);
+
+          return 1;
+        }
+
+        IPC::Handle replyHandle = IPC::OpenPort(
+          replyPortId,
+          IPC::RightReceive | IPC::RightManage
+        );
+
+        if (replyHandle == 0) {
+          IPC::CloseHandle(irqHandle);
+          IPC::DestroyPort(replyPortId);
+
+          return 1;
+        }
+
         Message request {};
         IPC::Message msg {};
 
@@ -92,23 +115,27 @@ namespace Quantum::ABI {
 
         ::Quantum::CopyBytes(msg.payload, &request, msg.length);
 
-        IPC::Send(IPC::Ports::IRQ, msg);
+        IPC::Send(irqHandle, msg);
 
         IPC::Message reply {};
 
         for (UInt32 i = 0; i < 1024; ++i) {
-          if (IPC::TryReceive(replyPortId, reply) == 0) {
+          if (IPC::TryReceive(replyHandle, reply) == 0) {
             if (reply.length >= sizeof(UInt32)) {
               UInt32 status = 0;
 
               ::Quantum::CopyBytes(&status, reply.payload, sizeof(status));
 
-              IPC::DestroyPort(replyPortId);
+              IPC::DestroyPort(replyHandle);
+              IPC::CloseHandle(replyHandle);
+              IPC::CloseHandle(irqHandle);
 
               return status;
             }
 
-            IPC::DestroyPort(replyPortId);
+            IPC::DestroyPort(replyHandle);
+            IPC::CloseHandle(replyHandle);
+            IPC::CloseHandle(irqHandle);
 
             return 1;
           }
@@ -118,7 +145,9 @@ namespace Quantum::ABI {
           }
         }
 
-        IPC::DestroyPort(replyPortId);
+        IPC::DestroyPort(replyHandle);
+        IPC::CloseHandle(replyHandle);
+        IPC::CloseHandle(irqHandle);
 
         return 1;
       }

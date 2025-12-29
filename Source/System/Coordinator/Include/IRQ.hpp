@@ -34,6 +34,11 @@ namespace Quantum::System::Coordinator {
       inline static UInt32 _portId = 0;
 
       /**
+       * IRQ routing port handle.
+       */
+      inline static UInt32 _portHandle = 0;
+
+      /**
        * Registers an IRQ routing port.
        * @param irq
        *   IRQ line number.

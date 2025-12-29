@@ -39,6 +39,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   using Kernel::Devices::BlockDevices;
   using Kernel::Devices::InputDevices;
   using Kernel::HandleTable;
+  using Kernel::IPCPortObject;
+  using Kernel::KernelObject;
   using Kernel::IRQ;
   using Kernel::Logger;
 
@@ -64,12 +66,26 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       return false;
     }
 
-    return tcb->handleTable->Resolve(
+    KernelObject* object = nullptr;
+
+    if (!tcb->handleTable->Resolve(
       portOrHandle,
-      HandleTable::ObjectType::IpcPort,
+      KernelObject::Type::IPCPort,
       rights,
-      outPortId
-    );
+      object
+    )) {
+      return false;
+    }
+
+    if (!object || object->type != KernelObject::Type::IPCPort) {
+      return false;
+    }
+
+    auto* portObject = reinterpret_cast<IPCPortObject*>(object);
+
+    outPortId = portObject->portId;
+
+    return true;
   }
 
   Interrupts::Context* SystemCalls::OnSystemCall(Interrupts::Context& context) {
@@ -330,11 +346,21 @@ namespace Quantum::System::Kernel::Arch::IA32 {
           break;
         }
 
+        IPCPortObject* portObject = KernelObject::CreateIPCPortObject(portId);
+
+        if (!portObject) {
+          context.eax = 0;
+
+          break;
+        }
+
         HandleTable::Handle handle = tcb->handleTable->Create(
-          HandleTable::ObjectType::IpcPort,
-          portId,
+          KernelObject::Type::IPCPort,
+          portObject,
           rights
         );
+
+        portObject->Release();
 
         context.eax = handle;
 
