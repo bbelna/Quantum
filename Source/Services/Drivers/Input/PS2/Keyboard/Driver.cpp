@@ -149,9 +149,10 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
     }
 
     InputDevices::Event event {};
+    UInt32 deviceToken = _deviceHandle != 0 ? _deviceHandle : _deviceId;
 
     event.type = type;
-    event.deviceId = _deviceId;
+    event.deviceId = deviceToken;
     event.keyCode = keyCode;
     event.modifiers = BuildModifiers();
     event.ascii = ascii;
@@ -318,6 +319,13 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
       Console::WriteLine("PS/2 keyboard device registration failed");
       Task::Exit(1);
     }
+
+    _deviceHandle = InputDevices::Open(
+      _deviceId,
+      InputDevices::RightRegister
+        | InputDevices::RightRead
+        | InputDevices::RightControl
+    );
 
     Console::WriteLine("PS/2 keyboard driver ready");
 

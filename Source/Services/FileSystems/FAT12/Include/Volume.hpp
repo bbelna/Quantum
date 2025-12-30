@@ -66,6 +66,13 @@ namespace Quantum::Services::FileSystems::FAT12 {
       ABI::FileSystem::VolumeHandle GetHandle() const;
 
       /**
+       * Returns the handle or id to use for block I/O.
+       * @return
+       *   Block device handle if available, otherwise the raw device id.
+       */
+      UInt32 GetDeviceToken() const;
+
+      /**
        * Checks whether the label matches this volume.
        * @param label
        *   Volume label to check.
@@ -452,6 +459,11 @@ namespace Quantum::Services::FileSystems::FAT12 {
        * Backing block device info.
        */
       ABI::Devices::BlockDevices::Info _device {};
+
+      /**
+       * Block device handle for this volume.
+       */
+      ABI::Devices::BlockDevices::Handle _deviceHandle = 0;
 
       /**
        * Cached volume info.

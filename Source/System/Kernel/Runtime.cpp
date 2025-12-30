@@ -143,10 +143,20 @@ namespace Quantum::System::Kernel {
   using InitFunction = void (*)();
 
   extern "C" {
+    /**
+     * Start of the global constructors array.
+     */
     extern InitFunction __init_array_start[];
+
+    /**
+     * End of the global constructors array.
+     */
     extern InitFunction __init_array_end[];
   }
 
+  /**
+   * Runs global constructors.
+   */
   void RunGlobalConstructors() {
     for (InitFunction* fn = __init_array_start; fn < __init_array_end; ++fn) {
       if (*fn) {

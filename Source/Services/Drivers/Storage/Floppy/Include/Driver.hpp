@@ -288,6 +288,11 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
       inline static UInt32 _deviceIds[_maxDevices] = {};
 
       /**
+       * Block device handles for bound devices.
+       */
+      inline static BlockDevices::Handle _deviceHandles[_maxDevices] = {};
+
+      /**
        * Device sector sizes in bytes.
        */
       inline static UInt32 _deviceSectorSizes[_maxDevices] = {};

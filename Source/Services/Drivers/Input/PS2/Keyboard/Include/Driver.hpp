@@ -36,6 +36,11 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
       inline static UInt32 _deviceId = 0;
 
       /**
+       * Input device handle for event submissions.
+       */
+      inline static ABI::Devices::InputDevices::Handle _deviceHandle = 0;
+
+      /**
        * IPC port identifier for IRQ delivery.
        */
       inline static UInt32 _portId = 0;

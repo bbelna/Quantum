@@ -8,6 +8,7 @@
 
 #include <ABI/Console.hpp>
 #include <ABI/Devices/BlockDevices.hpp>
+#include <ABI/Handle.hpp>
 
 #include "Volume.hpp"
 
@@ -28,6 +29,16 @@ namespace Quantum::Services::FileSystems::FAT12 {
     _valid = false;
     _device = info;
     _handle = static_cast<FileSystem::VolumeHandle>(info.id);
+
+    if (_deviceHandle != 0) {
+      ABI::Handle::Close(_deviceHandle);
+      _deviceHandle = 0;
+    }
+
+    _deviceHandle = BlockDevices::Open(
+      info.id,
+      BlockDevices::RightRead | BlockDevices::RightWrite
+    );
 
     UInt8 bootSector[512] = {};
 
@@ -120,6 +131,10 @@ namespace Quantum::Services::FileSystems::FAT12 {
 
   FileSystem::VolumeHandle Volume::GetHandle() const {
     return _handle;
+  }
+
+  UInt32 Volume::GetDeviceToken() const {
+    return _deviceHandle != 0 ? _deviceHandle : _device.id;
   }
 
   bool Volume::MatchesLabel(CString label) const {
@@ -386,7 +401,7 @@ namespace Quantum::Services::FileSystems::FAT12 {
 
     BlockDevices::Request request {};
 
-    request.deviceId = _device.id;
+    request.deviceId = GetDeviceToken();
     request.lba = _bootSectorLBA;
     request.count = 1;
     request.buffer = buffer;

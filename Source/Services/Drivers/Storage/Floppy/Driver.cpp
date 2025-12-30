@@ -1317,6 +1317,18 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
 
         continue;
       }
+
+      BlockDevices::Handle deviceHandle = BlockDevices::Open(
+        deviceId,
+        BlockDevices::RightRead
+          | BlockDevices::RightWrite
+          | BlockDevices::RightControl
+          | BlockDevices::RightBind
+      );
+
+      if (_deviceCount > 0) {
+        _deviceHandles[_deviceCount - 1] = deviceHandle;
+      }
     }
 
     if (_deviceCount == 0) {
@@ -1325,7 +1337,11 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
     }
 
     for (UInt32 i = 0; i < _deviceCount; ++i) {
-      if (BlockDevices::Bind(_deviceIds[i], portId) != 0) {
+      UInt32 bindTarget = _deviceHandles[i] != 0
+        ? _deviceHandles[i]
+        : _deviceIds[i];
+
+      if (BlockDevices::Bind(bindTarget, portId) != 0) {
         Console::WriteLine("Floppy driver failed to bind block device");
         Task::Exit(1);
       }
