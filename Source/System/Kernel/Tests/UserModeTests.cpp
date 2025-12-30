@@ -75,13 +75,13 @@ namespace Quantum::System::Kernel::Tests {
       false
     );
 
-    Task::ControlBlock* tcb = Task::CreateUser(
+    Task::ControlBlock* task = Task::CreateUser(
       _userProgramBase,
       _userStackTop,
       addressSpace
     );
 
-    if (tcb == nullptr) {
+    if (task == nullptr || task->mainThread == nullptr) {
       Arch::AddressSpace::Destroy(addressSpace);
       Task::EnablePreemption();
 
@@ -96,7 +96,7 @@ namespace Quantum::System::Kernel::Tests {
     for (UInt32 i = 0; i < maxIterations; ++i) {
       Task::Yield();
 
-      if (tcb->state == Arch::IA32::Task::State::Terminated) {
+      if (task->mainThread->state == Thread::State::Terminated) {
         terminated = true;
 
         break;

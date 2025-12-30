@@ -10,10 +10,10 @@
 
 #if defined(QUANTUM_ARCH_AMD64)
 #else
-#include "Arch/IA32/Task.hpp"
+#include "Arch/IA32/Thread.hpp"
 #include "Arch/IA32/Prelude.hpp"
 
-using ArchTask = KernelIA32::Task;
+using ArchTask = KernelIA32::Thread;
 #endif
 
 namespace Quantum::System::Kernel::Arch {

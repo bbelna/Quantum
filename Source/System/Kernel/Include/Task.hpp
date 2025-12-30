@@ -1,8 +1,8 @@
 /**
  * @file System/Kernel/Include/Task.hpp
- * @brief Architecture-agnostic task management.
+ * @brief Architecture-agnostic task (process) management.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright © 2025-2026 The Quantum OS Project
+ * @copyright Ac 2025-2026 The Quantum OS Project
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
@@ -10,28 +10,90 @@
 
 #include <Types.hpp>
 
-#include "Arch/Task.hpp"
 #include "Interrupts.hpp"
+#include "Thread.hpp"
 
 namespace Quantum::System::Kernel {
+  class HandleTable;
+
   /**
-   * Task management and scheduling.
+   * Task control block.
+   */
+  struct TaskControlBlock {
+    /**
+     * Unique task identifier.
+     */
+    UInt32 id;
+
+    /**
+     * Capability flags granted to the task.
+     */
+    UInt32 caps;
+
+    /**
+     * Physical address of the task page directory.
+     */
+    UInt32 pageDirectoryPhysical;
+
+    /**
+     * User-mode heap base address.
+     */
+    UInt32 userHeapBase;
+
+    /**
+     * Current user-mode heap end (break).
+     */
+    UInt32 userHeapEnd;
+
+    /**
+     * End of the mapped heap region.
+     */
+    UInt32 userHeapMappedEnd;
+
+    /**
+     * User-mode heap upper limit.
+     */
+    UInt32 userHeapLimit;
+
+    /**
+     * Per-task handle table.
+     */
+    HandleTable* handleTable;
+
+    /**
+     * Primary thread for this task.
+     */
+    Thread::ControlBlock* mainThread;
+
+    /**
+     * Pointer to the next task in the global task list.
+     */
+    TaskControlBlock* next;
+  };
+
+  /**
+   * Task (process) management.
    */
   class Task {
     public:
-      using ControlBlock = Arch::Task::ControlBlock;
+      using ControlBlock = TaskControlBlock;
 
       /**
-       * Initializes the task subsystem and creates the idle task.
+       * Capability flags.
+       */
+      static constexpr UInt32 CapabilityIO = 1u << 0;
+
+      /**
+       * Initializes the task subsystem and creates the idle thread.
        */
       static void Initialize();
 
       /**
-       * Creates a new kernel task.
+       * Creates a new kernel task with a single thread.
        * @param entryPoint
-       *   Function pointer to the task's entry point.
+       *   Function pointer to the task's main thread entry point.
        * @param stackSize
-       *   Size of the task's kernel stack in bytes.
+       *   Size of the thread's kernel stack in bytes.
        * @return
        *   Pointer to the task control block, or nullptr on failure.
        */
@@ -41,7 +103,7 @@ namespace Quantum::System::Kernel {
       );
 
       /**
-       * Creates a new user task in the specified address space.
+       * Creates a new user task with a single thread.
        * @param entryPoint
        *   User-mode entry point address.
        * @param userStackTop
@@ -58,12 +120,12 @@ namespace Quantum::System::Kernel {
       );
 
       /**
-       * Terminates the current task.
+       * Terminates the current thread.
        */
       [[noreturn]] static void Exit();
 
       /**
-       * Yields the CPU to the next ready task.
+       * Yields the CPU to the next ready thread.
        */
       static void Yield();
 
@@ -144,10 +206,59 @@ namespace Quantum::System::Kernel {
        */
       static Interrupts::Context* Tick(Interrupts::Context& context);
 
+      /**
+       * Releases a task and its resources (called by thread cleanup).
+       * @param task
+       *   Task control block to destroy.
+       */
+      static void Destroy(ControlBlock* task);
+
     private:
+      /**
+       * Creates a task control block without creating any threads.
+       * @param pageDirectoryPhysical
+       *   Physical address of the task page directory.
+       * @return
+       *   Pointer to the task control block, or nullptr on failure.
+       */
+      static ControlBlock* CreateInternal(UInt32 pageDirectoryPhysical);
+
+      /**
+       * Adds a task to the global task list.
+       * @param task
+       *   Pointer to the task to add.
+       */
+      static void AddToAllTasks(ControlBlock* task);
+
+      /**
+       * Removes a task from the global task list.
+       * @param task
+       *   Pointer to the task to remove.
+       */
+      static void RemoveFromAllTasks(ControlBlock* task);
+
+      /**
+       * Finds a task by id in the global task list.
+       * @param id
+       *   Task identifier to locate.
+       * @return
+       *   Pointer to the task control block, or `nullptr` if not found.
+       */
+      static ControlBlock* FindById(UInt32 id);
+
       /**
        * Task id of the coordinator task (for privileged operations).
        */
       inline static UInt32 _coordinatorTaskId = 0;
+
+      /**
+       * Head of the global task list.
+       */
+      inline static ControlBlock* _allTasksHead = nullptr;
+
+      /**
+       * Next task ID to assign.
+       */
+      inline static UInt32 _nextTaskId = 1;
   };
 }
