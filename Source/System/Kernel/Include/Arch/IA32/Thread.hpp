@@ -2,7 +2,7 @@
  * @file System/Kernel/Include/Arch/IA32/Thread.hpp
  * @brief IA32 thread context and control structures.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright Ac 2025-2026 The Quantum OS Project
+ * @copyright © 2025-2026 The Quantum OS Project
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
@@ -12,6 +12,7 @@
 #include <Types.hpp>
 
 #include "Interrupts.hpp"
+#include "Prelude.hpp"
 
 namespace Quantum::System::Kernel {
   struct TaskControlBlock;
@@ -65,7 +66,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         /**
          * Owning task control block.
          */
-        ::Quantum::System::Kernel::TaskControlBlock* task;
+        Kernel::TaskControlBlock* task;
 
         /**
          * Current thread state.
@@ -140,7 +141,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        *   Pointer to the thread control block, or `nullptr` on failure.
        */
       static ControlBlock* Create(
-        ::Quantum::System::Kernel::TaskControlBlock* task,
+        Kernel::TaskControlBlock* task,
         void (*entryPoint)(),
         UInt32 stackSize
       );
@@ -159,7 +160,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        *   Pointer to the thread control block, or `nullptr` on failure.
        */
       static ControlBlock* CreateUser(
-        ::Quantum::System::Kernel::TaskControlBlock* task,
+        Kernel::TaskControlBlock* task,
         UInt32 entryPoint,
         UInt32 userStackTop,
         UInt32 stackSize
@@ -254,6 +255,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       inline static bool _preemptionEnabled = false;
 
       /**
+       * Preemption disable nesting count.
+       */
+      inline static UInt32 _preemptDisableCount = 0;
+
+      /**
        * When true, force a reschedule even if preemption is disabled.
        */
       inline static volatile bool _forceReschedule = false;
@@ -270,6 +276,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
       /**
        * Adds a thread to the ready queue.
+       * @param thread
+       *   Pointer to the thread to add.
        */
       static void AddToReadyQueue(ControlBlock* thread);
 
@@ -334,7 +342,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        *   Pointer to the thread control block, or `nullptr` on failure.
        */
       static ControlBlock* CreateThreadInternal(
-        ::Quantum::System::Kernel::TaskControlBlock* task,
+        Kernel::TaskControlBlock* task,
         void (*entryPoint)(),
         UInt32 stackSize
       );

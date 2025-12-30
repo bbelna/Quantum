@@ -12,6 +12,7 @@
 #include "Testing.hpp"
 #include "Tests/MemoryTests.hpp"
 #include "Tests/TaskTests.hpp"
+#include "Tests/IPCTests.hpp"
 #include "Tests/UserModeTests.hpp"
 
 namespace Quantum::System::Kernel {
@@ -95,6 +96,7 @@ namespace Quantum::System::Kernel {
   void Testing::RegisterBuiltins() {
     Tests::MemoryTests::RegisterTests();
     Tests::TaskTests::RegisterTests();
+    Tests::IPCTests::RegisterTests();
     Tests::UserModeTests::RegisterTests();
   }
 }

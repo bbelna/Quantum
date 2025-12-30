@@ -2,7 +2,7 @@
  * @file System/Kernel/Include/WaitQueue.hpp
  * @brief Simple wait queue for blocking threads.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright Ac 2025-2026 The Quantum OS Project
+ * @copyright © 2025-2026 The Quantum OS Project
  * SPDX-License-Identifier: GPL-2.0-only
  */
 

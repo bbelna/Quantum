@@ -2,7 +2,7 @@
  * @file System/Kernel/Arch/IA32/Thread.cpp
  * @brief IA32 thread context and control structures.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright Ac 2025-2026 The Quantum OS Project
+ * @copyright © 2025-2026 The Quantum OS Project
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
@@ -339,6 +339,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     _forceReschedule = false;
     _pendingCleanup = nullptr;
     _schedulerActive = false;
+    _preemptDisableCount = 0;
     _nextThreadId = 1;
     _currentThread = nullptr;
     _readyQueueHead = nullptr;
@@ -499,21 +500,31 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   }
 
   void Thread::EnablePreemption() {
-    _preemptionEnabled = true;
+    if (_preemptDisableCount > 0) {
+      _preemptDisableCount -= 1;
+    }
 
-    Logger::Write(LogLevel::Debug, "Preemptive multitasking enabled");
+    if (_preemptDisableCount == 0 && !_preemptionEnabled) {
+      _preemptionEnabled = true;
+      Logger::Write(LogLevel::Debug, "Preemptive multitasking enabled");
+    }
   }
 
   void Thread::DisablePreemption() {
-    _preemptionEnabled = false;
+    _preemptDisableCount += 1;
 
-    Logger::Write(LogLevel::Debug, "Preemptive multitasking disabled");
+    if (_preemptionEnabled) {
+      _preemptionEnabled = false;
+      Logger::Write(LogLevel::Debug, "Preemptive multitasking disabled");
+    }
   }
 
   Thread::Context* Thread::Tick(Thread::Context& context) {
     // called from timer interrupt
+    bool preemptionAllowed
+      = _preemptionEnabled && _preemptDisableCount == 0;
     bool shouldSchedule
-      = (_preemptionEnabled && _schedulerActive) || _forceReschedule;
+      = (preemptionAllowed && _schedulerActive) || _forceReschedule;
 
     _forceReschedule = false;
 

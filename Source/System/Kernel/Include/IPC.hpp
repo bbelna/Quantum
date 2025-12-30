@@ -12,6 +12,7 @@
 
 #include "Objects/IPCPortObject.hpp"
 #include "Objects/KernelObject.hpp"
+#include "WaitQueue.hpp"
 
 namespace Quantum::System::Kernel {
   /**
@@ -230,6 +231,16 @@ namespace Quantum::System::Kernel {
          * Message queue.
          */
         Message queue[maxQueueDepth];
+
+        /**
+         * Threads waiting to send (queue full).
+         */
+        WaitQueue sendWait;
+
+        /**
+         * Threads waiting to receive (queue empty).
+         */
+        WaitQueue recvWait;
       };
 
       /**

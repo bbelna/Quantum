@@ -12,6 +12,7 @@
 #include "Handles.hpp"
 #include "IPC.hpp"
 #include "Task.hpp"
+#include "WaitQueue.hpp"
 
 namespace Quantum::System::Kernel {
   using ::Quantum::CopyBytes;
@@ -38,6 +39,8 @@ namespace Quantum::System::Kernel {
         _ports[i].head = 0;
         _ports[i].tail = 0;
         _ports[i].count = 0;
+        _ports[i].sendWait.Initialize();
+        _ports[i].recvWait.Initialize();
 
         if (!_ports[i].object) {
           _ports[i].used = false;
@@ -72,7 +75,11 @@ namespace Quantum::System::Kernel {
 
     // block (cooperatively) if queue full
     while (port->count >= maxQueueDepth) {
-      Task::Yield();
+      if (!port->used) {
+        return false;
+      }
+
+      port->sendWait.EnqueueCurrent();
     }
 
     Message& msg = port->queue[port->tail];
@@ -87,6 +94,7 @@ namespace Quantum::System::Kernel {
 
     port->tail = (port->tail + 1) % maxQueueDepth;
     ++port->count;
+    port->recvWait.WakeOne();
 
     return true;
   }
@@ -109,7 +117,11 @@ namespace Quantum::System::Kernel {
     }
 
     while (port->count == 0) {
-      Task::Yield();
+      if (!port->used) {
+        return false;
+      }
+
+      port->recvWait.EnqueueCurrent();
     }
 
     Message& msg = port->queue[port->head];
@@ -146,6 +158,7 @@ namespace Quantum::System::Kernel {
 
     port->head = (port->head + 1) % maxQueueDepth;
     --port->count;
+    port->sendWait.WakeOne();
 
     return true;
   }
@@ -216,6 +229,9 @@ namespace Quantum::System::Kernel {
       port->object->Release();
     }
 
+    port->sendWait.WakeAll();
+    port->recvWait.WakeAll();
+
     port->used = false;
     port->id = 0;
     port->ownerTaskId = 0;
@@ -257,7 +273,11 @@ namespace Quantum::System::Kernel {
 
     // block (cooperatively) if queue full
     while (port->count >= maxQueueDepth) {
-      Task::Yield();
+      if (!port->used) {
+        return false;
+      }
+
+      port->sendWait.EnqueueCurrent();
     }
 
     Message& msg = port->queue[port->tail];
@@ -276,6 +296,7 @@ namespace Quantum::System::Kernel {
 
     port->tail = (port->tail + 1) % maxQueueDepth;
     ++port->count;
+    port->recvWait.WakeOne();
 
     return true;
   }
