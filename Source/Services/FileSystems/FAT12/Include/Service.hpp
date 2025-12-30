@@ -147,7 +147,7 @@ namespace Quantum::Services::FileSystems::FAT12 {
        * @param handle
        *   Volume handle.
        * @return
-       *   Volume pointer or nullptr.
+       *   Volume pointer or `nullptr`.
        */
       static Volume* FindVolumeByHandle(ABI::FileSystem::VolumeHandle handle);
 
@@ -156,7 +156,7 @@ namespace Quantum::Services::FileSystems::FAT12 {
        * @param label
        *   Volume label.
        * @return
-       *   Volume pointer or nullptr.
+       *   Volume pointer or `nullptr`.
        */
       static Volume* FindVolumeByLabel(CString label);
 
@@ -194,7 +194,7 @@ namespace Quantum::Services::FileSystems::FAT12 {
        * @param handle
        *   Handle to lookup.
        * @return
-       *   Handle slot pointer or nullptr.
+       *   Handle slot pointer or `nullptr`.
        */
       static HandleState* GetHandleState(ABI::FileSystem::Handle handle);
 

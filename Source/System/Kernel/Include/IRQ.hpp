@@ -72,7 +72,7 @@ namespace Quantum::System::Kernel {
        * @param irq
        *   IRQ line number.
        * @return
-       *   Kernel object pointer, or nullptr if out of range.
+       *   Kernel object pointer, or `nullptr` if out of range.
        */
       static Objects::IRQLineObject* GetObject(UInt32 irq);
   };

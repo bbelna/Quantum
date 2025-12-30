@@ -233,7 +233,7 @@ namespace Quantum::System::Kernel::Devices {
        * @param deviceId
        *   Identifier of the device to query.
        * @return
-       *   Kernel object pointer, or nullptr if not found.
+       *   Kernel object pointer, or `nullptr` if not found.
        */
       static Objects::Devices::InputDeviceObject* GetObject(UInt32 deviceId);
 

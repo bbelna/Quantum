@@ -11,7 +11,7 @@
 #include "Arch/IA32/Interrupts.hpp"
 #include "Arch/IA32/IO.hpp"
 #include "Arch/IA32/PIC.hpp"
-#include "Arch/IA32/Task.hpp"
+#include "Arch/IA32/Thread.hpp"
 #include "Arch/IA32/Timer.hpp"
 #include "Interrupts.hpp"
 #include "Logger.hpp"
@@ -28,7 +28,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       Logger::Write(LogLevel::Trace, "Tick");
     }
 
-    return Task::Tick(context);
+    return Thread::Tick(context);
   }
 
   void Timer::Initialize() {
