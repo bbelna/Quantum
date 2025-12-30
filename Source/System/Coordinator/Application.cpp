@@ -15,6 +15,7 @@
 #include <ABI/Task.hpp>
 
 #include "Application.hpp"
+#include "Devices.hpp"
 #include "FileSystem.hpp"
 #include "IRQ.hpp"
 #include "Input.hpp"
@@ -24,6 +25,7 @@ namespace Quantum::System::Coordinator {
   using ABI::IO;
   using ABI::IPC;
   using ABI::Task;
+  using Coordinator::Devices;
   using Coordinator::IRQ;
   using Coordinator::FileSystem;
   using Coordinator::Input;
@@ -154,10 +156,12 @@ namespace Quantum::System::Coordinator {
       return;
     }
 
+    UInt32 receiveId = _readyHandle != 0 ? _readyHandle : _readyPortId;
+
     for (;;) {
       IPC::Message msg {};
 
-      if (IPC::TryReceive(_readyPortId, msg) != 0) {
+      if (IPC::TryReceive(receiveId, msg) != 0) {
         break;
       }
 
@@ -199,7 +203,17 @@ namespace Quantum::System::Coordinator {
       Console::WriteLine("Coordinator: readiness port id mismatch");
     }
 
+    _readyHandle = IPC::OpenPort(
+      _readyPortId,
+      IPC::RightReceive | IPC::RightManage
+    );
+
+    if (_readyHandle == 0) {
+      Console::WriteLine("Coordinator: failed to open readiness port handle");
+    }
+
     Input::Initialize();
+    Devices::Initialize();
 
     InitBundle::Info info {};
 
@@ -310,6 +324,7 @@ namespace Quantum::System::Coordinator {
 
     for (;;) {
       ProcessReadyMessages();
+
       bool progressed = false;
 
       for (UInt32 i = 0; i < entryCount; ++i) {
@@ -364,6 +379,7 @@ namespace Quantum::System::Coordinator {
       IRQ::ProcessPending();
       FileSystem::ProcessPending();
       Input::ProcessPending();
+      Devices::ProcessPending();
     }
   }
 }

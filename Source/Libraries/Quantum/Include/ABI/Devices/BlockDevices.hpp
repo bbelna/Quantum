@@ -19,6 +19,10 @@ namespace Quantum::ABI::Devices {
   class BlockDevices {
     public:
       /**
+       * Block device handle type.
+       */
+      using Handle = UInt32;
+      /**
        * Block I/O operation identifiers.
        */
       enum class Operation : UInt32 {
@@ -205,6 +209,26 @@ namespace Quantum::ABI::Devices {
       static constexpr UInt32 flagReady = 1u << 2;
 
       /**
+       * Block device read right.
+       */
+      static constexpr UInt32 RightRead = 1u << 0;
+
+      /**
+       * Block device write right.
+       */
+      static constexpr UInt32 RightWrite = 1u << 1;
+
+      /**
+       * Block device control right.
+       */
+      static constexpr UInt32 RightControl = 1u << 2;
+
+      /**
+       * Block device bind right.
+       */
+      static constexpr UInt32 RightBind = 1u << 3;
+
+      /**
        * Maximum sector size supported by WritePartial.
        */
       static constexpr UInt32 helperMaxBytes = 4096;
@@ -234,6 +258,19 @@ namespace Quantum::ABI::Devices {
           reinterpret_cast<UInt32>(&outInfo),
           0
         );
+      }
+
+      /**
+       * Opens a handle to a block device.
+       * @param deviceId
+       *   Device identifier.
+       * @param rights
+       *   Rights mask.
+       * @return
+       *   Handle on success; 0 on failure.
+       */
+      static Handle Open(UInt32 deviceId, UInt32 rights) {
+        return InvokeSystemCall(SystemCall::Block_Open, deviceId, rights, 0);
       }
 
       /**

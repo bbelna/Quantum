@@ -11,11 +11,13 @@
 #include <ABI/Input.hpp>
 #include <ABI/IPC.hpp>
 #include <ABI/Task.hpp>
+#include <Bytes.hpp>
 
 #include "Testing.hpp"
 #include "Tests/InputTests.hpp"
 
 namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
+  using ::Quantum::CopyBytes;
   using ABI::Console;
   using ABI::Devices::InputDevices;
   using ABI::Input;
@@ -32,15 +34,6 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
     Console::WriteLine(")");
 
     _skipLogged = true;
-  }
-
-  void InputTests::CopyBytes(void* dest, const void* src, UInt32 length) {
-    auto* d = reinterpret_cast<UInt8*>(dest);
-    auto* s = reinterpret_cast<const UInt8*>(src);
-
-    for (UInt32 i = 0; i < length; ++i) {
-      d[i] = s[i];
-    }
   }
 
   bool InputTests::TestKeyboardPresent() {
@@ -78,10 +71,24 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
       return false;
     }
 
+    IPC::Handle portHandle = IPC::OpenPort(
+      portId,
+      IPC::RightReceive | IPC::RightManage
+    );
+
+    if (portHandle == 0) {
+      IPC::DestroyPort(portId);
+
+      TEST_ASSERT(false, "input port handle open failed");
+
+      return false;
+    }
+
     if (Input::Subscribe(portId) != 0) {
       TEST_ASSERT(false, "input subscribe failed");
 
-      IPC::DestroyPort(portId);
+      IPC::DestroyPort(portHandle);
+      IPC::CloseHandle(portHandle);
 
       return false;
     }
@@ -94,7 +101,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
     for (;;) {
       IPC::Message msg {};
 
-      if (IPC::Receive(portId, msg) != 0) {
+      if (IPC::Receive(portHandle, msg) != 0) {
         Task::Yield();
 
         continue;
@@ -114,7 +121,8 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
     }
 
     Input::Unsubscribe(portId);
-    IPC::DestroyPort(portId);
+    IPC::DestroyPort(portHandle);
+    IPC::CloseHandle(portHandle);
 
     if (!received) {
       TEST_ASSERT(false, "no input event received");

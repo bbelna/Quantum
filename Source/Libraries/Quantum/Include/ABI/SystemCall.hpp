@@ -27,10 +27,14 @@ namespace Quantum::ABI {
     IPC_Receive = 402,
     IPC_TryReceive = 403,
     IPC_DestroyPort = 404,
+    IPC_OpenPort = 405,
+    IPC_CloseHandle = 406,
+    IPC_SendHandle = 407,
     IRQ_Register = 501,
     IRQ_Unregister = 502,
     IRQ_Enable = 503,
     IRQ_Disable = 504,
+    IRQ_Open = 505,
     IO_In8 = 600,
     IO_In16 = 601,
     IO_In32 = 602,
@@ -45,13 +49,18 @@ namespace Quantum::ABI {
     Block_AllocateDMABuffer = 705,
     Block_UpdateInfo = 706,
     Block_Register = 707,
+    Block_Open = 708,
     Input_GetCount = 720,
     Input_GetInfo = 721,
     Input_Register = 722,
     Input_UpdateInfo = 723,
     Input_ReadEvent = 724,
     Input_PushEvent = 725,
-    Memory_ExpandHeap = 800
+    Input_Open = 726,
+    Memory_ExpandHeap = 800,
+    Handle_Close = 810,
+    Handle_Dup = 811,
+    Handle_Query = 812
   };
 
   /**

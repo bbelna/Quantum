@@ -33,6 +33,11 @@ namespace Quantum::System::Coordinator {
       inline static UInt32 _portId = 0;
 
       /**
+       * Input broker port handle.
+       */
+      inline static UInt32 _portHandle = 0;
+
+      /**
        * Maximum number of input subscribers.
        */
       static constexpr UInt32 _maxSubscribers = 16;

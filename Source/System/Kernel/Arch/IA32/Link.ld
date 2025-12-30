@@ -39,6 +39,22 @@ SECTIONS
     *(.rodata.*)
   }
 
+  .init_array : AT(ADDR(.init_array) - KERNEL_VIRT_BASE + KERNEL_LOAD_PHYS)
+  {
+    __init_array_start = .;
+    KEEP(*(SORT(.init_array.*)))
+    KEEP(*(.init_array))
+    __init_array_end = .;
+  }
+
+  .fini_array : AT(ADDR(.fini_array) - KERNEL_VIRT_BASE + KERNEL_LOAD_PHYS)
+  {
+    __fini_array_start = .;
+    KEEP(*(SORT(.fini_array.*)))
+    KEEP(*(.fini_array))
+    __fini_array_end = .;
+  }
+
   .data : AT(ADDR(.data) - KERNEL_VIRT_BASE + KERNEL_LOAD_PHYS)
   {
     *(.data)

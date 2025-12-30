@@ -63,6 +63,11 @@ namespace Quantum::System::Coordinator {
       inline static UInt32 _readyPortId = 0;
 
       /**
+       * Coordinator readiness port handle.
+       */
+      inline static UInt32 _readyHandle = 0;
+
+      /**
        * Maximum INIT.BND entries to process.
        */
       static constexpr UInt32 _maxBundleEntries = 64;

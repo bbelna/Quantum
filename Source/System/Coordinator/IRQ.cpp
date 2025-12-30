@@ -7,6 +7,7 @@
  */
 
 #include <ABI/Console.hpp>
+#include <ABI/Handle.hpp>
 #include <ABI/IPC.hpp>
 #include <ABI/IRQ.hpp>
 #include <ABI/Task.hpp>
@@ -27,12 +28,72 @@ namespace Quantum::System::Coordinator {
 
     if (_portId == 0) {
       Console::WriteLine("Coordinator: failed to create IRQ port");
+
       return;
     }
 
     if (_portId != IPC::Ports::IRQ) {
       Console::WriteLine("Coordinator: IRQ port id mismatch");
     }
+
+    _portHandle = IPC::OpenPort(
+      _portId,
+      IPC::RightReceive | IPC::RightManage
+    );
+
+    if (_portHandle == 0) {
+      Console::WriteLine("Coordinator: failed to open IRQ port handle");
+    }
+  }
+
+  void IRQ::StorePendingReply(UInt32 senderId, UInt32 handle) {
+    if (senderId == 0 || handle == 0) {
+      return;
+    }
+
+    for (UInt32 i = 0; i < _maxPendingReplies; ++i) {
+      if (_pendingReplies[i].inUse && _pendingReplies[i].senderId == senderId) {
+        if (_pendingReplies[i].handle != 0) {
+          IPC::CloseHandle(_pendingReplies[i].handle);
+        }
+
+        _pendingReplies[i].handle = handle;
+
+        return;
+      }
+    }
+
+    for (UInt32 i = 0; i < _maxPendingReplies; ++i) {
+      if (!_pendingReplies[i].inUse) {
+        _pendingReplies[i].inUse = true;
+        _pendingReplies[i].senderId = senderId;
+        _pendingReplies[i].handle = handle;
+
+        return;
+      }
+    }
+
+    IPC::CloseHandle(handle);
+  }
+
+  UInt32 IRQ::TakePendingReply(UInt32 senderId) {
+    if (senderId == 0) {
+      return 0;
+    }
+
+    for (UInt32 i = 0; i < _maxPendingReplies; ++i) {
+      if (_pendingReplies[i].inUse && _pendingReplies[i].senderId == senderId) {
+        UInt32 handle = _pendingReplies[i].handle;
+
+        _pendingReplies[i].inUse = false;
+        _pendingReplies[i].senderId = 0;
+        _pendingReplies[i].handle = 0;
+
+        return handle;
+      }
+    }
+
+    return 0;
   }
 
   void IRQ::ProcessPending() {
@@ -40,11 +101,21 @@ namespace Quantum::System::Coordinator {
       return;
     }
 
+    UInt32 receiveId = _portHandle != 0 ? _portHandle : _portId;
+
     for (;;) {
       IPC::Message msg {};
 
-      if (IPC::TryReceive(_portId, msg) != 0) {
+      if (IPC::TryReceive(receiveId, msg) != 0) {
         break;
+      }
+
+      IPC::Handle transferHandle = 0;
+
+      if (IPC::TryGetHandleMessage(msg, transferHandle)) {
+        StorePendingReply(msg.senderId, transferHandle);
+
+        continue;
       }
 
       if (msg.length < sizeof(ABI::IRQ::Message)) {
@@ -66,9 +137,39 @@ namespace Quantum::System::Coordinator {
         continue;
       }
 
-      UInt32 status = Register(request.irq, request.portId);
+      IPC::Handle replyHandle = 0;
 
       if (request.replyPortId != 0) {
+        replyHandle = IPC::OpenPort(request.replyPortId, IPC::RightSend);
+      } else {
+        replyHandle = TakePendingReply(msg.senderId);
+      }
+
+      ABI::IRQ::Handle irqHandle = ABI::IRQ::Open(
+        request.irq,
+        ABI::IRQ::RightRegister
+          | ABI::IRQ::RightUnregister
+          | ABI::IRQ::RightEnable
+          | ABI::IRQ::RightDisable
+      );
+      UInt32 status = 1;
+
+      if (irqHandle != 0) {
+        status = Register(irqHandle, request.portId);
+
+        if (status == 0 && replyHandle != 0) {
+          UInt32 rights = ABI::IRQ::RightRegister
+            | ABI::IRQ::RightUnregister
+            | ABI::IRQ::RightEnable
+            | ABI::IRQ::RightDisable;
+
+          IPC::SendHandle(replyHandle, irqHandle, rights);
+        }
+
+        ABI::Handle::Close(irqHandle);
+      }
+
+      if (replyHandle != 0) {
         UInt32 payload = status;
         IPC::Message reply {};
 
@@ -78,7 +179,8 @@ namespace Quantum::System::Coordinator {
           reply.payload[i] = reinterpret_cast<UInt8*>(&payload)[i];
         }
 
-        IPC::Send(request.replyPortId, reply);
+        IPC::Send(replyHandle, reply);
+        IPC::CloseHandle(replyHandle);
       }
     }
 

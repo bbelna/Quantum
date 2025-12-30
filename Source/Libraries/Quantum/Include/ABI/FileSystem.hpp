@@ -10,6 +10,7 @@
 
 #include "ABI/IPC.hpp"
 #include "ABI/SystemCall.hpp"
+#include "Bytes.hpp"
 #include "Types.hpp"
 
 namespace Quantum::ABI {
@@ -294,7 +295,7 @@ namespace Quantum::ABI {
         UInt32 status;
 
         /**
-         * Reply port id for responses.
+         * Reply port id for responses (0 when using handle transfer).
          */
         UInt32 replyPortId;
 
@@ -527,7 +528,8 @@ namespace Quantum::ABI {
         request.dataLength = 0;
 
         if (buffer && length <= messageDataBytes) {
-          CopyBytes(request.data, buffer, length);
+          ::Quantum::CopyBytes(request.data, buffer, length);
+
           request.dataLength = length;
         }
 
@@ -760,15 +762,6 @@ namespace Quantum::ABI {
         return length + 1;
       }
 
-      static void CopyBytes(void* dest, const void* src, UInt32 length) {
-        auto* d = reinterpret_cast<UInt8*>(dest);
-        auto* s = reinterpret_cast<const UInt8*>(src);
-
-        for (UInt32 i = 0; i < length; ++i) {
-          d[i] = s[i];
-        }
-      }
-
       static UInt32 SendRequest(
         ServiceMessage& request,
         ServiceMessage& response,
@@ -781,25 +774,64 @@ namespace Quantum::ABI {
           return 0;
         }
 
-        request.replyPortId = replyPortId;
+        request.replyPortId = 0;
 
         IPC::Message msg {};
         UInt32 requestBytes = messageHeaderBytes + request.dataLength;
 
         msg.length = requestBytes;
 
-        CopyBytes(msg.payload, &request, requestBytes);
+        ::Quantum::CopyBytes(msg.payload, &request, requestBytes);
 
-        if (IPC::Send(IPC::Ports::FileSystem, msg) != 0) {
+        IPC::Handle replyHandle = IPC::OpenPort(
+          replyPortId,
+          IPC::RightReceive | IPC::RightManage | IPC::RightSend
+        );
+
+        if (replyHandle == 0) {
           IPC::DestroyPort(replyPortId);
 
           return 0;
         }
 
+        IPC::Handle fsHandle = IPC::OpenPort(
+          IPC::Ports::FileSystem,
+          IPC::RightSend
+        );
+
+        if (fsHandle == 0) {
+          IPC::CloseHandle(replyHandle);
+
+          return 0;
+        }
+
+        if (IPC::SendHandle(
+          fsHandle,
+          replyHandle,
+          IPC::RightSend
+        ) != 0) {
+          IPC::CloseHandle(fsHandle);
+          IPC::DestroyPort(replyHandle);
+          IPC::CloseHandle(replyHandle);
+
+          return 0;
+        }
+
+        if (IPC::Send(fsHandle, msg) != 0) {
+          IPC::CloseHandle(fsHandle);
+          IPC::DestroyPort(replyHandle);
+          IPC::CloseHandle(replyHandle);
+
+          return 0;
+        }
+
+        IPC::CloseHandle(fsHandle);
+
         IPC::Message reply {};
 
-        if (IPC::Receive(replyPortId, reply) != 0) {
-          IPC::DestroyPort(replyPortId);
+        if (IPC::Receive(replyHandle, reply) != 0) {
+          IPC::DestroyPort(replyHandle);
+          IPC::CloseHandle(replyHandle);
 
           return 0;
         }
@@ -810,7 +842,7 @@ namespace Quantum::ABI {
           copyBytes = sizeof(response);
         }
 
-        CopyBytes(&response, reply.payload, copyBytes);
+        ::Quantum::CopyBytes(&response, reply.payload, copyBytes);
 
         if (output && outputBytes > 0 && response.dataLength > 0) {
           UInt32 responseBytes = response.dataLength;
@@ -819,12 +851,13 @@ namespace Quantum::ABI {
             responseBytes = outputBytes;
           }
 
-          CopyBytes(output, response.data, responseBytes);
+          ::Quantum::CopyBytes(output, response.data, responseBytes);
         }
 
         UInt32 status = response.status;
 
-        IPC::DestroyPort(replyPortId);
+        IPC::DestroyPort(replyHandle);
+        IPC::CloseHandle(replyHandle);
 
         return status;
       }

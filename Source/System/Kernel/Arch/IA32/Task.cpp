@@ -15,6 +15,7 @@
 #include "Arch/IA32/TSS.hpp"
 #include "CPU.hpp"
 #include "Heap.hpp"
+#include "Handles.hpp"
 #include "Logger.hpp"
 #include "Panic.hpp"
 #include "Prelude.hpp"
@@ -22,6 +23,7 @@
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   using Kernel::Heap;
+  using Kernel::HandleTable;
   using Kernel::UserMode;
 
   using LogLevel = Kernel::Logger::Level;
@@ -251,6 +253,16 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     tcb->userHeapLimit = 0;
     tcb->next = nullptr;
     tcb->allNext = nullptr;
+    tcb->handleTable = nullptr;
+
+    HandleTable* handleTable = static_cast<HandleTable*>(
+      Heap::Allocate(sizeof(HandleTable))
+    );
+
+    if (handleTable != nullptr) {
+      handleTable->Initialize();
+      tcb->handleTable = handleTable;
+    }
 
     // ensure stack can hold the bootstrap frame
     const UInt32 minFrame = sizeof(Task::Context) + 8;

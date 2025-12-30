@@ -18,6 +18,11 @@ namespace Quantum::ABI::Devices {
   class InputDevices {
     public:
       /**
+       * Input device handle type.
+       */
+      using Handle = UInt32;
+
+      /**
        * Input device type identifiers.
        */
       enum class Type : UInt32 {
@@ -138,6 +143,21 @@ namespace Quantum::ABI::Devices {
       static constexpr UInt32 modCaps = 1u << 3;
 
       /**
+       * Input device read right.
+       */
+      static constexpr UInt32 RightRead = 1u << 0;
+
+      /**
+       * Input device control right.
+       */
+      static constexpr UInt32 RightControl = 1u << 1;
+
+      /**
+       * Input device register right.
+       */
+      static constexpr UInt32 RightRegister = 1u << 2;
+
+      /**
        * Returns the number of input devices.
        * @return
        *   Number of registered devices.
@@ -162,6 +182,19 @@ namespace Quantum::ABI::Devices {
           reinterpret_cast<UInt32>(&outInfo),
           0
         );
+      }
+
+      /**
+       * Opens a handle to an input device.
+       * @param deviceId
+       *   Device identifier.
+       * @param rights
+       *   Rights mask.
+       * @return
+       *   Handle on success; 0 on failure.
+       */
+      static Handle Open(UInt32 deviceId, UInt32 rights) {
+        return InvokeSystemCall(SystemCall::Input_Open, deviceId, rights, 0);
       }
 
       /**

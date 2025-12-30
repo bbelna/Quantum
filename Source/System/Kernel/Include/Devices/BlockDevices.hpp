@@ -11,6 +11,7 @@
 #include <Types.hpp>
 
 #include "IPC.hpp"
+#include "Objects/Devices/BlockDeviceObject.hpp"
 
 namespace Quantum::System::Kernel::Devices {
   /**
@@ -126,6 +127,11 @@ namespace Quantum::System::Kernel::Devices {
          * IPC port bound to the device (0 if unbound).
          */
         UInt32 portId;
+
+        /**
+         * Kernel object for handle-based access.
+         */
+        Objects::Devices::BlockDeviceObject* object;
       };
 
       /**
@@ -316,6 +322,15 @@ namespace Quantum::System::Kernel::Devices {
        */
       static bool Write(const Request& request);
 
+      /**
+       * Retrieves the kernel object for a device.
+       * @param deviceId
+       *   Identifier of the device to query.
+       * @return
+       *   Kernel object pointer, or `nullptr` if not found.
+       */
+      static Objects::Devices::BlockDeviceObject* GetObject(UInt32 deviceId);
+
     private:
       /**
        * Maximum number of registered devices.
@@ -396,16 +411,5 @@ namespace Quantum::System::Kernel::Devices {
         const Request& request,
         bool write
       );
-
-      /**
-       * Copies bytes between buffers.
-       * @param dest
-       *   Destination buffer.
-       * @param src
-       *   Source buffer.
-       * @param length
-       *   Number of bytes to copy.
-       */
-      static void CopyBytes(void* dest, const void* src, UInt32 length);
   };
 }

@@ -9,21 +9,25 @@
 #include <ABI/Console.hpp>
 #include <ABI/Coordinator.hpp>
 #include <ABI/Devices/InputDevices.hpp>
+#include <ABI/Handle.hpp>
 #include <ABI/IO.hpp>
 #include <ABI/IPC.hpp>
 #include <ABI/IRQ.hpp>
 #include <ABI/Prelude.hpp>
 #include <ABI/Task.hpp>
+#include <Bytes.hpp>
 
 #include "Controller.hpp"
 #include "Driver.hpp"
+#include "Prelude.hpp"
 
 namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
+  using ::Quantum::CopyBytes;
   using ABI::Console;
   using ABI::Devices::InputDevices;
   using ABI::IPC;
   using ABI::Task;
-  using Quantum::Services::Drivers::Input::PS2::Controller;
+  using PS2::Controller;
 
   static constexpr UInt8 scancodeMap[128] = {
     0,  27, '1','2','3','4','5','6','7','8','9','0','-','=', '\b',
@@ -50,20 +54,24 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
   static constexpr UInt8 capsMake = 0x3A;
   static constexpr UInt8 capsBreak = 0xBA;
 
-  void Driver::CopyBytes(void* dest, const void* src, UInt32 length) {
-    auto* d = reinterpret_cast<UInt8*>(dest);
-    auto* s = reinterpret_cast<const UInt8*>(src);
-
-    for (UInt32 i = 0; i < length; ++i) {
-      d[i] = s[i];
-    }
-  }
-
   void Driver::RegisterIRQRoute(UInt32 portId) {
-    UInt32 status = ABI::IRQ::Register(_irqLine, portId);
+    ABI::IRQ::Handle handle = 0;
+    UInt32 status = ABI::IRQ::Register(_irqLine, portId, &handle);
 
     if (status != 0) {
       Console::WriteLine("PS/2 keyboard IRQ register failed");
+
+      if (handle != 0) {
+        ABI::Handle::Close(handle);
+      }
+
+      return;
+    }
+
+    _irqHandle = handle;
+
+    if (_irqHandle != 0) {
+      ABI::IRQ::Enable(_irqHandle);
     }
   }
 
@@ -78,7 +86,17 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
 
     CopyBytes(msg.payload, &ready, msg.length);
 
-    IPC::Send(ABI::IPC::Ports::CoordinatorReady, msg);
+    IPC::Handle readyHandle = IPC::OpenPort(
+      ABI::IPC::Ports::CoordinatorReady,
+      IPC::RightSend
+    );
+
+    if (readyHandle == 0) {
+      return;
+    }
+
+    IPC::Send(readyHandle, msg);
+    IPC::CloseHandle(readyHandle);
   }
 
   bool Driver::IsIRQMessage(const IPC::Message& msg) {
@@ -131,9 +149,10 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
     }
 
     InputDevices::Event event {};
+    UInt32 deviceToken = _deviceHandle != 0 ? _deviceHandle : _deviceId;
 
     event.type = type;
-    event.deviceId = _deviceId;
+    event.deviceId = deviceToken;
     event.keyCode = keyCode;
     event.modifiers = BuildModifiers();
     event.ascii = ascii;
@@ -271,6 +290,17 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
 
     RegisterIRQRoute(portId);
 
+    IPC::Handle portHandle = IPC::OpenPort(
+      portId,
+      IPC::RightReceive | IPC::RightManage
+    );
+
+    if (portHandle == 0) {
+      Console::WriteLine("PS/2 keyboard failed to open IPC handle");
+      IPC::DestroyPort(portId);
+      Task::Exit(1);
+    }
+
     if (!Controller::Initialize()) {
       Console::WriteLine("PS/2 keyboard controller init failed");
       Task::Exit(1);
@@ -290,6 +320,13 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
       Task::Exit(1);
     }
 
+    _deviceHandle = InputDevices::Open(
+      _deviceId,
+      InputDevices::RightRegister
+        | InputDevices::RightRead
+        | InputDevices::RightControl
+    );
+
     Console::WriteLine("PS/2 keyboard driver ready");
 
     SendReadySignal(2);
@@ -297,7 +334,7 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
     for (;;) {
       IPC::Message msg {};
 
-      if (IPC::Receive(portId, msg) != 0) {
+      if (IPC::Receive(portHandle, msg) != 0) {
         Task::Yield();
 
         continue;

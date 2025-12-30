@@ -38,7 +38,7 @@ namespace Quantum::Services::FileSystems::FAT12 {
 
     BlockDevices::Request request {};
 
-    request.deviceId = _volume->_device.id;
+    request.deviceId = _volume->GetDeviceToken();
     request.lba = _volume->_fatStartLBA;
     request.count = _volume->_fatSectors;
     request.buffer = _volume->_fatCache;
@@ -80,7 +80,7 @@ namespace Quantum::Services::FileSystems::FAT12 {
     UInt8 sector[512] = {};
     BlockDevices::Request request {};
 
-    request.deviceId = _volume->_device.id;
+    request.deviceId = _volume->GetDeviceToken();
     request.lba = _volume->_fatStartLBA + sectorOffset;
     request.count = 1;
     request.buffer = sector;
@@ -193,7 +193,7 @@ namespace Quantum::Services::FileSystems::FAT12 {
       UInt8 sector[512] = {};
       BlockDevices::Request request {};
 
-      request.deviceId = _volume->_device.id;
+      request.deviceId = _volume->GetDeviceToken();
       request.lba = fatLBA;
       request.count = 1;
       request.buffer = sector;

@@ -6,6 +6,8 @@
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
+#include <Bytes.hpp>
+
 #include "Arch/AddressSpace.hpp"
 #include "Arch/PhysicalAllocator.hpp"
 #include "Devices/BlockDevices.hpp"
@@ -14,8 +16,10 @@
 #include "Task.hpp"
 
 namespace Quantum::System::Kernel::Devices {
+  using ::Quantum::CopyBytes;
   using Kernel::IPC;
   using Kernel::Task;
+  using Objects::Devices::BlockDeviceObject;
 
   using LogLevel = Kernel::Logger::Level;
 
@@ -27,6 +31,7 @@ namespace Quantum::System::Kernel::Devices {
       _devices[i] = nullptr;
       _deviceStorage[i].info.id = 0;
       _deviceStorage[i].portId = 0;
+      _deviceStorage[i].object = nullptr;
     }
   }
 
@@ -119,6 +124,14 @@ namespace Quantum::System::Kernel::Devices {
 
     device->info.id = id;
     device->portId = 0;
+    device->object = new BlockDeviceObject(id);
+
+    if (!device->object) {
+      device->info.id = 0;
+
+      return 0;
+    }
+
     _devices[_deviceCount++] = device;
 
     return id;
@@ -172,6 +185,13 @@ namespace Quantum::System::Kernel::Devices {
     storage->info.id = id;
     storage->info.flags &= ~flagReady;
     storage->portId = 0;
+    storage->object = new BlockDeviceObject(id);
+
+    if (!storage->object) {
+      storage->info.id = 0;
+
+      return 0;
+    }
 
     _devices[_deviceCount++] = storage;
 
@@ -181,6 +201,11 @@ namespace Quantum::System::Kernel::Devices {
   bool BlockDevices::Unregister(UInt32 deviceId) {
     for (UInt32 i = 0; i < _deviceCount; ++i) {
       if (_devices[i] && _devices[i]->info.id == deviceId) {
+        if (_devices[i]->object) {
+          _devices[i]->object->Release();
+          _devices[i]->object = nullptr;
+        }
+
         _devices[i]->info.id = 0;
         _devices[i]->portId = 0;
         _devices[i] = _devices[_deviceCount - 1];
@@ -377,6 +402,16 @@ namespace Quantum::System::Kernel::Devices {
     return nullptr;
   }
 
+  BlockDeviceObject* BlockDevices::GetObject(UInt32 deviceId) {
+    BlockDevices::Device* device = Find(deviceId);
+
+    if (!device) {
+      return nullptr;
+    }
+
+    return device->object;
+  }
+
   bool BlockDevices::ValidateRequest(
     const BlockDevices::Device& device,
     const BlockDevices::Request& request
@@ -509,14 +544,5 @@ namespace Quantum::System::Kernel::Devices {
     }
 
     return true;
-  }
-
-  void BlockDevices::CopyBytes(void* dest, const void* src, UInt32 length) {
-    auto* d = reinterpret_cast<UInt8*>(dest);
-    auto* s = reinterpret_cast<const UInt8*>(src);
-
-    for (UInt32 i = 0; i < length; ++i) {
-      d[i] = s[i];
-    }
   }
 }

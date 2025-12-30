@@ -30,6 +30,8 @@ KER_COMMON_SRCS := \
 	$(wildcard $(KERNEL_SRC_DIR)/*.cpp) \
 	$(wildcard $(KERNEL_SRC_DIR)/Devices/*.cpp) \
 	$(wildcard $(KERNEL_SRC_DIR)/Handlers/*.cpp) \
+	$(wildcard $(KERNEL_SRC_DIR)/Objects/*.cpp) \
+	$(wildcard $(KERNEL_SRC_DIR)/Objects/*/*.cpp) \
 	$(wildcard $(KERNEL_SRC_DIR)/Runtime/*.cpp) \
 	$(wildcard $(KERNEL_SRC_DIR)/Tests/*.cpp)
 

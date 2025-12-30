@@ -52,6 +52,11 @@ namespace Quantum::System::Coordinator {
       inline static UInt32 _portId = 0;
 
       /**
+       * File system broker port handle.
+       */
+      inline static UInt32 _portHandle = 0;
+
+      /**
        * Registered file system services.
        */
       inline static Service _services[_maxServices] = {};
@@ -95,6 +100,43 @@ namespace Quantum::System::Coordinator {
        * Active handle mappings.
        */
       inline static HandleMap _handles[_maxHandles] = {};
+
+      /**
+       * Pending reply handles awaiting a request.
+       */
+      struct PendingReply {
+        bool inUse;
+        UInt32 senderId;
+        UInt32 handle;
+      };
+
+      /**
+       * Maximum number of pending reply handles.
+       */
+      static constexpr UInt32 _maxPendingReplies = 16;
+
+      /**
+       * Pending reply handle storage.
+       */
+      inline static PendingReply _pendingReplies[_maxPendingReplies] = {};
+
+      /**
+       * Stores a pending reply handle for a sender.
+       * @param senderId
+       *   Sender task identifier.
+       * @param handle
+       *   Reply handle.
+       */
+      static void StorePendingReply(UInt32 senderId, UInt32 handle);
+
+      /**
+       * Takes a pending reply handle for a sender.
+       * @param senderId
+       *   Sender task identifier.
+       * @return
+       *   Reply handle, or 0 if none pending.
+       */
+      static UInt32 TakePendingReply(UInt32 senderId);
 
       /**
        * Finds the first registered service.

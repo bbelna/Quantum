@@ -10,6 +10,7 @@
 
 #include <ABI/Devices/InputDevices.hpp>
 #include <ABI/IPC.hpp>
+#include <ABI/IRQ.hpp>
 #include <Types.hpp>
 
 namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
@@ -28,6 +29,51 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
        * Keyboard IRQ line.
        */
       static constexpr UInt32 _irqLine = 1;
+
+      /**
+       * Input device identifier assigned by the kernel.
+       */
+      inline static UInt32 _deviceId = 0;
+
+      /**
+       * Input device handle for event submissions.
+       */
+      inline static ABI::Devices::InputDevices::Handle _deviceHandle = 0;
+
+      /**
+       * IPC port identifier for IRQ delivery.
+       */
+      inline static UInt32 _portId = 0;
+
+      /**
+       * IRQ handle granted by the coordinator.
+       */
+      inline static ABI::IRQ::Handle _irqHandle = 0;
+
+      /**
+       * Indicates if Shift key is active.
+       */
+      inline static bool _shiftActive = false;
+
+      /**
+       * Indicates if Caps Lock is active.
+       */
+      inline static bool _capsLock = false;
+
+      /**
+       * Indicates if Control key is active.
+       */
+      inline static bool _ctrlActive = false;
+
+      /**
+       * Indicates if Alt key is active.
+       */
+      inline static bool _altActive = false;
+
+      /**
+       * Indicates if the last scancode was an extended prefix (0xE0).
+       */
+      inline static bool _extendedPrefix = false;
 
       /**
        * Registers the IRQ route with the coordinator.
@@ -88,51 +134,5 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
         UInt32 ascii,
         UInt32 unicode
       );
-
-      /**
-       * Copies bytes between buffers.
-       * @param dest
-       *   Destination buffer.
-       * @param src 
-       *   Source buffer.
-       * @param length
-       *   Number of bytes to copy.
-       */
-      static void CopyBytes(void* dest, const void* src, UInt32 length);
-
-      /**
-       * Input device identifier assigned by the kernel.
-       */
-      inline static UInt32 _deviceId = 0;
-
-      /**
-       * IPC port identifier for IRQ delivery.
-       */
-      inline static UInt32 _portId = 0;
-
-      /**
-       * Indicates if Shift key is active.
-       */
-      inline static bool _shiftActive = false;
-
-      /**
-       * Indicates if Caps Lock is active.
-       */
-      inline static bool _capsLock = false;
-
-      /**
-       * Indicates if Control key is active.
-       */
-      inline static bool _ctrlActive = false;
-
-      /**
-       * Indicates if Alt key is active.
-       */
-      inline static bool _altActive = false;
-
-      /**
-       * Indicates if the last scancode was an extended prefix (0xE0).
-       */
-      inline static bool _extendedPrefix = false;
   };
 }

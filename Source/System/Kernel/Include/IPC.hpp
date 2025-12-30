@@ -10,6 +10,9 @@
 
 #include <Types.hpp>
 
+#include "Objects/IPCPortObject.hpp"
+#include "Objects/KernelObject.hpp"
+
 namespace Quantum::System::Kernel {
   /**
    * IPC subsystem.
@@ -42,7 +45,7 @@ namespace Quantum::System::Kernel {
        * @param buffer
        *   Pointer to payload data.
        * @param length
-       *   Payload length in bytes (<= MaxPayloadBytes).
+       *   Payload length in bytes (<= `maxPayloadBytes`).
        * @return
        *   True on success; false on invalid arguments/port.
        */
@@ -51,6 +54,26 @@ namespace Quantum::System::Kernel {
         UInt32 senderId,
         const void* buffer,
         UInt32 length
+      );
+
+      /**
+       * Sends a handle to the given port.
+       * @param portId
+       *   Target port.
+       * @param senderId
+       *   Identifier of the sending task.
+       * @param object
+       *   Kernel object to transfer.
+       * @param rights
+       *   Rights mask to grant.
+       * @return
+       *   True on success; false on failure.
+       */
+      static bool SendHandle(
+        UInt32 portId,
+        UInt32 senderId,
+        Objects::KernelObject* object,
+        UInt32 rights
       );
 
       /**
@@ -119,6 +142,15 @@ namespace Quantum::System::Kernel {
        */
       static bool GetPortOwner(UInt32 portId, UInt32& outOwnerId);
 
+      /**
+       * Retrieves the kernel object for a port.
+       * @param portId
+       *   Port identifier to query.
+       * @return
+       *   IPC port object pointer, or nullptr if not found.
+       */
+      static Objects::IPCPortObject* GetPortObject(UInt32 portId);
+
     private:
       /**
        * IPC message descriptor stored in each port queue.
@@ -133,6 +165,21 @@ namespace Quantum::System::Kernel {
          * Length of the payload in bytes.
          */
         UInt32 length;
+
+        /**
+         * Whether this message transfers a handle.
+         */
+        bool hasTransfer;
+
+        /**
+         * Transferred object pointer.
+         */
+        Objects::KernelObject* transferObject;
+
+        /**
+         * Rights for the transferred object.
+         */
+        UInt32 transferRights;
 
         /**
          * Message payload data.
@@ -158,6 +205,11 @@ namespace Quantum::System::Kernel {
          * Identifier of the owning task.
          */
         UInt32 ownerTaskId;
+
+        /**
+         * IPC port object.
+         */
+        Objects::IPCPortObject* object;
 
         /**
          * Head index in the message queue.
@@ -197,12 +249,11 @@ namespace Quantum::System::Kernel {
 
       /**
        * Finds a port by id.
+       * @param id
+       *   Port identifier.
+       * @return
+       *   Pointer to the port, or `nullptr` if not found.
        */
       static Port* FindPort(UInt32 id);
-
-      /**
-       * Copies a message payload into a destination buffer.
-       */
-      static void CopyPayload(void* dest, const void* src, UInt32 length);
   };
 }

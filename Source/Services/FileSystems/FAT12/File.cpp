@@ -85,7 +85,7 @@ namespace Quantum::Services::FileSystems::FAT12 {
         + sectorOffset;
       BlockDevices::Request request {};
 
-      request.deviceId = _volume->_device.id;
+      request.deviceId = _volume->GetDeviceToken();
       request.lba = lba;
       request.count = 1;
       request.buffer = sector;
@@ -250,7 +250,7 @@ namespace Quantum::Services::FileSystems::FAT12 {
         + sectorOffset;
       BlockDevices::Request request {};
 
-      request.deviceId = _volume->_device.id;
+      request.deviceId = _volume->GetDeviceToken();
       request.lba = lba;
       request.count = 1;
       request.buffer = sector;

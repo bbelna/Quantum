@@ -7,8 +7,11 @@
  */
 
 #include <ABI/Devices/BlockDevices.hpp>
+#include <ABI/Devices/InputDevices.hpp>
+#include <ABI/Handle.hpp>
 #include <ABI/InitBundle.hpp>
 #include <ABI/IPC.hpp>
+#include <ABI/IRQ.hpp>
 #include <ABI/Prelude.hpp>
 #include <ABI/SystemCall.hpp>
 #include <Types.hpp>
@@ -25,6 +28,7 @@
 #include "InitBundle.hpp"
 #include "Interrupts.hpp"
 #include "IPC.hpp"
+#include "Handles.hpp"
 #include "IRQ.hpp"
 #include "Logger.hpp"
 #include "Prelude.hpp"
@@ -37,16 +41,167 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   using Kernel::Console;
   using Kernel::Devices::BlockDevices;
   using Kernel::Devices::InputDevices;
+  using Kernel::HandleTable;
+  using Kernel::Objects::IPCPortObject;
+  using Kernel::Objects::KernelObject;
+  using Kernel::Objects::KernelObjectType;
   using Kernel::IRQ;
   using Kernel::Logger;
+  using Kernel::Objects::IRQLineObject;
+  using Kernel::Objects::Devices::BlockDeviceObject;
+  using Kernel::Objects::Devices::InputDeviceObject;
 
   using DMABuffer = ABI::Devices::BlockDevices::DMABuffer;
   using LogLevel = Kernel::Logger::Level;
 
   extern "C" void SYSCALL80();
 
+  static bool ResolveIPCHandle(
+    UInt32 portOrHandle,
+    UInt32 rights,
+    UInt32& outPortId
+  ) {
+    if (!HandleTable::IsHandle(portOrHandle)) {
+      outPortId = portOrHandle;
+
+      return true;
+    }
+
+    Kernel::Task::ControlBlock* tcb = Kernel::Task::GetCurrent();
+
+    if (!tcb || !tcb->handleTable) {
+      return false;
+    }
+
+    KernelObject* object = nullptr;
+
+    if (!tcb->handleTable->Resolve(
+      portOrHandle,
+      KernelObjectType::IPCPort,
+      rights,
+      object
+    )) {
+      return false;
+    }
+
+    if (!object || object->type != KernelObjectType::IPCPort) {
+      return false;
+    }
+
+    auto* portObject = reinterpret_cast<IPCPortObject*>(object);
+
+    outPortId = portObject->portId;
+
+    return true;
+  }
+
+  static bool ResolveBlockDeviceHandle(
+    UInt32 deviceOrHandle,
+    UInt32 rights,
+    UInt32& outDeviceId
+  ) {
+    if (!HandleTable::IsHandle(deviceOrHandle)) {
+      outDeviceId = deviceOrHandle;
+
+      return true;
+    }
+
+    Kernel::Task::ControlBlock* tcb = Kernel::Task::GetCurrent();
+
+    if (!tcb || !tcb->handleTable) {
+      return false;
+    }
+
+    KernelObject* object = nullptr;
+
+    if (!tcb->handleTable->Resolve(
+      deviceOrHandle,
+      KernelObjectType::BlockDevice,
+      rights,
+      object
+    )) {
+      return false;
+    }
+
+    auto* deviceObject = reinterpret_cast<BlockDeviceObject*>(object);
+
+    outDeviceId = deviceObject->deviceId;
+
+    return true;
+  }
+
+  static bool ResolveInputDeviceHandle(
+    UInt32 deviceOrHandle,
+    UInt32 rights,
+    UInt32& outDeviceId
+  ) {
+    if (!HandleTable::IsHandle(deviceOrHandle)) {
+      outDeviceId = deviceOrHandle;
+
+      return true;
+    }
+
+    Kernel::Task::ControlBlock* tcb = Kernel::Task::GetCurrent();
+
+    if (!tcb || !tcb->handleTable) {
+      return false;
+    }
+
+    KernelObject* object = nullptr;
+
+    if (!tcb->handleTable->Resolve(
+      deviceOrHandle,
+      KernelObjectType::InputDevice,
+      rights,
+      object
+    )) {
+      return false;
+    }
+
+    auto* deviceObject = reinterpret_cast<InputDeviceObject*>(object);
+
+    outDeviceId = deviceObject->deviceId;
+
+    return true;
+  }
+
+  static bool ResolveIRQHandle(
+    UInt32 irqOrHandle,
+    UInt32 rights,
+    UInt32& outIrq
+  ) {
+    if (!HandleTable::IsHandle(irqOrHandle)) {
+      outIrq = irqOrHandle;
+
+      return true;
+    }
+
+    Kernel::Task::ControlBlock* tcb = Kernel::Task::GetCurrent();
+
+    if (!tcb || !tcb->handleTable) {
+      return false;
+    }
+
+    KernelObject* object = nullptr;
+
+    if (!tcb->handleTable->Resolve(
+      irqOrHandle,
+      KernelObjectType::IRQLine,
+      rights,
+      object
+    )) {
+      return false;
+    }
+
+    auto* irqObject = reinterpret_cast<IRQLineObject*>(object);
+
+    outIrq = irqObject->irqLine;
+
+    return true;
+  }
+
   Interrupts::Context* SystemCalls::OnSystemCall(Interrupts::Context& context) {
-        SystemCall id = static_cast<SystemCall>(context.eax);
+    SystemCall id = static_cast<SystemCall>(context.eax);
 
     switch (id) {
       case SystemCall::Task_Exit: {
@@ -135,10 +290,17 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::IPC_Send: {
-        UInt32 portId = context.ebx;
+        UInt32 portId = 0;
+        UInt32 portOrHandle = context.ebx;
         IPC::Message* msg = reinterpret_cast<IPC::Message*>(context.ecx);
 
         if (!msg || msg->length == 0 || msg->length > IPC::maxPayloadBytes) {
+          context.eax = 1;
+
+          break;
+        }
+
+        if (!ResolveIPCHandle(portOrHandle, IPC::RightSend, portId)) {
           context.eax = 1;
 
           break;
@@ -153,10 +315,17 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::IPC_Receive: {
-        UInt32 portId = context.ebx;
+        UInt32 portId = 0;
+        UInt32 portOrHandle = context.ebx;
         IPC::Message* msg = reinterpret_cast<IPC::Message*>(context.ecx);
 
         if (!msg) {
+          context.eax = 1;
+
+          break;
+        }
+
+        if (!ResolveIPCHandle(portOrHandle, IPC::RightReceive, portId)) {
           context.eax = 1;
 
           break;
@@ -183,10 +352,17 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::IPC_TryReceive: {
-        UInt32 portId = context.ebx;
+        UInt32 portId = 0;
+        UInt32 portOrHandle = context.ebx;
         IPC::Message* msg = reinterpret_cast<IPC::Message*>(context.ecx);
 
         if (!msg) {
+          context.eax = 1;
+
+          break;
+        }
+
+        if (!ResolveIPCHandle(portOrHandle, IPC::RightReceive, portId)) {
           context.eax = 1;
 
           break;
@@ -213,10 +389,215 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::IPC_DestroyPort: {
-        UInt32 portId = context.ebx;
-        bool ok = Kernel::IPC::DestroyPort(portId);
+        UInt32 portId = 0;
+        UInt32 portOrHandle = context.ebx;
+        bool ok = false;
+
+        if (!ResolveIPCHandle(portOrHandle, IPC::RightManage, portId)) {
+          context.eax = 1;
+
+          break;
+        }
+
+        UInt32 ownerId = 0;
+
+        if (Kernel::IPC::GetPortOwner(portId, ownerId)) {
+          if (ownerId == Kernel::Task::GetCurrentId()) {
+            ok = Kernel::IPC::DestroyPort(portId);
+          }
+        }
 
         context.eax = ok ? 0 : 1;
+
+        break;
+      }
+
+      case SystemCall::IPC_OpenPort: {
+        UInt32 portId = context.ebx;
+        UInt32 rights = context.ecx;
+
+        if (portId == 0) {
+          context.eax = 0;
+
+          break;
+        }
+
+        UInt32 ownerId = 0;
+
+        if (!Kernel::IPC::GetPortOwner(portId, ownerId)) {
+          context.eax = 0;
+
+          break;
+        }
+
+        Kernel::Task::ControlBlock* tcb = Kernel::Task::GetCurrent();
+
+        if (!tcb || !tcb->handleTable) {
+          context.eax = 0;
+
+          break;
+        }
+
+        UInt32 allowed = IPC::RightSend;
+
+        if (ownerId == Kernel::Task::GetCurrentId()) {
+          allowed |= IPC::RightReceive | IPC::RightManage;
+        }
+
+        if ((rights & ~allowed) != 0) {
+          context.eax = 0;
+
+          break;
+        }
+
+        rights &= allowed;
+
+        if (rights == 0) {
+          context.eax = 0;
+
+          break;
+        }
+
+        IPCPortObject* portObject = Kernel::IPC::GetPortObject(portId);
+
+        if (!portObject) {
+          context.eax = 0;
+
+          break;
+        }
+
+        HandleTable::Handle handle = tcb->handleTable->Create(
+          KernelObjectType::IPCPort,
+          portObject,
+          rights
+        );
+
+        context.eax = handle;
+
+        break;
+      }
+
+      case SystemCall::IPC_CloseHandle: {
+        UInt32 handle = context.ebx;
+        Kernel::Task::ControlBlock* tcb = Kernel::Task::GetCurrent();
+        bool ok = false;
+
+        if (tcb && tcb->handleTable && HandleTable::IsHandle(handle)) {
+          ok = tcb->handleTable->Close(handle);
+        }
+
+        context.eax = ok ? 0 : 1;
+
+        break;
+      }
+
+      case SystemCall::IPC_SendHandle: {
+        UInt32 portId = 0;
+        UInt32 portOrHandle = context.ebx;
+        UInt32 handle = context.ecx;
+        UInt32 rights = context.edx;
+
+        if (!ResolveIPCHandle(portOrHandle, IPC::RightSend, portId)) {
+          context.eax = 1;
+
+          break;
+        }
+
+        Kernel::Task::ControlBlock* tcb = Kernel::Task::GetCurrent();
+
+        if (!tcb || !tcb->handleTable || !HandleTable::IsHandle(handle)) {
+          context.eax = 1;
+
+          break;
+        }
+
+        KernelObjectType type = KernelObjectType::None;
+        UInt32 entryRights = 0;
+
+        if (!tcb->handleTable->Query(handle, type, entryRights)) {
+          context.eax = 1;
+
+          break;
+        }
+
+        if (rights == 0) {
+          rights = entryRights;
+        } else if ((entryRights & rights) != rights) {
+          context.eax = 1;
+
+          break;
+        }
+
+        KernelObject* object = nullptr;
+
+        if (!tcb->handleTable->Resolve(handle, type, rights, object)) {
+          context.eax = 1;
+
+          break;
+        }
+
+        UInt32 sender = Kernel::Task::GetCurrentId();
+        bool ok = Kernel::IPC::SendHandle(portId, sender, object, rights);
+
+        context.eax = ok ? 0 : 1;
+
+        break;
+      }
+
+      case SystemCall::Handle_Close: {
+        UInt32 handle = context.ebx;
+        Kernel::Task::ControlBlock* tcb = Kernel::Task::GetCurrent();
+        bool ok = false;
+
+        if (tcb && tcb->handleTable && HandleTable::IsHandle(handle)) {
+          ok = tcb->handleTable->Close(handle);
+        }
+
+        context.eax = ok ? 0 : 1;
+
+        break;
+      }
+
+      case SystemCall::Handle_Dup: {
+        UInt32 handle = context.ebx;
+        UInt32 rights = context.ecx;
+        Kernel::Task::ControlBlock* tcb = Kernel::Task::GetCurrent();
+
+        if (!tcb || !tcb->handleTable || !HandleTable::IsHandle(handle)) {
+          context.eax = 0;
+
+          break;
+        }
+
+        context.eax = tcb->handleTable->Duplicate(handle, rights);
+
+        break;
+      }
+
+      case SystemCall::Handle_Query: {
+        UInt32 handle = context.ebx;
+        ABI::Handle::Info* info
+          = reinterpret_cast<ABI::Handle::Info*>(context.ecx);
+        Kernel::Task::ControlBlock* tcb = Kernel::Task::GetCurrent();
+
+        if (!tcb || !tcb->handleTable || !HandleTable::IsHandle(handle) || !info) {
+          context.eax = 1;
+
+          break;
+        }
+
+        KernelObjectType type = KernelObjectType::None;
+        UInt32 rights = 0;
+
+        if (!tcb->handleTable->Query(handle, type, rights)) {
+          context.eax = 1;
+
+          break;
+        }
+
+        info->type = static_cast<UInt32>(type);
+        info->rights = rights;
+        context.eax = 0;
 
         break;
       }
@@ -321,11 +702,22 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::Block_GetInfo: {
-        UInt32 deviceId = context.ebx;
+        UInt32 deviceId = 0;
+        UInt32 deviceOrHandle = context.ebx;
         BlockDevices::Info* info
           = reinterpret_cast<BlockDevices::Info*>(context.ecx);
 
         if (!info) {
+          context.eax = 1;
+
+          break;
+        }
+
+        if (!ResolveBlockDeviceHandle(
+          deviceOrHandle,
+          ABI::Devices::BlockDevices::RightControl,
+          deviceId
+        )) {
           context.eax = 1;
 
           break;
@@ -354,11 +746,22 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::Block_UpdateInfo: {
-        UInt32 deviceId = context.ebx;
+        UInt32 deviceId = 0;
+        UInt32 deviceOrHandle = context.ebx;
         BlockDevices::Info* info
           = reinterpret_cast<BlockDevices::Info*>(context.ecx);
 
         if (!info) {
+          context.eax = 1;
+
+          break;
+        }
+
+        if (!ResolveBlockDeviceHandle(
+          deviceOrHandle,
+          ABI::Devices::BlockDevices::RightControl,
+          deviceId
+        )) {
           context.eax = 1;
 
           break;
@@ -381,7 +784,23 @@ namespace Quantum::System::Kernel::Arch::IA32 {
           break;
         }
 
-        context.eax = BlockDevices::Read(*request) ? 0 : 1;
+        UInt32 deviceId = 0;
+
+        if (!ResolveBlockDeviceHandle(
+          request->deviceId,
+          ABI::Devices::BlockDevices::RightRead,
+          deviceId
+        )) {
+          context.eax = 1;
+
+          break;
+        }
+
+        BlockDevices::Request resolved = *request;
+
+        resolved.deviceId = deviceId;
+
+        context.eax = BlockDevices::Read(resolved) ? 0 : 1;
 
         break;
       }
@@ -396,18 +815,101 @@ namespace Quantum::System::Kernel::Arch::IA32 {
           break;
         }
 
-        context.eax = BlockDevices::Write(*request) ? 0 : 1;
+        UInt32 deviceId = 0;
+
+        if (!ResolveBlockDeviceHandle(
+          request->deviceId,
+          ABI::Devices::BlockDevices::RightWrite,
+          deviceId
+        )) {
+          context.eax = 1;
+
+          break;
+        }
+
+        BlockDevices::Request resolved = *request;
+
+        resolved.deviceId = deviceId;
+
+        context.eax = BlockDevices::Write(resolved) ? 0 : 1;
 
         break;
       }
 
       case SystemCall::Block_Bind: {
-        UInt32 deviceId = context.ebx;
+        UInt32 deviceId = 0;
+        UInt32 deviceOrHandle = context.ebx;
         UInt32 portId = context.ecx;
+
+        if (!ResolveBlockDeviceHandle(
+          deviceOrHandle,
+          ABI::Devices::BlockDevices::RightBind,
+          deviceId
+        )) {
+          context.eax = 1;
+
+          break;
+        }
 
         bool ok = BlockDevices::Bind(deviceId, portId);
 
         context.eax = ok ? 0 : 1;
+
+        break;
+      }
+
+      case SystemCall::Block_Open: {
+        if (!Kernel::Task::IsCurrentTaskCoordinator()) {
+          context.eax = 0;
+
+          break;
+        }
+
+        UInt32 deviceId = context.ebx;
+        UInt32 rights = context.ecx;
+
+        if (rights == 0) {
+          context.eax = 0;
+
+          break;
+        }
+
+        Kernel::Task::ControlBlock* tcb = Kernel::Task::GetCurrent();
+
+        if (!tcb || !tcb->handleTable) {
+          context.eax = 0;
+
+          break;
+        }
+
+        KernelObject* object = BlockDevices::GetObject(deviceId);
+
+        if (!object) {
+          context.eax = 0;
+
+          break;
+        }
+
+        UInt32 allowed = ABI::Devices::BlockDevices::RightRead
+          | ABI::Devices::BlockDevices::RightWrite
+          | ABI::Devices::BlockDevices::RightControl
+          | ABI::Devices::BlockDevices::RightBind;
+
+        rights &= allowed;
+
+        if (rights == 0) {
+          context.eax = 0;
+
+          break;
+        }
+
+        HandleTable::Handle handle = tcb->handleTable->Create(
+          KernelObjectType::BlockDevice,
+          object,
+          rights
+        );
+
+        context.eax = handle;
 
         break;
       }
@@ -449,11 +951,22 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::Input_GetInfo: {
-        UInt32 deviceId = context.ebx;
+        UInt32 deviceId = 0;
+        UInt32 deviceOrHandle = context.ebx;
         InputDevices::Info* info
           = reinterpret_cast<InputDevices::Info*>(context.ecx);
 
         if (!info) {
+          context.eax = 1;
+
+          break;
+        }
+
+        if (!ResolveInputDeviceHandle(
+          deviceOrHandle,
+          ABI::Devices::InputDevices::RightControl,
+          deviceId
+        )) {
           context.eax = 1;
 
           break;
@@ -482,11 +995,22 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::Input_UpdateInfo: {
-        UInt32 deviceId = context.ebx;
+        UInt32 deviceId = 0;
+        UInt32 deviceOrHandle = context.ebx;
         InputDevices::Info* info
           = reinterpret_cast<InputDevices::Info*>(context.ecx);
 
         if (!info) {
+          context.eax = 1;
+
+          break;
+        }
+
+        if (!ResolveInputDeviceHandle(
+          deviceOrHandle,
+          ABI::Devices::InputDevices::RightControl,
+          deviceId
+        )) {
           context.eax = 1;
 
           break;
@@ -500,11 +1024,22 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::Input_ReadEvent: {
-        UInt32 deviceId = context.ebx;
+        UInt32 deviceId = 0;
+        UInt32 deviceOrHandle = context.ebx;
         InputDevices::Event* event
           = reinterpret_cast<InputDevices::Event*>(context.ecx);
 
         if (!event) {
+          context.eax = 1;
+
+          break;
+        }
+
+        if (!ResolveInputDeviceHandle(
+          deviceOrHandle,
+          ABI::Devices::InputDevices::RightRead,
+          deviceId
+        )) {
           context.eax = 1;
 
           break;
@@ -518,11 +1053,22 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::Input_PushEvent: {
-        UInt32 deviceId = context.ebx;
+        UInt32 deviceId = 0;
+        UInt32 deviceOrHandle = context.ebx;
         InputDevices::Event* event
           = reinterpret_cast<InputDevices::Event*>(context.ecx);
 
         if (!event) {
+          context.eax = 1;
+
+          break;
+        }
+
+        if (!ResolveInputDeviceHandle(
+          deviceOrHandle,
+          ABI::Devices::InputDevices::RightRegister,
+          deviceId
+        )) {
           context.eax = 1;
 
           break;
@@ -535,15 +1081,83 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         break;
       }
 
-      case SystemCall::IRQ_Register: {
+      case SystemCall::Input_Open: {
         if (!Kernel::Task::IsCurrentTaskCoordinator()) {
+          context.eax = 0;
+
+          break;
+        }
+
+        UInt32 deviceId = context.ebx;
+        UInt32 rights = context.ecx;
+
+        if (rights == 0) {
+          context.eax = 0;
+
+          break;
+        }
+
+        Kernel::Task::ControlBlock* tcb = Kernel::Task::GetCurrent();
+
+        if (!tcb || !tcb->handleTable) {
+          context.eax = 0;
+
+          break;
+        }
+
+        KernelObject* object = InputDevices::GetObject(deviceId);
+
+        if (!object) {
+          context.eax = 0;
+
+          break;
+        }
+
+        UInt32 allowed = ABI::Devices::InputDevices::RightRead
+          | ABI::Devices::InputDevices::RightControl
+          | ABI::Devices::InputDevices::RightRegister;
+
+        rights &= allowed;
+
+        if (rights == 0) {
+          context.eax = 0;
+
+          break;
+        }
+
+        HandleTable::Handle handle = tcb->handleTable->Create(
+          KernelObjectType::InputDevice,
+          object,
+          rights
+        );
+
+        context.eax = handle;
+
+        break;
+      }
+
+      case SystemCall::IRQ_Register: {
+        UInt32 irq = 0;
+        UInt32 irqOrHandle = context.ebx;
+        UInt32 portId = context.ecx;
+        bool isHandle = HandleTable::IsHandle(irqOrHandle);
+
+        if (!ResolveIRQHandle(
+          irqOrHandle,
+          ABI::IRQ::RightRegister,
+          irq
+        )) {
           context.eax = 1;
 
           break;
         }
 
-        UInt32 irq = context.ebx;
-        UInt32 portId = context.ecx;
+        if (!isHandle && !Kernel::Task::IsCurrentTaskCoordinator()) {
+          context.eax = 1;
+
+          break;
+        }
+
         bool ok = IRQ::Register(irq, portId);
 
         context.eax = ok ? 0 : 1;
@@ -552,13 +1166,26 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::IRQ_Unregister: {
-        if (!Kernel::Task::IsCurrentTaskCoordinator()) {
+        UInt32 irq = 0;
+        UInt32 irqOrHandle = context.ebx;
+        bool isHandle = HandleTable::IsHandle(irqOrHandle);
+
+        if (!ResolveIRQHandle(
+          irqOrHandle,
+          ABI::IRQ::RightUnregister,
+          irq
+        )) {
           context.eax = 1;
 
           break;
         }
 
-        UInt32 irq = context.ebx;
+        if (!isHandle && !Kernel::Task::IsCurrentTaskCoordinator()) {
+          context.eax = 1;
+
+          break;
+        }
+
         bool ok = IRQ::Unregister(irq);
 
         context.eax = ok ? 0 : 1;
@@ -567,13 +1194,26 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::IRQ_Enable: {
-        if (!Kernel::Task::IsCurrentTaskCoordinator()) {
+        UInt32 irq = 0;
+        UInt32 irqOrHandle = context.ebx;
+        bool isHandle = HandleTable::IsHandle(irqOrHandle);
+
+        if (!ResolveIRQHandle(
+          irqOrHandle,
+          ABI::IRQ::RightEnable,
+          irq
+        )) {
           context.eax = 1;
 
           break;
         }
 
-        UInt32 irq = context.ebx;
+        if (!isHandle && !Kernel::Task::IsCurrentTaskCoordinator()) {
+          context.eax = 1;
+
+          break;
+        }
+
         bool ok = IRQ::Enable(irq);
 
         context.eax = ok ? 0 : 1;
@@ -582,16 +1222,85 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::IRQ_Disable: {
-        if (!Kernel::Task::IsCurrentTaskCoordinator()) {
+        UInt32 irq = 0;
+        UInt32 irqOrHandle = context.ebx;
+        bool isHandle = HandleTable::IsHandle(irqOrHandle);
+
+        if (!ResolveIRQHandle(
+          irqOrHandle,
+          ABI::IRQ::RightDisable,
+          irq
+        )) {
           context.eax = 1;
 
           break;
         }
 
-        UInt32 irq = context.ebx;
+        if (!isHandle && !Kernel::Task::IsCurrentTaskCoordinator()) {
+          context.eax = 1;
+
+          break;
+        }
+
         bool ok = IRQ::Disable(irq);
 
         context.eax = ok ? 0 : 1;
+
+        break;
+      }
+
+      case SystemCall::IRQ_Open: {
+        if (!Kernel::Task::IsCurrentTaskCoordinator()) {
+          context.eax = 0;
+
+          break;
+        }
+
+        UInt32 irq = context.ebx;
+        UInt32 rights = context.ecx;
+
+        if (rights == 0) {
+          context.eax = 0;
+
+          break;
+        }
+
+        Kernel::Task::ControlBlock* tcb = Kernel::Task::GetCurrent();
+
+        if (!tcb || !tcb->handleTable) {
+          context.eax = 0;
+
+          break;
+        }
+
+        KernelObject* object = IRQ::GetObject(irq);
+
+        if (!object) {
+          context.eax = 0;
+
+          break;
+        }
+
+        UInt32 allowed = ABI::IRQ::RightRegister
+          | ABI::IRQ::RightUnregister
+          | ABI::IRQ::RightEnable
+          | ABI::IRQ::RightDisable;
+
+        rights &= allowed;
+
+        if (rights == 0) {
+          context.eax = 0;
+
+          break;
+        }
+
+        HandleTable::Handle handle = tcb->handleTable->Create(
+          KernelObjectType::IRQLine,
+          object,
+          rights
+        );
+
+        context.eax = handle;
 
         break;
       }

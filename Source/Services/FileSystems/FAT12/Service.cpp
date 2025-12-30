@@ -38,7 +38,17 @@ namespace Quantum::Services::FileSystems::FAT12 {
       msg.payload[i] = reinterpret_cast<UInt8*>(&ready)[i];
     }
 
-    IPC::Send(ABI::IPC::Ports::CoordinatorReady, msg);
+    IPC::Handle readyHandle = IPC::OpenPort(
+      ABI::IPC::Ports::CoordinatorReady,
+      IPC::RightSend
+    );
+
+    if (readyHandle == 0) {
+      return;
+    }
+
+    IPC::Send(readyHandle, msg);
+    IPC::CloseHandle(readyHandle);
   }
 
   void Service::InitializeVolumes() {
@@ -389,6 +399,17 @@ namespace Quantum::Services::FileSystems::FAT12 {
       Task::Exit(1);
     }
 
+    IPC::Handle portHandle = IPC::OpenPort(
+      portId,
+      IPC::RightReceive | IPC::RightManage
+    );
+
+    if (portHandle == 0) {
+      Console::WriteLine("FAT12: failed to open IPC handle");
+      IPC::DestroyPort(portId);
+      Task::Exit(1);
+    }
+
     UInt32 reg = FileSystem::RegisterService(
       FileSystem::Type::FAT12,
       portId
@@ -406,8 +427,21 @@ namespace Quantum::Services::FileSystems::FAT12 {
     for (;;) {
       IPC::Message msg {};
 
-      if (IPC::Receive(portId, msg) != 0) {
+      if (IPC::Receive(portHandle, msg) != 0) {
         Task::Yield();
+
+        continue;
+      }
+
+      IPC::Handle transferHandle = 0;
+
+      if (IPC::TryGetHandleMessage(msg, transferHandle)) {
+        if (_pendingReplyHandle != 0) {
+          IPC::CloseHandle(_pendingReplyHandle);
+        }
+
+        _pendingReplyHandle = transferHandle;
+        _pendingReplySender = msg.senderId;
 
         continue;
       }
@@ -428,7 +462,18 @@ namespace Quantum::Services::FileSystems::FAT12 {
         reinterpret_cast<UInt8*>(&request)[i] = msg.payload[i];
       }
 
-      if (request.replyPortId == 0) {
+      IPC::Handle replyHandle = 0;
+
+      if (request.replyPortId != 0) {
+        replyHandle = IPC::OpenPort(request.replyPortId, IPC::RightSend);
+      } else if (_pendingReplyHandle != 0 && _pendingReplySender == msg.senderId)
+      {
+        replyHandle = _pendingReplyHandle;
+        _pendingReplyHandle = 0;
+        _pendingReplySender = 0;
+      }
+
+      if (replyHandle == 0) {
         continue;
       }
 
@@ -436,7 +481,7 @@ namespace Quantum::Services::FileSystems::FAT12 {
 
       response.op = request.op;
       response.status = 1;
-      response.replyPortId = request.replyPortId;
+      response.replyPortId = 0;
       response.arg0 = 0;
       response.arg1 = 0;
       response.arg2 = 0;
@@ -1232,7 +1277,8 @@ namespace Quantum::Services::FileSystems::FAT12 {
         reply.payload[i] = reinterpret_cast<UInt8*>(&response)[i];
       }
 
-      IPC::Send(request.replyPortId, reply);
+      IPC::Send(replyHandle, reply);
+      IPC::CloseHandle(replyHandle);
     }
   }
 }

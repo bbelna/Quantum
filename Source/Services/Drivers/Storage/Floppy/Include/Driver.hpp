@@ -10,6 +10,7 @@
 
 #include <ABI/Devices/BlockDevices.hpp>
 #include <ABI/IPC.hpp>
+#include <ABI/IRQ.hpp>
 #include <ABI/Prelude.hpp>
 #include <Types.hpp>
 
@@ -287,6 +288,11 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
       inline static UInt32 _deviceIds[_maxDevices] = {};
 
       /**
+       * Block device handles for bound devices.
+       */
+      inline static BlockDevices::Handle _deviceHandles[_maxDevices] = {};
+
+      /**
        * Device sector sizes in bytes.
        */
       inline static UInt32 _deviceSectorSizes[_maxDevices] = {};
@@ -365,6 +371,16 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
        * IPC port id for this driver.
        */
       inline static UInt32 _portId = 0;
+
+      /**
+       * IPC handle for receiving messages.
+       */
+      inline static IPC::Handle _portHandle = 0;
+
+      /**
+       * IRQ handle granted by the coordinator.
+       */
+      inline static ABI::IRQ::Handle _irqHandle = 0;
 
       /**
        * Maximum number of queued non-IRQ messages while waiting.
@@ -468,17 +484,6 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
        *   True on success; false on failure.
        */
       static bool SendSpecifyCommand();
-
-      /**
-       * Copies raw bytes into a destination buffer.
-       * @param dest
-       *   Destination buffer.
-       * @param src
-       *   Source buffer.
-       * @param length
-       *   Number of bytes to copy.
-       */
-      static void CopyBytes(void* dest, const void* src, UInt32 length);
 
       /**
        * Copies bytes for IPC message parsing.

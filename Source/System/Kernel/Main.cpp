@@ -15,6 +15,7 @@
 #include "Interrupts.hpp"
 #include "Main.hpp"
 #include "Prelude.hpp"
+#include "Runtime.hpp"
 #include "Task.hpp"
 #include "TestRunner.hpp"
 
@@ -26,6 +27,9 @@ namespace Quantum::System::Kernel {
     BootInfo::Initialize(bootInfoPhysicalAddress);
     Paging::Initialize(bootInfoPhysicalAddress);
     Interrupts::Initialize();
+
+    RunGlobalConstructors();
+
     DeviceManager::Initialize();
     InitBundle::Initialize();
     Task::Initialize();

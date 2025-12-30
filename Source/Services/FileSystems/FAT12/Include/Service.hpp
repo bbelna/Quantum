@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include <ABI/IPC.hpp>
+
 #include "Volume.hpp"
 
 namespace Quantum::Services::FileSystems::FAT12 {
@@ -117,6 +119,16 @@ namespace Quantum::Services::FileSystems::FAT12 {
        * Number of mounted volumes.
        */
       inline static UInt32 _volumeCount = 0;
+
+      /**
+       * Pending reply handle from the coordinator.
+       */
+      inline static ABI::IPC::Handle _pendingReplyHandle = 0;
+
+      /**
+       * Sender id for the pending reply handle.
+       */
+      inline static UInt32 _pendingReplySender = 0;
 
       /**
        * Initializes the FAT12 volume list.

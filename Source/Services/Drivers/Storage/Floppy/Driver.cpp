@@ -9,14 +9,17 @@
 #include <ABI/Console.hpp>
 #include <ABI/Coordinator.hpp>
 #include <ABI/Devices/BlockDevices.hpp>
+#include <ABI/Handle.hpp>
 #include <ABI/IO.hpp>
 #include <ABI/IRQ.hpp>
 #include <ABI/IPC.hpp>
 #include <ABI/Task.hpp>
+#include <Bytes.hpp>
 
 #include "Driver.hpp"
 
 namespace Quantum::Services::Drivers::Storage::Floppy {
+  using ::Quantum::CopyBytes;
   using ABI::Console;
   using ABI::IO;
   using ABI::Task;
@@ -136,15 +139,6 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
     return true;
   }
 
-  void Driver::CopyBytes(void* dest, const void* src, UInt32 length) {
-    auto* d = reinterpret_cast<UInt8*>(dest);
-    auto* s = reinterpret_cast<const UInt8*>(src);
-
-    for (UInt32 i = 0; i < length; ++i) {
-      d[i] = s[i];
-    }
-  }
-
   void Driver::FillBytes(void* dest, UInt8 value, UInt32 length) {
     auto* d = reinterpret_cast<UInt8*>(dest);
 
@@ -259,7 +253,7 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
         IPC::Message msg {};
 
         // poll the port so we can time out if no IRQ arrives
-        if (IPC::TryReceive(_portId, msg) == 0) {
+        if (_portHandle != 0 && IPC::TryReceive(_portHandle, msg) == 0) {
           if (IsIRQMessage(msg)) {
             return true;
           }
@@ -279,10 +273,23 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
   }
 
   void Driver::RegisterIRQRoute(UInt32 portId) {
-    UInt32 status = ABI::IRQ::Register(_irqLine, portId);
+    ABI::IRQ::Handle handle = 0;
+    UInt32 status = ABI::IRQ::Register(_irqLine, portId, &handle);
 
     if (status != 0) {
       Console::WriteLine("Floppy driver IRQ register failed");
+
+      if (handle != 0) {
+        ABI::Handle::Close(handle);
+      }
+
+      return;
+    }
+
+    _irqHandle = handle;
+
+    if (_irqHandle != 0) {
+      ABI::IRQ::Enable(_irqHandle);
     }
   }
 
@@ -297,7 +304,17 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
 
     CopyBytes(msg.payload, &ready, msg.length);
 
-    IPC::Send(ABI::IPC::Ports::CoordinatorReady, msg);
+    IPC::Handle readyHandle = IPC::OpenPort(
+      ABI::IPC::Ports::CoordinatorReady,
+      IPC::RightSend
+    );
+
+    if (readyHandle == 0) {
+      return;
+    }
+
+    IPC::Send(readyHandle, msg);
+    IPC::CloseHandle(readyHandle);
   }
 
   bool Driver::GetDeviceInfo(
@@ -1193,6 +1210,17 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
 
     RegisterIRQRoute(portId);
 
+    _portHandle = IPC::OpenPort(
+      portId,
+      IPC::RightReceive | IPC::RightManage
+    );
+
+    if (_portHandle == 0) {
+      Console::WriteLine("Floppy driver failed to open IPC handle");
+      IPC::DestroyPort(portId);
+      Task::Exit(1);
+    }
+
     BlockDevices::DMABuffer dmaBuffer {};
 
     if (
@@ -1289,6 +1317,18 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
 
         continue;
       }
+
+      BlockDevices::Handle deviceHandle = BlockDevices::Open(
+        deviceId,
+        BlockDevices::RightRead
+          | BlockDevices::RightWrite
+          | BlockDevices::RightControl
+          | BlockDevices::RightBind
+      );
+
+      if (_deviceCount > 0) {
+        _deviceHandles[_deviceCount - 1] = deviceHandle;
+      }
     }
 
     if (_deviceCount == 0) {
@@ -1297,7 +1337,11 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
     }
 
     for (UInt32 i = 0; i < _deviceCount; ++i) {
-      if (BlockDevices::Bind(_deviceIds[i], portId) != 0) {
+      UInt32 bindTarget = _deviceHandles[i] != 0
+        ? _deviceHandles[i]
+        : _deviceIds[i];
+
+      if (BlockDevices::Bind(bindTarget, portId) != 0) {
         Console::WriteLine("Floppy driver failed to bind block device");
         Task::Exit(1);
       }
@@ -1318,7 +1362,7 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
 
         --_pendingCount;
       } else {
-        if (IPC::Receive(portId, msg) != 0) {
+        if (IPC::Receive(_portHandle, msg) != 0) {
           Task::Yield();
           UpdateMotorIdle();
 
@@ -1497,7 +1541,15 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
       }
 
       CopyBytes(reply.payload, &response, reply.length);
-      IPC::Send(request.replyPortId, reply);
+      IPC::Handle replyHandle = IPC::OpenPort(
+        request.replyPortId,
+        IPC::RightSend
+      );
+
+      if (replyHandle != 0) {
+        IPC::Send(replyHandle, reply);
+        IPC::CloseHandle(replyHandle);
+      }
     }
 
     Task::Exit(0);

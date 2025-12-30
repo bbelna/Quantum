@@ -45,9 +45,18 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
        *   True if a ready floppy device was found.
        */
       static bool FindFloppyDevice(
-        UInt32& outId,
+        UInt32& outToken,
         ABI::Devices::BlockDevices::Info& outInfo
       );
+
+      /**
+       * Closes a device token if it is a handle.
+       * @param deviceToken
+       *   Device token to close.
+       * @param deviceId
+       *   Raw device identifier.
+       */
+      static void CloseDeviceToken(UInt32 deviceToken, UInt32 deviceId);
 
       /**
        * Reads sectors from the floppy device.
@@ -63,7 +72,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
        *   True on success.
        */
       static bool ReadSectors(
-        UInt32 deviceId,
+        UInt32 deviceToken,
         UInt32 lba,
         UInt32 count,
         void* buffer
@@ -83,7 +92,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
        *   True on success.
        */
       static bool WriteSectors(
-        UInt32 deviceId,
+        UInt32 deviceToken,
         UInt32 lba,
         UInt32 count,
         void* buffer

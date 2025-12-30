@@ -24,7 +24,8 @@ LIBQ_LIB     := $(LIBQ_OBJ_DIR)/libQuantum.a
 LIBQ_SRCS := \
 	$(LIBQ_DIR)/CString.cpp \
 	$(LIBQ_DIR)/Align.cpp \
-	$(LIBQ_DIR)/Debug.cpp
+	$(LIBQ_DIR)/Debug.cpp \
+	$(LIBQ_DIR)/Bytes.cpp
 
 LIBQ_OBJS := \
 	$(patsubst $(LIBQ_DIR)/%.cpp,$(LIBQ_OBJ_DIR)/%.cpp.o,$(LIBQ_SRCS))
