@@ -10,7 +10,8 @@
 
 #include <Types.hpp>
 
-#include "KernelObject.hpp"
+#include "Objects/IPCPortObject.hpp"
+#include "Objects/KernelObject.hpp"
 
 namespace Quantum::System::Kernel {
   /**
@@ -71,7 +72,7 @@ namespace Quantum::System::Kernel {
       static bool SendHandle(
         UInt32 portId,
         UInt32 senderId,
-        KernelObject* object,
+        Objects::KernelObject* object,
         UInt32 rights
       );
 
@@ -148,7 +149,7 @@ namespace Quantum::System::Kernel {
        * @return
        *   IPC port object pointer, or nullptr if not found.
        */
-      static IPCPortObject* GetPortObject(UInt32 portId);
+      static Objects::IPCPortObject* GetPortObject(UInt32 portId);
 
     private:
       /**
@@ -173,7 +174,7 @@ namespace Quantum::System::Kernel {
         /**
          * Transferred object pointer.
          */
-        KernelObject* transferObject;
+        Objects::KernelObject* transferObject;
 
         /**
          * Rights for the transferred object.
@@ -208,7 +209,7 @@ namespace Quantum::System::Kernel {
         /**
          * IPC port object.
          */
-        IPCPortObject* object;
+        Objects::IPCPortObject* object;
 
         /**
          * Head index in the message queue.

@@ -16,6 +16,7 @@
 namespace Quantum::System::Kernel {
   using Kernel::IPC;
   using Kernel::Task;
+  using Objects::IRQLineObject;
 
   bool IRQ::Register(UInt32 irq, UInt32 portId) {
     if (irq >= _maxIRQs || portId == 0) {
@@ -116,7 +117,7 @@ namespace Quantum::System::Kernel {
     IRQLineObject* obj = _irqObjects[irq];
 
     if (!obj) {
-      obj = KernelObject::CreateIRQLineObject(irq);
+      obj = new IRQLineObject(irq);
 
       if (!obj) {
         return nullptr;

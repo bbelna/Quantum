@@ -11,7 +11,7 @@
 #include <Types.hpp>
 
 #include "IPC.hpp"
-#include "KernelObject.hpp"
+#include "Objects/Devices/BlockDeviceObject.hpp"
 
 namespace Quantum::System::Kernel::Devices {
   /**
@@ -131,7 +131,7 @@ namespace Quantum::System::Kernel::Devices {
         /**
          * Kernel object for handle-based access.
          */
-        BlockDeviceObject* object;
+        Objects::Devices::BlockDeviceObject* object;
       };
 
       /**
@@ -327,9 +327,9 @@ namespace Quantum::System::Kernel::Devices {
        * @param deviceId
        *   Identifier of the device to query.
        * @return
-       *   Kernel object pointer, or nullptr if not found.
+       *   Kernel object pointer, or `nullptr` if not found.
        */
-      static BlockDeviceObject* GetObject(UInt32 deviceId);
+      static Objects::Devices::BlockDeviceObject* GetObject(UInt32 deviceId);
 
     private:
       /**

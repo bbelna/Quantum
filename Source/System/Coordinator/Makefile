@@ -29,6 +29,7 @@ LIBQ_LIB := $(BUILD_DIR)/Libraries/Quantum/libQuantum.a
 COORD_SRCS := \
 	$(COORD_DIR)/Application.cpp \
 	$(COORD_DIR)/Main.cpp \
+	$(COORD_DIR)/Devices.cpp \
 	$(COORD_DIR)/IRQ.cpp \
 	$(COORD_DIR)/FileSystem.cpp \
 	$(COORD_DIR)/Input.cpp \
@@ -38,6 +39,7 @@ COORD_SRCS := \
 
 COORD_HDRS := \
 	$(COORD_DIR)/Include/Application.hpp \
+	$(COORD_DIR)/Include/Devices.hpp \
 	$(COORD_DIR)/Include/IRQ.hpp \
 	$(COORD_DIR)/Include/FileSystem.hpp \
 	$(COORD_DIR)/Include/Input.hpp

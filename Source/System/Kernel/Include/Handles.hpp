@@ -10,7 +10,8 @@
 
 #include <Types.hpp>
 
-#include "KernelObject.hpp"
+#include "Objects/KernelObject.hpp"
+#include "Objects/KernelObjectType.hpp"
 
 namespace Quantum::System::Kernel {
   /**
@@ -45,7 +46,7 @@ namespace Quantum::System::Kernel {
         /**
          * The kernel object type.
          */
-        KernelObject::Type type;
+        Objects::KernelObjectType type;
 
         /**
          * Access rights.
@@ -55,7 +56,7 @@ namespace Quantum::System::Kernel {
         /**
          * The kernel object pointer.
          */
-        KernelObject* object;
+        Objects::KernelObject* object;
 
         /**
          * The handle value.
@@ -85,8 +86,8 @@ namespace Quantum::System::Kernel {
        *   Handle on success; 0 on failure.
        */
       Handle Create(
-        KernelObject::Type type,
-        KernelObject* object,
+        Objects::KernelObjectType type,
+        Objects::KernelObject* object,
         UInt32 rights
       );
 
@@ -123,7 +124,7 @@ namespace Quantum::System::Kernel {
        */
       bool Query(
         Handle handle,
-        KernelObject::Type& outType,
+        Objects::KernelObjectType& outType,
         UInt32& outRights
       ) const;
 
@@ -142,9 +143,9 @@ namespace Quantum::System::Kernel {
        */
       bool Resolve(
         Handle handle,
-        KernelObject::Type type,
+        Objects::KernelObjectType type,
         UInt32 rights,
-        KernelObject*& outObject
+        Objects::KernelObject*& outObject
       ) const;
 
     private:

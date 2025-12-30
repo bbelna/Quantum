@@ -51,6 +51,11 @@ namespace Quantum::ABI {
          * Input broker port.
          */
         static constexpr UInt32 Input = 4;
+
+        /**
+         * Device broker port.
+         */
+        static constexpr UInt32 Devices = 5;
       };
 
       /**

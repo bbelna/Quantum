@@ -15,6 +15,8 @@
 
 namespace Quantum::System::Kernel {
   using ::Quantum::CopyBytes;
+  using Objects::IPCPortObject;
+  using Objects::KernelObject;
 
   IPC::Port* IPC::FindPort(UInt32 id) {
     for (UInt32 i = 0; i < _maxPorts; ++i) {
@@ -32,7 +34,7 @@ namespace Quantum::System::Kernel {
         _ports[i].used = true;
         _ports[i].id = _nextPortId++;
         _ports[i].ownerTaskId = Task::GetCurrentId();
-        _ports[i].object = KernelObject::CreateIPCPortObject(_ports[i].id);
+        _ports[i].object = new IPCPortObject(_ports[i].id);
         _ports[i].head = 0;
         _ports[i].tail = 0;
         _ports[i].count = 0;

@@ -10,8 +10,8 @@
 #include "Task.hpp"
 
 namespace Quantum::System::Kernel::Devices {
-  using Kernel::KernelObject;
   using Kernel::Task;
+  using Objects::Devices::InputDeviceObject;
 
   void InputDevices::Initialize() {
     _deviceCount = 0;
@@ -42,7 +42,7 @@ namespace Quantum::System::Kernel::Devices {
     device->ownerId = 0;
     device->head = 0;
     device->tail = 0;
-    device->object = KernelObject::CreateInputDeviceObject(id);
+    device->object = new InputDeviceObject(id);
 
     if (!device->object) {
       device->info.id = 0;
@@ -101,7 +101,7 @@ namespace Quantum::System::Kernel::Devices {
     storage->ownerId = Task::GetCurrentId();
     storage->head = 0;
     storage->tail = 0;
-    storage->object = KernelObject::CreateInputDeviceObject(id);
+    storage->object = new InputDeviceObject(id);
 
     if (!storage->object) {
       storage->info.id = 0;

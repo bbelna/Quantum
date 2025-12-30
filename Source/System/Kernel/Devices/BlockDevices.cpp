@@ -18,8 +18,8 @@
 namespace Quantum::System::Kernel::Devices {
   using ::Quantum::CopyBytes;
   using Kernel::IPC;
-  using Kernel::KernelObject;
   using Kernel::Task;
+  using Objects::Devices::BlockDeviceObject;
 
   using LogLevel = Kernel::Logger::Level;
 
@@ -124,7 +124,7 @@ namespace Quantum::System::Kernel::Devices {
 
     device->info.id = id;
     device->portId = 0;
-    device->object = KernelObject::CreateBlockDeviceObject(id);
+    device->object = new BlockDeviceObject(id);
 
     if (!device->object) {
       device->info.id = 0;
@@ -185,7 +185,7 @@ namespace Quantum::System::Kernel::Devices {
     storage->info.id = id;
     storage->info.flags &= ~flagReady;
     storage->portId = 0;
-    storage->object = KernelObject::CreateBlockDeviceObject(id);
+    storage->object = new BlockDeviceObject(id);
 
     if (!storage->object) {
       storage->info.id = 0;

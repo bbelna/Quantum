@@ -8,6 +8,7 @@
 
 #include <ABI/Console.hpp>
 #include <ABI/Devices/BlockDevices.hpp>
+#include <ABI/Devices/DeviceBroker.hpp>
 #include <ABI/Handle.hpp>
 #include <ABI/Task.hpp>
 
@@ -52,13 +53,23 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
         continue;
       }
 
-      UInt32 handle = BlockDevices::Open(
+      UInt32 handle = ABI::Devices::DeviceBroker::OpenBlockDevice(
         info.id,
         BlockDevices::RightRead
           | BlockDevices::RightWrite
           | BlockDevices::RightControl
           | BlockDevices::RightBind
       );
+
+      if (handle == 0) {
+        handle = BlockDevices::Open(
+          info.id,
+          BlockDevices::RightRead
+            | BlockDevices::RightWrite
+            | BlockDevices::RightControl
+            | BlockDevices::RightBind
+        );
+      }
 
       outToken = handle != 0 ? handle : info.id;
       outInfo = info;

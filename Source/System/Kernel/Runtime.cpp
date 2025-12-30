@@ -9,6 +9,7 @@
 #include <Types.hpp>
 
 #include "Heap.hpp"
+#include "Panic.hpp"
 #include "Runtime.hpp"
 
 extern "C" {
@@ -39,6 +40,13 @@ extern "C" {
    */
   void __cxa_guard_abort(unsigned char* guard) {
     *guard = 0;
+  }
+
+  /**
+   * Pure virtual function handler.
+   */
+  void __cxa_pure_virtual() {
+    PANIC("pure virtual call");
   }
 
   /**

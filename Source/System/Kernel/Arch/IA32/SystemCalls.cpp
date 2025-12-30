@@ -42,13 +42,14 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   using Kernel::Devices::BlockDevices;
   using Kernel::Devices::InputDevices;
   using Kernel::HandleTable;
-  using Kernel::IPCPortObject;
-  using Kernel::KernelObject;
+  using Kernel::Objects::IPCPortObject;
+  using Kernel::Objects::KernelObject;
+  using Kernel::Objects::KernelObjectType;
   using Kernel::IRQ;
   using Kernel::Logger;
-  using Kernel::IRQLineObject;
-  using Kernel::BlockDeviceObject;
-  using Kernel::InputDeviceObject;
+  using Kernel::Objects::IRQLineObject;
+  using Kernel::Objects::Devices::BlockDeviceObject;
+  using Kernel::Objects::Devices::InputDeviceObject;
 
   using DMABuffer = ABI::Devices::BlockDevices::DMABuffer;
   using LogLevel = Kernel::Logger::Level;
@@ -76,14 +77,14 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
     if (!tcb->handleTable->Resolve(
       portOrHandle,
-      KernelObject::Type::IPCPort,
+      KernelObjectType::IPCPort,
       rights,
       object
     )) {
       return false;
     }
 
-    if (!object || object->type != KernelObject::Type::IPCPort) {
+    if (!object || object->type != KernelObjectType::IPCPort) {
       return false;
     }
 
@@ -115,7 +116,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
     if (!tcb->handleTable->Resolve(
       deviceOrHandle,
-      KernelObject::Type::BlockDevice,
+      KernelObjectType::BlockDevice,
       rights,
       object
     )) {
@@ -150,7 +151,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
     if (!tcb->handleTable->Resolve(
       deviceOrHandle,
-      KernelObject::Type::InputDevice,
+      KernelObjectType::InputDevice,
       rights,
       object
     )) {
@@ -185,7 +186,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
     if (!tcb->handleTable->Resolve(
       irqOrHandle,
-      KernelObject::Type::IRQLine,
+      KernelObjectType::IRQLine,
       rights,
       object
     )) {
@@ -466,7 +467,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         }
 
         HandleTable::Handle handle = tcb->handleTable->Create(
-          KernelObject::Type::IPCPort,
+          KernelObjectType::IPCPort,
           portObject,
           rights
         );
@@ -510,7 +511,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
           break;
         }
 
-        KernelObject::Type type = KernelObject::Type::None;
+        KernelObjectType type = KernelObjectType::None;
         UInt32 entryRights = 0;
 
         if (!tcb->handleTable->Query(handle, type, entryRights)) {
@@ -585,7 +586,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
           break;
         }
 
-        KernelObject::Type type = KernelObject::Type::None;
+        KernelObjectType type = KernelObjectType::None;
         UInt32 rights = 0;
 
         if (!tcb->handleTable->Query(handle, type, rights)) {
@@ -858,6 +859,12 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::Block_Open: {
+        if (!Kernel::Task::IsCurrentTaskCoordinator()) {
+          context.eax = 0;
+
+          break;
+        }
+
         UInt32 deviceId = context.ebx;
         UInt32 rights = context.ecx;
 
@@ -897,7 +904,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         }
 
         HandleTable::Handle handle = tcb->handleTable->Create(
-          KernelObject::Type::BlockDevice,
+          KernelObjectType::BlockDevice,
           object,
           rights
         );
@@ -1075,6 +1082,12 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       }
 
       case SystemCall::Input_Open: {
+        if (!Kernel::Task::IsCurrentTaskCoordinator()) {
+          context.eax = 0;
+
+          break;
+        }
+
         UInt32 deviceId = context.ebx;
         UInt32 rights = context.ecx;
 
@@ -1113,7 +1126,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         }
 
         HandleTable::Handle handle = tcb->handleTable->Create(
-          KernelObject::Type::InputDevice,
+          KernelObjectType::InputDevice,
           object,
           rights
         );
@@ -1282,7 +1295,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         }
 
         HandleTable::Handle handle = tcb->handleTable->Create(
-          KernelObject::Type::IRQLine,
+          KernelObjectType::IRQLine,
           object,
           rights
         );

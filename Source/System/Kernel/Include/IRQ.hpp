@@ -11,7 +11,8 @@
 #include <Types.hpp>
 
 #include "Interrupts.hpp"
-#include "KernelObject.hpp"
+#include "Objects/IRQLineObject.hpp"
+#include "Objects/KernelObject.hpp"
 
 namespace Quantum::System::Kernel {
   /**
@@ -58,7 +59,7 @@ namespace Quantum::System::Kernel {
       /**
        * IRQ line objects for handle-based access.
        */
-      inline static IRQLineObject* _irqObjects[_maxIRQs] = {};
+      inline static Objects::IRQLineObject* _irqObjects[_maxIRQs] = {};
 
       /**
        * Routes a specific IRQ to its registered port.
@@ -73,6 +74,6 @@ namespace Quantum::System::Kernel {
        * @return
        *   Kernel object pointer, or nullptr if out of range.
        */
-      static IRQLineObject* GetObject(UInt32 irq);
+      static Objects::IRQLineObject* GetObject(UInt32 irq);
   };
 }

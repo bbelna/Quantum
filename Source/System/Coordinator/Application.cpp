@@ -15,6 +15,7 @@
 #include <ABI/Task.hpp>
 
 #include "Application.hpp"
+#include "Devices.hpp"
 #include "FileSystem.hpp"
 #include "IRQ.hpp"
 #include "Input.hpp"
@@ -24,6 +25,7 @@ namespace Quantum::System::Coordinator {
   using ABI::IO;
   using ABI::IPC;
   using ABI::Task;
+  using Coordinator::Devices;
   using Coordinator::IRQ;
   using Coordinator::FileSystem;
   using Coordinator::Input;
@@ -211,6 +213,7 @@ namespace Quantum::System::Coordinator {
     }
 
     Input::Initialize();
+    Devices::Initialize();
 
     InitBundle::Info info {};
 
@@ -321,6 +324,7 @@ namespace Quantum::System::Coordinator {
 
     for (;;) {
       ProcessReadyMessages();
+
       bool progressed = false;
 
       for (UInt32 i = 0; i < entryCount; ++i) {
@@ -375,6 +379,7 @@ namespace Quantum::System::Coordinator {
       IRQ::ProcessPending();
       FileSystem::ProcessPending();
       Input::ProcessPending();
+      Devices::ProcessPending();
     }
   }
 }

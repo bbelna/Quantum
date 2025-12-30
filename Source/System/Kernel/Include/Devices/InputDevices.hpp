@@ -10,7 +10,7 @@
 
 #include <Types.hpp>
 
-#include "KernelObject.hpp"
+#include "Objects/Devices/InputDeviceObject.hpp"
 
 namespace Quantum::System::Kernel::Devices {
   /**
@@ -235,7 +235,7 @@ namespace Quantum::System::Kernel::Devices {
        * @return
        *   Kernel object pointer, or nullptr if not found.
        */
-      static InputDeviceObject* GetObject(UInt32 deviceId);
+      static Objects::Devices::InputDeviceObject* GetObject(UInt32 deviceId);
 
       /**
        * Registered device descriptor.
@@ -269,7 +269,7 @@ namespace Quantum::System::Kernel::Devices {
         /**
          * Kernel object for handle-based access.
          */
-        InputDeviceObject* object;
+        Objects::Devices::InputDeviceObject* object;
       };
 
     private:

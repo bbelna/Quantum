@@ -11,10 +11,13 @@
 #include "Handles.hpp"
 
 namespace Quantum::System::Kernel {
+  using Objects::KernelObject;
+  using Objects::KernelObjectType;
+
   void HandleTable::Initialize() {
     for (UInt32 i = 0; i < maxHandles; ++i) {
       _entries[i].inUse = false;
-      _entries[i].type = KernelObject::Type::None;
+      _entries[i].type = KernelObjectType::None;
       _entries[i].rights = 0;
       _entries[i].object = nullptr;
       _entries[i].handle = 0;
@@ -40,7 +43,7 @@ namespace Quantum::System::Kernel {
   }
 
   HandleTable::Handle HandleTable::Create(
-    KernelObject::Type type,
+    KernelObjectType type,
     KernelObject* object,
     UInt32 rights
   ) {
@@ -48,7 +51,7 @@ namespace Quantum::System::Kernel {
       return 0;
     }
 
-    if (object->type == KernelObject::Type::None) {
+    if (object->type == KernelObjectType::None) {
       return 0;
     }
 
@@ -87,7 +90,7 @@ namespace Quantum::System::Kernel {
     }
 
     _entries[index].inUse = false;
-    _entries[index].type = KernelObject::Type::None;
+    _entries[index].type = KernelObjectType::None;
     _entries[index].rights = 0;
     _entries[index].object = nullptr;
     _entries[index].handle = 0;
@@ -119,7 +122,7 @@ namespace Quantum::System::Kernel {
 
   bool HandleTable::Query(
     Handle handle,
-    KernelObject::Type& outType,
+    KernelObjectType& outType,
     UInt32& outRights
   ) const {
     UInt32 index = GetIndex(handle);
@@ -142,7 +145,7 @@ namespace Quantum::System::Kernel {
 
   bool HandleTable::Resolve(
     Handle handle,
-    KernelObject::Type type,
+    KernelObjectType type,
     UInt32 rights,
     KernelObject*& outObject
   ) const {
@@ -158,7 +161,7 @@ namespace Quantum::System::Kernel {
       return false;
     }
 
-    if (type != KernelObject::Type::None && entry.type != type) {
+    if (type != KernelObjectType::None && entry.type != type) {
       return false;
     }
 

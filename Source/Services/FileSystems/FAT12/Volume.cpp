@@ -8,6 +8,7 @@
 
 #include <ABI/Console.hpp>
 #include <ABI/Devices/BlockDevices.hpp>
+#include <ABI/Devices/DeviceBroker.hpp>
 #include <ABI/Handle.hpp>
 
 #include "Volume.hpp"
@@ -35,10 +36,17 @@ namespace Quantum::Services::FileSystems::FAT12 {
       _deviceHandle = 0;
     }
 
-    _deviceHandle = BlockDevices::Open(
+    _deviceHandle = ABI::Devices::DeviceBroker::OpenBlockDevice(
       info.id,
       BlockDevices::RightRead | BlockDevices::RightWrite
     );
+
+    if (_deviceHandle == 0) {
+      _deviceHandle = BlockDevices::Open(
+        info.id,
+        BlockDevices::RightRead | BlockDevices::RightWrite
+      );
+    }
 
     UInt8 bootSector[512] = {};
 
