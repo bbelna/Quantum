@@ -63,7 +63,7 @@ namespace {
    * @param size
    *   Size of the block's payload in bytes.
    * @return
-   *   Pointer to the new block header, or nullptr on failure.
+   *   Pointer to the new block header, or `nullptr` on failure.
    */
   BlockHeader* RequestBlock(UInt32 size) {
     using Quantum::ABI::InvokeSystemCall;

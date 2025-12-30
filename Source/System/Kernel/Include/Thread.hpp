@@ -38,7 +38,7 @@ namespace Quantum::System::Kernel {
        * @param stackSize
        *   Size of the thread's kernel stack in bytes.
        * @return
-       *   Pointer to the thread control block, or nullptr on failure.
+       *   Pointer to the thread control block, or `nullptr` on failure.
        */
       static ControlBlock* Create(
         TaskControlBlock* task,
@@ -57,7 +57,7 @@ namespace Quantum::System::Kernel {
        * @param stackSize
        *   Size of the thread's kernel stack in bytes.
        * @return
-       *   Pointer to the thread control block, or nullptr on failure.
+       *   Pointer to the thread control block, or `nullptr` on failure.
        */
       static ControlBlock* CreateUser(
         TaskControlBlock* task,
@@ -108,5 +108,12 @@ namespace Quantum::System::Kernel {
        *   Pointer to the context to resume after scheduling.
        */
       static Interrupts::Context* Tick(Interrupts::Context& context);
+
+      /**
+       * Marks a blocked thread as ready and enqueues it.
+       * @param thread
+       *   Thread to wake.
+       */
+      static void Wake(ControlBlock* thread);
   };
 }

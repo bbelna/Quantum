@@ -63,4 +63,8 @@ namespace Quantum::System::Kernel {
   Interrupts::Context* Thread::Tick(Interrupts::Context& context) {
     return Arch::Thread::Tick(context);
   }
+
+  void Thread::Wake(Thread::ControlBlock* thread) {
+    Arch::Thread::Wake(thread);
+  }
 }

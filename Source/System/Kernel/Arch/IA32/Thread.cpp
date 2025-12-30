@@ -96,18 +96,43 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     return nullptr;
   }
 
+  static void RemoveFromTaskList(
+    TaskControlBlock* task,
+    Thread::ControlBlock* thread
+  ) {
+    if (task == nullptr || thread == nullptr) {
+      return;
+    }
+
+    Thread::ControlBlock** current = &task->threadHead;
+
+    while (*current) {
+      if (*current == thread) {
+        *current = thread->taskNext;
+        thread->taskNext = nullptr;
+
+        if (task->threadCount > 0) {
+          task->threadCount -= 1;
+        }
+
+        return;
+      }
+
+      current = &((*current)->taskNext);
+    }
+  }
+
   Thread::Context* Thread::Schedule(Thread::Context* currentContext) {
     if (_pendingCleanup && _pendingCleanup != _currentThread) {
       TaskControlBlock* cleanupTask = _pendingCleanup->task;
-      bool destroyTask
-        = cleanupTask && cleanupTask->mainThread == _pendingCleanup;
 
       RemoveFromAllThreads(_pendingCleanup);
+      RemoveFromTaskList(cleanupTask, _pendingCleanup);
 
       Heap::Free(_pendingCleanup->stackBase);
       Heap::Free(_pendingCleanup);
 
-      if (destroyTask) {
+      if (cleanupTask && cleanupTask->threadCount == 0) {
         Task::Destroy(cleanupTask);
       }
 
@@ -141,7 +166,9 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     TaskControlBlock* previousTask
       = previousThread ? previousThread->task : nullptr;
     TaskControlBlock* nextTask = nextThread->task;
-    UInt32 previousSpace = previousTask ? previousTask->pageDirectoryPhysical : 0;
+    UInt32 previousSpace = previousTask
+      ? previousTask->pageDirectoryPhysical
+      : 0;
     UInt32 nextSpace = nextTask ? nextTask->pageDirectoryPhysical : 0;
 
     if (nextSpace != 0 && nextSpace != previousSpace) {
@@ -261,8 +288,10 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     );
     tcb->userEntryPoint = 0;
     tcb->userStackTop = 0;
+    tcb->taskNext = nullptr;
     tcb->next = nullptr;
     tcb->allNext = nullptr;
+    tcb->waitNext = nullptr;
 
     // ensure stack can hold the bootstrap frame
     const UInt32 minFrame = sizeof(Thread::Context) + 8;
@@ -360,6 +389,14 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     AddToReadyQueue(tcb);
     AddToAllThreads(tcb);
 
+    if (task->mainThread == nullptr) {
+      task->mainThread = tcb;
+    }
+
+    tcb->taskNext = task->threadHead;
+    task->threadHead = tcb;
+    task->threadCount += 1;
+
     Logger::Write(LogLevel::Debug, "Thread created successfully");
     Logger::WriteFormatted(
       LogLevel::Debug,
@@ -404,6 +441,14 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     AddToReadyQueue(tcb);
     AddToAllThreads(tcb);
 
+    if (task->mainThread == nullptr) {
+      task->mainThread = tcb;
+    }
+
+    tcb->taskNext = task->threadHead;
+    task->threadHead = tcb;
+    task->threadCount += 1;
+
     Logger::WriteFormatted(
       LogLevel::Debug,
       "Created user thread ID=%u entry=%p stack=%p-%p size=%p task=%u",
@@ -425,7 +470,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       _currentThread ? _currentThread->id : 0
     );
 
-    // mark thread as terminated; defer freeing stack/TCB until after next switch
+    // mark thread as terminated; defer freeing stack/TCB until after next
+    // switch
     if (_currentThread != nullptr) {
       _currentThread->state = Thread::State::Terminated;
     }
@@ -476,5 +522,13 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     }
 
     return Schedule(&context);
+  }
+
+  void Thread::Wake(Thread::ControlBlock* thread) {
+    if (thread == nullptr || thread->state != Thread::State::Blocked) {
+      return;
+    }
+
+    AddToReadyQueue(thread);
   }
 }

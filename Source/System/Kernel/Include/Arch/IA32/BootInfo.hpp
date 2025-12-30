@@ -65,7 +65,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       static void Initialize(UInt32 bootInfoPhysicalAddress);
 
       /**
-       * Returns the cached boot info view, or nullptr if unavailable.
+       * Returns the cached boot info view, or `nullptr` if unavailable.
        */
       static const View* Get();
 

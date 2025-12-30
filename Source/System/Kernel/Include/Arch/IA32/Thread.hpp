@@ -103,6 +103,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         UInt32 userStackTop;
 
         /**
+         * Pointer to the next thread in the owning task list.
+         */
+        ControlBlock* taskNext;
+
+        /**
          * Pointer to the next thread in the scheduler queue.
          */
         ControlBlock* next;
@@ -111,6 +116,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
          * Pointer to the next thread in the global thread list.
          */
         ControlBlock* allNext;
+
+        /**
+         * Pointer to the next thread in a wait queue.
+         */
+        ControlBlock* waitNext;
       };
 
       /**
@@ -127,7 +137,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * @param stackSize
        *   Size of the thread's kernel stack in bytes.
        * @return
-       *   Pointer to the thread control block, or nullptr on failure.
+       *   Pointer to the thread control block, or `nullptr` on failure.
        */
       static ControlBlock* Create(
         ::Quantum::System::Kernel::TaskControlBlock* task,
@@ -146,7 +156,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * @param stackSize
        *   Size of the thread's kernel stack in bytes.
        * @return
-       *   Pointer to the thread control block, or nullptr on failure.
+       *   Pointer to the thread control block, or `nullptr` on failure.
        */
       static ControlBlock* CreateUser(
         ::Quantum::System::Kernel::TaskControlBlock* task,
@@ -199,6 +209,13 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        *   Updated thread context to switch to.
        */
       static Context* Tick(Context& context);
+
+      /**
+       * Marks a blocked thread as ready and enqueues it.
+       * @param thread
+       *   Thread to wake.
+       */
+      static void Wake(ControlBlock* thread);
 
     private:
       /**
@@ -314,7 +331,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * @param stackSize
        *   Size of the thread's kernel stack in bytes.
        * @return
-       *   Pointer to the thread control block, or nullptr on failure.
+       *   Pointer to the thread control block, or `nullptr` on failure.
        */
       static ControlBlock* CreateThreadInternal(
         ::Quantum::System::Kernel::TaskControlBlock* task,

@@ -47,6 +47,8 @@ namespace Quantum::System::Kernel {
     task->userHeapLimit = 0;
     task->handleTable = nullptr;
     task->mainThread = nullptr;
+    task->threadHead = nullptr;
+    task->threadCount = 0;
     task->next = nullptr;
 
     HandleTable* handleTable = static_cast<HandleTable*>(

@@ -303,7 +303,7 @@ namespace Quantum::System::Kernel {
        * @param neededWithHeader
        *   Total bytes including header.
        * @return
-       *   Pointer to payload or nullptr.
+       *   Pointer to payload or `nullptr`.
        */
       static void* AllocateFromBin(UInt32 binSize, UInt32 neededWithHeader);
 

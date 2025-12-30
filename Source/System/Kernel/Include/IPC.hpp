@@ -147,7 +147,7 @@ namespace Quantum::System::Kernel {
        * @param portId
        *   Port identifier to query.
        * @return
-       *   IPC port object pointer, or nullptr if not found.
+       *   IPC port object pointer, or `nullptr` if not found.
        */
       static Objects::IPCPortObject* GetPortObject(UInt32 portId);
 

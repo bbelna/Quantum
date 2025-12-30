@@ -66,6 +66,16 @@ namespace Quantum::System::Kernel {
     Thread::ControlBlock* mainThread;
 
     /**
+     * Head of the task's thread list.
+     */
+    Thread::ControlBlock* threadHead;
+
+    /**
+     * Number of threads owned by this task.
+     */
+    UInt32 threadCount;
+
+    /**
      * Pointer to the next task in the global task list.
      */
     TaskControlBlock* next;
@@ -95,7 +105,7 @@ namespace Quantum::System::Kernel {
        * @param stackSize
        *   Size of the thread's kernel stack in bytes.
        * @return
-       *   Pointer to the task control block, or nullptr on failure.
+       *   Pointer to the task control block, or `nullptr` on failure.
        */
       static ControlBlock* Create(
         void (*entryPoint)(),
@@ -111,7 +121,7 @@ namespace Quantum::System::Kernel {
        * @param pageDirectoryPhysical
        *   Physical address of the user address space page directory.
        * @return
-       *   Pointer to the task control block, or nullptr on failure.
+       *   Pointer to the task control block, or `nullptr` on failure.
        */
       static ControlBlock* CreateUser(
         UInt32 entryPoint,
@@ -219,7 +229,7 @@ namespace Quantum::System::Kernel {
        * @param pageDirectoryPhysical
        *   Physical address of the task page directory.
        * @return
-       *   Pointer to the task control block, or nullptr on failure.
+       *   Pointer to the task control block, or `nullptr` on failure.
        */
       static ControlBlock* CreateInternal(UInt32 pageDirectoryPhysical);
 
