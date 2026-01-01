@@ -13,6 +13,7 @@
 #include "Arch/IA32/Paging.hpp"
 #include "Arch/IA32/Thread.hpp"
 #include "Arch/IA32/TSS.hpp"
+#include "Arch/IA32/Timer.hpp"
 #include "CPU.hpp"
 #include "Heap.hpp"
 #include "Logger.hpp"
@@ -80,6 +81,49 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
       current = &((*current)->allNext);
     }
+  }
+
+  void Thread::RemoveFromSleepQueue(Thread::ControlBlock* thread) {
+    if (thread == nullptr) {
+      return;
+    }
+
+    UInt32 flags = 0;
+    _sleepLock.AcquireIRQSave(flags);
+
+    Thread::ControlBlock** current = &_sleepHead;
+
+    while (*current) {
+      if (*current == thread) {
+        *current = thread->sleepNext;
+        thread->sleepNext = nullptr;
+        thread->wakeTick = 0;
+
+        break;
+      }
+
+      current = &((*current)->sleepNext);
+    }
+
+    _sleepLock.ReleaseIRQRestore(flags);
+  }
+
+  void Thread::ProcessSleepQueue(UInt64 currentTick) {
+    UInt32 flags = 0;
+    _sleepLock.AcquireIRQSave(flags);
+
+    while (_sleepHead && _sleepHead->wakeTick <= currentTick) {
+      Thread::ControlBlock* thread = _sleepHead;
+      _sleepHead = thread->sleepNext;
+      thread->sleepNext = nullptr;
+      thread->wakeTick = 0;
+
+      if (thread->state == Thread::State::Blocked) {
+        AddToReadyQueue(thread);
+      }
+    }
+
+    _sleepLock.ReleaseIRQRestore(flags);
   }
 
   Thread::ControlBlock* Thread::FindById(UInt32 id) {
@@ -292,6 +336,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     tcb->next = nullptr;
     tcb->allNext = nullptr;
     tcb->waitNext = nullptr;
+    tcb->wakeTick = 0;
+    tcb->sleepNext = nullptr;
 
     // ensure stack can hold the bootstrap frame
     const UInt32 minFrame = sizeof(Thread::Context) + 8;
@@ -345,6 +391,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     _readyQueueHead = nullptr;
     _readyQueueTail = nullptr;
     _allThreadsHead = nullptr;
+    _sleepHead = nullptr;
+    _sleepLock.Initialize();
 
     Logger::Write(LogLevel::Debug, "Creating idle thread");
 
@@ -524,6 +572,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
   Thread::Context* Thread::Tick(Thread::Context& context) {
     // called from timer interrupt
+    ProcessSleepQueue(Timer::Ticks());
+
     bool preemptionAllowed
       = _preemptionEnabled && _preemptDisableCount == 0;
     bool shouldSchedule
@@ -543,6 +593,52 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       return;
     }
 
+    RemoveFromSleepQueue(thread);
     AddToReadyQueue(thread);
+  }
+
+  void Thread::SleepTicks(UInt32 ticks) {
+    if (ticks == 0) {
+      return;
+    }
+
+    Thread::ControlBlock* thread = _currentThread;
+
+    if (thread == nullptr || thread == _idleThread) {
+      return;
+    }
+
+    UInt64 wakeTick = Timer::Ticks() + ticks;
+    UInt32 flags = 0;
+
+    _sleepLock.AcquireIRQSave(flags);
+
+    thread->state = Thread::State::Blocked;
+    thread->wakeTick = wakeTick;
+    thread->sleepNext = nullptr;
+
+    if (_sleepHead == nullptr || wakeTick < _sleepHead->wakeTick) {
+      thread->sleepNext = _sleepHead;
+      _sleepHead = thread;
+    } else {
+      Thread::ControlBlock* current = _sleepHead;
+
+      while (
+        current->sleepNext != nullptr
+        && current->sleepNext->wakeTick <= wakeTick
+      ) {
+        current = current->sleepNext;
+      }
+
+      thread->sleepNext = current->sleepNext;
+      current->sleepNext = thread;
+    }
+
+    _sleepLock.ReleaseIRQRestore(flags);
+
+    _schedulerActive = true;
+    _forceReschedule = true;
+
+    asm volatile("int $32" ::: "memory");
   }
 }

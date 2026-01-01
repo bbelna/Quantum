@@ -37,6 +37,9 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
         return true;
       }
 
+      if ((i & 0x3FF) == 0) {
+        Task::SleepTicks(1);
+      }
     }
 
     return false;
@@ -51,6 +54,9 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
         return true;
       }
 
+      if ((i & 0x3FF) == 0) {
+        Task::SleepTicks(1);
+      }
     }
 
     return false;
@@ -256,6 +262,9 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
         }
       }
 
+      if ((i & 0x3FF) == 0) {
+        Task::SleepTicks(1);
+      }
     }
 
     Console::WriteLine("FDC IRQ timeout");
@@ -510,6 +519,9 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
     for (UInt32 i = 0; i < maxSpins; ++i) {
       IO::Out8(_ioAccessProbePort, 0);
 
+      if ((i & 0x3FF) == 0) {
+        Task::SleepTicks(1);
+      }
     }
   }
 

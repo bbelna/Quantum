@@ -216,6 +216,12 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         break;
       }
 
+      case SystemCall::Task_Sleep: {
+        Kernel::Task::SleepTicks(context.ebx);
+
+        break;
+      }
+
       case SystemCall::Task_GrantIOAccess: {
         if (!Kernel::Task::IsCurrentTaskCoordinator()) {
           context.eax = 1;

@@ -9,6 +9,7 @@
 #include <ABI/Console.hpp>
 #include <ABI/Devices/BlockDevices.hpp>
 #include <ABI/FileSystem.hpp>
+#include <ABI/Task.hpp>
 
 #include "Testing.hpp"
 #include "Tests/FAT12Tests.hpp"
@@ -17,6 +18,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
   using ABI::Console;
   using ABI::Devices::BlockDevices;
   using ABI::FileSystem;
+  using ABI::Task;
 
   void FAT12Tests::LogSkip(CString reason) {
     if (_skipLogged) {
@@ -71,16 +73,17 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
           continue;
         }
 
-        if (
-          (info.flags & BlockDevices::flagReady) != 0
-          && info.sectorSize != 0
-          && info.sectorCount != 0
-        ) {
-          return true;
-        }
+      if (
+        (info.flags & BlockDevices::flagReady) != 0
+        && info.sectorSize != 0
+        && info.sectorCount != 0
+      ) {
+        return true;
       }
-
     }
+
+    Task::SleepTicks(1);
+  }
 
     return false;
   }
@@ -110,6 +113,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
         }
       }
 
+      Task::SleepTicks(1);
     }
 
     return false;

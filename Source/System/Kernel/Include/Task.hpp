@@ -140,6 +140,13 @@ namespace Quantum::System::Kernel {
       static void Yield();
 
       /**
+       * Sleeps the current task for the specified number of ticks.
+       * @param ticks
+       *   Number of timer ticks to sleep.
+       */
+      static void SleepTicks(UInt32 ticks);
+
+      /**
        * Gets the currently executing task.
        * @return
        *   Pointer to the current task control block.

@@ -145,6 +145,10 @@ namespace Quantum::System::Kernel {
     Thread::Yield();
   }
 
+  void Task::SleepTicks(UInt32 ticks) {
+    Thread::SleepTicks(ticks);
+  }
+
   Task::ControlBlock* Task::GetCurrent() {
     Thread::ControlBlock* thread = Thread::GetCurrent();
 

@@ -32,5 +32,14 @@ namespace Quantum::ABI {
       static inline void Exit(UInt32 code = 0) {
         ABI::InvokeSystemCall(ABI::SystemCall::Task_Exit, code);
       }
+
+      /**
+       * Sleeps for at least the specified number of timer ticks.
+       * @param ticks
+       *   Number of timer ticks to sleep.
+       */
+      static inline void SleepTicks(UInt32 ticks) {
+        ABI::InvokeSystemCall(ABI::SystemCall::Task_Sleep, ticks);
+      }
   };
 }

@@ -67,4 +67,8 @@ namespace Quantum::System::Kernel {
   void Thread::Wake(Thread::ControlBlock* thread) {
     Arch::Thread::Wake(thread);
   }
+
+  void Thread::SleepTicks(UInt32 ticks) {
+    Arch::Thread::SleepTicks(ticks);
+  }
 }

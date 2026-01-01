@@ -115,5 +115,12 @@ namespace Quantum::System::Kernel {
        *   Thread to wake.
        */
       static void Wake(ControlBlock* thread);
+
+      /**
+       * Sleeps the current thread for the specified number of ticks.
+       * @param ticks
+       *   Number of timer ticks to sleep.
+       */
+      static void SleepTicks(UInt32 ticks);
   };
 }
