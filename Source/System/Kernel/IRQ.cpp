@@ -37,6 +37,16 @@ namespace Quantum::System::Kernel {
 
     _irqPorts[irq] = portId;
 
+    ABI::IRQ::Message payload {};
+
+    payload.op = 0;
+    payload.irq = irq;
+    payload.portId = 0;
+    payload.replyPortId = 0;
+    payload.data = 0;
+
+    IPC::ConfigureIRQPayload(portId, &payload, sizeof(payload), 0);
+
     UInt8 vector = static_cast<UInt8>(32 + irq);
 
     Arch::Interrupts::RegisterHandler(vector, HandleIRQ);
@@ -106,7 +116,7 @@ namespace Quantum::System::Kernel {
     payload.replyPortId = 0;
     payload.data = 0;
 
-    IPC::Send(portId, Task::GetCurrentId(), &payload, sizeof(payload));
+    IPC::TrySend(portId, Task::GetCurrentId(), &payload, sizeof(payload));
   }
 
   IRQLineObject* IRQ::GetObject(UInt32 irq) {

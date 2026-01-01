@@ -12,6 +12,7 @@
 
 #include "IPC.hpp"
 #include "Objects/Devices/BlockDeviceObject.hpp"
+#include "Sync/SpinLock.hpp"
 
 namespace Quantum::System::Kernel::Devices {
   /**
@@ -376,6 +377,11 @@ namespace Quantum::System::Kernel::Devices {
        * Size of the DMA buffer in bytes.
        */
       inline static UInt32 _dmaBufferBytes = 0;
+
+      /**
+       * Protects device registry state.
+       */
+      inline static Sync::SpinLock _lock;
 
       /**
        * Finds a device by id.

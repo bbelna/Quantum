@@ -14,43 +14,39 @@ namespace Quantum::System::Kernel::Sync {
   /**
    * Scoped lock guard for simple locks.
    */
-  template <typename LockT>
+  template <typename LockType>
   class ScopedLock {
     public:
-      explicit ScopedLock(LockT& lock) : _lock(lock) {
+      /**
+       * Constructs a scoped lock guard and acquires the lock.
+       * @param lock
+       *   Lock to acquire.
+       */
+      explicit ScopedLock(LockType& lock) : _lock(lock) {
         _lock.Acquire();
       }
 
+      /**
+       * Destructs the scoped lock guard and releases the lock.
+       */
       ~ScopedLock() {
         _lock.Release();
       }
 
+      /**
+       * Deleted copy constructor.
+       */
       ScopedLock(const ScopedLock&) = delete;
+
+      /**
+       * Deleted copy assignment operator.
+       */
       ScopedLock& operator=(const ScopedLock&) = delete;
 
     private:
-      LockT& _lock;
-  };
-
-  /**
-   * Scoped lock guard for irqsave/irqrestore spinlocks.
-   */
-  template <typename LockT>
-  class ScopedIrqLock {
-    public:
-      explicit ScopedIrqLock(LockT& lock) : _lock(lock) {
-        _lock.AcquireIrqSave(_flags);
-      }
-
-      ~ScopedIrqLock() {
-        _lock.ReleaseIrqRestore(_flags);
-      }
-
-      ScopedIrqLock(const ScopedIrqLock&) = delete;
-      ScopedIrqLock& operator=(const ScopedIrqLock&) = delete;
-
-    private:
-      LockT& _lock;
-      UInt32 _flags = 0;
+      /**
+       * Lock reference.
+       */
+      LockType& _lock;
   };
 }

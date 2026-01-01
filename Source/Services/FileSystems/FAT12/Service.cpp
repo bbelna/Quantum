@@ -44,6 +44,8 @@ namespace Quantum::Services::FileSystems::FAT12 {
     );
 
     if (readyHandle == 0) {
+      Console::WriteLine("FAT12 ready port open failed");
+
       return;
     }
 
@@ -428,8 +430,6 @@ namespace Quantum::Services::FileSystems::FAT12 {
       IPC::Message msg {};
 
       if (IPC::Receive(portHandle, msg) != 0) {
-        Task::Yield();
-
         continue;
       }
 

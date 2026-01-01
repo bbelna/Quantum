@@ -10,6 +10,7 @@
 
 namespace Quantum::System::Kernel {
   void WaitQueue::Initialize() {
+    _lock.Initialize();
     _head = nullptr;
     _tail = nullptr;
   }
@@ -21,33 +22,43 @@ namespace Quantum::System::Kernel {
       return;
     }
 
-    thread->waitNext = nullptr;
-    thread->state = Thread::State::Blocked;
+    {
+      Sync::ScopedLock<Sync::SpinLock> guard(_lock);
 
-    if (_tail == nullptr) {
-      _head = thread;
-      _tail = thread;
-    } else {
-      _tail->waitNext = thread;
-      _tail = thread;
+      thread->waitNext = nullptr;
+      thread->state = Thread::State::Blocked;
+
+      if (_tail == nullptr) {
+        _head = thread;
+        _tail = thread;
+      } else {
+        _tail->waitNext = thread;
+        _tail = thread;
+      }
     }
 
     Thread::Yield();
   }
 
   bool WaitQueue::WakeOne() {
-    if (_head == nullptr) {
-      return false;
+    Thread::ControlBlock* thread = nullptr;
+
+    {
+      Sync::ScopedLock<Sync::SpinLock> guard(_lock);
+
+      if (_head == nullptr) {
+        return false;
+      }
+
+      thread = _head;
+      _head = thread->waitNext;
+
+      if (_head == nullptr) {
+        _tail = nullptr;
+      }
+
+      thread->waitNext = nullptr;
     }
-
-    Thread::ControlBlock* thread = _head;
-    _head = thread->waitNext;
-
-    if (_head == nullptr) {
-      _tail = nullptr;
-    }
-
-    thread->waitNext = nullptr;
 
     Thread::Wake(thread);
 

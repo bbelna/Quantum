@@ -11,23 +11,21 @@
 namespace Quantum::System::Kernel::Objects {
   KernelObject::KernelObject(KernelObjectType type) {
     this->type = type;
-    this->_refCount = 1;
+    _refCount.Initialize();
   }
 
   KernelObject::~KernelObject() = default;
 
   void KernelObject::AddRef() {
-    ++_refCount;
+    _refCount.AddRef();
   }
 
   void KernelObject::Release() {
-    if (_refCount == 0) {
+    if (_refCount.Get() == 0) {
       return;
     }
 
-    --_refCount;
-
-    if (_refCount == 0) {
+    if (_refCount.Release() == 0) {
       delete this;
     }
   }

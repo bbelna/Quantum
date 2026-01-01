@@ -11,6 +11,8 @@
 #include <Types.hpp>
 
 #include "Objects/Devices/InputDeviceObject.hpp"
+#include "Sync/SpinLock.hpp"
+#include "WaitQueue.hpp"
 
 namespace Quantum::System::Kernel::Devices {
   /**
@@ -267,6 +269,11 @@ namespace Quantum::System::Kernel::Devices {
         UInt32 tail;
 
         /**
+         * Wait queue for readers blocking on input.
+         */
+        WaitQueue waitQueue;
+
+        /**
          * Kernel object for handle-based access.
          */
         Objects::Devices::InputDeviceObject* object;
@@ -297,6 +304,11 @@ namespace Quantum::System::Kernel::Devices {
        * Next device id to assign.
        */
       inline static UInt32 _nextDeviceId = 1;
+
+      /**
+       * Protects device registry state.
+       */
+      inline static Sync::SpinLock _lock;
 
       /**
        * Finds a device by id.

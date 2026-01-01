@@ -12,6 +12,7 @@
 #include "Testing.hpp"
 #include "Tests/FAT12Tests.hpp"
 #include "Tests/FloppyTests.hpp"
+#include "Tests/IPCTests.hpp"
 #include "Tests/InputTests.hpp"
 
 namespace Quantum::Applications::Diagnostics::TestSuite {
@@ -117,5 +118,6 @@ namespace Quantum::Applications::Diagnostics::TestSuite {
     Tests::FloppyTests::RegisterTests();
     Tests::FAT12Tests::RegisterTests();
     Tests::InputTests::RegisterTests();
+    Tests::IPCTests::RegisterTests();
   }
 }

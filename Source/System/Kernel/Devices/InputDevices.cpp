@@ -8,12 +8,15 @@
 
 #include "Devices/InputDevices.hpp"
 #include "Task.hpp"
+#include "Sync/ScopedLock.hpp"
 
 namespace Quantum::System::Kernel::Devices {
   using Kernel::Task;
   using Objects::Devices::InputDeviceObject;
 
   void InputDevices::Initialize() {
+    _lock.Initialize();
+
     _deviceCount = 0;
     _nextDeviceId = 1;
 
@@ -26,6 +29,9 @@ namespace Quantum::System::Kernel::Devices {
       _deviceStorage[i].ownerId = 0;
       _deviceStorage[i].head = 0;
       _deviceStorage[i].tail = 0;
+
+      _deviceStorage[i].waitQueue.Initialize();
+
       _deviceStorage[i].object = nullptr;
     }
   }
@@ -35,6 +41,8 @@ namespace Quantum::System::Kernel::Devices {
       return 0;
     }
 
+    Sync::ScopedLock<Sync::SpinLock> guard(_lock);
+
     UInt32 id = _nextDeviceId++;
 
     device->info.id = id;
@@ -42,6 +50,9 @@ namespace Quantum::System::Kernel::Devices {
     device->ownerId = 0;
     device->head = 0;
     device->tail = 0;
+
+    device->waitQueue.Initialize();
+
     device->object = new InputDeviceObject(id);
 
     if (!device->object) {
@@ -63,6 +74,8 @@ namespace Quantum::System::Kernel::Devices {
     if (info.type == Type::Unknown) {
       return 0;
     }
+
+    Sync::ScopedLock<Sync::SpinLock> guard(_lock);
 
     for (UInt32 i = 0; i < _deviceCount; ++i) {
       Device* device = _devices[i];
@@ -101,6 +114,9 @@ namespace Quantum::System::Kernel::Devices {
     storage->ownerId = Task::GetCurrentId();
     storage->head = 0;
     storage->tail = 0;
+
+    storage->waitQueue.Initialize();
+
     storage->object = new InputDeviceObject(id);
 
     if (!storage->object) {
@@ -115,6 +131,8 @@ namespace Quantum::System::Kernel::Devices {
   }
 
   bool InputDevices::Unregister(UInt32 deviceId) {
+    Sync::ScopedLock<Sync::SpinLock> guard(_lock);
+
     for (UInt32 i = 0; i < _deviceCount; ++i) {
       if (_devices[i] && _devices[i]->info.id == deviceId) {
         if (_devices[i]->ownerId != 0) {
@@ -145,10 +163,14 @@ namespace Quantum::System::Kernel::Devices {
   }
 
   UInt32 InputDevices::GetCount() {
+    Sync::ScopedLock<Sync::SpinLock> guard(_lock);
+
     return _deviceCount;
   }
 
   bool InputDevices::GetInfo(UInt32 deviceId, InputDevices::Info& outInfo) {
+    Sync::ScopedLock<Sync::SpinLock> guard(_lock);
+
     InputDevices::Device* device = Find(deviceId);
 
     if (!device) {
@@ -164,6 +186,8 @@ namespace Quantum::System::Kernel::Devices {
     UInt32 deviceId,
     const InputDevices::Info& info
   ) {
+    Sync::ScopedLock<Sync::SpinLock> guard(_lock);
+
     InputDevices::Device* device = Find(deviceId);
 
     if (!device) {
@@ -185,6 +209,8 @@ namespace Quantum::System::Kernel::Devices {
   }
 
   bool InputDevices::ReadEvent(UInt32 deviceId, InputDevices::Event& outEvent) {
+    Sync::ScopedLock<Sync::SpinLock> guard(_lock);
+
     InputDevices::Device* device = Find(deviceId);
 
     if (!device) {
@@ -209,6 +235,8 @@ namespace Quantum::System::Kernel::Devices {
     UInt32 deviceId,
     const InputDevices::Event& event
   ) {
+    Sync::ScopedLock<Sync::SpinLock> guard(_lock);
+
     InputDevices::Device* device = Find(deviceId);
 
     if (!device) {
@@ -235,6 +263,8 @@ namespace Quantum::System::Kernel::Devices {
     device->events[device->head] = stored;
     device->head = next;
 
+    device->waitQueue.WakeOne();
+
     return true;
   }
 
@@ -249,6 +279,8 @@ namespace Quantum::System::Kernel::Devices {
   }
 
   InputDeviceObject* InputDevices::GetObject(UInt32 deviceId) {
+    Sync::ScopedLock<Sync::SpinLock> guard(_lock);
+
     InputDevices::Device* device = Find(deviceId);
 
     if (!device) {

@@ -168,10 +168,10 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   static bool ResolveIRQHandle(
     UInt32 irqOrHandle,
     UInt32 rights,
-    UInt32& outIrq
+    UInt32& outIRQ
   ) {
     if (!HandleTable::IsHandle(irqOrHandle)) {
-      outIrq = irqOrHandle;
+      outIRQ = irqOrHandle;
 
       return true;
     }
@@ -195,7 +195,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
     auto* irqObject = reinterpret_cast<IRQLineObject*>(object);
 
-    outIrq = irqObject->irqLine;
+    outIRQ = irqObject->irqLine;
 
     return true;
   }

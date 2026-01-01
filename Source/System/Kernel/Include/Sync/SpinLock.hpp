@@ -53,8 +53,8 @@ namespace Quantum::System::Kernel::Sync {
        * @param flags
        *   Receives the previous interrupt flags.
        */
-      void AcquireIrqSave(UInt32& flags) {
-        _lock.AcquireIrqSave(flags);
+      void AcquireIRQSave(UInt32& flags) {
+        _lock.AcquireIRQSave(flags);
       }
 
       /**
@@ -62,8 +62,8 @@ namespace Quantum::System::Kernel::Sync {
        * @param flags
        *   Previous interrupt flags.
        */
-      void ReleaseIrqRestore(UInt32 flags) {
-        _lock.ReleaseIrqRestore(flags);
+      void ReleaseIRQRestore(UInt32 flags) {
+        _lock.ReleaseIRQRestore(flags);
       }
 
     private:

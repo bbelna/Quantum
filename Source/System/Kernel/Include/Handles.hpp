@@ -10,6 +10,8 @@
 
 #include <Types.hpp>
 
+#include "Sync/ScopedLock.hpp"
+#include "Sync/SpinLock.hpp"
 #include "Objects/KernelObject.hpp"
 #include "Objects/KernelObjectType.hpp"
 
@@ -149,6 +151,8 @@ namespace Quantum::System::Kernel {
       ) const;
 
     private:
+      mutable Sync::SpinLock _lock;
+
       /**
        * Handle entries.
        */

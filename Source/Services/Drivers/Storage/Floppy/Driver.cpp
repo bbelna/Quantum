@@ -37,9 +37,6 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
         return true;
       }
 
-      if ((i & 0x3FF) == 0) {
-        Task::Yield();
-      }
     }
 
     return false;
@@ -54,9 +51,6 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
         return true;
       }
 
-      if ((i & 0x3FF) == 0) {
-        Task::Yield();
-      }
     }
 
     return false;
@@ -262,9 +256,6 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
         }
       }
 
-      if ((i & 0x3FF) == 0) {
-        Task::Yield();
-      }
     }
 
     Console::WriteLine("FDC IRQ timeout");
@@ -310,6 +301,7 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
     );
 
     if (readyHandle == 0) {
+      Console::WriteLine("Floppy driver ready port open failed");
       return;
     }
 
@@ -518,9 +510,6 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
     for (UInt32 i = 0; i < maxSpins; ++i) {
       IO::Out8(_ioAccessProbePort, 0);
 
-      if ((i & 0x3FF) == 0) {
-        Task::Yield();
-      }
     }
   }
 
@@ -1363,7 +1352,6 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
         --_pendingCount;
       } else {
         if (IPC::Receive(_portHandle, msg) != 0) {
-          Task::Yield();
           UpdateMotorIdle();
 
           continue;
@@ -1541,6 +1529,7 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
       }
 
       CopyBytes(reply.payload, &response, reply.length);
+
       IPC::Handle replyHandle = IPC::OpenPort(
         request.replyPortId,
         IPC::RightSend

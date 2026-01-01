@@ -15,6 +15,8 @@ namespace Quantum::System::Kernel {
   using Objects::KernelObjectType;
 
   void HandleTable::Initialize() {
+    _lock.Initialize();
+
     for (UInt32 i = 0; i < maxHandles; ++i) {
       _entries[i].inUse = false;
       _entries[i].type = KernelObjectType::None;
@@ -55,6 +57,8 @@ namespace Quantum::System::Kernel {
       return 0;
     }
 
+    Sync::ScopedLock<Sync::SpinLock> guard(_lock);
+
     for (UInt32 i = 0; i < maxHandles; ++i) {
       if (!_entries[i].inUse) {
         Handle handle = handleTag | (i + 1);
@@ -81,6 +85,8 @@ namespace Quantum::System::Kernel {
       return false;
     }
 
+    Sync::ScopedLock<Sync::SpinLock> guard(_lock);
+
     if (!_entries[index].inUse || _entries[index].handle != handle) {
       return false;
     }
@@ -105,6 +111,8 @@ namespace Quantum::System::Kernel {
       return 0;
     }
 
+    Sync::ScopedLock<Sync::SpinLock> guard(_lock);
+
     const Entry& entry = _entries[index];
 
     if (!entry.inUse || entry.handle != handle) {
@@ -117,7 +125,25 @@ namespace Quantum::System::Kernel {
       return 0;
     }
 
-    return Create(entry.type, entry.object, requested);
+    for (UInt32 i = 0; i < maxHandles; ++i) {
+      if (!_entries[i].inUse) {
+        Handle dupHandle = handleTag | (i + 1);
+
+        _entries[i].inUse = true;
+        _entries[i].type = entry.type;
+        _entries[i].rights = requested;
+        _entries[i].object = entry.object;
+        _entries[i].handle = dupHandle;
+
+        if (_entries[i].object) {
+          _entries[i].object->AddRef();
+        }
+
+        return dupHandle;
+      }
+    }
+
+    return 0;
   }
 
   bool HandleTable::Query(
@@ -130,6 +156,8 @@ namespace Quantum::System::Kernel {
     if (index >= maxHandles) {
       return false;
     }
+
+    Sync::ScopedLock<Sync::SpinLock> guard(_lock);
 
     const Entry& entry = _entries[index];
 
@@ -154,6 +182,8 @@ namespace Quantum::System::Kernel {
     if (index >= maxHandles) {
       return false;
     }
+
+    Sync::ScopedLock<Sync::SpinLock> guard(_lock);
 
     const Entry& entry = _entries[index];
 

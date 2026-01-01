@@ -7,13 +7,11 @@
  */
 
 #include <ABI/IO.hpp>
-#include <ABI/Task.hpp>
 
 #include "Controller.hpp"
 
 namespace Quantum::Services::Drivers::Input::PS2 {
   using ABI::IO;
-  using ABI::Task;
 
   bool Controller::WaitForRead() {
     const UInt32 maxSpins = 100000;
@@ -25,9 +23,6 @@ namespace Quantum::Services::Drivers::Input::PS2 {
         return true;
       }
 
-      if ((i & 0x3FF) == 0) {
-        Task::Yield();
-      }
     }
 
     return false;
@@ -43,9 +38,6 @@ namespace Quantum::Services::Drivers::Input::PS2 {
         return true;
       }
 
-      if ((i & 0x3FF) == 0) {
-        Task::Yield();
-      }
     }
 
     return false;

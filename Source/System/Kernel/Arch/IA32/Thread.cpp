@@ -506,6 +506,8 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
     if (_preemptDisableCount == 0 && !_preemptionEnabled) {
       _preemptionEnabled = true;
+      _schedulerActive = true;
+
       Logger::Write(LogLevel::Debug, "Preemptive multitasking enabled");
     }
   }
@@ -515,6 +517,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
     if (_preemptionEnabled) {
       _preemptionEnabled = false;
+
       Logger::Write(LogLevel::Debug, "Preemptive multitasking disabled");
     }
   }

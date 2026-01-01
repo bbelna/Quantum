@@ -9,7 +9,6 @@
 #include <ABI/Console.hpp>
 #include <ABI/Devices/BlockDevices.hpp>
 #include <ABI/FileSystem.hpp>
-#include <ABI/Task.hpp>
 
 #include "Testing.hpp"
 #include "Tests/FAT12Tests.hpp"
@@ -18,7 +17,6 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
   using ABI::Console;
   using ABI::Devices::BlockDevices;
   using ABI::FileSystem;
-  using ABI::Task;
 
   void FAT12Tests::LogSkip(CString reason) {
     if (_skipLogged) {
@@ -82,13 +80,12 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
         }
       }
 
-      Task::Yield();
     }
 
     return false;
   }
 
-  bool FAT12Tests::OpenFat12Volume(FileSystem::VolumeHandle& outVolume) {
+  bool FAT12Tests::OpenVolume(FileSystem::VolumeHandle& outVolume) {
     FileSystem::VolumeEntry entries[8] = {};
 
     for (UInt32 attempt = 0; attempt < 128; ++attempt) {
@@ -113,7 +110,6 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
         }
       }
 
-      Task::Yield();
     }
 
     return false;
@@ -225,7 +221,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
   void FAT12Tests::CleanupTestEntries() {
     FileSystem::VolumeHandle volume = 0;
 
-    if (!OpenFat12Volume(volume)) {
+    if (!OpenVolume(volume)) {
       return;
     }
 
@@ -252,7 +248,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
 
     FileSystem::VolumeHandle volume = 0;
 
-    if (!OpenFat12Volume(volume)) {
+    if (!OpenVolume(volume)) {
       LogSkip("no FAT12 volume");
 
       return true;
@@ -277,7 +273,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
 
     FileSystem::VolumeHandle volume = 0;
 
-    if (!OpenFat12Volume(volume)) {
+    if (!OpenVolume(volume)) {
       LogSkip("no FAT12 volume");
 
       return true;
@@ -315,7 +311,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
 
     FileSystem::VolumeHandle volume = 0;
 
-    if (!OpenFat12Volume(volume)) {
+    if (!OpenVolume(volume)) {
       LogSkip("no FAT12 volume");
 
       return true;
@@ -374,7 +370,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
 
     FileSystem::VolumeHandle volume = 0;
 
-    if (!OpenFat12Volume(volume)) {
+    if (!OpenVolume(volume)) {
       LogSkip("no FAT12 volume");
 
       return true;
@@ -440,7 +436,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
 
     FileSystem::VolumeHandle volume = 0;
 
-    if (!OpenFat12Volume(volume)) {
+    if (!OpenVolume(volume)) {
       LogSkip("no FAT12 volume");
 
       return true;
@@ -514,7 +510,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
 
     FileSystem::VolumeHandle volume = 0;
 
-    if (!OpenFat12Volume(volume)) {
+    if (!OpenVolume(volume)) {
       LogSkip("no FAT12 volume");
 
       return true;
@@ -598,7 +594,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
 
     FileSystem::VolumeHandle volume = 0;
 
-    if (!OpenFat12Volume(volume)) {
+    if (!OpenVolume(volume)) {
       LogSkip("no FAT12 volume");
 
       return true;
@@ -691,7 +687,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
 
     FileSystem::VolumeHandle volume = 0;
 
-    if (!OpenFat12Volume(volume)) {
+    if (!OpenVolume(volume)) {
       LogSkip("no FAT12 volume");
 
       return true;
@@ -788,7 +784,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
 
     FileSystem::VolumeHandle volume = 0;
 
-    if (!OpenFat12Volume(volume)) {
+    if (!OpenVolume(volume)) {
       LogSkip("no FAT12 volume");
 
       return true;
@@ -903,7 +899,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
 
     FileSystem::VolumeHandle volume = 0;
 
-    if (!OpenFat12Volume(volume)) {
+    if (!OpenVolume(volume)) {
       LogSkip("no FAT12 volume");
 
       return true;
@@ -955,7 +951,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
 
     FileSystem::VolumeHandle volume = 0;
 
-    if (!OpenFat12Volume(volume)) {
+    if (!OpenVolume(volume)) {
       LogSkip("no FAT12 volume");
 
       return true;
@@ -1016,7 +1012,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
 
     FileSystem::VolumeHandle volume = 0;
 
-    if (!OpenFat12Volume(volume)) {
+    if (!OpenVolume(volume)) {
       LogSkip("no FAT12 volume");
 
       return true;
@@ -1067,7 +1063,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
 
     FileSystem::VolumeHandle volume = 0;
 
-    if (!OpenFat12Volume(volume)) {
+    if (!OpenVolume(volume)) {
       LogSkip("no FAT12 volume");
 
       return true;
@@ -1139,7 +1135,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
 
     FileSystem::VolumeHandle volume = 0;
 
-    if (!OpenFat12Volume(volume)) {
+    if (!OpenVolume(volume)) {
       LogSkip("no FAT12 volume");
 
       return true;
@@ -1214,7 +1210,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
 
     FileSystem::VolumeHandle volume = 0;
 
-    if (!OpenFat12Volume(volume)) {
+    if (!OpenVolume(volume)) {
       LogSkip("no FAT12 volume");
 
       return true;

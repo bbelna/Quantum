@@ -265,7 +265,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       inline static volatile bool _forceReschedule = false;
 
       /**
-       * Becomes true after the first explicit yield to gate preemption.
+       * Becomes true once scheduling should be active.
        */
       inline static bool _schedulerActive = false;
 

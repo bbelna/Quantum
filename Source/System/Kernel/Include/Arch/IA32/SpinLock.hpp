@@ -8,10 +8,11 @@
 
 #pragma once
 
+#include <Atomics.hpp>
 #include <Types.hpp>
 
-#include "Atomics.hpp"
 #include "CPU.hpp"
+#include "Prelude.hpp"
 
 namespace Quantum::System::Kernel::Arch::IA32 {
   /**
@@ -56,7 +57,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * @param flags
        *   Receives the previous interrupt flags.
        */
-      void AcquireIrqSave(UInt32& flags) {
+      void AcquireIRQSave(UInt32& flags) {
         asm volatile(
           "pushf\n"
           "pop %0\n"
@@ -74,7 +75,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * @param flags
        *   Previous interrupt flags.
        */
-      void ReleaseIrqRestore(UInt32 flags) {
+      void ReleaseIRQRestore(UInt32 flags) {
         Release();
 
         asm volatile(
@@ -90,6 +91,6 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       /**
        * Lock state (0 = unlocked, 1 = locked).
        */
-      Atomic<UInt32> _state;
+      Kernel::Atomic<UInt32> _state;
   };
 }

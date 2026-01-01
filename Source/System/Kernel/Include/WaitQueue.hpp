@@ -9,6 +9,8 @@
 #pragma once
 
 #include "Thread.hpp"
+#include "Sync/ScopedLock.hpp"
+#include "Sync/SpinLock.hpp"
 
 namespace Quantum::System::Kernel {
   /**
@@ -39,6 +41,7 @@ namespace Quantum::System::Kernel {
       void WakeAll();
 
     private:
+      Sync::SpinLock _lock;
       Thread::ControlBlock* _head = nullptr;
       Thread::ControlBlock* _tail = nullptr;
   };

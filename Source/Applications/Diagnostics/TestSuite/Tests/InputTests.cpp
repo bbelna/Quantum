@@ -10,7 +10,6 @@
 #include <ABI/Devices/InputDevices.hpp>
 #include <ABI/Input.hpp>
 #include <ABI/IPC.hpp>
-#include <ABI/Task.hpp>
 #include <Bytes.hpp>
 
 #include "Testing.hpp"
@@ -22,7 +21,6 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
   using ABI::Devices::InputDevices;
   using ABI::Input;
   using ABI::IPC;
-  using ABI::Task;
 
   void InputTests::LogSkip(CString reason) {
     if (_skipLogged) {
@@ -102,8 +100,6 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
       IPC::Message msg {};
 
       if (IPC::Receive(portHandle, msg) != 0) {
-        Task::Yield();
-
         continue;
       }
 

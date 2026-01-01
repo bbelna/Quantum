@@ -92,6 +92,8 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
     );
 
     if (readyHandle == 0) {
+      Console::WriteLine("PS/2 keyboard ready port open failed");
+
       return;
     }
 
@@ -335,8 +337,6 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
       IPC::Message msg {};
 
       if (IPC::Receive(portHandle, msg) != 0) {
-        Task::Yield();
-
         continue;
       }
 
