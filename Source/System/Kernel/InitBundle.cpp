@@ -114,11 +114,26 @@ namespace Quantum::System::Kernel {
       UInt32 stackTop,
       LoadedImage& out
     ) {
-      if (ELF::LoadUserImage(payload, size, addressSpace, out.entry, out.imageEnd)) {
+      if (
+        ELF::LoadUserImage(
+          payload,
+          size,
+          addressSpace,
+          out.entry,
+          out.imageEnd
+        )
+      ) {
         return true;
       }
 
-      return LoadLegacyImage(payload, size, addressSpace, programBase, stackTop, out);
+      return LoadLegacyImage(
+        payload,
+        size,
+        addressSpace,
+        programBase,
+        stackTop,
+        out
+      );
     }
   }
 
@@ -362,14 +377,16 @@ namespace Quantum::System::Kernel {
 
     LoadedImage loaded {};
 
-    if (!LoadBundleImage(
-      payload,
-      size,
-      addressSpace,
-      _userProgramBase,
-      _userStackTop,
-      loaded
-    )) {
+    if (
+      !LoadBundleImage(
+        payload,
+        size,
+        addressSpace,
+        _userProgramBase,
+        _userStackTop,
+        loaded
+      )
+    ) {
       Logger::Write(LogLevel::Warning, "Coordinator image load failed");
       Arch::AddressSpace::Destroy(addressSpace);
       Task::Exit();
@@ -444,12 +461,22 @@ namespace Quantum::System::Kernel {
       return 0;
     }
 
-    constexpr UInt32 pageSize = 4096;
     const UInt8* bundleBase
       = reinterpret_cast<const UInt8*>(_initBundleMappedBase);
     const UInt8* payload = bundleBase + entry->offset;
     UInt32 size = entry->size;
 
+    return SpawnImage(payload, size);
+  }
+
+  UInt32 InitBundle::SpawnImage(const UInt8* image, UInt32 size) {
+    if (!image || size == 0) {
+      Logger::Write(LogLevel::Warning, "SpawnTask: image payload invalid");
+
+      return 0;
+    }
+
+    constexpr UInt32 pageSize = 4096;
     UInt32 addressSpace = Arch::AddressSpace::Create();
 
     if (addressSpace == 0) {
@@ -463,14 +490,16 @@ namespace Quantum::System::Kernel {
 
     LoadedImage loaded {};
 
-    if (!LoadBundleImage(
-      payload,
-      size,
-      addressSpace,
-      _userProgramBase,
-      _userStackTop,
-      loaded
-    )) {
+    if (
+      !LoadBundleImage(
+        image,
+        size,
+        addressSpace,
+        _userProgramBase,
+        _userStackTop,
+        loaded
+      )
+    ) {
       Logger::Write(LogLevel::Warning, "SpawnTask: image load failed");
       Arch::AddressSpace::Destroy(addressSpace);
 

@@ -48,6 +48,17 @@ namespace Quantum::System::Kernel {
        */
       static UInt32 SpawnTask(CString name);
 
+      /**
+       * Spawns a user task from an in-memory image.
+       * @param image
+       *   Pointer to the image bytes.
+       * @param size
+       *   Size of the image in bytes.
+       * @return
+       *   Task id on success; 0 on failure.
+       */
+      static UInt32 SpawnImage(const UInt8* image, UInt32 size);
+
     private:
       /**
        * Kernel virtual base for the INIT.BND mapping.
@@ -96,21 +107,37 @@ namespace Quantum::System::Kernel {
 
       /**
        * Validates the INIT.BND header magic.
+       * @param header
+       *   Header to validate.
+       * @return
+       *   True if the magic is valid; false otherwise.
        */
       static bool HasMagic(const ABI::InitBundle::Header& header);
 
       /**
        * Retrieves the bundle entries table.
+       * @param entryCount
+       *   Receives the number of entries in the bundle.
+       * @return
+       *   Pointer to the entry table.
        */
       static const ABI::InitBundle::Entry* GetBundleEntries(UInt32& entryCount);
 
       /**
        * Finds the coordinator entry in INIT.BND.
+       * @return
+       *   Pointer to the coordinator entry if found; `nullptr` otherwise.
        */
       static const ABI::InitBundle::Entry* FindCoordinatorEntry();
 
       /**
        * Compares an entry name to a target name.
+       * @param entry
+       *   Entry to compare.
+       * @param name
+       *   Null-terminated target name.
+       * @return
+       *   True if they match; false otherwise.
        */
       static bool EntryNameMatches(
         const ABI::InitBundle::Entry& entry,
@@ -119,6 +146,10 @@ namespace Quantum::System::Kernel {
 
       /**
        * Finds an entry by name in INIT.BND.
+       * @param name
+       *   Null-terminated entry name.
+       * @return
+       *   Pointer to the entry if found; `nullptr` otherwise.
        */
       static const ABI::InitBundle::Entry* FindEntryByName(CString name);
   };

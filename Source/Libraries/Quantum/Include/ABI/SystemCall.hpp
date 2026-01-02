@@ -20,6 +20,7 @@ namespace Quantum::ABI {
     Task_GrantIOAccess = 102,
     Task_Sleep = 103,
     Task_GetTickRate = 104,
+    Task_SpawnImage = 105,
     Console_Write = 200,
     Console_WriteLine = 201,
     InitBundle_GetInfo = 300,

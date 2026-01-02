@@ -229,6 +229,15 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         break;
       }
 
+      case SystemCall::Task_SpawnImage: {
+        const UInt8* image = reinterpret_cast<const UInt8*>(context.ebx);
+        UInt32 size = context.ecx;
+
+        context.eax = Kernel::InitBundle::SpawnImage(image, size);
+
+        break;
+      }
+
       case SystemCall::Task_GrantIOAccess: {
         if (!Kernel::Task::IsCurrentTaskCoordinator()) {
           context.eax = 1;
@@ -1488,7 +1497,3 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     Interrupts::RegisterHandler(vector, OnSystemCall);
   }
 }
-
-
-
-

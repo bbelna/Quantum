@@ -105,6 +105,23 @@ namespace Quantum::ABI {
         SleepTicks(static_cast<UInt32>(ticks));
       }
 
+      /**
+       * Spawns a user task from an in-memory image.
+       * @param image
+       *   Pointer to the image bytes.
+       * @param size
+       *   Size of the image in bytes.
+       * @return
+       *   Task id on success; 0 on failure.
+       */
+      static inline UInt32 SpawnImage(const void* image, UInt32 size) {
+        return ABI::InvokeSystemCall(
+          ABI::SystemCall::Task_SpawnImage,
+          reinterpret_cast<UInt32>(image),
+          size
+        );
+      }
+
     private:
       /**
        * Cached tick rate in Hz (0 = unknown).
