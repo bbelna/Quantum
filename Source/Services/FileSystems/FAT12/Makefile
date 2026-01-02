@@ -56,8 +56,8 @@ $(SERVICE_ELF): $(FAT12_SRCS) $(FAT12_HDRS) $(FAT12_DIR)/Link.ld $(LIBQ_LIB)
 	@echo "[OK] Linked FAT12.elf -> $@"
 
 $(SERVICE_QX): $(SERVICE_ELF)
-	$(OBJCOPY32) -O binary $< $@
-	@echo "[OK] Created fat12.qx -> $@"
+	cp $< $@
+	@echo "[OK] Copied FAT12.elf -> $@"
 
 clean:
 	@rm -rf $(BUILD_DIR)/FileSystems/FAT12

@@ -65,8 +65,8 @@ $(APP_ELF): $(APP_SRCS) $(APP_HDRS) $(APP_DIR)/Link.ld $(LIBQ_LIB)
 	@echo "[OK] Linked TestSuite.elf -> $@"
 
 $(APP_QX): $(APP_ELF)
-	$(OBJCOPY32) -O binary $< $@
-	@echo "[OK] Created TestSuite.qx -> $@"
+	cp $< $@
+	@echo "[OK] Copied TestSuite.elf -> $@"
 
 clean:
 	@rm -rf $(BUILD_DIR)/Applications/Diagnostics/TestSuite

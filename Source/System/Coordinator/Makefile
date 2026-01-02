@@ -63,8 +63,8 @@ $(COORD_ELF): $(COORD_SRCS) $(COORD_HDRS) $(COORD_DIR)/Link.ld $(LIBQ_LIB)
 	@echo "[OK] Linked Coordinator.elf -> $@"
 
 $(COORD_QX): $(COORD_ELF)
-	$(OBJCOPY32) -O binary $< $@
-	@echo "[OK] Created Coordinator.qx -> $@"
+	cp $< $@
+	@echo "[OK] Copied Coordinator.elf -> $@"
 
 clean:
 	@rm -rf $(BUILD_DIR)/Coordinator

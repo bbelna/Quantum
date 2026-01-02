@@ -52,8 +52,8 @@ $(DRIVER_ELF): $(FLOPPY_SRCS) $(FLOPPY_HDRS) $(DRIVER_DIR)/Link.ld $(LIBQ_LIB)
 	@echo "[OK] Linked Floppy.elf -> $@"
 
 $(DRIVER_QX): $(DRIVER_ELF)
-	$(OBJCOPY32) -O binary $< $@
-	@echo "[OK] Created Floppy.qx -> $@"
+	cp $< $@
+	@echo "[OK] Copied Floppy.elf -> $@"
 
 clean:
 	@rm -rf $(BUILD_DIR)/Drivers/Storage/Floppy

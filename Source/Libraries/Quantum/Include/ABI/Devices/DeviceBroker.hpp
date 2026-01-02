@@ -131,7 +131,9 @@ namespace Quantum::ABI::Devices {
 
         IPC::Handle replyHandle = IPC::OpenPort(
           replyPortId,
-          static_cast<UInt32>(IPC::Right::Receive) | static_cast<UInt32>(IPC::Right::Manage) | static_cast<UInt32>(IPC::Right::Send)
+          static_cast<UInt32>(IPC::Right::Receive)
+            | static_cast<UInt32>(IPC::Right::Manage)
+            | static_cast<UInt32>(IPC::Right::Send)
         );
 
         if (replyHandle == 0) {

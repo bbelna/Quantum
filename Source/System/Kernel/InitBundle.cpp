@@ -13,6 +13,7 @@
 #include "Arch/Paging.hpp"
 #include "Arch/PhysicalAllocator.hpp"
 #include "BootInfo.hpp"
+#include "ELF.hpp"
 #include "InitBundle.hpp"
 #include "Logger.hpp"
 #include "Prelude.hpp"
@@ -26,6 +27,100 @@ namespace Quantum::System::Kernel {
   using BundleEntry = ABI::InitBundle::Entry;
   using BundleEntryType = ABI::InitBundle::EntryType;
   using LogLevel = Kernel::Logger::Level;
+
+  namespace {
+    struct LoadedImage {
+      UInt32 entry;
+      UInt32 imageEnd;
+    };
+
+    bool LoadLegacyImage(
+      const UInt8* payload,
+      UInt32 size,
+      UInt32 addressSpace,
+      UInt32 programBase,
+      UInt32 stackTop,
+      LoadedImage& out
+    ) {
+      if (!payload || size < sizeof(UInt32)) {
+        return false;
+      }
+
+      UInt32 entryOffset = *reinterpret_cast<const UInt32*>(payload);
+      UInt32 imageBytes = size;
+      UInt32 maxImageBytes = stackTop - programBase;
+
+      if (size >= sizeof(UInt32) * 2) {
+        UInt32 reportedBytes
+          = *reinterpret_cast<const UInt32*>(payload + sizeof(UInt32));
+
+        if (reportedBytes >= size && reportedBytes <= maxImageBytes) {
+          imageBytes = reportedBytes;
+        }
+      }
+
+      if (entryOffset >= size) {
+        return false;
+      }
+
+      constexpr UInt32 pageSize = 4096;
+      UInt32 pages = AlignUp(imageBytes, pageSize) / pageSize;
+
+      for (UInt32 i = 0; i < pages; ++i) {
+        UInt32 phys = Arch::PhysicalAllocator::AllocatePage(true);
+        UInt32 vaddr = programBase + i * pageSize;
+
+        if (phys == 0) {
+          return false;
+        }
+
+        Arch::AddressSpace::MapPage(
+          addressSpace,
+          vaddr,
+          phys,
+          true,
+          true,
+          false
+        );
+
+        UInt32 offset = i * pageSize;
+
+        if (offset < size) {
+          UInt32 toCopy = size - offset;
+
+          if (toCopy > pageSize) {
+            toCopy = pageSize;
+          }
+
+          UInt8* dest = reinterpret_cast<UInt8*>(phys);
+
+          for (UInt32 j = 0; j < toCopy; ++j) {
+            dest[j] = payload[offset + j];
+          }
+        }
+      }
+
+      out.entry = programBase + entryOffset;
+      out.imageEnd = programBase + imageBytes;
+
+      return true;
+    }
+
+    bool LoadBundleImage(
+      const UInt8* payload,
+      UInt32 size,
+      UInt32 addressSpace,
+      UInt32 programBase,
+      UInt32 stackTop,
+      LoadedImage& out
+    ) {
+      if (ELF::LoadUserImage(payload, size, addressSpace, out.entry, out.imageEnd)) {
+        return true;
+      }
+
+      return LoadLegacyImage(payload, size, addressSpace, programBase, stackTop, out);
+    }
+  }
 
   void InitBundle::MapInitBundle() {
     BootInfo::InitBundleInfo initBundle {};
@@ -258,24 +353,6 @@ namespace Quantum::System::Kernel {
     const UInt8* payload = bundleBase + entry->offset;
     UInt32 size = entry->size;
 
-    if (size < sizeof(UInt32)) {
-      Logger::Write(LogLevel::Warning, "Coordinator payload too small");
-      Task::Exit();
-    }
-
-    UInt32 entryOffset = *reinterpret_cast<const UInt32*>(payload);
-    UInt32 imageBytes = size;
-    UInt32 maxImageBytes = _userStackTop - _userProgramBase;
-
-    if (size >= sizeof(UInt32) * 2) {
-      UInt32 reportedBytes
-        = *reinterpret_cast<const UInt32*>(payload + sizeof(UInt32));
-
-      if (reportedBytes >= size && reportedBytes <= maxImageBytes) {
-        imageBytes = reportedBytes;
-      }
-    }
-
     UInt32 addressSpace = Arch::AddressSpace::Create();
 
     if (addressSpace == 0) {
@@ -283,36 +360,19 @@ namespace Quantum::System::Kernel {
       Task::Exit();
     }
 
-    UInt32 pages = AlignUp(imageBytes, pageSize) / pageSize;
+    LoadedImage loaded {};
 
-    for (UInt32 i = 0; i < pages; ++i) {
-      UInt32 phys = Arch::PhysicalAllocator::AllocatePage(true);
-      UInt32 vaddr = _userProgramBase + i * pageSize;
-
-      Arch::AddressSpace::MapPage(
-        addressSpace,
-        vaddr,
-        phys,
-        true,
-        true,
-        false
-      );
-
-      UInt32 offset = i * pageSize;
-
-      if (offset < size) {
-        UInt32 toCopy = size - offset;
-
-        if (toCopy > pageSize) {
-          toCopy = pageSize;
-        }
-
-        UInt8* dest = reinterpret_cast<UInt8*>(phys);
-
-        for (UInt32 j = 0; j < toCopy; ++j) {
-          dest[j] = payload[offset + j];
-        }
-      }
+    if (!LoadBundleImage(
+      payload,
+      size,
+      addressSpace,
+      _userProgramBase,
+      _userStackTop,
+      loaded
+    )) {
+      Logger::Write(LogLevel::Warning, "Coordinator image load failed");
+      Arch::AddressSpace::Destroy(addressSpace);
+      Task::Exit();
     }
 
     UInt32 stackBytes = AlignUp(_userStackSize, pageSize);
@@ -337,7 +397,7 @@ namespace Quantum::System::Kernel {
     Task::SetCurrentAddressSpace(addressSpace);
     Arch::AddressSpace::Activate(addressSpace);
     UserMode::Enter(
-      _userProgramBase + entryOffset,
+      loaded.entry,
       _userStackTop
     );
   }
@@ -390,78 +450,6 @@ namespace Quantum::System::Kernel {
     const UInt8* payload = bundleBase + entry->offset;
     UInt32 size = entry->size;
 
-    if (size < sizeof(UInt32)) {
-      Logger::Write(LogLevel::Warning, "SpawnTask: payload too small");
-
-      return 0;
-    }
-
-    UInt32 entryOffset = *reinterpret_cast<const UInt32*>(payload);
-    UInt32 imageBytes = size;
-    UInt32 maxImageBytes = _userStackTop - _userProgramBase;
-
-    if (size >= sizeof(UInt32) * 2) {
-      UInt32 reportedBytes
-        = *reinterpret_cast<const UInt32*>(payload + sizeof(UInt32));
-
-      if (reportedBytes >= size && reportedBytes <= maxImageBytes) {
-        imageBytes = reportedBytes;
-      }
-    }
-
-    if (entryOffset >= size) {
-      Logger::WriteFormatted(
-        LogLevel::Warning,
-        "SpawnTask: entry offset out of range (entry=%p size=%p)",
-        entryOffset,
-        size
-      );
-
-      if (size >= sizeof(UInt32)) {
-        UInt32 raw0 = *reinterpret_cast<const UInt32*>(payload);
-        UInt32 raw1 = 0;
-
-        if (size >= sizeof(UInt32) * 2) {
-          raw1 = *reinterpret_cast<const UInt32*>(payload + sizeof(UInt32));
-        }
-
-        Logger::WriteFormatted(
-          LogLevel::Warning,
-          "SpawnTask: payload head=%p %p",
-          raw0,
-          raw1
-        );
-
-        BootInfo::InitBundleInfo initInfo {};
-
-        if (BootInfo::GetInitBundleInfo(initInfo)) {
-          const UInt8* physBase
-            = reinterpret_cast<const UInt8*>(initInfo.physical);
-          const UInt8* physPayload = physBase + entry->offset;
-          UInt32 phys0 = *reinterpret_cast<const UInt32*>(physPayload);
-          UInt32 phys1 = *reinterpret_cast<const UInt32*>(physPayload + 4);
-
-          Logger::WriteFormatted(
-            LogLevel::Warning,
-            "SpawnTask: phys payload head=%p %p",
-            phys0,
-            phys1
-          );
-          Logger::WriteFormatted(
-            LogLevel::Warning,
-            "SpawnTask: bundle phys=%p virt=%p off=%p",
-            initInfo.physical,
-            _initBundleMappedBase,
-            entry->offset
-          );
-        }
-      }
-
-      Logger::Write(LogLevel::Warning, "SpawnTask: entry offset out of range");
-
-      return 0;
-    }
-
     UInt32 addressSpace = Arch::AddressSpace::Create();
 
     if (addressSpace == 0) {
@@ -473,36 +461,20 @@ namespace Quantum::System::Kernel {
       return 0;
     }
 
-    UInt32 pages = AlignUp(imageBytes, pageSize) / pageSize;
+    LoadedImage loaded {};
 
-    for (UInt32 i = 0; i < pages; ++i) {
-      UInt32 phys = Arch::PhysicalAllocator::AllocatePage(true);
-      UInt32 vaddr = _userProgramBase + i * pageSize;
+    if (!LoadBundleImage(
+      payload,
+      size,
+      addressSpace,
+      _userProgramBase,
+      _userStackTop,
+      loaded
+    )) {
+      Logger::Write(LogLevel::Warning, "SpawnTask: image load failed");
+      Arch::AddressSpace::Destroy(addressSpace);
 
-      Arch::AddressSpace::MapPage(
-        addressSpace,
-        vaddr,
-        phys,
-        true,
-        true,
-        false
-      );
-
-      UInt32 offset = i * pageSize;
-
-      if (offset < size) {
-        UInt32 toCopy = size - offset;
-
-        if (toCopy > pageSize) {
-          toCopy = pageSize;
-        }
-
-        UInt8* dest = reinterpret_cast<UInt8*>(phys);
-
-        for (UInt32 j = 0; j < toCopy; ++j) {
-          dest[j] = payload[offset + j];
-        }
-      }
+      return 0;
     }
 
     UInt32 stackBytes = AlignUp(_userStackSize, pageSize);
@@ -524,7 +496,7 @@ namespace Quantum::System::Kernel {
     }
 
     Task::ControlBlock* task = Task::CreateUser(
-      _userProgramBase + entryOffset,
+      loaded.entry,
       _userStackTop,
       addressSpace
     );
@@ -537,7 +509,7 @@ namespace Quantum::System::Kernel {
     }
 
     // initialize per-task heap bounds
-    UInt32 heapBase = AlignUp(_userProgramBase + imageBytes, pageSize);
+    UInt32 heapBase = AlignUp(loaded.imageEnd, pageSize);
     UInt32 heapLimit = stackBase;
 
     if (heapBase < heapLimit) {

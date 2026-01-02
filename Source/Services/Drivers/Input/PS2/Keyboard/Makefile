@@ -59,8 +59,8 @@ $(DRIVER_ELF): $(KEYBOARD_SRCS) $(KEYBOARD_HDRS) $(DRIVER_DIR)/Link.ld $(LIBQ_LI
 	@echo "[OK] Linked Keyboard.elf -> $@"
 
 $(DRIVER_QX): $(DRIVER_ELF)
-	$(OBJCOPY32) -O binary $< $@
-	@echo "[OK] Created Keyboard.qx -> $@"
+	cp $< $@
+	@echo "[OK] Copied Keyboard.elf -> $@"
 
 clean:
 	@rm -rf $(BUILD_DIR)/Drivers/Input/PS2/Keyboard
