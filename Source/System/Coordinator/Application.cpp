@@ -17,8 +17,8 @@
 #include "Application.hpp"
 #include "Devices.hpp"
 #include "FileSystem.hpp"
-#include "IRQ.hpp"
 #include "Input.hpp"
+#include "IRQ.hpp"
 
 namespace Quantum::System::Coordinator {
   using ABI::Console;
@@ -199,13 +199,16 @@ namespace Quantum::System::Coordinator {
 
     if (_readyPortId == 0) {
       Console::WriteLine("Coordinator: failed to create readiness port");
-    } else if (_readyPortId != IPC::Ports::CoordinatorReady) {
+    } else if (
+      _readyPortId != static_cast<UInt32>(IPC::Ports::CoordinatorReady)
+    ) {
       Console::WriteLine("Coordinator: readiness port id mismatch");
     }
 
     _readyHandle = IPC::OpenPort(
       _readyPortId,
-      IPC::RightReceive | IPC::RightManage
+      static_cast<UInt32>(IPC::Right::Receive)
+        | static_cast<UInt32>(IPC::Right::Manage)
     );
 
     if (_readyHandle == 0) {

@@ -12,7 +12,6 @@
 #include "ABI/Devices/InputDevices.hpp"
 #include "ABI/Handle.hpp"
 #include "ABI/IPC.hpp"
-#include "ABI/Task.hpp"
 #include "Bytes.hpp"
 #include "Types.hpp"
 
@@ -26,17 +25,44 @@ namespace Quantum::ABI::Devices {
        * Device broker operation identifiers.
        */
       enum class Operation : UInt32 {
+        /**
+         * Opens a block device handle.
+         */
         OpenBlock = 1,
+
+        /**
+         * Opens an input device handle.
+         */
         OpenInput = 2
       };
+
+      /**
+       * Default timeout in ticks for broker requests.
+       */
+      static constexpr UInt32 requestTimeoutTicks = 500;
 
       /**
        * Device broker request message.
        */
       struct Request {
-        UInt32 op;
+        /**
+         * Operation type.
+         */
+        Operation op;
+
+        /**
+         * Device identifier.
+         */
         UInt32 deviceId;
+
+        /**
+         * Requested rights mask.
+         */
         UInt32 rights;
+
+        /**
+         * Reply port identifier.
+         */
         UInt32 replyPortId;
       };
 
@@ -81,6 +107,17 @@ namespace Quantum::ABI::Devices {
       }
 
     private:
+      /**
+       * Opens a device handle via the coordinator.
+       * @param op
+       *   Operation type.
+       * @param deviceId
+       *   Device identifier.
+       * @param rights
+       *   Rights mask.
+       * @return
+       *   Handle on success; 0 on failure.
+       */
       static UInt32 OpenDevice(
         Operation op,
         UInt32 deviceId,
@@ -94,7 +131,7 @@ namespace Quantum::ABI::Devices {
 
         IPC::Handle replyHandle = IPC::OpenPort(
           replyPortId,
-          IPC::RightReceive | IPC::RightManage | IPC::RightSend
+          static_cast<UInt32>(IPC::Right::Receive) | static_cast<UInt32>(IPC::Right::Manage) | static_cast<UInt32>(IPC::Right::Send)
         );
 
         if (replyHandle == 0) {
@@ -104,8 +141,8 @@ namespace Quantum::ABI::Devices {
         }
 
         IPC::Handle brokerHandle = IPC::OpenPort(
-          IPC::Ports::Devices,
-          IPC::RightSend
+          static_cast<UInt32>(IPC::Ports::Devices),
+          static_cast<UInt32>(IPC::Right::Send)
         );
 
         if (brokerHandle == 0) {
@@ -117,7 +154,7 @@ namespace Quantum::ABI::Devices {
 
         Request request {};
 
-        request.op = static_cast<UInt32>(op);
+        request.op = op;
         request.deviceId = deviceId;
         request.rights = rights;
         request.replyPortId = 0;
@@ -125,12 +162,13 @@ namespace Quantum::ABI::Devices {
         IPC::Message msg {};
 
         msg.length = sizeof(request);
+
         ::Quantum::CopyBytes(msg.payload, &request, sizeof(request));
 
         if (IPC::SendHandle(
           brokerHandle,
           replyHandle,
-          IPC::RightSend
+          static_cast<UInt32>(IPC::Right::Send)
         ) != 0) {
           IPC::CloseHandle(brokerHandle);
           IPC::DestroyPort(replyHandle);
@@ -152,9 +190,10 @@ namespace Quantum::ABI::Devices {
         IPC::Message reply {};
         UInt32 status = 1;
         UInt32 receivedHandle = 0;
+        UInt32 remaining = requestTimeoutTicks;
 
-        for (UInt32 i = 0; i < 1024; ++i) {
-          if (IPC::TryReceive(replyHandle, reply) == 0) {
+        while (remaining > 0) {
+          if (IPC::ReceiveTimeout(replyHandle, reply, 1) == 0) {
             UInt32 transferHandle = 0;
 
             if (IPC::TryGetHandleMessage(reply, transferHandle)) {
@@ -176,9 +215,7 @@ namespace Quantum::ABI::Devices {
             break;
           }
 
-          if ((i & 0x3F) == 0) {
-            Task::Yield();
-          }
+          remaining -= 1;
         }
 
         IPC::DestroyPort(replyHandle);
@@ -196,3 +233,4 @@ namespace Quantum::ABI::Devices {
       }
   };
 }
+

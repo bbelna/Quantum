@@ -11,6 +11,8 @@
 #include <Types.hpp>
 
 #include "Objects/Devices/InputDeviceObject.hpp"
+#include "Sync/SpinLock.hpp"
+#include "WaitQueue.hpp"
 
 namespace Quantum::System::Kernel::Devices {
   /**
@@ -116,9 +118,11 @@ namespace Quantum::System::Kernel::Devices {
       };
 
       /**
-       * Device is initialized and ready for input.
+       * Input device capability flags.
        */
-      static constexpr UInt32 flagReady = 1u << 0;
+      enum class Flag : UInt32 {
+        Ready = 1u << 0
+      };
 
       /**
        * Event queue size per device.
@@ -126,24 +130,14 @@ namespace Quantum::System::Kernel::Devices {
       static constexpr UInt32 eventQueueSize = 64;
 
       /**
-       * Shift modifier mask.
+       * Input modifier flags.
        */
-      static constexpr UInt32 modShift = 1u << 0;
-
-      /**
-       * Control modifier mask.
-       */
-      static constexpr UInt32 modCtrl = 1u << 1;
-
-      /**
-       * Alt modifier mask.
-       */
-      static constexpr UInt32 modAlt = 1u << 2;
-
-      /**
-       * Caps Lock modifier mask.
-       */
-      static constexpr UInt32 modCaps = 1u << 3;
+      enum class Modifier : UInt32 {
+        Shift = 1u << 0,
+        Ctrl = 1u << 1,
+        Alt = 1u << 2,
+        Caps = 1u << 3
+      };
 
       /**
        * Initializes the input device registry.
@@ -218,6 +212,23 @@ namespace Quantum::System::Kernel::Devices {
       static bool ReadEvent(UInt32 deviceId, Event& outEvent);
 
       /**
+       * Reads the next event for a device with a timeout.
+       * @param deviceId
+       *   Identifier of the device to read.
+       * @param outEvent
+       *   Receives the event.
+       * @param timeoutTicks
+       *   Maximum number of ticks to wait.
+       * @return
+       *   True on success; false on timeout or failure.
+       */
+      static bool ReadEventTimeout(
+        UInt32 deviceId,
+        Event& outEvent,
+        UInt32 timeoutTicks
+      );
+
+      /**
        * Pushes an event into the device queue.
        * @param deviceId
        *   Identifier of the device to update.
@@ -267,6 +278,11 @@ namespace Quantum::System::Kernel::Devices {
         UInt32 tail;
 
         /**
+         * Wait queue for readers blocking on input.
+         */
+        WaitQueue waitQueue;
+
+        /**
          * Kernel object for handle-based access.
          */
         Objects::Devices::InputDeviceObject* object;
@@ -297,6 +313,11 @@ namespace Quantum::System::Kernel::Devices {
        * Next device id to assign.
        */
       inline static UInt32 _nextDeviceId = 1;
+
+      /**
+       * Protects device registry state.
+       */
+      inline static Sync::SpinLock _lock;
 
       /**
        * Finds a device by id.

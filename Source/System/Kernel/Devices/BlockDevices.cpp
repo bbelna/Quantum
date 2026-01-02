@@ -13,6 +13,7 @@
 #include "Devices/BlockDevices.hpp"
 #include "IPC.hpp"
 #include "Logger.hpp"
+#include "Sync/ScopedLock.hpp"
 #include "Task.hpp"
 
 namespace Quantum::System::Kernel::Devices {
@@ -24,6 +25,8 @@ namespace Quantum::System::Kernel::Devices {
   using LogLevel = Kernel::Logger::Level;
 
   void BlockDevices::Initialize() {
+    _lock.Initialize();
+
     _deviceCount = 0;
     _nextDeviceId = 1;
 
@@ -46,21 +49,39 @@ namespace Quantum::System::Kernel::Devices {
     msg.dataLength = 0;
 
     UInt32 senderId = Task::GetCurrentId();
+    UInt32 notifyCount = 0;
 
-    for (UInt32 i = 0; i < _deviceCount; ++i) {
-      Device* device = _devices[i];
+    struct NotifyTarget {
+      UInt32 deviceId;
+      UInt32 portId;
+    } targets[_maxDevices] = {};
 
-      if (
-        !device
-        || device->portId == 0
-        || device->info.type != type
-      ) {
-        continue;
+    {
+      Sync::ScopedLock<Sync::SpinLock> guard(_lock);
+
+      for (UInt32 i = 0; i < _deviceCount; ++i) {
+        Device* device = _devices[i];
+
+        if (
+          !device
+          || device->portId == 0
+          || device->info.type != type
+        ) {
+          continue;
+        }
+
+        if (notifyCount < _maxDevices) {
+          targets[notifyCount].deviceId = device->info.id;
+          targets[notifyCount].portId = device->portId;
+          notifyCount += 1;
+        }
       }
+    }
 
-      msg.deviceId = device->info.id;
+    for (UInt32 i = 0; i < notifyCount; ++i) {
+      msg.deviceId = targets[i].deviceId;
 
-      IPC::Send(device->portId, senderId, &msg, messageHeaderBytes);
+      IPC::Send(targets[i].portId, senderId, &msg, messageHeaderBytes);
     }
   }
 
@@ -78,19 +99,29 @@ namespace Quantum::System::Kernel::Devices {
       return false;
     }
 
-    if (_dmaBufferPhysical == 0) {
-      UInt32 page = Arch::PhysicalAllocator::AllocatePageBelow(
-        _dmaMaxPhysicalAddress,
-        true,
-        0x10000
-      );
+    UInt32 dmaPhysical = 0;
+    UInt32 dmaBytes = 0;
 
-      if (page == 0) {
-        return false;
+    {
+      Sync::ScopedLock<Sync::SpinLock> guard(_lock);
+
+      if (_dmaBufferPhysical == 0) {
+        UInt32 page = Arch::PhysicalAllocator::AllocatePageBelow(
+          _dmaMaxPhysicalAddress,
+          true,
+          0x10000
+        );
+
+        if (page == 0) {
+          return false;
+        }
+
+        _dmaBufferPhysical = page;
+        _dmaBufferBytes = Arch::PhysicalAllocator::pageSize;
       }
 
-      _dmaBufferPhysical = page;
-      _dmaBufferBytes = Arch::PhysicalAllocator::pageSize;
+      dmaPhysical = _dmaBufferPhysical;
+      dmaBytes = _dmaBufferBytes;
     }
 
     UInt32 directory = Task::GetCurrentAddressSpace();
@@ -102,15 +133,15 @@ namespace Quantum::System::Kernel::Devices {
     Arch::AddressSpace::MapPage(
       directory,
       _dmaBufferVirtualBase,
-      _dmaBufferPhysical,
+      dmaPhysical,
       true,
       true,
       false
     );
 
-    outPhysical = _dmaBufferPhysical;
+    outPhysical = dmaPhysical;
     outVirtual = _dmaBufferVirtualBase;
-    outSize = _dmaBufferBytes;
+    outSize = dmaBytes;
 
     return true;
   }
@@ -120,6 +151,7 @@ namespace Quantum::System::Kernel::Devices {
       return 0;
     }
 
+    Sync::ScopedLock<Sync::SpinLock> guard(_lock);
     UInt32 id = _nextDeviceId++;
 
     device->info.id = id;
@@ -149,6 +181,8 @@ namespace Quantum::System::Kernel::Devices {
     ) {
       return 0;
     }
+
+    Sync::ScopedLock<Sync::SpinLock> guard(_lock);
 
     for (UInt32 i = 0; i < _deviceCount; ++i) {
       Device* device = _devices[i];
@@ -183,7 +217,7 @@ namespace Quantum::System::Kernel::Devices {
 
     storage->info = info;
     storage->info.id = id;
-    storage->info.flags &= ~flagReady;
+    storage->info.flags &= ~static_cast<UInt32>(BlockDevices::Flag::Ready);
     storage->portId = 0;
     storage->object = new BlockDeviceObject(id);
 
@@ -199,6 +233,8 @@ namespace Quantum::System::Kernel::Devices {
   }
 
   bool BlockDevices::Unregister(UInt32 deviceId) {
+    Sync::ScopedLock<Sync::SpinLock> guard(_lock);
+
     for (UInt32 i = 0; i < _deviceCount; ++i) {
       if (_devices[i] && _devices[i]->info.id == deviceId) {
         if (_devices[i]->object) {
@@ -220,10 +256,14 @@ namespace Quantum::System::Kernel::Devices {
   }
 
   UInt32 BlockDevices::GetCount() {
+    Sync::ScopedLock<Sync::SpinLock> guard(_lock);
+
     return _deviceCount;
   }
 
   bool BlockDevices::GetInfo(UInt32 deviceId, BlockDevices::Info& outInfo) {
+    Sync::ScopedLock<Sync::SpinLock> guard(_lock);
+
     BlockDevices::Device* device = Find(deviceId);
 
     if (!device) {
@@ -239,6 +279,8 @@ namespace Quantum::System::Kernel::Devices {
     UInt32 deviceId,
     const BlockDevices::Info& info
   ) {
+    Sync::ScopedLock<Sync::SpinLock> guard(_lock);
+
     BlockDevices::Device* device = Find(deviceId);
 
     if (!device) {
@@ -274,22 +316,31 @@ namespace Quantum::System::Kernel::Devices {
   }
 
   bool BlockDevices::Read(const BlockDevices::Request& request) {
-    BlockDevices::Device* device = Find(request.deviceId);
+    BlockDevices::Device snapshot {};
 
-    if (!device) {
+    {
+      Sync::ScopedLock<Sync::SpinLock> guard(_lock);
+
+      BlockDevices::Device* device = Find(request.deviceId);
+
+      if (!device) {
+        return false;
+      }
+
+      snapshot.info = device->info;
+      snapshot.portId = device->portId;
+    }
+
+    if ((snapshot.info.flags & static_cast<UInt32>(BlockDevices::Flag::Ready)) == 0) {
       return false;
     }
 
-    if ((device->info.flags & flagReady) == 0) {
+    if (!ValidateRequest(snapshot, request)) {
       return false;
     }
 
-    if (!ValidateRequest(*device, request)) {
-      return false;
-    }
-
-    if (device->portId != 0) {
-      UInt32 sectorSize = device->info.sectorSize;
+    if (snapshot.portId != 0) {
+      UInt32 sectorSize = snapshot.info.sectorSize;
       UInt32 maxPerChunk = 0;
 
       if (sectorSize != 0) {
@@ -313,7 +364,7 @@ namespace Quantum::System::Kernel::Devices {
         chunk.count = toRead;
         chunk.buffer = buffer;
 
-        if (!SendRequest(*device, chunk, false)) {
+        if (!SendRequest(snapshot, chunk, false)) {
           return false;
         }
 
@@ -331,26 +382,35 @@ namespace Quantum::System::Kernel::Devices {
   }
 
   bool BlockDevices::Write(const BlockDevices::Request& request) {
-    BlockDevices::Device* device = Find(request.deviceId);
+    BlockDevices::Device snapshot {};
 
-    if (!device) {
+    {
+      Sync::ScopedLock<Sync::SpinLock> guard(_lock);
+
+      BlockDevices::Device* device = Find(request.deviceId);
+
+      if (!device) {
+        return false;
+      }
+
+      snapshot.info = device->info;
+      snapshot.portId = device->portId;
+    }
+
+    if ((snapshot.info.flags & static_cast<UInt32>(BlockDevices::Flag::Ready)) == 0) {
       return false;
     }
 
-    if ((device->info.flags & flagReady) == 0) {
+    if ((snapshot.info.flags & static_cast<UInt32>(BlockDevices::Flag::ReadOnly)) != 0) {
       return false;
     }
 
-    if ((device->info.flags & flagReadOnly) != 0) {
+    if (!ValidateRequest(snapshot, request)) {
       return false;
     }
 
-    if (!ValidateRequest(*device, request)) {
-      return false;
-    }
-
-    if (device->portId != 0) {
-      UInt32 sectorSize = device->info.sectorSize;
+    if (snapshot.portId != 0) {
+      UInt32 sectorSize = snapshot.info.sectorSize;
       UInt32 maxPerChunk = 0;
 
       if (sectorSize != 0) {
@@ -375,7 +435,7 @@ namespace Quantum::System::Kernel::Devices {
         chunk.count = toWrite;
         chunk.buffer = const_cast<UInt8*>(buffer);
 
-        if (!SendRequest(*device, chunk, true)) {
+        if (!SendRequest(snapshot, chunk, true)) {
           return false;
         }
 
@@ -403,6 +463,8 @@ namespace Quantum::System::Kernel::Devices {
   }
 
   BlockDeviceObject* BlockDevices::GetObject(UInt32 deviceId) {
+    Sync::ScopedLock<Sync::SpinLock> guard(_lock);
+
     BlockDevices::Device* device = Find(deviceId);
 
     if (!device) {
@@ -437,6 +499,8 @@ namespace Quantum::System::Kernel::Devices {
   }
 
   bool BlockDevices::Bind(UInt32 deviceId, UInt32 portId) {
+    Sync::ScopedLock<Sync::SpinLock> guard(_lock);
+
     BlockDevices::Device* device = Find(deviceId);
 
     if (!device || portId == 0) {
@@ -454,7 +518,7 @@ namespace Quantum::System::Kernel::Devices {
     }
 
     device->portId = portId;
-    device->info.flags |= flagReady;
+    device->info.flags |= static_cast<UInt32>(BlockDevices::Flag::Ready);
 
     return true;
   }
@@ -512,12 +576,17 @@ namespace Quantum::System::Kernel::Devices {
 
     UInt32 senderId = 0;
     UInt32 responseLength = 0;
-    bool received = IPC::Receive(
+    UInt32 timeoutTicks = request.timeoutTicks != 0
+      ? request.timeoutTicks
+      : _requestTimeoutTicks;
+
+    bool received = IPC::ReceiveTimeout(
       replyPortId,
       senderId,
       &response,
       IPC::maxPayloadBytes,
-      responseLength
+      responseLength,
+      timeoutTicks
     );
 
     IPC::DestroyPort(replyPortId);
@@ -546,3 +615,5 @@ namespace Quantum::System::Kernel::Devices {
     return true;
   }
 }
+
+

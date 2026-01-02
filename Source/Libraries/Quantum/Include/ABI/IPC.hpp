@@ -31,47 +31,52 @@ namespace Quantum::ABI {
       /**
        * Coordinator port identifiers.
        */
-      struct Ports {
+      enum class Ports : UInt32 {
         /**
          * IRQ routing control port.
          */
-        static constexpr UInt32 IRQ = 1;
+        IRQ = 1,
 
         /**
          * File system broker port.
          */
-        static constexpr UInt32 FileSystem = 2;
+        FileSystem = 2,
 
         /**
          * Coordinator readiness port.
          */
-        static constexpr UInt32 CoordinatorReady = 3;
+        CoordinatorReady = 3,
 
         /**
          * Input broker port.
          */
-        static constexpr UInt32 Input = 4;
+        Input = 4,
 
         /**
          * Device broker port.
          */
-        static constexpr UInt32 Devices = 5;
+        Devices = 5
       };
 
       /**
-       * IPC send right flag.
+       * IPC right flags.
        */
-      static constexpr UInt32 RightSend = 1u << 0;
+      enum class Right : UInt32 {
+        /**
+         * Send right.
+         */
+        Send = 1u << 0,
 
-      /**
-       * IPC receive right flag.
-       */
-      static constexpr UInt32 RightReceive = 1u << 1;
+        /**
+         * Receive right.
+         */
+        Receive = 1u << 1,
 
-      /**
-       * IPC manage right flag.
-       */
-      static constexpr UInt32 RightManage = 1u << 2;
+        /**
+         * Manage right.
+         */
+        Manage = 1u << 2
+      };
 
       /**
        * IPC message layout.
@@ -97,14 +102,23 @@ namespace Quantum::ABI {
        * IPC handle transfer payload.
        */
       struct HandleMessage {
-        UInt32 op;
+        /**
+         * Handle message operations.
+         */
+        enum class Operation : UInt32 {
+          Transfer = 1
+        };
+
+        /**
+         * Operation type.
+         */
+        Operation op;
+
+        /**
+         * Transferred handle.
+         */
         UInt32 handle;
       };
-
-      /**
-       * Handle transfer operation identifier.
-       */
-      static constexpr UInt32 HandleOp = 1;
 
       /**
        * Attempts to extract a handle transfer message.
@@ -131,7 +145,7 @@ namespace Quantum::ABI {
           sizeof(HandleMessage)
         );
 
-        if (transfer.op != HandleOp) {
+        if (transfer.op != HandleMessage::Operation::Transfer) {
           return false;
         }
 
@@ -247,6 +261,30 @@ namespace Quantum::ABI {
           portId,
           reinterpret_cast<UInt32>(&outMessage),
           0
+        );
+      }
+
+      /**
+       * Receives a message with a timeout.
+       * @param portId
+       *   Port id or handle to receive from.
+       * @param outMessage
+       *   Receives the message contents.
+       * @param timeoutTicks
+       *   Maximum number of ticks to wait.
+       * @return
+       *   0 on success, non-zero on timeout or failure.
+       */
+      static UInt32 ReceiveTimeout(
+        UInt32 portId,
+        Message& outMessage,
+        UInt32 timeoutTicks
+      ) {
+        return InvokeSystemCall(
+          SystemCall::IPC_ReceiveTimeout,
+          portId,
+          reinterpret_cast<UInt32>(&outMessage),
+          timeoutTicks
         );
       }
 

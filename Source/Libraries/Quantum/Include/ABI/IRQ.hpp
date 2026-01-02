@@ -10,7 +10,6 @@
 
 #include "ABI/Handle.hpp"
 #include "ABI/IPC.hpp"
-#include "ABI/Task.hpp"
 #include "Bytes.hpp"
 #include "Types.hpp"
 
@@ -24,10 +23,16 @@ namespace Quantum::ABI {
        * IRQ handle type.
        */
       using Handle = UInt32;
+
       /**
        * IRQ routing operation identifiers.
        */
       enum class Operation : UInt32 {
+        /**
+         * IRQ notification payload.
+         */
+        Notify = 0,
+
         /**
          * Requests IRQ routing to a port.
          */
@@ -35,13 +40,43 @@ namespace Quantum::ABI {
       };
 
       /**
+       * IRQ rights.
+       */
+      enum class Right : UInt32 {
+        /**
+         * Register right.
+         */
+        Register = 1u << 0,
+
+        /**
+         * Unregister right.
+         */
+        Unregister = 1u << 1,
+
+        /**
+         * Enable right.
+         */
+        Enable = 1u << 2,
+
+        /**
+         * Disable right.
+         */
+        Disable = 1u << 3
+      };
+
+      /**
+       * Default timeout in ticks for IRQ registration.
+       */
+      static constexpr UInt32 requestTimeoutTicks = 500;
+
+      /**
        * IRQ message payload.
        */
       struct Message {
         /**
-         * Operation identifier (0 for IRQ notification).
+         * Operation identifier.
          */
-        UInt32 op;
+        Operation op;
 
         /**
          * IRQ line number.
@@ -100,8 +135,8 @@ namespace Quantum::ABI {
         }
 
         IPC::Handle irqHandle = IPC::OpenPort(
-          IPC::Ports::IRQ,
-          IPC::RightSend
+          static_cast<UInt32>(IPC::Ports::IRQ),
+          static_cast<UInt32>(IPC::Right::Send)
         );
 
         if (irqHandle == 0) {
@@ -112,7 +147,9 @@ namespace Quantum::ABI {
 
         IPC::Handle replyHandle = IPC::OpenPort(
           replyPortId,
-          IPC::RightReceive | IPC::RightManage | IPC::RightSend
+          static_cast<UInt32>(IPC::Right::Receive)
+            | static_cast<UInt32>(IPC::Right::Manage)
+            | static_cast<UInt32>(IPC::Right::Send)
         );
 
         if (replyHandle == 0) {
@@ -125,7 +162,7 @@ namespace Quantum::ABI {
         Message request {};
         IPC::Message msg {};
 
-        request.op = static_cast<UInt32>(Operation::Register);
+        request.op = Operation::Register;
         request.irq = irq;
         request.portId = portId;
         request.replyPortId = 0;
@@ -135,11 +172,13 @@ namespace Quantum::ABI {
 
         ::Quantum::CopyBytes(msg.payload, &request, msg.length);
 
-        if (IPC::SendHandle(
-          irqHandle,
-          replyHandle,
-          IPC::RightSend
-        ) != 0) {
+        if (
+          IPC::SendHandle(
+            irqHandle,
+            replyHandle,
+            static_cast<UInt32>(IPC::Right::Send)
+          ) != 0
+        ) {
           IPC::DestroyPort(replyHandle);
           IPC::CloseHandle(replyHandle);
           IPC::CloseHandle(irqHandle);
@@ -151,9 +190,10 @@ namespace Quantum::ABI {
 
         IPC::Message reply {};
         Handle receivedHandle = 0;
+        UInt32 remaining = requestTimeoutTicks;
 
-        for (UInt32 i = 0; i < 1024; ++i) {
-          if (IPC::TryReceive(replyHandle, reply) == 0) {
+        while (remaining > 0) {
+          if (IPC::ReceiveTimeout(replyHandle, reply, 1) == 0) {
             Handle transferHandle = 0;
 
             if (IPC::TryGetHandleMessage(reply, transferHandle)) {
@@ -195,9 +235,7 @@ namespace Quantum::ABI {
             return 1;
           }
 
-          if ((i & 0x3F) == 0) {
-            Task::Yield();
-          }
+          remaining -= 1;
         }
 
         if (receivedHandle != 0) {
@@ -210,26 +248,6 @@ namespace Quantum::ABI {
 
         return 1;
       }
-
-      /**
-       * IRQ register right.
-       */
-      static constexpr UInt32 RightRegister = 1u << 0;
-
-      /**
-       * IRQ unregister right.
-       */
-      static constexpr UInt32 RightUnregister = 1u << 1;
-
-      /**
-       * IRQ enable right.
-       */
-      static constexpr UInt32 RightEnable = 1u << 2;
-
-      /**
-       * IRQ disable right.
-       */
-      static constexpr UInt32 RightDisable = 1u << 3;
 
       /**
        * Opens a handle to an IRQ line.

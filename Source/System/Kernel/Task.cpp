@@ -80,6 +80,7 @@ namespace Quantum::System::Kernel {
     }
 
     task->mainThread = thread;
+
     AddToAllTasks(task);
 
     Logger::Write(LogLevel::Debug, "Task created successfully");
@@ -124,6 +125,7 @@ namespace Quantum::System::Kernel {
     }
 
     task->mainThread = thread;
+
     AddToAllTasks(task);
 
     Logger::WriteFormatted(
@@ -143,6 +145,10 @@ namespace Quantum::System::Kernel {
 
   void Task::Yield() {
     Thread::Yield();
+  }
+
+  void Task::SleepTicks(UInt32 ticks) {
+    Thread::SleepTicks(ticks);
   }
 
   Task::ControlBlock* Task::GetCurrent() {
@@ -220,6 +226,7 @@ namespace Quantum::System::Kernel {
 
     if (task->handleTable != nullptr) {
       Heap::Free(task->handleTable);
+
       task->handleTable = nullptr;
     }
 

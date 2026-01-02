@@ -699,7 +699,6 @@ namespace Quantum::System::Kernel {
 
   Heap::HeapState Heap::GetHeapState() {
     Heap::HeapState state {};
-
     UInt32 freeBytes = 0;
     UInt32 blocks = 0;
     Heap::FreeBlock* current = _freeList;

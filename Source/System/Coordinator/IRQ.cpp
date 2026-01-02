@@ -32,13 +32,14 @@ namespace Quantum::System::Coordinator {
       return;
     }
 
-    if (_portId != IPC::Ports::IRQ) {
+    if (_portId != static_cast<UInt32>(IPC::Ports::IRQ)) {
       Console::WriteLine("Coordinator: IRQ port id mismatch");
     }
 
     _portHandle = IPC::OpenPort(
       _portId,
-      IPC::RightReceive | IPC::RightManage
+      static_cast<UInt32>(IPC::Right::Receive)
+        | static_cast<UInt32>(IPC::Right::Manage)
     );
 
     if (_portHandle == 0) {
@@ -133,24 +134,27 @@ namespace Quantum::System::Coordinator {
         reinterpret_cast<UInt8*>(&request)[i] = msg.payload[i];
       }
 
-      if (request.op != static_cast<UInt32>(ABI::IRQ::Operation::Register)) {
+      if (request.op != ABI::IRQ::Operation::Register) {
         continue;
       }
 
       IPC::Handle replyHandle = 0;
 
       if (request.replyPortId != 0) {
-        replyHandle = IPC::OpenPort(request.replyPortId, IPC::RightSend);
+        replyHandle = IPC::OpenPort(
+          request.replyPortId,
+          static_cast<UInt32>(IPC::Right::Send)
+        );
       } else {
         replyHandle = TakePendingReply(msg.senderId);
       }
 
       ABI::IRQ::Handle irqHandle = ABI::IRQ::Open(
         request.irq,
-        ABI::IRQ::RightRegister
-          | ABI::IRQ::RightUnregister
-          | ABI::IRQ::RightEnable
-          | ABI::IRQ::RightDisable
+        static_cast<UInt32>(ABI::IRQ::Right::Register)
+          | static_cast<UInt32>(ABI::IRQ::Right::Unregister)
+          | static_cast<UInt32>(ABI::IRQ::Right::Enable)
+          | static_cast<UInt32>(ABI::IRQ::Right::Disable)
       );
       UInt32 status = 1;
 
@@ -158,10 +162,10 @@ namespace Quantum::System::Coordinator {
         status = Register(irqHandle, request.portId);
 
         if (status == 0 && replyHandle != 0) {
-          UInt32 rights = ABI::IRQ::RightRegister
-            | ABI::IRQ::RightUnregister
-            | ABI::IRQ::RightEnable
-            | ABI::IRQ::RightDisable;
+          UInt32 rights = static_cast<UInt32>(ABI::IRQ::Right::Register)
+            | static_cast<UInt32>(ABI::IRQ::Right::Unregister)
+            | static_cast<UInt32>(ABI::IRQ::Right::Enable)
+            | static_cast<UInt32>(ABI::IRQ::Right::Disable);
 
           IPC::SendHandle(replyHandle, irqHandle, rights);
         }
@@ -187,3 +191,5 @@ namespace Quantum::System::Coordinator {
     Task::Yield();
   }
 }
+
+

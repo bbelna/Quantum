@@ -40,6 +40,7 @@ namespace Quantum::System::Kernel {
     Task::Create(InitBundle::LaunchCoordinatorTask, 4096);
     #endif
 
+    Task::EnablePreemption();
     Task::Yield();
   }
 }

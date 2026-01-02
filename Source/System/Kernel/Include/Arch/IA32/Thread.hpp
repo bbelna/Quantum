@@ -11,6 +11,8 @@
 #include <Prelude.hpp>
 #include <Types.hpp>
 
+#include <Sync/SpinLock.hpp>
+
 #include "Interrupts.hpp"
 #include "Prelude.hpp"
 
@@ -122,6 +124,16 @@ namespace Quantum::System::Kernel::Arch::IA32 {
          * Pointer to the next thread in a wait queue.
          */
         ControlBlock* waitNext;
+
+        /**
+         * Wake tick for timed sleeps.
+         */
+        UInt64 wakeTick;
+
+        /**
+         * Pointer to the next thread in the sleep queue.
+         */
+        ControlBlock* sleepNext;
       };
 
       /**
@@ -218,6 +230,13 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        */
       static void Wake(ControlBlock* thread);
 
+      /**
+       * Sleeps the current thread for the specified number of ticks.
+       * @param ticks
+       *   Number of timer ticks to sleep.
+       */
+      static void SleepTicks(UInt32 ticks);
+
     private:
       /**
        * Pointer to the currently executing thread.
@@ -245,6 +264,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       inline static ControlBlock* _readyQueueTail = nullptr;
 
       /**
+       * Head of the sleep queue.
+       */
+      inline static ControlBlock* _sleepHead = nullptr;
+
+      /**
        * Thread pending cleanup (deferred until we are on a different stack).
        */
       inline static ControlBlock* _pendingCleanup = nullptr;
@@ -265,7 +289,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       inline static volatile bool _forceReschedule = false;
 
       /**
-       * Becomes true after the first explicit yield to gate preemption.
+       * Becomes true once scheduling should be active.
        */
       inline static bool _schedulerActive = false;
 
@@ -273,6 +297,11 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        * Next thread ID to assign.
        */
       inline static UInt32 _nextThreadId = 1;
+
+      /**
+       * Sleep queue lock.
+       */
+      inline static Sync::SpinLock _sleepLock;
 
       /**
        * Adds a thread to the ready queue.
@@ -301,6 +330,20 @@ namespace Quantum::System::Kernel::Arch::IA32 {
        *   Pointer to the thread to remove.
        */
       static void RemoveFromAllThreads(ControlBlock* thread);
+
+      /**
+       * Removes a thread from the sleep queue.
+       * @param thread
+       *   Pointer to the thread to remove.
+       */
+      static void RemoveFromSleepQueue(ControlBlock* thread);
+
+      /**
+       * Wakes any sleeping threads whose wake tick has elapsed.
+       * @param currentTick
+       *   Current timer tick count.
+       */
+      static void ProcessSleepQueue(UInt64 currentTick);
 
       /**
        * Picks the next thread to run and returns its saved context pointer.

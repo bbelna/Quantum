@@ -118,44 +118,64 @@ namespace Quantum::ABI::Devices {
       };
 
       /**
-       * Device ready flag.
+       * Default timeout in ticks for input reads.
        */
-      static constexpr UInt32 flagReady = 1u << 0;
+      static constexpr UInt32 requestTimeoutTicks = 500;
 
       /**
-       * Shift modifier mask.
+       * Input device capability flags.
        */
-      static constexpr UInt32 modShift = 1u << 0;
+      enum class Flag : UInt32 {
+        /**
+         * Device is ready for use.
+         */
+        Ready = 1u << 0
+      };
 
       /**
-       * Control modifier mask.
+       * Input modifier flags.
        */
-      static constexpr UInt32 modCtrl = 1u << 1;
+      enum class Modifier : UInt32 {
+        /**
+         * Shift key active.
+         */
+        Shift = 1u << 0,
+
+        /**
+         * Control key active.
+         */
+        Ctrl = 1u << 1,
+
+        /**
+         * Alt key active.
+         */
+        Alt = 1u << 2,
+
+        /**
+         * Caps Lock active.
+         */
+        Caps = 1u << 3
+      };
 
       /**
-       * Alt modifier mask.
+       * Input device rights.
        */
-      static constexpr UInt32 modAlt = 1u << 2;
+      enum class Right : UInt32 {
+        /**
+         * Read right.
+         */
+        Read = 1u << 0,
 
-      /**
-       * Caps Lock modifier mask.
-       */
-      static constexpr UInt32 modCaps = 1u << 3;
+        /**
+         * Control right.
+         */
+        Control = 1u << 1,
 
-      /**
-       * Input device read right.
-       */
-      static constexpr UInt32 RightRead = 1u << 0;
-
-      /**
-       * Input device control right.
-       */
-      static constexpr UInt32 RightControl = 1u << 1;
-
-      /**
-       * Input device register right.
-       */
-      static constexpr UInt32 RightRegister = 1u << 2;
+        /**
+         * Register right.
+         */
+        Register = 1u << 2
+      };
 
       /**
        * Returns the number of input devices.
@@ -246,6 +266,30 @@ namespace Quantum::ABI::Devices {
           deviceId,
           reinterpret_cast<UInt32>(&outEvent),
           0
+        );
+      }
+
+      /**
+       * Reads the next event for a device with a timeout.
+       * @param deviceId
+       *   Identifier of the device to read.
+       * @param outEvent
+       *   Receives the event.
+       * @param timeoutTicks
+       *   Maximum number of ticks to wait.
+       * @return
+       *   0 on success, non-zero on failure or timeout.
+       */
+      static UInt32 ReadEvent(
+        UInt32 deviceId,
+        Event& outEvent,
+        UInt32 timeoutTicks
+      ) {
+        return InvokeSystemCall(
+          SystemCall::Input_ReadEventTimeout,
+          deviceId,
+          reinterpret_cast<UInt32>(&outEvent),
+          timeoutTicks
         );
       }
 

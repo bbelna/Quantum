@@ -94,7 +94,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
        * @return
        *   True on success.
        */
-      static bool OpenFat12Volume(ABI::FileSystem::VolumeHandle& outVolume);
+      static bool OpenVolume(ABI::FileSystem::VolumeHandle& outVolume);
 
       /**
        * Opens a path on the given volume.

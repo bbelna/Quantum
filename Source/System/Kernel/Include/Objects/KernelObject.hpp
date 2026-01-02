@@ -11,6 +11,7 @@
 #include <Types.hpp>
 
 #include "Objects/KernelObjectType.hpp"
+#include "Sync/RefCount.hpp"
 
 namespace Quantum::System::Kernel::Objects {
   /**
@@ -49,6 +50,6 @@ namespace Quantum::System::Kernel::Objects {
       /**
        * Reference count.
        */
-      UInt32 _refCount;
+      Sync::RefCount _refCount;
   };
 }

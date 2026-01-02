@@ -10,8 +10,10 @@
 
 #include <Types.hpp>
 
+#include "Atomics.hpp"
 #include "Objects/IPCPortObject.hpp"
 #include "Objects/KernelObject.hpp"
+#include "Sync/SpinLock.hpp"
 #include "WaitQueue.hpp"
 
 namespace Quantum::System::Kernel {
@@ -58,6 +60,46 @@ namespace Quantum::System::Kernel {
       );
 
       /**
+       * Sends a message to the given port without blocking.
+       * @param portId
+       *   Target port.
+       * @param senderId
+       *   Identifier of the sending task.
+       * @param buffer
+       *   Pointer to payload data.
+       * @param length
+       *   Payload length in bytes (<= `maxPayloadBytes`).
+       * @return
+       *   True on success; false if the queue is full or arguments invalid.
+       */
+      static bool TrySend(
+        UInt32 portId,
+        UInt32 senderId,
+        const void* buffer,
+        UInt32 length
+      );
+
+      /**
+       * Configures a fast-path payload for IRQ notifications on a port.
+       * @param portId
+       *   Target port.
+       * @param buffer
+       *   Payload to reuse when IRQ notifications are pending.
+       * @param length
+       *   Payload length in bytes (<= `maxPayloadBytes`).
+       * @param senderId
+       *   Sender task id to report for IRQ notifications.
+       * @return
+       *   True on success; false on invalid arguments/port.
+       */
+      static bool ConfigureIRQPayload(
+        UInt32 portId,
+        const void* buffer,
+        UInt32 length,
+        UInt32 senderId
+      );
+
+      /**
        * Sends a handle to the given port.
        * @param portId
        *   Target port.
@@ -98,6 +140,32 @@ namespace Quantum::System::Kernel {
         void* outBuffer,
         UInt32 bufferCapacity,
         UInt32& outLength
+      );
+
+      /**
+       * Receives a message with a timeout.
+       * @param portId
+       *   Port to receive from.
+       * @param outSenderId
+       *   Receives the sender task id.
+       * @param outBuffer
+       *   Buffer to copy payload into.
+       * @param bufferCapacity
+       *   Capacity of outBuffer in bytes.
+       * @param outLength
+       *   Receives the payload length.
+       * @param timeoutTicks
+       *   Maximum number of ticks to wait.
+       * @return
+       *   True on success; false on timeout or invalid arguments/port.
+       */
+      static bool ReceiveTimeout(
+        UInt32 portId,
+        UInt32& outSenderId,
+        void* outBuffer,
+        UInt32 bufferCapacity,
+        UInt32& outLength,
+        UInt32 timeoutTicks
       );
 
       /**
@@ -233,6 +301,11 @@ namespace Quantum::System::Kernel {
         Message queue[maxQueueDepth];
 
         /**
+         * Protects port state.
+         */
+        Sync::SpinLock lock;
+
+        /**
          * Threads waiting to send (queue full).
          */
         WaitQueue sendWait;
@@ -241,6 +314,26 @@ namespace Quantum::System::Kernel {
          * Threads waiting to receive (queue empty).
          */
         WaitQueue recvWait;
+
+        /**
+         * Pending IRQ notifications for this port.
+         */
+        Atomic<UInt32> irqPending;
+
+        /**
+         * IRQ notification sender id.
+         */
+        UInt32 irqSenderId;
+
+        /**
+         * IRQ notification payload length.
+         */
+        UInt32 irqPayloadLength;
+
+        /**
+         * IRQ notification payload buffer.
+         */
+        UInt8 irqPayload[maxPayloadBytes];
       };
 
       /**
@@ -259,6 +352,11 @@ namespace Quantum::System::Kernel {
       inline static UInt32 _nextPortId = 1;
 
       /**
+       * Protects the global port table.
+       */
+      inline static Sync::SpinLock _portsLock;
+
+      /**
        * Finds a port by id.
        * @param id
        *   Port identifier.
@@ -266,5 +364,16 @@ namespace Quantum::System::Kernel {
        *   Pointer to the port, or `nullptr` if not found.
        */
       static Port* FindPort(UInt32 id);
+
+      /**
+       * Consumes a pending IRQ notification and materializes it as a message.
+       * @param port
+       *   Port to check.
+       * @param msg
+       *   Message to populate on success.
+       * @return
+       *   True if an IRQ notification was consumed.
+       */
+      static bool ConsumeIRQPending(Port& port, Message& msg);
   };
 }

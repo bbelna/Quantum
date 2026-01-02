@@ -21,6 +21,7 @@
 #include "Arch/IA32/IO.hpp"
 #include "Arch/IA32/Interrupts.hpp"
 #include "Arch/IA32/SystemCalls.hpp"
+#include "Arch/IA32/Timer.hpp"
 #include "Arch/IA32/PhysicalAllocator.hpp"
 #include "Console.hpp"
 #include "Devices/BlockDevices.hpp"
@@ -42,14 +43,14 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   using Kernel::Devices::BlockDevices;
   using Kernel::Devices::InputDevices;
   using Kernel::HandleTable;
-  using Kernel::Objects::IPCPortObject;
-  using Kernel::Objects::KernelObject;
-  using Kernel::Objects::KernelObjectType;
   using Kernel::IRQ;
   using Kernel::Logger;
-  using Kernel::Objects::IRQLineObject;
   using Kernel::Objects::Devices::BlockDeviceObject;
   using Kernel::Objects::Devices::InputDeviceObject;
+  using Kernel::Objects::IPCPortObject;
+  using Kernel::Objects::IRQLineObject;
+  using Kernel::Objects::KernelObject;
+  using Kernel::Objects::KernelObjectType;
 
   using DMABuffer = ABI::Devices::BlockDevices::DMABuffer;
   using LogLevel = Kernel::Logger::Level;
@@ -168,10 +169,10 @@ namespace Quantum::System::Kernel::Arch::IA32 {
   static bool ResolveIRQHandle(
     UInt32 irqOrHandle,
     UInt32 rights,
-    UInt32& outIrq
+    UInt32& outIRQ
   ) {
     if (!HandleTable::IsHandle(irqOrHandle)) {
-      outIrq = irqOrHandle;
+      outIRQ = irqOrHandle;
 
       return true;
     }
@@ -195,7 +196,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
     auto* irqObject = reinterpret_cast<IRQLineObject*>(object);
 
-    outIrq = irqObject->irqLine;
+    outIRQ = irqObject->irqLine;
 
     return true;
   }
@@ -212,6 +213,18 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
       case SystemCall::Task_Yield: {
         Kernel::Task::Yield();
+
+        break;
+      }
+
+      case SystemCall::Task_Sleep: {
+        Kernel::Task::SleepTicks(context.ebx);
+
+        break;
+      }
+
+      case SystemCall::Task_GetTickRate: {
+        context.eax = Timer::FrequencyHz();
 
         break;
       }
@@ -300,7 +313,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
           break;
         }
 
-        if (!ResolveIPCHandle(portOrHandle, IPC::RightSend, portId)) {
+        if (!ResolveIPCHandle(portOrHandle, static_cast<UInt32>(IPC::Right::Send), portId)) {
           context.eax = 1;
 
           break;
@@ -325,7 +338,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
           break;
         }
 
-        if (!ResolveIPCHandle(portOrHandle, IPC::RightReceive, portId)) {
+        if (!ResolveIPCHandle(portOrHandle, static_cast<UInt32>(IPC::Right::Receive), portId)) {
           context.eax = 1;
 
           break;
@@ -351,6 +364,45 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         break;
       }
 
+      case SystemCall::IPC_ReceiveTimeout: {
+        UInt32 portId = 0;
+        UInt32 portOrHandle = context.ebx;
+        IPC::Message* msg = reinterpret_cast<IPC::Message*>(context.ecx);
+        UInt32 timeoutTicks = context.edx;
+
+        if (!msg) {
+          context.eax = 1;
+
+          break;
+        }
+
+        if (!ResolveIPCHandle(portOrHandle, static_cast<UInt32>(IPC::Right::Receive), portId)) {
+          context.eax = 1;
+
+          break;
+        }
+
+        UInt32 sender = 0;
+        UInt32 length = 0;
+        bool ok = Kernel::IPC::ReceiveTimeout(
+          portId,
+          sender,
+          msg->payload,
+          IPC::maxPayloadBytes,
+          length,
+          timeoutTicks
+        );
+
+        if (ok) {
+          msg->senderId = sender;
+          msg->length = length;
+        }
+
+        context.eax = ok ? 0 : 1;
+
+        break;
+      }
+
       case SystemCall::IPC_TryReceive: {
         UInt32 portId = 0;
         UInt32 portOrHandle = context.ebx;
@@ -362,7 +414,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
           break;
         }
 
-        if (!ResolveIPCHandle(portOrHandle, IPC::RightReceive, portId)) {
+        if (!ResolveIPCHandle(portOrHandle, static_cast<UInt32>(IPC::Right::Receive), portId)) {
           context.eax = 1;
 
           break;
@@ -393,7 +445,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         UInt32 portOrHandle = context.ebx;
         bool ok = false;
 
-        if (!ResolveIPCHandle(portOrHandle, IPC::RightManage, portId)) {
+        if (!ResolveIPCHandle(portOrHandle, static_cast<UInt32>(IPC::Right::Manage), portId)) {
           context.eax = 1;
 
           break;
@@ -438,10 +490,10 @@ namespace Quantum::System::Kernel::Arch::IA32 {
           break;
         }
 
-        UInt32 allowed = IPC::RightSend;
+        UInt32 allowed = static_cast<UInt32>(IPC::Right::Send);
 
         if (ownerId == Kernel::Task::GetCurrentId()) {
-          allowed |= IPC::RightReceive | IPC::RightManage;
+          allowed |= static_cast<UInt32>(IPC::Right::Receive) | static_cast<UInt32>(IPC::Right::Manage);
         }
 
         if ((rights & ~allowed) != 0) {
@@ -497,7 +549,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         UInt32 handle = context.ecx;
         UInt32 rights = context.edx;
 
-        if (!ResolveIPCHandle(portOrHandle, IPC::RightSend, portId)) {
+        if (!ResolveIPCHandle(portOrHandle, static_cast<UInt32>(IPC::Right::Send), portId)) {
           context.eax = 1;
 
           break;
@@ -715,7 +767,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
         if (!ResolveBlockDeviceHandle(
           deviceOrHandle,
-          ABI::Devices::BlockDevices::RightControl,
+          static_cast<UInt32>(ABI::Devices::BlockDevices::Right::Control),
           deviceId
         )) {
           context.eax = 1;
@@ -759,7 +811,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
         if (!ResolveBlockDeviceHandle(
           deviceOrHandle,
-          ABI::Devices::BlockDevices::RightControl,
+          static_cast<UInt32>(ABI::Devices::BlockDevices::Right::Control),
           deviceId
         )) {
           context.eax = 1;
@@ -788,7 +840,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
         if (!ResolveBlockDeviceHandle(
           request->deviceId,
-          ABI::Devices::BlockDevices::RightRead,
+          static_cast<UInt32>(ABI::Devices::BlockDevices::Right::Read),
           deviceId
         )) {
           context.eax = 1;
@@ -819,7 +871,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
         if (!ResolveBlockDeviceHandle(
           request->deviceId,
-          ABI::Devices::BlockDevices::RightWrite,
+          static_cast<UInt32>(ABI::Devices::BlockDevices::Right::Write),
           deviceId
         )) {
           context.eax = 1;
@@ -843,7 +895,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
         if (!ResolveBlockDeviceHandle(
           deviceOrHandle,
-          ABI::Devices::BlockDevices::RightBind,
+          static_cast<UInt32>(ABI::Devices::BlockDevices::Right::Bind),
           deviceId
         )) {
           context.eax = 1;
@@ -890,10 +942,10 @@ namespace Quantum::System::Kernel::Arch::IA32 {
           break;
         }
 
-        UInt32 allowed = ABI::Devices::BlockDevices::RightRead
-          | ABI::Devices::BlockDevices::RightWrite
-          | ABI::Devices::BlockDevices::RightControl
-          | ABI::Devices::BlockDevices::RightBind;
+        UInt32 allowed = static_cast<UInt32>(ABI::Devices::BlockDevices::Right::Read)
+          | static_cast<UInt32>(ABI::Devices::BlockDevices::Right::Write)
+          | static_cast<UInt32>(ABI::Devices::BlockDevices::Right::Control)
+          | static_cast<UInt32>(ABI::Devices::BlockDevices::Right::Bind);
 
         rights &= allowed;
 
@@ -964,7 +1016,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
         if (!ResolveInputDeviceHandle(
           deviceOrHandle,
-          ABI::Devices::InputDevices::RightControl,
+          static_cast<UInt32>(ABI::Devices::InputDevices::Right::Control),
           deviceId
         )) {
           context.eax = 1;
@@ -1008,7 +1060,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
         if (!ResolveInputDeviceHandle(
           deviceOrHandle,
-          ABI::Devices::InputDevices::RightControl,
+          static_cast<UInt32>(ABI::Devices::InputDevices::Right::Control),
           deviceId
         )) {
           context.eax = 1;
@@ -1037,7 +1089,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
         if (!ResolveInputDeviceHandle(
           deviceOrHandle,
-          ABI::Devices::InputDevices::RightRead,
+          static_cast<UInt32>(ABI::Devices::InputDevices::Right::Read),
           deviceId
         )) {
           context.eax = 1;
@@ -1046,6 +1098,40 @@ namespace Quantum::System::Kernel::Arch::IA32 {
         }
 
         bool ok = InputDevices::ReadEvent(deviceId, *event);
+
+        context.eax = ok ? 0 : 1;
+
+        break;
+      }
+
+      case SystemCall::Input_ReadEventTimeout: {
+        UInt32 deviceId = 0;
+        UInt32 deviceOrHandle = context.ebx;
+        InputDevices::Event* event
+          = reinterpret_cast<InputDevices::Event*>(context.ecx);
+        UInt32 timeoutTicks = context.edx;
+
+        if (!event) {
+          context.eax = 1;
+
+          break;
+        }
+
+        if (!ResolveInputDeviceHandle(
+          deviceOrHandle,
+          static_cast<UInt32>(ABI::Devices::InputDevices::Right::Read),
+          deviceId
+        )) {
+          context.eax = 1;
+
+          break;
+        }
+
+        bool ok = InputDevices::ReadEventTimeout(
+          deviceId,
+          *event,
+          timeoutTicks
+        );
 
         context.eax = ok ? 0 : 1;
 
@@ -1066,7 +1152,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
         if (!ResolveInputDeviceHandle(
           deviceOrHandle,
-          ABI::Devices::InputDevices::RightRegister,
+          static_cast<UInt32>(ABI::Devices::InputDevices::Right::Register),
           deviceId
         )) {
           context.eax = 1;
@@ -1113,9 +1199,9 @@ namespace Quantum::System::Kernel::Arch::IA32 {
           break;
         }
 
-        UInt32 allowed = ABI::Devices::InputDevices::RightRead
-          | ABI::Devices::InputDevices::RightControl
-          | ABI::Devices::InputDevices::RightRegister;
+        UInt32 allowed = static_cast<UInt32>(ABI::Devices::InputDevices::Right::Read)
+          | static_cast<UInt32>(ABI::Devices::InputDevices::Right::Control)
+          | static_cast<UInt32>(ABI::Devices::InputDevices::Right::Register);
 
         rights &= allowed;
 
@@ -1144,7 +1230,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
         if (!ResolveIRQHandle(
           irqOrHandle,
-          ABI::IRQ::RightRegister,
+          static_cast<UInt32>(ABI::IRQ::Right::Register),
           irq
         )) {
           context.eax = 1;
@@ -1172,7 +1258,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
         if (!ResolveIRQHandle(
           irqOrHandle,
-          ABI::IRQ::RightUnregister,
+          static_cast<UInt32>(ABI::IRQ::Right::Unregister),
           irq
         )) {
           context.eax = 1;
@@ -1200,7 +1286,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
         if (!ResolveIRQHandle(
           irqOrHandle,
-          ABI::IRQ::RightEnable,
+          static_cast<UInt32>(ABI::IRQ::Right::Enable),
           irq
         )) {
           context.eax = 1;
@@ -1228,7 +1314,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
 
         if (!ResolveIRQHandle(
           irqOrHandle,
-          ABI::IRQ::RightDisable,
+          static_cast<UInt32>(ABI::IRQ::Right::Disable),
           irq
         )) {
           context.eax = 1;
@@ -1281,10 +1367,10 @@ namespace Quantum::System::Kernel::Arch::IA32 {
           break;
         }
 
-        UInt32 allowed = ABI::IRQ::RightRegister
-          | ABI::IRQ::RightUnregister
-          | ABI::IRQ::RightEnable
-          | ABI::IRQ::RightDisable;
+        UInt32 allowed = static_cast<UInt32>(ABI::IRQ::Right::Register)
+          | static_cast<UInt32>(ABI::IRQ::Right::Unregister)
+          | static_cast<UInt32>(ABI::IRQ::Right::Enable)
+          | static_cast<UInt32>(ABI::IRQ::Right::Disable);
 
         rights &= allowed;
 
@@ -1402,3 +1488,7 @@ namespace Quantum::System::Kernel::Arch::IA32 {
     Interrupts::RegisterHandler(vector, OnSystemCall);
   }
 }
+
+
+
+

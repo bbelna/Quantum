@@ -110,6 +110,14 @@ namespace Quantum::ABI {
       };
 
       /**
+       * File system status codes.
+       */
+      enum class Status : UInt32 {
+        Ok = 0,
+        Failed = 1
+      };
+
+      /**
        * File system type identifiers.
        */
       enum class Type : UInt32 {
@@ -281,18 +289,23 @@ namespace Quantum::ABI {
         = IPC::maxPayloadBytes - messageHeaderBytes;
 
       /**
+       * Default timeout in ticks for file system requests.
+       */
+      static constexpr UInt32 requestTimeoutTicks = 500;
+
+      /**
        * File system service IPC message.
        */
       struct ServiceMessage {
         /**
          * Operation identifier.
          */
-        UInt32 op;
+        Operation op;
 
         /**
-         * Status code (0 success, non-zero failure).
+         * Status/result code.
          */
-        UInt32 status;
+        Status status;
 
         /**
          * Reply port id for responses (0 when using handle transfer).
@@ -335,18 +348,43 @@ namespace Quantum::ABI {
        *   Number of entries written, or 0 on failure.
        */
       static UInt32 ListVolumes(void* outEntries, UInt32 maxEntries) {
+        return ListVolumes(outEntries, maxEntries, requestTimeoutTicks);
+      }
+
+      /**
+       * Lists available volumes with a timeout.
+       * @param outEntries
+       *   Output buffer for volume entries.
+       * @param maxEntries
+       *   Maximum number of entries to write.
+       * @param timeoutTicks
+       *   Maximum number of ticks to wait.
+       * @return
+       *   Number of entries written, or 0 on failure.
+       */
+      static UInt32 ListVolumes(
+        void* outEntries,
+        UInt32 maxEntries,
+        UInt32 timeoutTicks
+      ) {
         ServiceMessage request {};
         ServiceMessage response {};
         UInt32 outputBytes = maxEntries
           * static_cast<UInt32>(sizeof(VolumeEntry));
 
-        request.op = static_cast<UInt32>(Operation::ListVolumes);
+        request.op = Operation::ListVolumes;
         request.arg0 = 0;
         request.arg1 = maxEntries;
         request.arg2 = 0;
         request.dataLength = 0;
 
-        return SendRequest(request, response, outEntries, outputBytes);
+        return SendRequest(
+          request,
+          response,
+          outEntries,
+          outputBytes,
+          timeoutTicks
+        );
       }
 
       /**
@@ -359,10 +397,29 @@ namespace Quantum::ABI {
        *   0 on success, non-zero on failure.
        */
       static UInt32 GetVolumeInfo(VolumeHandle volume, VolumeInfo& outInfo) {
+        return GetVolumeInfo(volume, outInfo, requestTimeoutTicks);
+      }
+
+      /**
+       * Retrieves volume info by handle with a timeout.
+       * @param volume
+       *   Volume handle.
+       * @param outInfo
+       *   Receives volume info.
+       * @param timeoutTicks
+       *   Maximum number of ticks to wait.
+       * @return
+       *   0 on success, non-zero on failure.
+       */
+      static UInt32 GetVolumeInfo(
+        VolumeHandle volume,
+        VolumeInfo& outInfo,
+        UInt32 timeoutTicks
+      ) {
         ServiceMessage request {};
         ServiceMessage response {};
 
-        request.op = static_cast<UInt32>(Operation::GetVolumeInfo);
+        request.op = Operation::GetVolumeInfo;
         request.arg0 = volume;
         request.arg1 = 0;
         request.arg2 = 0;
@@ -372,7 +429,8 @@ namespace Quantum::ABI {
           request,
           response,
           &outInfo,
-          static_cast<UInt32>(sizeof(outInfo))
+          static_cast<UInt32>(sizeof(outInfo)),
+          timeoutTicks
         );
       }
 
@@ -386,16 +444,35 @@ namespace Quantum::ABI {
        *   0 on success, non-zero on failure.
        */
       static UInt32 SetVolumeLabel(VolumeHandle volume, CString label) {
+        return SetVolumeLabel(volume, label, requestTimeoutTicks);
+      }
+
+      /**
+       * Sets the volume label with a timeout.
+       * @param volume
+       *   Volume handle.
+       * @param label
+       *   Null-terminated label string.
+       * @param timeoutTicks
+       *   Maximum number of ticks to wait.
+       * @return
+       *   0 on success, non-zero on failure.
+       */
+      static UInt32 SetVolumeLabel(
+        VolumeHandle volume,
+        CString label,
+        UInt32 timeoutTicks
+      ) {
         ServiceMessage request {};
         ServiceMessage response {};
 
-        request.op = static_cast<UInt32>(Operation::SetVolumeLabel);
+        request.op = Operation::SetVolumeLabel;
         request.arg0 = volume;
         request.arg1 = 0;
         request.arg2 = 0;
         request.dataLength = CopyString(label, request.data, messageDataBytes);
 
-        return SendRequest(request, response, nullptr, 0);
+        return SendRequest(request, response, nullptr, 0, timeoutTicks);
       }
 
       /**
@@ -406,16 +483,29 @@ namespace Quantum::ABI {
        *   Volume handle, or 0 on failure.
        */
       static VolumeHandle OpenVolume(CString label) {
+        return OpenVolume(label, requestTimeoutTicks);
+      }
+
+      /**
+       * Opens a volume by label with a timeout.
+       * @param label
+       *   Volume label string.
+       * @param timeoutTicks
+       *   Maximum number of ticks to wait.
+       * @return
+       *   Volume handle, or 0 on failure.
+       */
+      static VolumeHandle OpenVolume(CString label, UInt32 timeoutTicks) {
         ServiceMessage request {};
         ServiceMessage response {};
 
-        request.op = static_cast<UInt32>(Operation::OpenVolume);
+        request.op = Operation::OpenVolume;
         request.arg0 = 0;
         request.arg1 = 0;
         request.arg2 = 0;
         request.dataLength = CopyString(label, request.data, messageDataBytes);
 
-        return SendRequest(request, response, nullptr, 0);
+        return SendRequest(request, response, nullptr, 0, timeoutTicks);
       }
 
       /**
@@ -426,16 +516,29 @@ namespace Quantum::ABI {
        *   0 on success, non-zero on failure.
        */
       static UInt32 CloseVolume(VolumeHandle volume) {
+        return CloseVolume(volume, requestTimeoutTicks);
+      }
+
+      /**
+       * Closes a volume handle with a timeout.
+       * @param volume
+       *   Volume handle to close.
+       * @param timeoutTicks
+       *   Maximum number of ticks to wait.
+       * @return
+       *   0 on success, non-zero on failure.
+       */
+      static UInt32 CloseVolume(VolumeHandle volume, UInt32 timeoutTicks) {
         ServiceMessage request {};
         ServiceMessage response {};
 
-        request.op = static_cast<UInt32>(Operation::CloseVolume);
+        request.op = Operation::CloseVolume;
         request.arg0 = volume;
         request.arg1 = 0;
         request.arg2 = 0;
         request.dataLength = 0;
 
-        return SendRequest(request, response, nullptr, 0);
+        return SendRequest(request, response, nullptr, 0, timeoutTicks);
       }
 
       /**
@@ -450,16 +553,38 @@ namespace Quantum::ABI {
        *   File handle, or 0 on failure.
        */
       static Handle Open(VolumeHandle volume, CString path, UInt32 flags) {
+        return Open(volume, path, flags, requestTimeoutTicks);
+      }
+
+      /**
+       * Opens a file or directory with a timeout.
+       * @param volume
+       *   Volume handle.
+       * @param path
+       *   Null-terminated path string.
+       * @param flags
+       *   Open flags.
+       * @param timeoutTicks
+       *   Maximum number of ticks to wait.
+       * @return
+       *   File handle, or 0 on failure.
+       */
+      static Handle Open(
+        VolumeHandle volume,
+        CString path,
+        UInt32 flags,
+        UInt32 timeoutTicks
+      ) {
         ServiceMessage request {};
         ServiceMessage response {};
 
-        request.op = static_cast<UInt32>(Operation::Open);
+        request.op = Operation::Open;
         request.arg0 = volume;
         request.arg1 = flags;
         request.arg2 = 0;
         request.dataLength = CopyString(path, request.data, messageDataBytes);
 
-        return SendRequest(request, response, nullptr, 0);
+        return SendRequest(request, response, nullptr, 0, timeoutTicks);
       }
 
       /**
@@ -470,16 +595,29 @@ namespace Quantum::ABI {
        *   0 on success, non-zero on failure.
        */
       static UInt32 Close(Handle handle) {
+        return Close(handle, requestTimeoutTicks);
+      }
+
+      /**
+       * Closes a file handle with a timeout.
+       * @param handle
+       *   File handle to close.
+       * @param timeoutTicks
+       *   Maximum number of ticks to wait.
+       * @return
+       *   0 on success, non-zero on failure.
+       */
+      static UInt32 Close(Handle handle, UInt32 timeoutTicks) {
         ServiceMessage request {};
         ServiceMessage response {};
 
-        request.op = static_cast<UInt32>(Operation::Close);
+        request.op = Operation::Close;
         request.arg0 = handle;
         request.arg1 = 0;
         request.arg2 = 0;
         request.dataLength = 0;
 
-        return SendRequest(request, response, nullptr, 0);
+        return SendRequest(request, response, nullptr, 0, timeoutTicks);
       }
 
       /**
@@ -494,16 +632,38 @@ namespace Quantum::ABI {
        *   Number of bytes read, or 0 on failure.
        */
       static UInt32 Read(Handle handle, void* buffer, UInt32 length) {
+        return Read(handle, buffer, length, requestTimeoutTicks);
+      }
+
+      /**
+       * Reads from a file handle with a timeout.
+       * @param handle
+       *   File handle.
+       * @param buffer
+       *   Output buffer.
+       * @param length
+       *   Number of bytes to read.
+       * @param timeoutTicks
+       *   Maximum number of ticks to wait.
+       * @return
+       *   Number of bytes read, or 0 on failure.
+       */
+      static UInt32 Read(
+        Handle handle,
+        void* buffer,
+        UInt32 length,
+        UInt32 timeoutTicks
+      ) {
         ServiceMessage request {};
         ServiceMessage response {};
 
-        request.op = static_cast<UInt32>(Operation::Read);
+        request.op = Operation::Read;
         request.arg0 = handle;
         request.arg1 = length;
         request.arg2 = 0;
         request.dataLength = 0;
 
-        return SendRequest(request, response, buffer, length);
+        return SendRequest(request, response, buffer, length, timeoutTicks);
       }
 
       /**
@@ -518,10 +678,32 @@ namespace Quantum::ABI {
        *   Number of bytes written, or 0 on failure.
        */
       static UInt32 Write(Handle handle, const void* buffer, UInt32 length) {
+        return Write(handle, buffer, length, requestTimeoutTicks);
+      }
+
+      /**
+       * Writes to a file handle with a timeout.
+       * @param handle
+       *   File handle.
+       * @param buffer
+       *   Input buffer.
+       * @param length
+       *   Number of bytes to write.
+       * @param timeoutTicks
+       *   Maximum number of ticks to wait.
+       * @return
+       *   Number of bytes written, or 0 on failure.
+       */
+      static UInt32 Write(
+        Handle handle,
+        const void* buffer,
+        UInt32 length,
+        UInt32 timeoutTicks
+      ) {
         ServiceMessage request {};
         ServiceMessage response {};
 
-        request.op = static_cast<UInt32>(Operation::Write);
+        request.op = Operation::Write;
         request.arg0 = handle;
         request.arg1 = length;
         request.arg2 = 0;
@@ -533,7 +715,7 @@ namespace Quantum::ABI {
           request.dataLength = length;
         }
 
-        return SendRequest(request, response, nullptr, 0);
+        return SendRequest(request, response, nullptr, 0, timeoutTicks);
       }
 
       /**
@@ -548,16 +730,38 @@ namespace Quantum::ABI {
        *   New offset, or 0 on failure.
        */
       static UInt32 Seek(Handle handle, UInt32 offset, UInt32 origin) {
+        return Seek(handle, offset, origin, requestTimeoutTicks);
+      }
+
+      /**
+       * Seeks within a file handle with a timeout.
+       * @param handle
+       *   File handle.
+       * @param offset
+       *   Offset in bytes.
+       * @param origin
+       *   Seek origin (0=begin,1=cur,2=end).
+       * @param timeoutTicks
+       *   Maximum number of ticks to wait.
+       * @return
+       *   New offset, or 0 on failure.
+       */
+      static UInt32 Seek(
+        Handle handle,
+        UInt32 offset,
+        UInt32 origin,
+        UInt32 timeoutTicks
+      ) {
         ServiceMessage request {};
         ServiceMessage response {};
 
-        request.op = static_cast<UInt32>(Operation::Seek);
+        request.op = Operation::Seek;
         request.arg0 = handle;
         request.arg1 = offset;
         request.arg2 = origin;
         request.dataLength = 0;
 
-        return SendRequest(request, response, nullptr, 0);
+        return SendRequest(request, response, nullptr, 0, timeoutTicks);
       }
 
       /**
@@ -570,10 +774,29 @@ namespace Quantum::ABI {
        *   0 on success, non-zero on failure.
        */
       static UInt32 Stat(Handle handle, FileInfo& outInfo) {
+        return Stat(handle, outInfo, requestTimeoutTicks);
+      }
+
+      /**
+       * Retrieves file info by handle with a timeout.
+       * @param handle
+       *   File handle.
+       * @param outInfo
+       *   Receives file info.
+       * @param timeoutTicks
+       *   Maximum number of ticks to wait.
+       * @return
+       *   0 on success, non-zero on failure.
+       */
+      static UInt32 Stat(
+        Handle handle,
+        FileInfo& outInfo,
+        UInt32 timeoutTicks
+      ) {
         ServiceMessage request {};
         ServiceMessage response {};
 
-        request.op = static_cast<UInt32>(Operation::Stat);
+        request.op = Operation::Stat;
         request.arg0 = handle;
         request.arg1 = 0;
         request.arg2 = 0;
@@ -583,7 +806,8 @@ namespace Quantum::ABI {
           request,
           response,
           &outInfo,
-          static_cast<UInt32>(sizeof(outInfo))
+          static_cast<UInt32>(sizeof(outInfo)),
+          timeoutTicks
         );
       }
 
@@ -597,10 +821,29 @@ namespace Quantum::ABI {
        *   0 on success, non-zero on failure.
        */
       static UInt32 ReadDirectory(Handle handle, DirectoryEntry& outEntry) {
+        return ReadDirectory(handle, outEntry, requestTimeoutTicks);
+      }
+
+      /**
+       * Reads a directory entry with a timeout.
+       * @param handle
+       *   Directory handle.
+       * @param outEntry
+       *   Receives directory entry data.
+       * @param timeoutTicks
+       *   Maximum number of ticks to wait.
+       * @return
+       *   0 on success, non-zero on failure.
+       */
+      static UInt32 ReadDirectory(
+        Handle handle,
+        DirectoryEntry& outEntry,
+        UInt32 timeoutTicks
+      ) {
         ServiceMessage request {};
         ServiceMessage response {};
 
-        request.op = static_cast<UInt32>(Operation::ReadDirectory);
+        request.op = Operation::ReadDirectory;
         request.arg0 = handle;
         request.arg1 = 0;
         request.arg2 = 0;
@@ -610,7 +853,8 @@ namespace Quantum::ABI {
           request,
           response,
           &outEntry,
-          static_cast<UInt32>(sizeof(outEntry))
+          static_cast<UInt32>(sizeof(outEntry)),
+          timeoutTicks
         );
       }
 
@@ -624,16 +868,35 @@ namespace Quantum::ABI {
        *   0 on success, non-zero on failure.
        */
       static UInt32 CreateDirectory(VolumeHandle volume, CString path) {
+        return CreateDirectory(volume, path, requestTimeoutTicks);
+      }
+
+      /**
+       * Creates a directory with a timeout.
+       * @param volume
+       *   Volume handle.
+       * @param path
+       *   Null-terminated directory path.
+       * @param timeoutTicks
+       *   Maximum number of ticks to wait.
+       * @return
+       *   0 on success, non-zero on failure.
+       */
+      static UInt32 CreateDirectory(
+        VolumeHandle volume,
+        CString path,
+        UInt32 timeoutTicks
+      ) {
         ServiceMessage request {};
         ServiceMessage response {};
 
-        request.op = static_cast<UInt32>(Operation::CreateDirectory);
+        request.op = Operation::CreateDirectory;
         request.arg0 = volume;
         request.arg1 = 0;
         request.arg2 = 0;
         request.dataLength = CopyString(path, request.data, messageDataBytes);
 
-        return SendRequest(request, response, nullptr, 0);
+        return SendRequest(request, response, nullptr, 0, timeoutTicks);
       }
 
       /**
@@ -646,16 +909,35 @@ namespace Quantum::ABI {
        *   0 on success, non-zero on failure.
        */
       static UInt32 CreateFile(VolumeHandle volume, CString path) {
+        return CreateFile(volume, path, requestTimeoutTicks);
+      }
+
+      /**
+       * Creates a file with a timeout.
+       * @param volume
+       *   Volume handle.
+       * @param path
+       *   Null-terminated file path.
+       * @param timeoutTicks
+       *   Maximum number of ticks to wait.
+       * @return
+       *   0 on success, non-zero on failure.
+       */
+      static UInt32 CreateFile(
+        VolumeHandle volume,
+        CString path,
+        UInt32 timeoutTicks
+      ) {
         ServiceMessage request {};
         ServiceMessage response {};
 
-        request.op = static_cast<UInt32>(Operation::CreateFile);
+        request.op = Operation::CreateFile;
         request.arg0 = volume;
         request.arg1 = 0;
         request.arg2 = 0;
         request.dataLength = CopyString(path, request.data, messageDataBytes);
 
-        return SendRequest(request, response, nullptr, 0);
+        return SendRequest(request, response, nullptr, 0, timeoutTicks);
       }
 
       /**
@@ -668,16 +950,35 @@ namespace Quantum::ABI {
        *   0 on success, non-zero on failure.
        */
       static UInt32 Remove(VolumeHandle volume, CString path) {
+        return Remove(volume, path, requestTimeoutTicks);
+      }
+
+      /**
+       * Removes a file or directory with a timeout.
+       * @param volume
+       *   Volume handle.
+       * @param path
+       *   Null-terminated path.
+       * @param timeoutTicks
+       *   Maximum number of ticks to wait.
+       * @return
+       *   0 on success, non-zero on failure.
+       */
+      static UInt32 Remove(
+        VolumeHandle volume,
+        CString path,
+        UInt32 timeoutTicks
+      ) {
         ServiceMessage request {};
         ServiceMessage response {};
 
-        request.op = static_cast<UInt32>(Operation::Remove);
+        request.op = Operation::Remove;
         request.arg0 = volume;
         request.arg1 = 0;
         request.arg2 = 0;
         request.dataLength = CopyString(path, request.data, messageDataBytes);
 
-        return SendRequest(request, response, nullptr, 0);
+        return SendRequest(request, response, nullptr, 0, timeoutTicks);
       }
 
       /**
@@ -696,11 +997,33 @@ namespace Quantum::ABI {
         CString fromPath,
         CString toPath
       ) {
+        return Rename(volume, fromPath, toPath, requestTimeoutTicks);
+      }
+
+      /**
+       * Renames a file or directory with a timeout.
+       * @param volume
+       *   Volume handle.
+       * @param fromPath
+       *   Source path.
+       * @param toPath
+       *   Destination path.
+       * @param timeoutTicks
+       *   Maximum number of ticks to wait.
+       * @return
+       *   0 on success, non-zero on failure.
+       */
+      static UInt32 Rename(
+        VolumeHandle volume,
+        CString fromPath,
+        CString toPath,
+        UInt32 timeoutTicks
+      ) {
         ServiceMessage request {};
         ServiceMessage response {};
         UInt32 offset = 0;
 
-        request.op = static_cast<UInt32>(Operation::Rename);
+        request.op = Operation::Rename;
         request.arg0 = volume;
         request.arg1 = 0;
         request.arg2 = 0;
@@ -719,7 +1042,7 @@ namespace Quantum::ABI {
             );
         }
 
-        return SendRequest(request, response, nullptr, 0);
+        return SendRequest(request, response, nullptr, 0, timeoutTicks);
       }
 
       /**
@@ -732,16 +1055,35 @@ namespace Quantum::ABI {
        *   0 on success, non-zero on failure.
        */
       static UInt32 RegisterService(Type type, UInt32 portId) {
+        return RegisterService(type, portId, requestTimeoutTicks);
+      }
+
+      /**
+       * Registers a file system service with the kernel and a timeout.
+       * @param type
+       *   File system type identifier.
+       * @param portId
+       *   IPC port owned by the service.
+       * @param timeoutTicks
+       *   Maximum number of ticks to wait.
+       * @return
+       *   0 on success, non-zero on failure.
+       */
+      static UInt32 RegisterService(
+        Type type,
+        UInt32 portId,
+        UInt32 timeoutTicks
+      ) {
         ServiceMessage request {};
         ServiceMessage response {};
 
-        request.op = static_cast<UInt32>(Operation::RegisterService);
+        request.op = Operation::RegisterService;
         request.arg0 = static_cast<UInt32>(type);
         request.arg1 = portId;
         request.arg2 = 0;
         request.dataLength = 0;
 
-        return SendRequest(request, response, nullptr, 0);
+        return SendRequest(request, response, nullptr, 0, timeoutTicks);
       }
 
     private:
@@ -766,7 +1108,8 @@ namespace Quantum::ABI {
         ServiceMessage& request,
         ServiceMessage& response,
         void* output,
-        UInt32 outputBytes
+        UInt32 outputBytes,
+        UInt32 timeoutTicks
       ) {
         UInt32 replyPortId = IPC::CreatePort();
 
@@ -785,7 +1128,7 @@ namespace Quantum::ABI {
 
         IPC::Handle replyHandle = IPC::OpenPort(
           replyPortId,
-          IPC::RightReceive | IPC::RightManage | IPC::RightSend
+          static_cast<UInt32>(IPC::Right::Receive) | static_cast<UInt32>(IPC::Right::Manage) | static_cast<UInt32>(IPC::Right::Send)
         );
 
         if (replyHandle == 0) {
@@ -795,8 +1138,8 @@ namespace Quantum::ABI {
         }
 
         IPC::Handle fsHandle = IPC::OpenPort(
-          IPC::Ports::FileSystem,
-          IPC::RightSend
+          static_cast<UInt32>(IPC::Ports::FileSystem),
+          static_cast<UInt32>(IPC::Right::Send)
         );
 
         if (fsHandle == 0) {
@@ -808,7 +1151,7 @@ namespace Quantum::ABI {
         if (IPC::SendHandle(
           fsHandle,
           replyHandle,
-          IPC::RightSend
+          static_cast<UInt32>(IPC::Right::Send)
         ) != 0) {
           IPC::CloseHandle(fsHandle);
           IPC::DestroyPort(replyHandle);
@@ -829,7 +1172,11 @@ namespace Quantum::ABI {
 
         IPC::Message reply {};
 
-        if (IPC::Receive(replyHandle, reply) != 0) {
+        if (IPC::ReceiveTimeout(
+          replyHandle,
+          reply,
+          timeoutTicks
+        ) != 0) {
           IPC::DestroyPort(replyHandle);
           IPC::CloseHandle(replyHandle);
 
@@ -854,7 +1201,7 @@ namespace Quantum::ABI {
           ::Quantum::CopyBytes(output, response.data, responseBytes);
         }
 
-        UInt32 status = response.status;
+        UInt32 status = static_cast<UInt32>(response.status);
 
         IPC::DestroyPort(replyHandle);
         IPC::CloseHandle(replyHandle);
@@ -863,3 +1210,4 @@ namespace Quantum::ABI {
       }
   };
 }
+

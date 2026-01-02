@@ -8,8 +8,8 @@
 
 #include <ABI/Console.hpp>
 #include <ABI/Devices/BlockDevices.hpp>
-#include <ABI/Devices/InputDevices.hpp>
 #include <ABI/Devices/DeviceBroker.hpp>
+#include <ABI/Devices/InputDevices.hpp>
 #include <ABI/Handle.hpp>
 #include <ABI/IPC.hpp>
 #include <ABI/Task.hpp>
@@ -36,13 +36,13 @@ namespace Quantum::System::Coordinator {
       return;
     }
 
-    if (_portId != IPC::Ports::Devices) {
+    if (_portId != static_cast<UInt32>(IPC::Ports::Devices)) {
       Console::WriteLine("Coordinator: devices port id mismatch");
     }
 
     _portHandle = IPC::OpenPort(
       _portId,
-      IPC::RightReceive | IPC::RightManage
+      static_cast<UInt32>(IPC::Right::Receive) | static_cast<UInt32>(IPC::Right::Manage)
     );
 
     if (_portHandle == 0) {
@@ -140,7 +140,7 @@ namespace Quantum::System::Coordinator {
       IPC::Handle replyHandle = 0;
 
       if (request.replyPortId != 0) {
-        replyHandle = IPC::OpenPort(request.replyPortId, IPC::RightSend);
+        replyHandle = IPC::OpenPort(request.replyPortId, static_cast<UInt32>(IPC::Right::Send));
       } else {
         replyHandle = TakePendingReply(msg.senderId);
       }
@@ -151,7 +151,7 @@ namespace Quantum::System::Coordinator {
 
       UInt32 status = 1;
 
-      if (request.op == static_cast<UInt32>(DeviceBroker::Operation::OpenBlock)) {
+      if (request.op == DeviceBroker::Operation::OpenBlock) {
         BlockDevices::Handle handle = BlockDevices::Open(
           request.deviceId,
           request.rights
@@ -160,10 +160,11 @@ namespace Quantum::System::Coordinator {
         if (handle != 0) {
           IPC::SendHandle(replyHandle, handle, request.rights);
           ABI::Handle::Close(handle);
+
           status = 0;
         }
       } else if (
-        request.op == static_cast<UInt32>(DeviceBroker::Operation::OpenInput)
+        request.op == DeviceBroker::Operation::OpenInput
       ) {
         InputDevices::Handle handle = InputDevices::Open(
           request.deviceId,
@@ -173,6 +174,7 @@ namespace Quantum::System::Coordinator {
         if (handle != 0) {
           IPC::SendHandle(replyHandle, handle, request.rights);
           ABI::Handle::Close(handle);
+
           status = 0;
         }
       }
@@ -180,6 +182,7 @@ namespace Quantum::System::Coordinator {
       IPC::Message reply {};
 
       reply.length = sizeof(status);
+
       for (UInt32 i = 0; i < sizeof(status); ++i) {
         reply.payload[i] = reinterpret_cast<UInt8*>(&status)[i];
       }
@@ -191,3 +194,4 @@ namespace Quantum::System::Coordinator {
     Task::Yield();
   }
 }
+

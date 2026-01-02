@@ -49,25 +49,25 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
         continue;
       }
 
-      if ((info.flags & BlockDevices::flagReady) == 0) {
+      if ((info.flags & static_cast<UInt32>(BlockDevices::Flag::Ready)) == 0) {
         continue;
       }
 
       UInt32 handle = ABI::Devices::DeviceBroker::OpenBlockDevice(
         info.id,
-        BlockDevices::RightRead
-          | BlockDevices::RightWrite
-          | BlockDevices::RightControl
-          | BlockDevices::RightBind
+        static_cast<UInt32>(BlockDevices::Right::Read)
+          | static_cast<UInt32>(BlockDevices::Right::Write)
+          | static_cast<UInt32>(BlockDevices::Right::Control)
+          | static_cast<UInt32>(BlockDevices::Right::Bind)
       );
 
       if (handle == 0) {
         handle = BlockDevices::Open(
           info.id,
-          BlockDevices::RightRead
-            | BlockDevices::RightWrite
-            | BlockDevices::RightControl
-            | BlockDevices::RightBind
+          static_cast<UInt32>(BlockDevices::Right::Read)
+            | static_cast<UInt32>(BlockDevices::Right::Write)
+            | static_cast<UInt32>(BlockDevices::Right::Control)
+            | static_cast<UInt32>(BlockDevices::Right::Bind)
         );
       }
 
@@ -234,7 +234,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
       return true;
     }
 
-    if ((info.flags & BlockDevices::flagReadOnly) != 0) {
+    if ((info.flags & static_cast<UInt32>(BlockDevices::Flag::ReadOnly)) != 0) {
       LogSkip("read-only");
       CloseDeviceToken(deviceToken, info.id);
 
@@ -318,7 +318,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
       return true;
     }
 
-    if ((info.flags & BlockDevices::flagReadOnly) != 0) {
+    if ((info.flags & static_cast<UInt32>(BlockDevices::Flag::ReadOnly)) != 0) {
       LogSkip("read-only");
       CloseDeviceToken(deviceToken, info.id);
 
@@ -410,7 +410,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
       return true;
     }
 
-    if ((info.flags & BlockDevices::flagReadOnly) != 0) {
+    if ((info.flags & static_cast<UInt32>(BlockDevices::Flag::ReadOnly)) != 0) {
       LogSkip("read-only");
       CloseDeviceToken(deviceToken, info.id);
 
@@ -515,3 +515,5 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
     );
   }
 }
+
+

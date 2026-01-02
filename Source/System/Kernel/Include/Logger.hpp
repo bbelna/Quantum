@@ -20,13 +20,35 @@ namespace Quantum::System::Kernel {
        * Log levels.
        */
       enum class Level : UInt32 {
-        Verbose = 0,
-        Debug = 100,
-        Trace = 200,
-        Info = 300,
-        Warning = 400,
-        Error = 500,
-        Panic = 600
+        /**
+         * Debug log level.
+         */
+        Debug = 0,
+
+        /**
+         * Trace log level.
+         */
+        Trace = 10,
+
+        /**
+         * Info log level.
+         */
+        Info = 20,
+
+        /**
+         * Warning log level.
+         */
+        Warning = 30,
+
+        /**
+         * Error log level.
+         */
+        Error = 40,
+
+        /**
+         * Panic log level.
+         */
+        Panic = 50
       };
 
       /**

@@ -47,5 +47,19 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
        *   True on success.
        */
       static bool TestKeyboardEvent();
+
+      /**
+       * Tests broker subscribe/unsubscribe with a timeout.
+       * @return
+       *   True on success.
+       */
+      static bool TestSubscribeTimeout();
+
+      /**
+       * Tests input device read timeout handling.
+       * @return
+       *   True on success.
+       */
+      static bool TestReadTimeout();
   };
 }

@@ -24,9 +24,8 @@ namespace Quantum::Services::Drivers::Input::PS2 {
       if ((status & _statusOutputFull) != 0) {
         return true;
       }
-
       if ((i & 0x3FF) == 0) {
-        Task::Yield();
+        Task::SleepTicks(1);
       }
     }
 
@@ -42,9 +41,8 @@ namespace Quantum::Services::Drivers::Input::PS2 {
       if ((status & _statusInputFull) == 0) {
         return true;
       }
-
       if ((i & 0x3FF) == 0) {
-        Task::Yield();
+        Task::SleepTicks(1);
       }
     }
 
