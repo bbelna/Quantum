@@ -30,6 +30,15 @@ namespace Quantum::System::Kernel::Arch::IA32 {
       static UInt64 Ticks();
 
       /**
+       * Returns the timer frequency in Hz.
+       * @return
+       *   PIT frequency in Hz.
+       */
+      static constexpr UInt32 FrequencyHz() {
+        return _pitFreqHz;
+      }
+
+      /**
        * Enables or disables periodic tick logging to the console.
        * @param enabled
        *   True to enable tick logging, false to disable.

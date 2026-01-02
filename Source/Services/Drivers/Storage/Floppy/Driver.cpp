@@ -228,7 +228,7 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
 
     CopyMessageBytes(&header, msg.payload, copyBytes);
 
-    return header.op == 0 && header.irq == _irqLine;
+    return header.op == ABI::IRQ::Operation::Notify && header.irq == _irqLine;
   }
 
   void Driver::QueuePendingMessage(const IPC::Message& msg) {
@@ -305,8 +305,8 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
     CopyBytes(msg.payload, &ready, msg.length);
 
     IPC::Handle readyHandle = IPC::OpenPort(
-      ABI::IPC::Ports::CoordinatorReady,
-      IPC::RightSend
+      static_cast<UInt32>(ABI::IPC::Ports::CoordinatorReady),
+      static_cast<UInt32>(IPC::Right::Send)
     );
 
     if (readyHandle == 0) {
@@ -1213,7 +1213,7 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
 
     _portHandle = IPC::OpenPort(
       portId,
-      IPC::RightReceive | IPC::RightManage
+      static_cast<UInt32>(IPC::Right::Receive) | static_cast<UInt32>(IPC::Right::Manage)
     );
 
     if (_portHandle == 0) {
@@ -1300,7 +1300,7 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
       info.type = BlockDevices::Type::Floppy;
       info.sectorSize = sectorSize;
       info.sectorCount = sectorCount;
-      info.flags = BlockDevices::flagRemovable;
+      info.flags = static_cast<UInt32>(BlockDevices::Flag::Removable);
       info.deviceIndex = driveIndex;
 
       UInt32 deviceId = BlockDevices::Register(info);
@@ -1321,10 +1321,10 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
 
       BlockDevices::Handle deviceHandle = BlockDevices::Open(
         deviceId,
-        BlockDevices::RightRead
-          | BlockDevices::RightWrite
-          | BlockDevices::RightControl
-          | BlockDevices::RightBind
+        static_cast<UInt32>(BlockDevices::Right::Read)
+          | static_cast<UInt32>(BlockDevices::Right::Write)
+          | static_cast<UInt32>(BlockDevices::Right::Control)
+          | static_cast<UInt32>(BlockDevices::Right::Bind)
       );
 
       if (_deviceCount > 0) {
@@ -1544,7 +1544,7 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
 
       IPC::Handle replyHandle = IPC::OpenPort(
         request.replyPortId,
-        IPC::RightSend
+        static_cast<UInt32>(IPC::Right::Send)
       );
 
       if (replyHandle != 0) {
@@ -1556,3 +1556,7 @@ namespace Quantum::Services::Drivers::Storage::Floppy {
     Task::Exit(0);
   }
 }
+
+
+
+

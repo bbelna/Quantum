@@ -74,7 +74,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
         }
 
       if (
-        (info.flags & BlockDevices::flagReady) != 0
+        (info.flags & static_cast<UInt32>(BlockDevices::Flag::Ready)) != 0
         && info.sectorSize != 0
         && info.sectorCount != 0
       ) {
@@ -1309,3 +1309,4 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
     Testing::Register("FAT12 cleanup", TestCleanup);
   }
 }
+

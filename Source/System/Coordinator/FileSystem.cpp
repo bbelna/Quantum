@@ -26,16 +26,17 @@ namespace Quantum::System::Coordinator {
 
     if (_portId == 0) {
       Console::WriteLine("Coordinator: failed to create file system port");
+
       return;
     }
 
-    if (_portId != IPC::Ports::FileSystem) {
+    if (_portId != static_cast<UInt32>(IPC::Ports::FileSystem)) {
       Console::WriteLine("Coordinator: file system port id mismatch");
     }
 
     _portHandle = IPC::OpenPort(
       _portId,
-      IPC::RightReceive | IPC::RightManage
+      static_cast<UInt32>(IPC::Right::Receive) | static_cast<UInt32>(IPC::Right::Manage)
     );
 
     if (_portHandle == 0) {
@@ -235,11 +236,7 @@ namespace Quantum::System::Coordinator {
         reinterpret_cast<UInt8*>(&request)[i] = msg.payload[i];
       }
 
-      if (
-        request.op == static_cast<UInt32>(
-          ABI::FileSystem::Operation::RegisterService
-        )
-      ) {
+      if (request.op == ABI::FileSystem::Operation::RegisterService) {
         RegisterService(
           static_cast<ABI::FileSystem::Type>(request.arg0),
           request.arg1
@@ -248,7 +245,7 @@ namespace Quantum::System::Coordinator {
         IPC::Handle replyHandle = 0;
 
         if (request.replyPortId != 0) {
-          replyHandle = IPC::OpenPort(request.replyPortId, IPC::RightSend);
+          replyHandle = IPC::OpenPort(request.replyPortId, static_cast<UInt32>(IPC::Right::Send));
         } else {
           replyHandle = TakePendingReply(msg.senderId);
         }
@@ -258,7 +255,7 @@ namespace Quantum::System::Coordinator {
           IPC::Message reply {};
 
           response.op = request.op;
-          response.status = 0;
+          response.status = ABI::FileSystem::Status::Ok;
           response.replyPortId = 0;
           response.arg0 = 0;
           response.arg1 = 0;
@@ -278,12 +275,11 @@ namespace Quantum::System::Coordinator {
         continue;
       }
 
-      ABI::FileSystem::Operation op
-        = static_cast<ABI::FileSystem::Operation>(request.op);
+      ABI::FileSystem::Operation op = request.op;
       IPC::Handle clientReplyHandle = 0;
 
       if (request.replyPortId != 0) {
-        clientReplyHandle = IPC::OpenPort(request.replyPortId, IPC::RightSend);
+        clientReplyHandle = IPC::OpenPort(request.replyPortId, static_cast<UInt32>(IPC::Right::Send));
       } else {
         clientReplyHandle = TakePendingReply(msg.senderId);
       }
@@ -295,7 +291,7 @@ namespace Quantum::System::Coordinator {
       ABI::FileSystem::ServiceMessage response {};
 
       response.op = request.op;
-      response.status = 1;
+      response.status = ABI::FileSystem::Status::Failed;
       response.replyPortId = 0;
       response.arg0 = 0;
       response.arg1 = 0;
@@ -352,7 +348,7 @@ namespace Quantum::System::Coordinator {
 
           IPC::Handle replyHandle = IPC::OpenPort(
             replyPortId,
-            IPC::RightReceive | IPC::RightManage | IPC::RightSend
+            static_cast<UInt32>(IPC::Right::Receive) | static_cast<UInt32>(IPC::Right::Manage) | static_cast<UInt32>(IPC::Right::Send)
           );
 
           if (replyHandle == 0) {
@@ -378,7 +374,7 @@ namespace Quantum::System::Coordinator {
 
           IPC::Handle serviceHandle = IPC::OpenPort(
             _services[i].portId,
-            IPC::RightSend
+            static_cast<UInt32>(IPC::Right::Send)
           );
 
           if (serviceHandle == 0) {
@@ -391,7 +387,7 @@ namespace Quantum::System::Coordinator {
           if (IPC::SendHandle(
             serviceHandle,
             replyHandle,
-            IPC::RightSend
+            static_cast<UInt32>(IPC::Right::Send)
           ) != 0) {
             IPC::CloseHandle(serviceHandle);
             IPC::DestroyPort(replyHandle);
@@ -451,7 +447,7 @@ namespace Quantum::System::Coordinator {
           IPC::CloseHandle(replyHandle);
         }
 
-        response.status = count;
+        response.status = static_cast<ABI::FileSystem::Status>(count);
         response.dataLength = count * entryBytes;
 
         sendReply();
@@ -460,7 +456,7 @@ namespace Quantum::System::Coordinator {
       }
 
       if (op == ABI::FileSystem::Operation::OpenVolume) {
-        response.status = 0;
+        response.status = static_cast<ABI::FileSystem::Status>(0);
 
         for (UInt32 i = 0; i < _maxServices; ++i) {
           if (_services[i].portId == 0) {
@@ -475,7 +471,7 @@ namespace Quantum::System::Coordinator {
 
           IPC::Handle replyHandle = IPC::OpenPort(
             replyPortId,
-            IPC::RightReceive | IPC::RightManage | IPC::RightSend
+            static_cast<UInt32>(IPC::Right::Receive) | static_cast<UInt32>(IPC::Right::Manage) | static_cast<UInt32>(IPC::Right::Send)
           );
 
           if (replyHandle == 0) {
@@ -500,7 +496,7 @@ namespace Quantum::System::Coordinator {
 
           IPC::Handle serviceHandle = IPC::OpenPort(
             _services[i].portId,
-            IPC::RightSend
+            static_cast<UInt32>(IPC::Right::Send)
           );
 
           if (serviceHandle == 0) {
@@ -510,11 +506,13 @@ namespace Quantum::System::Coordinator {
             continue;
           }
 
-          if (IPC::SendHandle(
-            serviceHandle,
-            replyHandle,
-            IPC::RightSend
-          ) != 0) {
+          if (
+            IPC::SendHandle(
+              serviceHandle,
+              replyHandle,
+              static_cast<UInt32>(IPC::Right::Send)
+            ) != 0
+          ) {
             IPC::CloseHandle(serviceHandle);
             IPC::DestroyPort(replyHandle);
             IPC::CloseHandle(replyHandle);
@@ -553,14 +551,16 @@ namespace Quantum::System::Coordinator {
               = serviceReply.payload[j];
           }
 
-          if (serviceResponse.status != 0) {
+          if (static_cast<UInt32>(serviceResponse.status) != 0) {
             ABI::FileSystem::Handle handle = AllocateHandle(
               _services[i].portId,
-              static_cast<ABI::FileSystem::Handle>(serviceResponse.status),
+              static_cast<ABI::FileSystem::Handle>(
+                static_cast<UInt32>(serviceResponse.status)
+              ),
               true
             );
 
-            response.status = handle;
+            response.status = static_cast<ABI::FileSystem::Status>(handle);
             response.dataLength = 0;
 
             IPC::DestroyPort(replyHandle);
@@ -575,7 +575,7 @@ namespace Quantum::System::Coordinator {
           IPC::CloseHandle(replyHandle);
         }
 
-        if (response.status == 0) {
+        if (static_cast<UInt32>(response.status) == 0) {
           sendReply();
         }
 
@@ -593,19 +593,26 @@ namespace Quantum::System::Coordinator {
         case ABI::FileSystem::Operation::CreateDirectory:
         case ABI::FileSystem::Operation::CreateFile:
         case ABI::FileSystem::Operation::Remove:
-        case ABI::FileSystem::Operation::Rename:
+        case ABI::FileSystem::Operation::Rename: {
           expectVolumeHandle = true;
+
           break;
+        }
+
         case ABI::FileSystem::Operation::Close:
         case ABI::FileSystem::Operation::ReadDirectory:
         case ABI::FileSystem::Operation::Read:
         case ABI::FileSystem::Operation::Write:
         case ABI::FileSystem::Operation::Stat:
-        case ABI::FileSystem::Operation::Seek:
+        case ABI::FileSystem::Operation::Seek: {
           expectFileHandle = true;
+
           break;
-        default:
+        }
+
+        default: {
           break;
+        }
       }
 
       HandleMap* mapped = nullptr;
@@ -663,11 +670,12 @@ namespace Quantum::System::Coordinator {
 
       IPC::Handle replyHandle = IPC::OpenPort(
         replyPortId,
-        IPC::RightReceive | IPC::RightManage | IPC::RightSend
+        static_cast<UInt32>(IPC::Right::Receive) | static_cast<UInt32>(IPC::Right::Manage) | static_cast<UInt32>(IPC::Right::Send)
       );
 
       if (replyHandle == 0) {
         IPC::DestroyPort(replyPortId);
+
         sendReply();
 
         continue;
@@ -675,22 +683,25 @@ namespace Quantum::System::Coordinator {
 
       IPC::Handle serviceSendHandle = IPC::OpenPort(
         servicePort,
-        IPC::RightSend
+        static_cast<UInt32>(IPC::Right::Send)
       );
 
       if (serviceSendHandle == 0) {
         IPC::DestroyPort(replyHandle);
         IPC::CloseHandle(replyHandle);
+
         sendReply();
 
         continue;
       }
 
-      if (IPC::SendHandle(
-        serviceSendHandle,
-        replyHandle,
-        IPC::RightSend
-      ) != 0) {
+      if (
+        IPC::SendHandle(
+          serviceSendHandle,
+          replyHandle,
+          static_cast<UInt32>(IPC::Right::Send)
+        ) != 0
+      ) {
         IPC::CloseHandle(serviceSendHandle);
         IPC::DestroyPort(replyHandle);
         IPC::CloseHandle(replyHandle);
@@ -736,25 +747,47 @@ namespace Quantum::System::Coordinator {
       IPC::DestroyPort(replyHandle);
       IPC::CloseHandle(replyHandle);
 
-      if (op == ABI::FileSystem::Operation::Open) {
-        if (response.status != 0) {
-          ABI::FileSystem::Handle handle = AllocateHandle(
-            servicePort,
-            static_cast<ABI::FileSystem::Handle>(response.status),
-            false
-          );
+      if (
+        static_cast<UInt32>(response.status) != 0
+        && op == ABI::FileSystem::Operation::Open
+      ) {
+        ABI::FileSystem::Handle handle = AllocateHandle(
+          servicePort,
+          static_cast<ABI::FileSystem::Handle>(
+            static_cast<UInt32>(response.status)
+          ),
+          false
+        );
 
-          response.status = handle;
-        }
-      } else if (op == ABI::FileSystem::Operation::Close) {
-        if (response.status == 0) {
-          ReleaseHandle(request.arg0);
-        }
-      } else if (op == ABI::FileSystem::Operation::CloseVolume) {
-        if (response.status == 0) {
-          ReleaseHandle(request.arg0);
-        }
+        response.status = static_cast<ABI::FileSystem::Status>(handle);
+      } else if (
+        static_cast<UInt32>(response.status) == 0 && (
+          op == ABI::FileSystem::Operation::Close
+          || op == ABI::FileSystem::Operation::CloseVolume
+        )
+      ) {
+        ReleaseHandle(request.arg0);
       }
+
+      // if (op == ABI::FileSystem::Operation::Open) {
+      //   if (response.status != 0) {
+      //     ABI::FileSystem::Handle handle = AllocateHandle(
+      //       servicePort,
+      //       static_cast<ABI::FileSystem::Handle>(response.status),
+      //       false
+      //     );
+
+      //     response.status = handle;
+      //   }
+      // } else if (op == ABI::FileSystem::Operation::Close) {
+      //   if (response.status == 0) {
+      //     ReleaseHandle(request.arg0);
+      //   }
+      // } else if (op == ABI::FileSystem::Operation::CloseVolume) {
+      //   if (response.status == 0) {
+      //     ReleaseHandle(request.arg0);
+      //   }
+      // }
 
       sendReply();
     }
@@ -762,3 +795,4 @@ namespace Quantum::System::Coordinator {
     Task::Yield();
   }
 }
+

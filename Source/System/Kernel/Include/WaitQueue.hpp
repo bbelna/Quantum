@@ -29,6 +29,15 @@ namespace Quantum::System::Kernel {
       void EnqueueCurrent();
 
       /**
+       * Enqueues the current thread and sleeps for up to the given ticks.
+       * @param ticks
+       *   Maximum number of ticks to wait.
+       * @return
+       *   True if woken by a signal; false if the wait timed out.
+       */
+      bool WaitTicks(UInt32 ticks);
+
+      /**
        * Wakes a single thread from the queue.
        * @return
        *   True if a thread was woken.

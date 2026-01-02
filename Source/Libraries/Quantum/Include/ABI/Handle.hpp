@@ -21,7 +21,14 @@ namespace Quantum::ABI {
        * Handle information payload.
        */
       struct Info {
+        /**
+         * Handle type identifier.
+         */
         UInt32 type;
+
+        /**
+         * Handle rights mask.
+         */
         UInt32 rights;
       };
 

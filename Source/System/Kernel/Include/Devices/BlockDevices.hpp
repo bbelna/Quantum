@@ -113,6 +113,11 @@ namespace Quantum::System::Kernel::Devices {
          * Pointer to the transfer buffer.
          */
         void* buffer;
+
+        /**
+         * Optional timeout in ticks (0 = default).
+         */
+        UInt32 timeoutTicks;
       };
 
       /**
@@ -192,19 +197,13 @@ namespace Quantum::System::Kernel::Devices {
       };
 
       /**
-       * Device is read-only.
+       * Block device capability flags.
        */
-      static constexpr UInt32 flagReadOnly = 1u << 0;
-
-      /**
-       * Device is removable media.
-       */
-      static constexpr UInt32 flagRemovable = 1u << 1;
-
-      /**
-       * Device is initialized and ready for I/O.
-       */
-      static constexpr UInt32 flagReady = 1u << 2;
+      enum class Flag : UInt32 {
+        ReadOnly = 1u << 0,
+        Removable = 1u << 1,
+        Ready = 1u << 2
+      };
 
       /**
        * Initializes the block device registry.
@@ -347,6 +346,11 @@ namespace Quantum::System::Kernel::Devices {
        * Maximum physical address for DMA buffers.
        */
       static constexpr UInt32 _dmaMaxPhysicalAddress = 0x01000000;
+
+      /**
+       * Default timeout in ticks for driver responses.
+       */
+      static constexpr UInt32 _requestTimeoutTicks = 500;
 
       /**
        * Registered device pointers.

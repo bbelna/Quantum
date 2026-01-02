@@ -27,8 +27,19 @@ namespace Quantum::System::Coordinator {
        * Device type identifiers for startup dependencies.
        */
       enum class DeviceType : UInt8 {
+        /**
+         * No device type.
+         */
         None = 0,
+
+        /**
+         * Floppy device.
+         */
         Floppy = 1,
+
+        /**
+         * Keyboard device.
+         */
         Keyboard = 2
       };
 

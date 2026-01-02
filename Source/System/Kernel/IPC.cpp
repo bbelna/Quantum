@@ -140,7 +140,7 @@ namespace Quantum::System::Kernel {
         }
       }
 
-      port->sendWait.EnqueueCurrent();
+      port->sendWait.WaitTicks(1);
     }
 
     return true;
@@ -194,7 +194,99 @@ namespace Quantum::System::Kernel {
         }
       }
 
-      port->recvWait.EnqueueCurrent();
+      port->recvWait.WaitTicks(1);
+    }
+
+    outSenderId = msg.senderId;
+    outLength = msg.length;
+
+    if (msg.hasTransfer && msg.transferObject) {
+      KernelObject* obj = msg.transferObject;
+      UInt32 rights = msg.transferRights;
+      UInt32 handleValue = 0;
+
+      Task::ControlBlock* tcb = Task::GetCurrent();
+
+      if (tcb && tcb->handleTable) {
+        handleValue = tcb->handleTable->Create(obj->type, obj, rights);
+      }
+
+      obj->Release();
+
+      UInt32 payload[2] = { 1, handleValue };
+
+      CopyBytes(msg.data, payload, sizeof(payload));
+
+      msg.length = sizeof(payload);
+      outLength = msg.length;
+    }
+
+    UInt32 toCopy = msg.length < bufferCapacity ? msg.length : bufferCapacity;
+
+    CopyBytes(outBuffer, msg.data, toCopy);
+
+    return true;
+  }
+
+  bool IPC::ReceiveTimeout(
+    UInt32 portId,
+    UInt32& outSenderId,
+    void* outBuffer,
+    UInt32 bufferCapacity,
+    UInt32& outLength,
+    UInt32 timeoutTicks
+  ) {
+    if (!outBuffer || bufferCapacity == 0) {
+      return false;
+    }
+
+    Port* port = nullptr;
+
+    {
+      Sync::ScopedLock<Sync::SpinLock> guard(_portsLock);
+      port = FindPort(portId);
+    }
+
+    if (!port) {
+      return false;
+    }
+
+    Message msg = {};
+    UInt32 remaining = timeoutTicks;
+
+    for (;;) {
+      {
+        Sync::ScopedLock<Sync::SpinLock> guard(port->lock);
+
+        if (!port->used) {
+          return false;
+        }
+
+        if (port->count > 0) {
+          msg = port->queue[port->head];
+
+          port->head = (port->head + 1) % maxQueueDepth;
+          --port->count;
+
+          port->sendWait.WakeOne();
+
+          break;
+        }
+
+        if (ConsumeIRQPending(*port, msg)) {
+          break;
+        }
+      }
+
+      if (remaining == 0) {
+        return false;
+      }
+
+      bool woken = port->recvWait.WaitTicks(1);
+
+      if (!woken && remaining > 0) {
+        remaining -= 1;
+      }
     }
 
     outSenderId = msg.senderId;
@@ -526,7 +618,7 @@ namespace Quantum::System::Kernel {
         }
       }
 
-      port->sendWait.EnqueueCurrent();
+      port->sendWait.WaitTicks(1);
     }
 
     return true;

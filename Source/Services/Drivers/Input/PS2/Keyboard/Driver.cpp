@@ -26,37 +26,13 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
   using ABI::Console;
   using ABI::Devices::InputDevices;
   using ABI::IPC;
+  using ABI::IRQ;
   using ABI::Task;
   using PS2::Controller;
 
-  static constexpr UInt8 scancodeMap[128] = {
-    0,  27, '1','2','3','4','5','6','7','8','9','0','-','=', '\b',
-    '\t','q','w','e','r','t','y','u','i','o','p','[',']','\n',
-    0,  'a','s','d','f','g','h','j','k','l',';','\'','`', 0,
-    '\\','z','x','c','v','b','n','m',',','.','/', 0, '*', 0, ' ',
-  };
-
-  static constexpr UInt8 scancodeMapShift[128] = {
-    0,  27, '!','@','#','$','%','^','&','*','(',')','_','+', '\b',
-    '\t','q','w','e','r','t','y','u','i','o','p','[',']','\n',
-    0,  'a','s','d','f','g','h','j','k','l',':','\"','~', 0,
-    '|','z','x','c','v','b','n','m','<','>','?', 0, '*', 0, ' ',
-  };
-
-  static constexpr UInt8 shiftLeftMake = 0x2A;
-  static constexpr UInt8 shiftRightMake = 0x36;
-  static constexpr UInt8 shiftLeftBreak = 0xAA;
-  static constexpr UInt8 shiftRightBreak = 0xB6;
-  static constexpr UInt8 ctrlMake = 0x1D;
-  static constexpr UInt8 ctrlBreak = 0x9D;
-  static constexpr UInt8 altMake = 0x38;
-  static constexpr UInt8 altBreak = 0xB8;
-  static constexpr UInt8 capsMake = 0x3A;
-  static constexpr UInt8 capsBreak = 0xBA;
-
   void Driver::RegisterIRQRoute(UInt32 portId) {
-    ABI::IRQ::Handle handle = 0;
-    UInt32 status = ABI::IRQ::Register(_irqLine, portId, &handle);
+    IRQ::Handle handle = 0;
+    UInt32 status = IRQ::Register(_irqLine, portId, &handle);
 
     if (status != 0) {
       Console::WriteLine("PS/2 keyboard IRQ register failed");
@@ -71,24 +47,23 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
     _irqHandle = handle;
 
     if (_irqHandle != 0) {
-      ABI::IRQ::Enable(_irqHandle);
+      IRQ::Enable(_irqHandle);
     }
   }
 
   void Driver::SendReadySignal(UInt8 deviceTypeId) {
     ABI::Coordinator::ReadyMessage ready {};
-    IPC::Message msg {};
-
     ready.deviceId = deviceTypeId;
     ready.state = 1;
 
+    IPC::Message msg {};
     msg.length = sizeof(ready);
 
     CopyBytes(msg.payload, &ready, msg.length);
 
     IPC::Handle readyHandle = IPC::OpenPort(
-      ABI::IPC::Ports::CoordinatorReady,
-      IPC::RightSend
+      static_cast<UInt32>(IPC::Ports::CoordinatorReady),
+      static_cast<UInt32>(IPC::Right::Send)
     );
 
     if (readyHandle == 0) {
@@ -102,39 +77,39 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
   }
 
   bool Driver::IsIRQMessage(const IPC::Message& msg) {
-    if (msg.length < sizeof(ABI::IRQ::Message)) {
+    if (msg.length < sizeof(IRQ::Message)) {
       return false;
     }
 
-    ABI::IRQ::Message header {};
+    IRQ::Message header {};
     UInt32 copyBytes = msg.length;
 
-    if (copyBytes > sizeof(ABI::IRQ::Message)) {
-      copyBytes = sizeof(ABI::IRQ::Message);
+    if (copyBytes > sizeof(IRQ::Message)) {
+      copyBytes = sizeof(IRQ::Message);
     }
 
     CopyBytes(&header, msg.payload, copyBytes);
 
-    return header.op == 0 && header.irq == _irqLine;
+    return header.op == IRQ::Operation::Notify && header.irq == _irqLine;
   }
 
   UInt32 Driver::BuildModifiers() {
     UInt32 mods = 0;
 
     if (_shiftActive) {
-      mods |= InputDevices::modShift;
+      mods |= static_cast<UInt32>(InputDevices::Modifier::Shift);
     }
 
     if (_ctrlActive) {
-      mods |= InputDevices::modCtrl;
+      mods |= static_cast<UInt32>(InputDevices::Modifier::Ctrl);
     }
 
     if (_altActive) {
-      mods |= InputDevices::modAlt;
+      mods |= static_cast<UInt32>(InputDevices::Modifier::Alt);
     }
 
     if (_capsLock) {
-      mods |= InputDevices::modCaps;
+      mods |= static_cast<UInt32>(InputDevices::Modifier::Caps);
     }
 
     return mods;
@@ -179,7 +154,7 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
     bool isBreak = (scancode & 0x80) != 0;
     UInt8 code = static_cast<UInt8>(scancode & 0x7F);
 
-    if (scancode == shiftLeftMake || scancode == shiftRightMake) {
+    if (scancode == _shiftLeftMake || scancode == _shiftRightMake) {
       _shiftActive = true;
 
       SendKeyEvent(code, InputDevices::EventType::KeyDown, 0, 0);
@@ -187,7 +162,7 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
       return;
     }
 
-    if (scancode == shiftLeftBreak || scancode == shiftRightBreak) {
+    if (scancode == _shiftLeftBreak || scancode == _shiftRightBreak) {
       _shiftActive = false;
 
       SendKeyEvent(code, InputDevices::EventType::KeyUp, 0, 0);
@@ -195,7 +170,7 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
       return;
     }
 
-    if (scancode == ctrlMake) {
+    if (scancode == _ctrlMake) {
       _ctrlActive = true;
 
       SendKeyEvent(code, InputDevices::EventType::KeyDown, 0, 0);
@@ -203,7 +178,7 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
       return;
     }
 
-    if (scancode == ctrlBreak) {
+    if (scancode == _ctrlBreak) {
       _ctrlActive = false;
 
       SendKeyEvent(code, InputDevices::EventType::KeyUp, 0, 0);
@@ -211,7 +186,7 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
       return;
     }
 
-    if (scancode == altMake) {
+    if (scancode == _altMake) {
       _altActive = true;
 
       SendKeyEvent(code, InputDevices::EventType::KeyDown, 0, 0);
@@ -219,7 +194,7 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
       return;
     }
 
-    if (scancode == altBreak) {
+    if (scancode == _altBreak) {
       _altActive = false;
 
       SendKeyEvent(code, InputDevices::EventType::KeyUp, 0, 0);
@@ -227,7 +202,7 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
       return;
     }
 
-    if (scancode == capsMake) {
+    if (scancode == _capsMake) {
       _capsLock = !_capsLock;
 
       SendKeyEvent(code, InputDevices::EventType::KeyDown, 0, 0);
@@ -235,13 +210,13 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
       return;
     }
 
-    if (scancode == capsBreak) {
+    if (scancode == _capsBreak) {
       SendKeyEvent(code, InputDevices::EventType::KeyUp, 0, 0);
 
       return;
     }
 
-    if (code >= sizeof(scancodeMap)) {
+    if (code >= sizeof(_scancodeMap)) {
       return;
     }
 
@@ -251,7 +226,7 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
       return;
     }
 
-    UInt8 base = scancodeMap[code];
+    UInt8 base = _scancodeMap[code];
     UInt8 ch = base;
 
     if (base >= 'a' && base <= 'z') {
@@ -259,7 +234,7 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
 
       ch = upper ? static_cast<UInt8>(base - ('a' - 'A')) : base;
     } else if (_shiftActive) {
-      ch = scancodeMapShift[code];
+      ch = _scancodeMapShift[code];
     }
 
     UInt32 ascii = ch != 0 ? static_cast<UInt32>(ch) : 0;
@@ -294,7 +269,8 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
 
     IPC::Handle portHandle = IPC::OpenPort(
       portId,
-      IPC::RightReceive | IPC::RightManage
+      static_cast<UInt32>(IPC::Right::Receive)
+        | static_cast<UInt32>(IPC::Right::Manage)
     );
 
     if (portHandle == 0) {
@@ -312,7 +288,7 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
 
     info.id = 0;
     info.type = InputDevices::Type::Keyboard;
-    info.flags = InputDevices::flagReady;
+    info.flags = static_cast<UInt32>(InputDevices::Flag::Ready);
     info.deviceIndex = 0;
 
     _deviceId = InputDevices::Register(info);
@@ -324,9 +300,9 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
 
     _deviceHandle = InputDevices::Open(
       _deviceId,
-      InputDevices::RightRegister
-        | InputDevices::RightRead
-        | InputDevices::RightControl
+      static_cast<UInt32>(InputDevices::Right::Register)
+        | static_cast<UInt32>(InputDevices::Right::Read)
+        | static_cast<UInt32>(InputDevices::Right::Control)
     );
 
     Console::WriteLine("PS/2 keyboard driver ready");
@@ -346,3 +322,7 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
     }
   }
 }
+
+
+
+

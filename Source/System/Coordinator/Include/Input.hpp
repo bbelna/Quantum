@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <ABI/Input.hpp>
 #include <Types.hpp>
 
 namespace Quantum::System::Coordinator {
@@ -52,13 +53,13 @@ namespace Quantum::System::Coordinator {
        * @param portId
        *   Subscriber port identifier.
        */
-      static void AddSubscriber(UInt32 portId);
+      static ABI::Input::Status AddSubscriber(UInt32 portId);
 
       /**
        * Removes a subscriber port.
        * @param portId
        *   Subscriber port identifier.
        */
-      static void RemoveSubscriber(UInt32 portId);
+      static ABI::Input::Status RemoveSubscriber(UInt32 portId);
   };
 }

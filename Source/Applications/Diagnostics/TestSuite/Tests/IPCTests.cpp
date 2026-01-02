@@ -2,7 +2,7 @@
  * @file Applications/Diagnostics/TestSuite/Tests/IPCTests.cpp
  * @brief IPC tests.
  * @author Brandon Belna <bbelna@aol.com>
- * @copyright Ac 2025-2026 The Quantum OS Project
+ * @copyright © 2025-2026 The Quantum OS Project
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
@@ -34,7 +34,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
 
     IPC::Handle portHandle = IPC::OpenPort(
       portId,
-      IPC::RightSend | IPC::RightReceive | IPC::RightManage
+      static_cast<UInt32>(IPC::Right::Send) | static_cast<UInt32>(IPC::Right::Receive) | static_cast<UInt32>(IPC::Right::Manage)
     );
 
     if (portHandle == 0) {
@@ -103,7 +103,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
 
     IPC::Handle portHandle = IPC::OpenPort(
       portId,
-      IPC::RightSend | IPC::RightReceive | IPC::RightManage
+      static_cast<UInt32>(IPC::Right::Send) | static_cast<UInt32>(IPC::Right::Receive) | static_cast<UInt32>(IPC::Right::Manage)
     );
 
     if (portHandle == 0) {
@@ -127,7 +127,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
 
     IPC::Handle targetHandle = IPC::OpenPort(
       targetPortId,
-      IPC::RightSend | IPC::RightReceive | IPC::RightManage
+      static_cast<UInt32>(IPC::Right::Send) | static_cast<UInt32>(IPC::Right::Receive) | static_cast<UInt32>(IPC::Right::Manage)
     );
 
     if (targetHandle == 0) {
@@ -193,8 +193,43 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
     return ok;
   }
 
+  bool IPCTests::TestReceiveTimeout() {
+    UInt32 portId = IPC::CreatePort();
+
+    if (portId == 0) {
+      TEST_ASSERT(false, "ipc timeout port create failed");
+
+      return false;
+    }
+
+    IPC::Handle portHandle = IPC::OpenPort(
+      portId,
+      static_cast<UInt32>(IPC::Right::Receive) | static_cast<UInt32>(IPC::Right::Manage)
+    );
+
+    if (portHandle == 0) {
+      IPC::DestroyPort(portId);
+
+      TEST_ASSERT(false, "ipc timeout port handle open failed");
+
+      return false;
+    }
+
+    IPC::Message msg {};
+    bool timedOut = IPC::ReceiveTimeout(portHandle, msg, 1) != 0;
+
+    TEST_ASSERT(timedOut, "ipc receive timeout expected");
+
+    IPC::DestroyPort(portHandle);
+    IPC::CloseHandle(portHandle);
+
+    return timedOut;
+  }
+
   void IPCTests::RegisterTests() {
     Testing::Register("IPC loopback", TestLoopback);
     Testing::Register("IPC handle transfer", TestHandleTransfer);
+    Testing::Register("IPC receive timeout", TestReceiveTimeout);
   }
 }
+

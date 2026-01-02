@@ -39,7 +39,7 @@ namespace Quantum::System::Kernel {
 
     ABI::IRQ::Message payload {};
 
-    payload.op = 0;
+    payload.op = ABI::IRQ::Operation::Notify;
     payload.irq = irq;
     payload.portId = 0;
     payload.replyPortId = 0;
@@ -110,7 +110,7 @@ namespace Quantum::System::Kernel {
 
     ABI::IRQ::Message payload {};
 
-    payload.op = 0;
+    payload.op = ABI::IRQ::Operation::Notify;
     payload.irq = irq;
     payload.portId = 0;
     payload.replyPortId = 0;

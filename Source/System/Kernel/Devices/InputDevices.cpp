@@ -46,7 +46,7 @@ namespace Quantum::System::Kernel::Devices {
     UInt32 id = _nextDeviceId++;
 
     device->info.id = id;
-    device->info.flags |= flagReady;
+    device->info.flags |= static_cast<UInt32>(InputDevices::Flag::Ready);
     device->ownerId = 0;
     device->head = 0;
     device->tail = 0;
@@ -110,7 +110,7 @@ namespace Quantum::System::Kernel::Devices {
 
     storage->info = info;
     storage->info.id = id;
-    storage->info.flags |= flagReady;
+    storage->info.flags |= static_cast<UInt32>(InputDevices::Flag::Ready);
     storage->ownerId = Task::GetCurrentId();
     storage->head = 0;
     storage->tail = 0;
@@ -217,7 +217,7 @@ namespace Quantum::System::Kernel::Devices {
       return false;
     }
 
-    if ((device->info.flags & flagReady) == 0) {
+    if ((device->info.flags & static_cast<UInt32>(InputDevices::Flag::Ready)) == 0) {
       return false;
     }
 
@@ -229,6 +229,49 @@ namespace Quantum::System::Kernel::Devices {
     device->tail = (device->tail + 1) % eventQueueSize;
 
     return true;
+  }
+
+  bool InputDevices::ReadEventTimeout(
+    UInt32 deviceId,
+    InputDevices::Event& outEvent,
+    UInt32 timeoutTicks
+  ) {
+    UInt32 remaining = timeoutTicks;
+
+    for (;;) {
+      InputDevices::Device* device = nullptr;
+
+      {
+        Sync::ScopedLock<Sync::SpinLock> guard(_lock);
+
+        device = Find(deviceId);
+
+        if (!device) {
+          return false;
+        }
+
+        if ((device->info.flags & static_cast<UInt32>(InputDevices::Flag::Ready)) == 0) {
+          return false;
+        }
+
+        if (device->head != device->tail) {
+          outEvent = device->events[device->tail];
+          device->tail = (device->tail + 1) % eventQueueSize;
+
+          return true;
+        }
+      }
+
+      if (remaining == 0) {
+        return false;
+      }
+
+      bool woken = device->waitQueue.WaitTicks(1);
+
+      if (!woken && remaining > 0) {
+        remaining -= 1;
+      }
+    }
   }
 
   bool InputDevices::PushEvent(
@@ -243,7 +286,7 @@ namespace Quantum::System::Kernel::Devices {
       return false;
     }
 
-    if ((device->info.flags & flagReady) == 0) {
+    if ((device->info.flags & static_cast<UInt32>(InputDevices::Flag::Ready)) == 0) {
       return false;
     }
 
@@ -290,3 +333,4 @@ namespace Quantum::System::Kernel::Devices {
     return device->object;
   }
 }
+

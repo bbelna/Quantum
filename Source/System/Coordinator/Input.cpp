@@ -10,6 +10,7 @@
 #include <ABI/Devices/InputDevices.hpp>
 #include <ABI/Input.hpp>
 #include <ABI/IPC.hpp>
+#include <Bytes.hpp>
 #include <ABI/Task.hpp>
 
 #include "Input.hpp"
@@ -32,13 +33,13 @@ namespace Quantum::System::Coordinator {
       return;
     }
 
-    if (_portId != IPC::Ports::Input) {
+    if (_portId != static_cast<UInt32>(IPC::Ports::Input)) {
       Console::WriteLine("Coordinator: input port id mismatch");
     }
 
     _portHandle = IPC::OpenPort(
       _portId,
-      IPC::RightReceive | IPC::RightManage
+      static_cast<UInt32>(IPC::Right::Receive) | static_cast<UInt32>(IPC::Right::Manage)
     );
 
     if (_portHandle == 0) {
@@ -46,14 +47,14 @@ namespace Quantum::System::Coordinator {
     }
   }
 
-  void Input::AddSubscriber(UInt32 portId) {
+  ABI::Input::Status Input::AddSubscriber(UInt32 portId) {
     if (portId == 0) {
-      return;
+      return ABI::Input::Status::Invalid;
     }
 
     for (UInt32 i = 0; i < _maxSubscribers; ++i) {
       if (_subscriberPorts[i] == portId) {
-        return;
+        return ABI::Input::Status::Ok;
       }
     }
 
@@ -61,23 +62,27 @@ namespace Quantum::System::Coordinator {
       if (_subscriberPorts[i] == 0) {
         _subscriberPorts[i] = portId;
 
-        return;
+        return ABI::Input::Status::Ok;
       }
     }
+
+    return ABI::Input::Status::Full;
   }
 
-  void Input::RemoveSubscriber(UInt32 portId) {
+  ABI::Input::Status Input::RemoveSubscriber(UInt32 portId) {
     if (portId == 0) {
-      return;
+      return ABI::Input::Status::Invalid;
     }
 
     for (UInt32 i = 0; i < _maxSubscribers; ++i) {
       if (_subscriberPorts[i] == portId) {
         _subscriberPorts[i] = 0;
 
-        return;
+        return ABI::Input::Status::Ok;
       }
     }
+
+    return ABI::Input::Status::NotFound;
   }
 
   void Input::ProcessPending() {
@@ -109,17 +114,34 @@ namespace Quantum::System::Coordinator {
         reinterpret_cast<UInt8*>(&request)[i] = msg.payload[i];
       }
 
-      if (
-        request.op
-        == static_cast<UInt32>(ABI::Input::Operation::Subscribe)
-      ) {
-        AddSubscriber(request.portId);
-      } else if (
-        request.op
-        == static_cast<UInt32>(ABI::Input::Operation::Unsubscribe)
-      ) {
-        RemoveSubscriber(request.portId);
+      ABI::Input::Status status = ABI::Input::Status::Invalid;
+
+      if (request.op == ABI::Input::Operation::Subscribe) {
+        status = AddSubscriber(request.portId);
+      } else if (request.op == ABI::Input::Operation::Unsubscribe) {
+        status = RemoveSubscriber(request.portId);
+      } else {
+        continue;
       }
+
+      UInt32 statusValue = static_cast<UInt32>(status);
+      IPC::Message reply {};
+
+      reply.length = sizeof(statusValue);
+
+      ::Quantum::CopyBytes(reply.payload, &statusValue, sizeof(statusValue));
+
+      IPC::Handle replyHandle = IPC::OpenPort(
+        request.portId,
+        static_cast<UInt32>(IPC::Right::Send)
+      );
+
+      if (replyHandle == 0) {
+        continue;
+      }
+
+      IPC::Send(replyHandle, reply);
+      IPC::CloseHandle(replyHandle);
     }
 
     UInt32 count = InputDevices::GetCount();
@@ -134,7 +156,7 @@ namespace Quantum::System::Coordinator {
 
         ABI::Input::EventMessage payload {};
 
-        payload.op = 0;
+        payload.op = ABI::Input::Operation::Event;
         payload.event = event;
 
         IPC::Message message {};
@@ -154,7 +176,7 @@ namespace Quantum::System::Coordinator {
 
           IPC::Handle subscriberHandle = IPC::OpenPort(
             portId,
-            IPC::RightSend
+            static_cast<UInt32>(IPC::Right::Send)
           );
 
           if (subscriberHandle == 0) {
@@ -170,3 +192,4 @@ namespace Quantum::System::Coordinator {
     Task::Yield();
   }
 }
+

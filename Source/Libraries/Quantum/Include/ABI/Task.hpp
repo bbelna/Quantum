@@ -41,5 +41,74 @@ namespace Quantum::ABI {
       static inline void SleepTicks(UInt32 ticks) {
         ABI::InvokeSystemCall(ABI::SystemCall::Task_Sleep, ticks);
       }
+
+      /**
+       * Returns the kernel tick rate in Hz.
+       * @return
+       *   Timer tick rate in Hz, or 0 on failure.
+       */
+      static inline UInt32 GetTickRate() {
+        if (_cachedTickRate != 0) {
+          return _cachedTickRate;
+        }
+
+        UInt32 hz = ABI::InvokeSystemCall(ABI::SystemCall::Task_GetTickRate);
+
+        if (hz != 0) {
+          _cachedTickRate = hz;
+        }
+
+        return hz;
+      }
+
+      /**
+       * Sleeps for at least the specified number of milliseconds.
+       * @param ms
+       *   Milliseconds to sleep.
+       */
+      static inline void SleepMs(UInt32 ms) {
+        UInt32 hz = GetTickRate();
+
+        if (hz == 0) {
+          return;
+        }
+
+        UInt64 ticks = static_cast<UInt64>(ms) * hz;
+        ticks = (ticks + 999) / 1000;
+
+        if (ticks == 0) {
+          ticks = 1;
+        }
+
+        SleepTicks(static_cast<UInt32>(ticks));
+      }
+
+      /**
+       * Sleeps for at least the specified number of microseconds.
+       * @param us
+       *   Microseconds to sleep.
+       */
+      static inline void SleepUs(UInt32 us) {
+        UInt32 hz = GetTickRate();
+
+        if (hz == 0) {
+          return;
+        }
+
+        UInt64 ticks = static_cast<UInt64>(us) * hz;
+        ticks = (ticks + 999999) / 1000000;
+
+        if (ticks == 0) {
+          ticks = 1;
+        }
+
+        SleepTicks(static_cast<UInt32>(ticks));
+      }
+
+    private:
+      /**
+       * Cached tick rate in Hz (0 = unknown).
+       */
+      inline static UInt32 _cachedTickRate = 0;
   };
 }

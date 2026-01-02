@@ -22,6 +22,7 @@ namespace Quantum::ABI::Devices {
        * Block device handle type.
        */
       using Handle = UInt32;
+
       /**
        * Block I/O operation identifiers.
        */
@@ -55,6 +56,51 @@ namespace Quantum::ABI::Devices {
          * Floppy disk device.
          */
         Floppy = 1
+      };
+
+      /**
+       * Block device capability flags.
+       */
+      enum class Flag : UInt32 {
+        /**
+         * Read-only device.
+         */
+        ReadOnly = 1u << 0,
+
+        /**
+         * Removable device.
+         */
+        Removable = 1u << 1,
+
+        /**
+         * Device is ready for I/O.
+         */
+        Ready = 1u << 2
+      };
+
+      /**
+       * Block device rights.
+       */
+      enum class Right : UInt32 {
+        /**
+         * Read right.
+         */
+        Read = 1u << 0,
+
+        /**
+         * Write right.
+         */
+        Write = 1u << 1,
+
+        /**
+         * Control right.
+         */
+        Control = 1u << 2,
+
+        /**
+         * Bind right.
+         */
+        Bind = 1u << 3
       };
 
       /**
@@ -115,6 +161,11 @@ namespace Quantum::ABI::Devices {
          * Pointer to the transfer buffer.
          */
         void* buffer;
+
+        /**
+         * Optional timeout in ticks (0 = default).
+         */
+        UInt32 timeoutTicks;
       };
 
       /**
@@ -192,41 +243,6 @@ namespace Quantum::ABI::Devices {
          */
         UInt32 size;
       };
-
-      /**
-       * Block device read only flag.
-       */
-      static constexpr UInt32 flagReadOnly = 1u << 0;
-
-      /**
-       * Block device removable media flag.
-       */
-      static constexpr UInt32 flagRemovable = 1u << 1;
-
-      /**
-       * Block device ready flag.
-       */
-      static constexpr UInt32 flagReady = 1u << 2;
-
-      /**
-       * Block device read right.
-       */
-      static constexpr UInt32 RightRead = 1u << 0;
-
-      /**
-       * Block device write right.
-       */
-      static constexpr UInt32 RightWrite = 1u << 1;
-
-      /**
-       * Block device control right.
-       */
-      static constexpr UInt32 RightControl = 1u << 2;
-
-      /**
-       * Block device bind right.
-       */
-      static constexpr UInt32 RightBind = 1u << 3;
 
       /**
        * Maximum sector size supported by WritePartial.
@@ -324,6 +340,22 @@ namespace Quantum::ABI::Devices {
       }
 
       /**
+       * Reads blocks from a device with a timeout.
+       * @param request
+       *   Block I/O request descriptor.
+       * @param timeoutTicks
+       *   Maximum number of ticks to wait (0 = default).
+       * @return
+       *   0 on success, non-zero on failure.
+       */
+      static UInt32 Read(const Request& request, UInt32 timeoutTicks) {
+        Request withTimeout = request;
+        withTimeout.timeoutTicks = timeoutTicks;
+
+        return Read(withTimeout);
+      }
+
+      /**
        * Writes a byte range within a single sector.
        * @param deviceId
        *   Device identifier.
@@ -400,6 +432,22 @@ namespace Quantum::ABI::Devices {
           0,
           0
         );
+      }
+
+      /**
+       * Writes blocks to a device with a timeout.
+       * @param request
+       *   Block I/O request descriptor.
+       * @param timeoutTicks
+       *   Maximum number of ticks to wait (0 = default).
+       * @return
+       *   0 on success, non-zero on failure.
+       */
+      static UInt32 Write(const Request& request, UInt32 timeoutTicks) {
+        Request withTimeout = request;
+        withTimeout.timeoutTicks = timeoutTicks;
+
+        return Write(withTimeout);
       }
 
       /**

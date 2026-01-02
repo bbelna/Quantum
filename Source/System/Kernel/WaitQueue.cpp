@@ -40,6 +40,67 @@ namespace Quantum::System::Kernel {
     Thread::Yield();
   }
 
+  bool WaitQueue::WaitTicks(UInt32 ticks) {
+    Thread::ControlBlock* thread = Thread::GetCurrent();
+
+    if (thread == nullptr) {
+      return false;
+    }
+
+    if (ticks == 0) {
+      return false;
+    }
+
+    {
+      Sync::ScopedLock<Sync::SpinLock> guard(_lock);
+
+      thread->waitNext = nullptr;
+      thread->state = Thread::State::Blocked;
+
+      if (_tail == nullptr) {
+        _head = thread;
+        _tail = thread;
+      } else {
+        _tail->waitNext = thread;
+        _tail = thread;
+      }
+    }
+
+    Thread::SleepTicks(ticks);
+
+    bool removed = false;
+
+    {
+      Sync::ScopedLock<Sync::SpinLock> guard(_lock);
+      Thread::ControlBlock* prev = nullptr;
+      Thread::ControlBlock* current = _head;
+
+      while (current) {
+        if (current == thread) {
+          if (prev) {
+            prev->waitNext = current->waitNext;
+          } else {
+            _head = current->waitNext;
+          }
+
+          if (_tail == current) {
+            _tail = prev;
+          }
+
+          current->waitNext = nullptr;
+          removed = true;
+
+          break;
+        }
+
+        prev = current;
+        current = current->waitNext;
+      }
+    }
+
+    return !removed;
+  }
+
   bool WaitQueue::WakeOne() {
     Thread::ControlBlock* thread = nullptr;
 

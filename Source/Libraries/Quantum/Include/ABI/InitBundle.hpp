@@ -51,8 +51,19 @@ namespace Quantum::ABI {
        * INIT.BND entry types.
        */
       enum class EntryType : UInt8 {
+        /**
+         * Init entry. Reserved for the Coordinator.
+         */
         Init = 1,
+
+        /**
+         * Driver entry.
+         */
         Driver = 2,
+
+        /**
+         * Service entry.
+         */
         Service = 3
       };
 

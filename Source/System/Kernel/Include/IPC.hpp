@@ -143,6 +143,32 @@ namespace Quantum::System::Kernel {
       );
 
       /**
+       * Receives a message with a timeout.
+       * @param portId
+       *   Port to receive from.
+       * @param outSenderId
+       *   Receives the sender task id.
+       * @param outBuffer
+       *   Buffer to copy payload into.
+       * @param bufferCapacity
+       *   Capacity of outBuffer in bytes.
+       * @param outLength
+       *   Receives the payload length.
+       * @param timeoutTicks
+       *   Maximum number of ticks to wait.
+       * @return
+       *   True on success; false on timeout or invalid arguments/port.
+       */
+      static bool ReceiveTimeout(
+        UInt32 portId,
+        UInt32& outSenderId,
+        void* outBuffer,
+        UInt32 bufferCapacity,
+        UInt32& outLength,
+        UInt32 timeoutTicks
+      );
+
+      /**
        * Attempts to receive a message without blocking.
        * @param portId
        *   Port to receive from.

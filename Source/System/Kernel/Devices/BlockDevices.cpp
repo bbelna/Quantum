@@ -217,7 +217,7 @@ namespace Quantum::System::Kernel::Devices {
 
     storage->info = info;
     storage->info.id = id;
-    storage->info.flags &= ~flagReady;
+    storage->info.flags &= ~static_cast<UInt32>(BlockDevices::Flag::Ready);
     storage->portId = 0;
     storage->object = new BlockDeviceObject(id);
 
@@ -331,7 +331,7 @@ namespace Quantum::System::Kernel::Devices {
       snapshot.portId = device->portId;
     }
 
-    if ((snapshot.info.flags & flagReady) == 0) {
+    if ((snapshot.info.flags & static_cast<UInt32>(BlockDevices::Flag::Ready)) == 0) {
       return false;
     }
 
@@ -397,11 +397,11 @@ namespace Quantum::System::Kernel::Devices {
       snapshot.portId = device->portId;
     }
 
-    if ((snapshot.info.flags & flagReady) == 0) {
+    if ((snapshot.info.flags & static_cast<UInt32>(BlockDevices::Flag::Ready)) == 0) {
       return false;
     }
 
-    if ((snapshot.info.flags & flagReadOnly) != 0) {
+    if ((snapshot.info.flags & static_cast<UInt32>(BlockDevices::Flag::ReadOnly)) != 0) {
       return false;
     }
 
@@ -518,7 +518,7 @@ namespace Quantum::System::Kernel::Devices {
     }
 
     device->portId = portId;
-    device->info.flags |= flagReady;
+    device->info.flags |= static_cast<UInt32>(BlockDevices::Flag::Ready);
 
     return true;
   }
@@ -576,12 +576,17 @@ namespace Quantum::System::Kernel::Devices {
 
     UInt32 senderId = 0;
     UInt32 responseLength = 0;
-    bool received = IPC::Receive(
+    UInt32 timeoutTicks = request.timeoutTicks != 0
+      ? request.timeoutTicks
+      : _requestTimeoutTicks;
+
+    bool received = IPC::ReceiveTimeout(
       replyPortId,
       senderId,
       &response,
       IPC::maxPayloadBytes,
-      responseLength
+      responseLength,
+      timeoutTicks
     );
 
     IPC::DestroyPort(replyPortId);
@@ -610,3 +615,5 @@ namespace Quantum::System::Kernel::Devices {
     return true;
   }
 }
+
+

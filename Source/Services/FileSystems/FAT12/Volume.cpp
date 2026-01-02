@@ -38,13 +38,13 @@ namespace Quantum::Services::FileSystems::FAT12 {
 
     _deviceHandle = ABI::Devices::DeviceBroker::OpenBlockDevice(
       info.id,
-      BlockDevices::RightRead | BlockDevices::RightWrite
+      static_cast<UInt32>(BlockDevices::Right::Read) | static_cast<UInt32>(BlockDevices::Right::Write)
     );
 
     if (_deviceHandle == 0) {
       _deviceHandle = BlockDevices::Open(
         info.id,
-        BlockDevices::RightRead | BlockDevices::RightWrite
+        static_cast<UInt32>(BlockDevices::Right::Read) | static_cast<UInt32>(BlockDevices::Right::Write)
       );
     }
 
@@ -570,3 +570,4 @@ namespace Quantum::Services::FileSystems::FAT12 {
     return Directory::RecordToEntry(record, entry);
   }
 }
+

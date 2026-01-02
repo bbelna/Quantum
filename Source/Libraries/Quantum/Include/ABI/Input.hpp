@@ -23,6 +23,11 @@ namespace Quantum::ABI {
        */
       enum class Operation : UInt32 {
         /**
+         * Input event delivery.
+         */
+        Event = 0,
+
+        /**
          * Subscribe to input events.
          */
         Subscribe = 1,
@@ -34,13 +39,43 @@ namespace Quantum::ABI {
       };
 
       /**
+       * Broker status codes.
+       */
+      enum class Status : UInt32 {
+        /**
+         * Operation successful.
+         */
+        Ok = 0,
+
+        /**
+         * Invalid request.
+         */
+        Invalid = 1,
+
+        /**
+         * Subscription already exists.
+         */
+        Full = 2,
+
+        /**
+         * Subscription not found.
+         */
+        NotFound = 3
+      };
+
+      /**
+       * Default timeout in ticks for broker operations.
+       */
+      static constexpr UInt32 requestTimeoutTicks = 500;
+
+      /**
        * Subscription request payload.
        */
       struct SubscribeMessage {
         /**
          * Operation identifier.
          */
-        UInt32 op;
+        Operation op;
 
         /**
          * Subscriber port identifier.
@@ -55,7 +90,7 @@ namespace Quantum::ABI {
         /**
          * Operation identifier (0 for event delivery).
          */
-        UInt32 op;
+        Operation op;
 
         /**
          * Input event payload.
@@ -71,13 +106,26 @@ namespace Quantum::ABI {
        *   0 on success, non-zero on failure.
        */
       static UInt32 Subscribe(UInt32 portId) {
+        return Subscribe(portId, requestTimeoutTicks);
+      }
+
+      /**
+       * Subscribes to the global input stream with a timeout.
+       * @param portId
+       *   IPC port owned by the caller.
+       * @param timeoutTicks
+       *   Maximum number of ticks to wait for ack.
+       * @return
+       *   0 on success, non-zero on failure.
+       */
+      static UInt32 Subscribe(UInt32 portId, UInt32 timeoutTicks) {
         if (portId == 0) {
           return 1;
         }
 
         IPC::Handle inputHandle = IPC::OpenPort(
-          IPC::Ports::Input,
-          IPC::RightSend
+          static_cast<UInt32>(IPC::Ports::Input),
+          static_cast<UInt32>(IPC::Right::Send)
         );
 
         if (inputHandle == 0) {
@@ -87,7 +135,7 @@ namespace Quantum::ABI {
         SubscribeMessage request {};
         IPC::Message msg {};
 
-        request.op = static_cast<UInt32>(Operation::Subscribe);
+        request.op = Operation::Subscribe;
         request.portId = portId;
 
         msg.length = sizeof(request);
@@ -100,7 +148,25 @@ namespace Quantum::ABI {
 
         IPC::CloseHandle(inputHandle);
 
-        return status;
+        if (status != 0) {
+          return status;
+        }
+
+        IPC::Message reply {};
+
+        if (IPC::ReceiveTimeout(portId, reply, timeoutTicks) != 0) {
+          return 1;
+        }
+
+        if (reply.length < sizeof(UInt32)) {
+          return 1;
+        }
+
+        UInt32 result = 1;
+
+        ::Quantum::CopyBytes(&result, reply.payload, sizeof(result));
+
+        return result;
       }
 
       /**
@@ -111,13 +177,26 @@ namespace Quantum::ABI {
        *   0 on success, non-zero on failure.
        */
       static UInt32 Unsubscribe(UInt32 portId) {
+        return Unsubscribe(portId, requestTimeoutTicks);
+      }
+
+      /**
+       * Unsubscribes from the global input stream with a timeout.
+       * @param portId
+       *   IPC port owned by the caller.
+       * @param timeoutTicks
+       *   Maximum number of ticks to wait for ack.
+       * @return
+       *   0 on success, non-zero on failure.
+       */
+      static UInt32 Unsubscribe(UInt32 portId, UInt32 timeoutTicks) {
         if (portId == 0) {
           return 1;
         }
 
         IPC::Handle inputHandle = IPC::OpenPort(
-          IPC::Ports::Input,
-          IPC::RightSend
+          static_cast<UInt32>(IPC::Ports::Input),
+          static_cast<UInt32>(IPC::Right::Send)
         );
 
         if (inputHandle == 0) {
@@ -127,7 +206,7 @@ namespace Quantum::ABI {
         SubscribeMessage request {};
         IPC::Message msg {};
 
-        request.op = static_cast<UInt32>(Operation::Unsubscribe);
+        request.op = Operation::Unsubscribe;
         request.portId = portId;
 
         msg.length = sizeof(request);
@@ -140,7 +219,26 @@ namespace Quantum::ABI {
 
         IPC::CloseHandle(inputHandle);
 
-        return status;
+        if (status != 0) {
+          return status;
+        }
+
+        IPC::Message reply {};
+
+        if (IPC::ReceiveTimeout(portId, reply, timeoutTicks) != 0) {
+          return 1;
+        }
+
+        if (reply.length < sizeof(UInt32)) {
+          return 1;
+        }
+
+        UInt32 result = 1;
+
+        ::Quantum::CopyBytes(&result, reply.payload, sizeof(result));
+
+        return result;
       }
   };
 }
+

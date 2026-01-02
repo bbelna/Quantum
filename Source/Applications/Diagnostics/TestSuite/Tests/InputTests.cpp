@@ -48,7 +48,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
         continue;
       }
 
-      if ((info.flags & InputDevices::flagReady) == 0) {
+      if ((info.flags & static_cast<UInt32>(InputDevices::Flag::Ready)) == 0) {
         continue;
       }
 
@@ -71,7 +71,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
 
     IPC::Handle portHandle = IPC::OpenPort(
       portId,
-      IPC::RightReceive | IPC::RightManage
+      static_cast<UInt32>(IPC::Right::Receive) | static_cast<UInt32>(IPC::Right::Manage)
     );
 
     if (portHandle == 0) {
@@ -109,7 +109,7 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
 
       CopyBytes(&payload, msg.payload, sizeof(Input::EventMessage));
 
-      if (payload.op == 0) {
+      if (payload.op == Input::Operation::Event) {
         received = true;
 
         break;
@@ -129,8 +129,101 @@ namespace Quantum::Applications::Diagnostics::TestSuite::Tests {
     return true;
   }
 
+  bool InputTests::TestSubscribeTimeout() {
+    UInt32 portId = IPC::CreatePort();
+
+    if (portId == 0) {
+      TEST_ASSERT(false, "input timeout port create failed");
+
+      return false;
+    }
+
+    IPC::Handle portHandle = IPC::OpenPort(
+      portId,
+      static_cast<UInt32>(IPC::Right::Receive) | static_cast<UInt32>(IPC::Right::Manage)
+    );
+
+    if (portHandle == 0) {
+      IPC::DestroyPort(portId);
+
+      TEST_ASSERT(false, "input timeout port handle open failed");
+
+      return false;
+    }
+
+    if (Input::Subscribe(portId, 10) != 0) {
+      TEST_ASSERT(false, "input subscribe timeout failed");
+
+      IPC::DestroyPort(portHandle);
+      IPC::CloseHandle(portHandle);
+
+      return false;
+    }
+
+    if (Input::Unsubscribe(portId, 10) != 0) {
+      TEST_ASSERT(false, "input unsubscribe timeout failed");
+
+      IPC::DestroyPort(portHandle);
+      IPC::CloseHandle(portHandle);
+
+      return false;
+    }
+
+    IPC::DestroyPort(portId);
+    IPC::CloseHandle(portHandle);
+
+    return true;
+  }
+
+  bool InputTests::TestReadTimeout() {
+    UInt32 count = InputDevices::GetCount();
+    UInt32 keyboardId = 0;
+
+    for (UInt32 i = 1; i <= count; ++i) {
+      InputDevices::Info info {};
+
+      if (InputDevices::GetInfo(i, info) != 0) {
+        continue;
+      }
+
+      if (info.type != InputDevices::Type::Keyboard) {
+        continue;
+      }
+
+      if ((info.flags & static_cast<UInt32>(InputDevices::Flag::Ready)) == 0) {
+        continue;
+      }
+
+      keyboardId = info.id;
+      break;
+    }
+
+    if (keyboardId == 0) {
+      LogSkip("keyboard not found");
+
+      return true;
+    }
+
+    InputDevices::Event event {};
+    UInt32 status = InputDevices::ReadEvent(keyboardId, event, 1);
+
+    if (status == 0) {
+      bool ok = event.deviceId == keyboardId;
+
+      TEST_ASSERT(ok, "input timeout returned wrong device id");
+
+      return ok;
+    }
+
+    return true;
+  }
+
   void InputTests::RegisterTests() {
     Testing::Register("Input keyboard present", TestKeyboardPresent);
     Testing::Register("Input keyboard event", TestKeyboardEvent);
+    Testing::Register("Input subscribe timeout", TestSubscribeTimeout);
+    Testing::Register("Input read timeout", TestReadTimeout);
   }
 }
+
+

@@ -31,6 +31,76 @@ namespace Quantum::Services::Drivers::Input::PS2::Keyboard {
       static constexpr UInt32 _irqLine = 1;
 
       /**
+       * Scancode translation table.
+       */
+      inline static constexpr UInt8 _scancodeMap[128] = {
+        0,  27, '1','2','3','4','5','6','7','8','9','0','-','=', '\b',
+        '\t','q','w','e','r','t','y','u','i','o','p','[',']','\n',
+        0,  'a','s','d','f','g','h','j','k','l',';','\'','`', 0,
+        '\\','z','x','c','v','b','n','m',',','.','/', 0, '*', 0, ' ',
+      };
+
+      /**
+       * Scancode translation table for Shift modifier.
+       */
+      inline static constexpr UInt8 _scancodeMapShift[128] = {
+        0,  27, '!','@','#','$','%','^','&','*','(',')','_','+', '\b',
+        '\t','q','w','e','r','t','y','u','i','o','p','[',']','\n',
+        0,  'a','s','d','f','g','h','j','k','l',':','\"','~', 0,
+        '|','z','x','c','v','b','n','m','<','>','?', 0, '*', 0, ' ',
+      };
+
+      /**
+       * Scancode for left Shift make code.
+       */
+      inline static constexpr UInt8 _shiftLeftMake = 0x2A;
+
+      /**
+       * Scancode for right Shift make code.
+       */
+      inline static constexpr UInt8 _shiftRightMake = 0x36;
+
+      /**
+       * Scancode for left Shift break code.
+       */
+      inline static constexpr UInt8 _shiftLeftBreak = 0xAA;
+
+      /**
+       * Scancode for right Shift break code.
+       */
+      inline static constexpr UInt8 _shiftRightBreak = 0xB6;
+
+      /**
+       * Scancode for Control make code.
+       */
+      inline static constexpr UInt8 _ctrlMake = 0x1D;
+
+      /**
+       * Scancode for Control break code.
+       */
+      inline static constexpr UInt8 _ctrlBreak = 0x9D;
+
+      /**
+       * Scancode for Alt make code.
+       */
+      inline static constexpr UInt8 _altMake = 0x38;
+
+      /**
+       * Scancode for Alt break code.
+       */
+      inline static constexpr UInt8 _altBreak = 0xB8;
+
+      /**
+       * Scancode for Caps Lock make code.
+       */
+      inline static constexpr UInt8 _capsMake = 0x3A;
+
+      /**
+       * Scancode for Caps Lock break code.
+       */
+      inline static constexpr UInt8 _capsBreak = 0xBA;
+
+      /**
        * Input device identifier assigned by the kernel.
        */
       inline static UInt32 _deviceId = 0;

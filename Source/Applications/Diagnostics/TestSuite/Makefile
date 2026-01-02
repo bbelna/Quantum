@@ -31,6 +31,7 @@ APP_SRCS := \
 	$(APP_DIR)/Testing.cpp \
 	$(APP_DIR)/Tests/FloppyTests.cpp \
 	$(APP_DIR)/Tests/FAT12Tests.cpp \
+	$(APP_DIR)/Tests/FileSystemTests.cpp \
 	$(APP_DIR)/Tests/IPCTests.cpp \
 	$(APP_DIR)/Tests/InputTests.cpp \
 	$(USER_RUNTIME)/CRT0.cpp \
@@ -41,6 +42,7 @@ APP_HDRS := \
 	$(APP_DIR)/Include/Testing.hpp \
 	$(APP_DIR)/Include/Tests/FloppyTests.hpp \
 	$(APP_DIR)/Include/Tests/FAT12Tests.hpp \
+	$(APP_DIR)/Include/Tests/FileSystemTests.hpp \
 	$(APP_DIR)/Include/Tests/IPCTests.hpp \
 	$(APP_DIR)/Include/Tests/InputTests.hpp
 
