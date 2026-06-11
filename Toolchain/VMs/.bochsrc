@@ -1,0 +1,39 @@
+# Bochs configuration for Quantum
+
+# CPU - Pentium II
+cpu: model=p2_klamath, count=1, ips=50000000
+
+# Memory - 32MB
+megs: 32
+
+# Boot from floppy
+boot: floppy
+floppya: 1_44=../../Build/Platform/PC/Quantum-DR0-PC-IA32.img, status=inserted
+floppyb: 1_44=../../Build/Platform/PC/Quantum-DR0-PC-IA32-Binaries.img, status=inserted
+
+# VGA with VESA (VESA) extension
+vga: extension=vbe, update_freq=60
+
+# Display
+display_library: x
+
+# PS/2 mouse and keyboard
+mouse: enabled=0, type=ps2, toggle=ctrl+alt
+keyboard: type=mf, serial_delay=250
+
+# Serial port -> Logs/Bochs-Serial.log
+com1: enabled=1, mode=file, dev=./Logs/Bochs-Serial.log
+
+# Clock
+clock: sync=realtime, time0=local
+
+# Logging
+log: ./Logs/Bochs.log
+panic: action=ask
+error: action=report
+info: action=report
+debug: action=ignore
+
+# Port 0xE9 writes appear directly in Bochs.log, write a byte from asm/C++
+# (out dx, al  where dx=0xE9) to emit debug markers without a serial port
+port_e9_hack: enabled=1

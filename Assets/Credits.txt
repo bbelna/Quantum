@@ -1,0 +1,26 @@
+--------------------------------------------------------------------------------
+QUANTUM CONTRIBUTOR CREDITS
+--------------------------------------------------------------------------------
+
+HUGE thank you to everyone who has contributed to the project, whether
+through code, testing, documentation, design, or simply by providing feedback
+and encouragement. Your support is what keeps this project going.
+
+Brandon Alex Belna
+Founder & Lead Architect, The Quantum Software Project
+
+--------------------------------------------------------------------------------
+
+Name:      Brandon Alex Belna
+Email:     bbelna@aol.com
+Bio:       Software Engineer & Mathematician
+Role(s):   Founder & Lead Architect, The Quantum Software Project
+           Senior Software Engineer, NGP VAN
+Credit(s): Everything
+
+--------------------------------------------------------------------------------
+
+Want to be on this list? Submit a PR or issue today!
+https://github.com/The-Quantum-OS-Project/Quantum/pulls
+https://github.com/The-Quantum-OS-Project/Quantum/issues
+

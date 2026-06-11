@@ -1,0 +1,87 @@
+[
+  {
+    "name": "StartupServer.qbn",
+    "type": "system",
+    "format": "binary",
+    "required": true,
+    "startup": true,
+    "path": "Build/Servers/Startup/StartupServer.qbn"
+  },
+  {
+    "name": "RunServer.qbn",
+    "type": "system",
+    "format": "binary",
+    "required": true,
+    "path": "Build/Servers/Run/RunServer.qbn"
+  },
+  {
+    "name": "DeviceServer.qx",
+    "type": "system",
+    "format": "elf32",
+    "required": true,
+    "path": "Build/Servers/Device/DeviceServer.qx"
+  },
+  {
+    "name": "GraphicsServer.qx",
+    "type": "system",
+    "format": "elf32",
+    "required": true,
+    "path": "Build/Servers/Graphics/GraphicsServer.qx"
+  },
+  {
+    "name": "FileSystemServer.qx",
+    "type": "system",
+    "format": "elf32",
+    "required": true,
+    "path": "Build/Servers/FileSystem/FileSystemServer.qx"
+  },
+  {
+    "name": "StorageServer.qx",
+    "type": "system",
+    "format": "elf32",
+    "required": true,
+    "path": "Build/Servers/Storage/StorageServer.qx"
+  },
+  {
+    "name": "FDC.qx",
+    "type": "driver",
+    "format": "elf32",
+    "required": true,
+    "path": "Build/Drivers/Storage/FDC/FDC.qx"
+  },
+  {
+    "name": "FAT12.qx",
+    "type": "filesystem",
+    "format": "elf32",
+    "required": true,
+    "path": "Build/FileSystems/FAT12/FAT12.qx"
+  },
+  {
+    "name": "InputServer.qx",
+    "type": "system",
+    "format": "elf32",
+    "required": true,
+    "path": "Build/Servers/Input/InputServer.qx"
+  },
+  {
+    "name": "StreamServer.qx",
+    "type": "system",
+    "format": "elf32",
+    "required": true,
+    "path": "Build/Servers/Stream/StreamServer.qx"
+  },
+  {
+    "name": "PS2Keyboard.qx",
+    "type": "driver",
+    "format": "disk",
+    "required": true,
+    "diskPath": "System/Drivers/PS2Keyboard.qx"
+  },
+  {
+    "name": "qsh.qx",
+    "type": "system",
+    "format": "disk",
+    "required": false,
+    "diskPath": "Binaries/qsh.qx"
+  }
+]

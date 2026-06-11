@@ -1,0 +1,127 @@
+#---------------------------------------------------------------------------
+# Project
+#---------------------------------------------------------------------------
+
+PROJECT_NAME           = "Quantum"
+PROJECT_BRIEF          = "Object-Oriented Software For All"
+PROJECT_NUMBER         = "0.1-alpha"
+
+OUTPUT_DIRECTORY       = Build/Documentation
+CREATE_SUBDIRS         = YES
+
+#---------------------------------------------------------------------------
+# Input
+#---------------------------------------------------------------------------
+
+# document source code
+INPUT                  = ./
+RECURSIVE              = YES
+FILE_PATTERNS          = *.hpp *.h *.cpp *.inl *.inc *.ipp *.tpp *.S *.asm \
+                         *.md
+
+# ignore build artifacts and generated output
+EXCLUDE_PATTERNS = */Build/* */.git/* */References/* */ThirdParty/* */LICENSE.md
+
+#---------------------------------------------------------------------------
+# Extraction / formatting
+#---------------------------------------------------------------------------
+
+EXTRACT_ALL            = NO
+EXTRACT_STATIC         = YES
+EXTRACT_PRIVATE        = NO
+
+AUTOLINK_SUPPORT       = NO
+JAVADOC_AUTOBRIEF      = YES
+MULTILINE_CPP_IS_BRIEF = YES
+
+#---------------------------------------------------------------------------
+# Source browsing
+#---------------------------------------------------------------------------
+
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+REFERENCED_BY_RELATION = YES
+REFERENCES_RELATION    = YES
+COLONCOLON_ARE_SCOPE = YES
+
+#---------------------------------------------------------------------------
+# Output formats
+#---------------------------------------------------------------------------
+
+GENERATE_HTML          = YES
+HTML_OUTPUT            = HTML
+
+HTML_EXTRA_STYLESHEET  = \
+  ThirdParty/doxygen-awesome-css/doxygen-awesome.css \
+  ThirdParty/doxygen-awesome-css/doxygen-awesome-sidebar-only.css \
+  ThirdParty/doxygen-awesome-css/doxygen-awesome-sidebar-only-darkmode-toggle.css
+
+HTML_EXTRA_FILES       = \
+  ThirdParty/doxygen-awesome-css/doxygen-awesome-darkmode-toggle.js \
+  ThirdParty/doxygen-awesome-css/doxygen-awesome-fragment-copy-button.js \
+  ThirdParty/doxygen-awesome-css/doxygen-awesome-paragraph-link.js \
+  ThirdParty/doxygen-awesome-css/doxygen-awesome-interactive-toc.js
+
+GENERATE_LATEX         = NO
+
+USE_MATHJAX            = YES
+MATHJAX_VERSION        = MathJax_3
+
+#---------------------------------------------------------------------------
+# Warnings
+#---------------------------------------------------------------------------
+
+WARN_IF_UNDOCUMENTED   = YES
+WARN_NO_PARAMDOC       = YES
+WARN_AS_ERROR          = NO
+HIDE_SCOPE_NAMES       = YES
+
+#---------------------------------------------------------------------------
+# Aliases
+#---------------------------------------------------------------------------
+
+ALIASES += QApp="::Quantum::App"
+ALIASES += QRuntime="::Quantum::Runtime"
+ALIASES += QCore="::Quantum::Core"
+ALIASES += QCursors="::Quantum::Cursors"
+ALIASES += QFont="::Quantum::Font"
+ALIASES += QUI="::Quantum::UI"
+ALIASES += QUIMenu="::Quantum::Menus"
+ALIASES += QThrd="::Quantum::Threading"
+ALIASES += QStrm="::Quantum::Streaming"
+
+ALIASES += QDemos="::Quantum::Demos"
+
+ALIASES += QOS="::Quantum::"
+ALIASES += QOSApps="::Quantum::Apps"
+ALIASES += QOSBtldr="::Quantum::Bootloader"
+ALIASES += QOSClients="::Quantum::Clients"
+ALIASES += QOSDrvs="::Quantum::Drivers"
+ALIASES += QOSHAL="::Quantum::HAL"
+ALIASES += QABI="::Quantum::ABI"
+ALIASES += QOSStrm="::Quantum::Streaming"
+
+ALIASES += QOSKrnl="::Quantum::Kernel"
+ALIASES += QOSKrnlIntDrvs="::Quantum::Kernel::Drivers::Interrupts"
+ALIASES += QOSKrnlTmrDrvs="::Quantum::Kernel::Drivers::Timers"
+ALIASES += QOSKrnlPC="::Quantum::Kernel::Platform::PC"
+ALIASES += QOSKrnlIA32="::Quantum::Kernel::Arch::IA32"
+
+ALIASES += QOSSrvs="::Quantum::Servers"
+ALIASES += QOSSrvCore="::Quantum::Servers::Core"
+ALIASES += QOSAppSrv="::Quantum::Servers::App"
+ALIASES += QOSCtxSrv="::Quantum::Servers::Context"
+ALIASES += QOSDvSrv="::Quantum::Servers::Device"
+ALIASES += QOSFSSrv="::Quantum::Servers::FileSystem"
+ALIASES += QOSGfxSrv="::Quantum::Servers::Graphics"
+ALIASES += QOSInSrv="::Quantum::Servers::Input"
+ALIASES += QOSRunSrv="::Quantum::Servers::Run"
+ALIASES += QOSStpSrv="::Quantum::Servers::Startup"
+ALIASES += QOSStrSrv="::Quantum::Servers::Storage"
+ALIASES += QOSStrmSrv="::Quantum::Servers::Stream"
+
+ALIASES += QOSFS="::Quantum::FileSystem"
+ALIASES += QOSQFS="::Quantum::FileSystem::QFS"
+
+ALIASES += QX="::Quantum::Executable"
+ALIASES += QGFX="::Quantum::Graphics"
